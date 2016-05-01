@@ -1,0 +1,165 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// (c) William Fonkou Tambe
+
+`ifndef FIFO_V
+`define FIFO_V
+
+// Module implementing a fifo.
+// A fifo is useful, not only for buffering data, but also
+// to safely move data between two modules that use different
+// clocks, in order words to move data between two clock domains.
+
+// Parameters:
+//
+// WIDTH
+// 	Number of bits used by each data in the fifo.
+// 	It must be non-null.
+//
+// DEPTH
+// 	Max number of data that the fifo can contain.
+// 	It must be at least 2 and a power of 2.
+
+// Ports:
+//
+// rst_i
+// 	When high on "clk_write_i" posedge, the fifo reset
+// 	itself empty; it must be low to write data in the fifo.
+//
+// usage_o
+// 	Count of data in the fifo.
+//
+// Ports for writing data in the fifo:
+//
+// clk_write_i
+// 	Clock used for writing data in the fifo.
+//
+// write_i
+// 	When high on "clk_write_i" posedge, "data_i" gets written in the fifo,
+// 	which must not be full.
+//
+// data_i
+// 	Data written in the fifo on "clk_write_i" posedge,
+// 	if "write_i" is high.
+//
+// full_o
+// 	High when the fifo is full.
+//
+// Ports for reading data from the fifo:
+//
+// clk_read_i
+// 	Clock used for reading data from the fifo.
+//
+// read_i
+// 	When high on "clk_read_i" posedge, next data from the fifo gets set
+// 	on "data_o"; the fifo must not be empty.
+//
+// data_o
+// 	Data from the fifo; its value is updated
+// 	on "clk_read_i" posedge, if "read_i" is high.
+//
+// empty_o
+// 	High when the fifo is empty.
+
+// Note that the fifo has two clock domains driven
+// by "clk_write_i" and "clk_read_i".
+// To prevent hazards, both clocks should transition
+// at the same time; also, both clocks should have
+// the same speed, or one clock should have a speed that
+// is the speed of the other clock times a power of 2.
+// If the frequency speed ratio described above between
+// the two clocks cannot be guaranteed, before attempting
+// to read data from the fifo, "usage_o" should be debounced
+// for at least two stable samples using the clock "clk_read_i",
+// and its value checked to insure that the fifo is not empty;
+// and before attempting to write data to the fifo, "usage_o"
+// should be debounced for at least two stable samples using
+// the clock "clk_write_i", and its value checked to insure
+// that the fifo is not full. The debouncing removes noise
+// from hazards that could occur due to both clocks having
+// their posedge too narrow for the combinational logic
+// computing "usage_o" to settle.
+
+`include "lib/ram/bram.v"
+
+module fifo (
+
+	 rst_i
+
+	,usage_o
+
+	,clk_read_i
+	,read_i
+	,data_o
+	,empty_o
+
+	,clk_write_i
+	,write_i
+	,data_i
+	,full_o
+);
+
+`include "lib/clog2.v"
+
+parameter WIDTH = 1;
+parameter DEPTH = 2;
+
+localparam CLOG2DEPTH = clog2(DEPTH);
+
+input wire rst_i;
+
+output wire [(CLOG2DEPTH +1) -1 : 0] usage_o;
+
+input  wire                clk_read_i;
+input  wire                read_i;
+output wire [WIDTH -1 : 0] data_o;
+output wire                empty_o;
+
+input  wire                clk_write_i;
+input  wire                write_i;
+input  wire [WIDTH -1 : 0] data_i;
+output wire                full_o;
+
+wire en = (read_i && !empty_o);
+wire we = (write_i && !full_o);
+
+// Read and write index within the bram.
+// Only the CLOG2DEPTH lsb are used for indexing.
+reg [(CLOG2DEPTH +1) -1 : 0] readidx = 0;
+reg [(CLOG2DEPTH +1) -1 : 0] writeidx = 0;
+
+bram #(
+
+	 .SZ (DEPTH)
+	,.DW (WIDTH)
+
+) fifobuf (
+
+	 .clk0_i  (clk_read_i)                  ,.clk1_i  (clk_write_i)
+	,.en0_i   (en)                          ,.en1_i   (1'b1)
+	                                        ,.we1_i   (we)
+	,.addr0_i (readidx[CLOG2DEPTH -1 : 0])  ,.addr1_i (writeidx[CLOG2DEPTH -1 : 0])
+	                                        ,.i1      (data_i)
+	,.o0      (data_o)                      ,.o1      ()
+);
+
+assign usage_o = (writeidx - readidx);
+
+assign full_o = (usage_o >= DEPTH);
+
+assign empty_o = (usage_o == 0);
+
+always @ (posedge clk_read_i) begin
+	if (rst_i)
+		readidx <= writeidx;
+	else if (en)
+		readidx <= readidx + 1'b1;
+end
+
+always @ (posedge clk_write_i) begin
+	if (we)
+		writeidx <= writeidx + 1'b1;
+end
+
+endmodule
+
+`endif /* FIFO_V */

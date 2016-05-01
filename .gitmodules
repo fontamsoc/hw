@@ -1,0 +1,6 @@
+[submodule "lib/core_usb_cdc"]
+	path = lib/core_usb_cdc
+	url = https://github.com/ultraembedded/core_usb_cdc.git
+[submodule "lib/core_usb_fs_phy"]
+	path = lib/core_usb_fs_phy
+	url = https://github.com/ultraembedded/core_usb_fs_phy

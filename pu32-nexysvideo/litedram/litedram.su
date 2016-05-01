@@ -1,0 +1,13 @@
+litedram.c:42:13:cdelay	0	static
+litedram.c:440:13:command_px	0	static
+litedram.c:493:13:sdram_read_leveling_rst_delay	0	static
+litedram.c:502:13:sdram_read_leveling_rst_bitslip	0	static
+litedram.c:583:13:sdram_read_leveling_inc_delay	0	static
+litedram.c:388:13:sdram_dfii_pix_baddress_write.constprop	0	static
+litedram.c:356:13:sdram_dfii_pix_address_write.constprop	0	static
+litedram.c:538:21:sdram_write_read_check_test_pattern	48	static
+litedram.c:596:21:sdram_read_leveling_scan_module	20	static
+litedram.c:627:13:sdram_leveling_center_module.constprop	28	static
+litedram.c:682:6:sdram_read_leveling	36	static
+litedram.c:784:6:sdram_leveling	36	static
+litedram.c:843:6:main	32	static
