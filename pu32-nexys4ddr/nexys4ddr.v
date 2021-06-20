@@ -32,6 +32,8 @@ module nexys4ddr (
 
 	 rst_n
 
+	,rst2_i
+
 	,clk100mhz_i
 
 	,sd_sclk
@@ -73,6 +75,8 @@ localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
 localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
 
 input wire rst_n;
+
+input wire rst2_i;
 
 input wire clk100mhz_i;
 
@@ -366,7 +370,7 @@ uart_hw #(
 
 ) uart (
 
-	 .rst_i (!pll_locked || rst_p)
+	 .rst_i (!pll_locked || rst_p || rst2_i)
 
 	,.clk_i     (clk_w)
 	,.clk_phy_i (clk_w)
