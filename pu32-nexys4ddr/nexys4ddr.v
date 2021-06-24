@@ -370,7 +370,9 @@ uart_hw #(
 
 ) uart (
 
-	 .rst_i (!pll_locked || rst_p || rst2_i)
+	 .rst_i (!pll_locked || rst_p)
+
+	,.rst2_i (rst2_i)
 
 	,.clk_i     (clk_w)
 	,.clk_phy_i (clk_w)
