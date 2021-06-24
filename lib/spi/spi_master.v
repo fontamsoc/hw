@@ -16,9 +16,9 @@ module spi_master (
 
 	sclkdivide,
 
-	txbufferwriteenable, txbufferdatain, txbufferusage,
+	txbufferwriteenable, txbufferdatain, txbufferusage, txbufferfull,
 
-	rxbufferreadenable, rxbufferdataout, rxbufferusage
+	rxbufferreadenable, rxbufferdataout, rxbufferusage, rxbufferempty,
 );
 
 `include "lib/clog2.v"
@@ -45,10 +45,12 @@ input wire[CLOG2SCLKDIVIDELIMIT -1 : 0] sclkdivide;
 input wire txbufferwriteenable;
 input wire[DATABITSIZE -1 : 0] txbufferdatain;
 output wire[(CLOG2BUFFERSIZE +1) -1 : 0] txbufferusage;
+output wire txbufferfull;
 
 input wire rxbufferreadenable;
 output wire[DATABITSIZE -1 : 0] rxbufferdataout;
 output wire[(CLOG2BUFFERSIZE +1) -1 : 0] rxbufferusage;
+output wire rxbufferempty;
 
 reg txfifowasread = 0;
 
@@ -82,8 +84,6 @@ spi_master_phy #(
 	.datain (txfifodataout)
 );
 
-wire rxbufferempty;
-
 fifo #(
 	.WIDTH (DATABITSIZE),
 	.DEPTH (BUFFERSIZE)
@@ -106,8 +106,6 @@ fifo #(
 );
 
 wire txfiforeadenable = (txbufferusage && !txfifowasread);
-
-wire txbufferfull;
 
 fifo #(
 	.WIDTH (DATABITSIZE),

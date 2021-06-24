@@ -175,7 +175,7 @@ dram #(
 
 localparam MASTERCOUNT_ = (1 << CLOG2MASTERCOUNT);
 
-wire queuenotfull = (queueusage != MASTERCOUNT_);
+wire queuenotfull = (queueusage < MASTERCOUNT_);
 
 wire queuenotalmostfull = (queueusage < (MASTERCOUNT_-1));
 

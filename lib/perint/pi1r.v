@@ -189,6 +189,8 @@ reg [ADDRBITSZ -1 : 0] addrspaceslaveidxlo = 0;
 reg slaveidxrdy = 0;
 reg slaveidxbsy = 0;
 
+wire slaveidx_not_max = (slaveidx < (SLAVECOUNT-1));
+
 wire slaveidxinvalid = (masteropmasteridx != PINOOP &&
 	masteraddrmasteridx != addrspaceslaveidxlo &&
 	!(masteraddrmasteridx >= addrspaceslaveidxlo &&
@@ -220,7 +222,7 @@ always @ (posedge clk_i) begin
 
 	end else if (!addrspacerdy) begin
 
-		if (slaveidx != (SLAVECOUNT-1)) begin
+		if (slaveidx_not_max) begin
 
 			addrspaceslaveidxlo <= slavemapszslaveidxplusaddrspaceslaveidxlo;
 
@@ -245,7 +247,7 @@ always @ (posedge clk_i) begin
 
 		if (!slaveidxinvalid)
 			slaveidxrdy <= 1'b1;
-		else if (slaveidx != (SLAVECOUNT-1)) begin
+		else if (slaveidx_not_max) begin
 			addrspaceslaveidxlo <= addrspaceslaveidx + 1'b1;
 			slaveidx <= slaveidx + 1'b1;
 			slaveidxbsy <= 1'b1;

@@ -400,7 +400,7 @@ always @ (posedge clk_i[0]) begin
 	end else if (m_pi1_op_i == PIRDOP) begin
 		m_pi1_rdy_o_ <= 1;
 	end else if (m_pi1_op_i == PIWROP) begin
-		m_pi1_rdy_o_ <= (bufusage != (CACHESETCOUNT-1));
+		m_pi1_rdy_o_ <= (bufusage < (CACHESETCOUNT-1));
 	end else if (m_pi1_op_i == PIRWOP) begin
 		m_pi1_rdy_o_ <= 0;
 	end

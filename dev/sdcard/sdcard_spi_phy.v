@@ -182,13 +182,13 @@ reg [8 -1 : 0] spitxbufferdatain = 0;
 localparam SPIBUFFERSIZE = 2;
 localparam CLOG2SPIBUFFERSIZE = clog2(SPIBUFFERSIZE);
 
-wire [(CLOG2SPIBUFFERSIZE +1) -1 : 0] spitxbufferusage;
+wire spitxbufferfull;
 
 reg spirxbufferreadenable = 0;
 
 wire [8 -1 : 0] rx_data_w;
 
-wire [(CLOG2SPIBUFFERSIZE +1) -1 : 0] spirxbufferusage;
+wire spirxbufferempty;
 
 spi_master #(
 
@@ -211,11 +211,11 @@ spi_master #(
 
 	,.txbufferwriteenable (spitxbufferwriteenable)
 	,.txbufferdatain      (spitxbufferdatain)
-	,.txbufferusage       (spitxbufferusage)
+	,.txbufferfull        (spitxbufferfull)
 
 	,.rxbufferreadenable (spirxbufferreadenable)
 	,.rxbufferdataout    (rx_data_w)
-	,.rxbufferusage      (spirxbufferusage)
+	,.rxbufferempty      (spirxbufferempty)
 );
 
 reg keepsdcardcshigh = 0;
@@ -429,8 +429,8 @@ assign cmd59[7] = dmc59[63:56];
 
 reg [CLOG2CLKFREQBY4 -1 : 0] cntr = 0;
 
-wire tx_pop_w  = ((state == CMD24RESP) && (spitxbufferusage != SPIBUFFERSIZE) && cntr && cntr <= 512);
-wire rx_push_w = ((state == CMD17RESP) && spirxbufferusage && cntr > 1 && cntr <= 513);
+wire tx_pop_w  = ((state == CMD24RESP) && !spitxbufferfull && cntr && cntr <= 512);
+wire rx_push_w = ((state == CMD17RESP) && !spirxbufferempty && cntr > 1 && cntr <= 513);
 
 reg [7 -1 : 0] crc7 = 0;
 
@@ -519,8 +519,7 @@ always @ (posedge clk_i[0]) begin
 		if (miscflag) begin
 
 			if (cntr) begin
-
-				if (spitxbufferusage != SPIBUFFERSIZE)
+				if (!spitxbufferfull)
 					cntr <= cntr - 1'b1;
 
 			end else begin
@@ -576,7 +575,7 @@ always @ (posedge clk_i[0]) begin
 
 		spitxbufferwriteenable <= 1;
 
-		if (spitxbufferusage != SPIBUFFERSIZE) begin
+		if (!spitxbufferfull) begin
 
 			if (cntr <= 6) begin
 
@@ -602,7 +601,7 @@ always @ (posedge clk_i[0]) begin
 
 		spitxbufferwriteenable <= 1;
 
-		if (spitxbufferusage != SPIBUFFERSIZE) begin
+		if (!spitxbufferfull) begin
 
 			if (cntr <= 6) begin
 
@@ -628,7 +627,7 @@ always @ (posedge clk_i[0]) begin
 
 		spitxbufferwriteenable <= 1;
 
-		if (spitxbufferusage != SPIBUFFERSIZE) begin
+		if (!spitxbufferfull) begin
 
 			if (cntr <= 6) begin
 
@@ -660,7 +659,7 @@ always @ (posedge clk_i[0]) begin
 
 			spitxbufferwriteenable <= 1;
 
-			if (spitxbufferusage != SPIBUFFERSIZE) begin
+			if (!spitxbufferfull) begin
 
 				if (cntr <= 6) begin
 
@@ -705,7 +704,7 @@ always @ (posedge clk_i[0]) begin
 
 		spitxbufferwriteenable <= 1;
 
-		if (spitxbufferusage != SPIBUFFERSIZE) begin
+		if (!spitxbufferfull) begin
 
 			if (cntr <= 6) begin
 
@@ -745,7 +744,7 @@ always @ (posedge clk_i[0]) begin
 
 		spitxbufferwriteenable <= 1;
 
-		if (spitxbufferusage != SPIBUFFERSIZE) begin
+		if (!spitxbufferfull) begin
 
 			if (cntr <= 6) begin
 
@@ -773,7 +772,7 @@ always @ (posedge clk_i[0]) begin
 
 		spitxbufferwriteenable <= 1;
 
-		if (spitxbufferusage != SPIBUFFERSIZE) begin
+		if (!spitxbufferfull) begin
 
 			if (cntr <= 6) begin
 
@@ -799,7 +798,7 @@ always @ (posedge clk_i[0]) begin
 
 		spitxbufferwriteenable <= 1;
 
-		if (spitxbufferusage != SPIBUFFERSIZE) begin
+		if (!spitxbufferfull) begin
 
 			if (cntr <= 6) begin
 
@@ -825,7 +824,7 @@ always @ (posedge clk_i[0]) begin
 
 		spitxbufferwriteenable <= 1;
 
-		if (spitxbufferusage != SPIBUFFERSIZE) begin
+		if (!spitxbufferfull) begin
 
 			if (cntr <= 6) begin
 
@@ -851,7 +850,7 @@ always @ (posedge clk_i[0]) begin
 
 		spitxbufferwriteenable <= 1;
 
-		if (spitxbufferusage != SPIBUFFERSIZE) begin
+		if (!spitxbufferfull) begin
 
 			if (cntr <= 6) begin
 
@@ -879,7 +878,7 @@ always @ (posedge clk_i[0]) begin
 
 		spitxbufferwriteenable <= 1;
 
-		if (spitxbufferusage != SPIBUFFERSIZE) begin
+		if (!spitxbufferfull) begin
 
 			if (cntr <= 6) begin
 
@@ -905,7 +904,7 @@ always @ (posedge clk_i[0]) begin
 
 		spitxbufferwriteenable <= 1;
 
-		if (spitxbufferusage != SPIBUFFERSIZE) begin
+		if (!spitxbufferfull) begin
 
 			if (cntr <= 6) begin
 
@@ -951,7 +950,7 @@ always @ (posedge clk_i[0]) begin
 
 		if (issdcardver2) begin
 
-			if (spirxbufferusage) begin
+			if (!spirxbufferempty) begin
 
 				if (cntr == 3) begin
 					if (rx_data_w[0] != 1)
@@ -1018,7 +1017,7 @@ always @ (posedge clk_i[0]) begin
 
 			end else begin
 
-				if (spirxbufferusage) begin
+				if (!spirxbufferempty) begin
 
 					if (cntr >= 66) begin
 						state <= PREPCMD9;
@@ -1052,7 +1051,7 @@ always @ (posedge clk_i[0]) begin
 
 			end else begin
 
-				if (spirxbufferusage) begin
+				if (!spirxbufferempty) begin
 
 					if (cntr == 19) begin
 
@@ -1099,7 +1098,7 @@ always @ (posedge clk_i[0]) begin
 
 		if (miscflag) begin
 
-			if (spirxbufferusage) begin
+			if (!spirxbufferempty) begin
 
 				if (cntr == 1) begin
 					issdcardaddrblockaligned <= |(rx_data_w & 'h40);
@@ -1143,7 +1142,7 @@ always @ (posedge clk_i[0]) begin
 
 			end else begin
 
-				if (spirxbufferusage) begin
+				if (!spirxbufferempty) begin
 
 					if (cntr == 515) begin
 
@@ -1196,7 +1195,7 @@ always @ (posedge clk_i[0]) begin
 
 			end else begin
 
-				if (spitxbufferusage != SPIBUFFERSIZE) begin
+				if (!spitxbufferfull) begin
 
 					if (cntr) begin
 
@@ -1232,7 +1231,7 @@ always @ (posedge clk_i[0]) begin
 
 		if (miscflag) begin
 
-			if (spirxbufferusage) begin
+			if (!spirxbufferempty) begin
 
 				if (cntr == 1) begin
 
