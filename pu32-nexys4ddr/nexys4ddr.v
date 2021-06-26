@@ -20,19 +20,16 @@
 `include "dev/pi1_dcache.v"
 
 `include "dev/pi1_upconverter.v"
-`include "dev/pi1_to_wb4.v"
 `include "dev/pi1q_to_wb4.v"
 `include "./litedram/litedram.v"
 
 `include "./devtbl.nexys4ddr.v"
 
-`include "./pll_100_to_200_mhz.nexys4ddr.v"
+`include "./pll_100_to_50_100_mhz.nexys4ddr.v"
 
 module nexys4ddr (
 
 	 rst_n
-
-	,rst2_i
 
 	,clk100mhz_i
 
@@ -76,8 +73,7 @@ localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
 
 input wire rst_n;
 
-input wire rst2_i;
-
+(* clock_buffer_type = "BUFG" *)
 input wire clk100mhz_i;
 
 wire brkonrst_w;
@@ -126,30 +122,20 @@ output wire [8 -1 : 0] an;
 
 assign an = {8{1'b1}};
 
-localparam CLKFREQ   = ( 50000000);
+localparam CLKFREQ = 50000000;
 
 wire pll_locked;
 
-wire clk200mhz_;
-pll_100_to_200_mhz pll (
-	 .RESET    (1'b0)
-	,.LOCKED   (pll_locked)
-	,.CLK_IN1  (clk100mhz_i)
-	,.CLK_OUT1 (clk200mhz_)
+wire clk50mhz;
+wire clk100mhz;
+pll_100_to_50_100_mhz pll (
+	 .reset    (1'b0)
+	,.locked   (pll_locked)
+	,.clk_in1  (clk100mhz_i)
+	,.clk_out1 (clk50mhz)
+	,.clk_out2 (clk100mhz)
 );
-(* keep = "true" *) wire clk200mhz;
-BUFG bufg0 (.O (clk200mhz), .I (clk200mhz_));
-reg [1:0] clkdiv;
-always @ (posedge clk200mhz) begin
-	clkdiv <= clkdiv - 1'b1;
-end
-(* keep = "true" *) wire clk100mhz;
-(* keep = "true" *) wire clk50mhz;
-BUFG bufg1 (.O (clk100mhz), .I (clkdiv[0]));
-BUFG bufg2 (.O (clk50mhz),  .I (clkdiv[1]));
-
-wire [2 -1 : 0] clk_w    = {clk100mhz, clk50mhz};
-wire [2 -1 : 0] clk_2x_w = {clk200mhz, clk100mhz};
+wire [2 -1 : 0] clk_w = {clk100mhz, clk50mhz};
 
 wire multipu_rst_ow;
 
@@ -167,7 +153,7 @@ localparam RST_CNTR_BITSZ = 16;
 
 reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
 wire rst = (!pll_locked || devtbl_rst0_r || (|rst_cntr));
-always @ (posedge clk200mhz) begin
+always @ (posedge clk_w[0]) begin
 	if (!multipu_rst_ow && !swwarmrst && rst_n) begin
 		if (rst_cntr)
 			rst_cntr <= rst_cntr - 1'b1;
@@ -175,7 +161,7 @@ always @ (posedge clk200mhz) begin
 		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
 end
 
-always @ (posedge clk200mhz) begin
+always @ (posedge clk_w[0]) begin
 	if (rst_p)
 		devtbl_rst0_r <= 0;
 	if (swpwroff)
@@ -205,15 +191,14 @@ wire pi1r_rst_w = rst;
 wire pi1r_clk_w = clk_w;
 `include "lib/perint/inst.pi1r.v"
 
-localparam DCACHESZ = 64;
+localparam DCACHESZ = 32;
 
 multipu #(
 
 	 .CLKFREQ        (CLKFREQ)
 	,.PUCOUNT        (PUCOUNT)
-	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*(128/PUCOUNT))
-	,.DCACHESETCOUNT ((1024/(ARCHBITSZ/8))*((DCACHESZ/2)/PUCOUNT))
-	,.TLBSETCOUNT    (4096/PUCOUNT)
+	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*(256/PUCOUNT))
+	,.TLBSETCOUNT    (8192/PUCOUNT)
 
 ) multipu (
 
@@ -372,8 +357,6 @@ uart_hw #(
 
 	 .rst_i (!pll_locked || rst_p)
 
-	,.rst2_i (rst2_i)
-
 	,.clk_i     (clk_w)
 	,.clk_phy_i (clk_w)
 
@@ -428,7 +411,7 @@ pi1_upconverter #(
 assign s_pi1r_mapsz_w[4] = RAMSZ;
 
 reg [RST_CNTR_BITSZ -1 : 0] ram_rst_cntr = {RST_CNTR_BITSZ{1'b1}};
-always @ (posedge clk200mhz) begin
+always @ (posedge clk_w[0]) begin
 	if (pll_locked && ram_rst_cntr)
 		ram_rst_cntr <= ram_rst_cntr - 1'b1;
 end
@@ -522,16 +505,15 @@ wire                        wb4_stall_wb_ctrl_w;
 wire                        wb4_ack_wb_ctrl_w;
 wire [ARCHBITSZ -1 : 0]     wb4_data_wb_ctrl_w1;
 
-pi1_to_wb4 #(
+pi1q_to_wb4 #(
 
 	.ARCHBITSZ (ARCHBITSZ)
 
-) pi1_to_wb4_wb_ctrl (
+) pi1q_to_wb4_wb_ctrl (
 
-	 .rst_i (ram_rst_w)
+	 .wb4_rst_i (ram_rst_w)
 
-	,.clk_i (clk_w)
-
+	,.pi1_clk_i   (clk_w)
 	,.pi1_op_i    (s_pi1r_op_w[5])
 	,.pi1_addr_i  (s_pi1r_addr_w[5])
 	,.pi1_data_i  (s_pi1r_data_w0[5])
@@ -539,6 +521,7 @@ pi1_to_wb4 #(
 	,.pi1_sel_i   (s_pi1r_sel_w[5])
 	,.pi1_rdy_o   (s_pi1r_rdy_w[5])
 
+	,.wb4_clk_i   (clk100mhz_i)
 	,.wb4_cyc_o   (wb4_cyc_wb_ctrl_w)
 	,.wb4_stb_o   (wb4_stb_wb_ctrl_w)
 	,.wb4_we_o    (wb4_we_wb_ctrl_w)
@@ -556,7 +539,7 @@ litedram litedram (
 
 	 .rst (ram_rst_w)
 
-	,.clk (clk_w)
+	,.clk (clk100mhz_i)
 
 	,.pll_locked (litedram_pll_locked)
 	,.init_done  (litedram_init_done)
