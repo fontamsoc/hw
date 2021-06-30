@@ -1,1 +1,1 @@
-localparam SOCVERSION = 'haf2db3fc;
+localparam SOCVERSION = 'h3f879fd2;
