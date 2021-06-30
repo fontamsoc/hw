@@ -93,8 +93,8 @@ wire slvwriterdy;
 
 wire [(CLOG2CACHESETCOUNT +1) -1 : 0] bufusage;
 
-wire buffull  = (bufusage >= CACHESETCOUNT);
-wire bufempty = (bufusage == 0);
+wire buffull;
+wire bufempty;
 
 wire bufpush = (m_pi1_op_i == PIWROP && m_pi1_rdy_o && !conly_r);
 
@@ -138,12 +138,12 @@ fifo_fwft #(
 	,.clk_pop_i (clk_i)
 	,.pop_i     (slvwriterdy && !bufempty)
 	,.data_o    (databufdato)
-	,.empty_o   ()
+	,.empty_o   (bufempty)
 
 	,.clk_push_i (clk_i)
 	,.push_i     (bufpush)
 	,.data_i     (m_pi1_data_i)
-	,.full_o     ()
+	,.full_o     (buffull)
 );
 
 wire [(ARCHBITSZ/8) -1 : 0] bytselbufdato;

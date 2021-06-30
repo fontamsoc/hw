@@ -105,7 +105,9 @@ fifo #(
 	.full_o ()
 );
 
-wire txfiforeadenable = (txbufferusage && !txfifowasread);
+wire txbufferempty;
+
+wire txfiforeadenable = (!txbufferempty && !txfifowasread);
 
 fifo #(
 	.WIDTH (DATABITSIZE),
@@ -120,6 +122,7 @@ fifo #(
 	.clk_read_i (clk_phy_i),
 	.read_i (txfiforeadenable),
 	.data_o (txfifodataout),
+	.empty_o (txbufferempty),
 
 	.clk_write_i (clk_i),
 	.write_i (txbufferwriteenable && !txbufferfull),
