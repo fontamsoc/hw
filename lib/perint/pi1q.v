@@ -106,7 +106,7 @@ reg [2 -1 : 0] prevqueueop;
 
 wire [2 -1 : 0] queueop_w0;
 
-wire queueen = (queuenotempty && (s_rdy_i || (prevqueueop == PINOOP && queueop_w0 == PINOOP)));
+wire queueen = s_rdy_i;
 wire queuewe = (masterrdy[queuewriteidx[CLOG2MASTERCOUNT -1 : 0]]);
 
 wire [2 -1 : 0] queueop_w1;
@@ -235,11 +235,13 @@ always @ (posedge s_clk_i) begin
 		prevqueueop <= s_op_o;
 		masterdato[prevqueuereadidx[CLOG2MASTERCOUNT -1 : 0]] <= s_data_i;
 		prevqueuereadidx <= queuereadidx[CLOG2MASTERCOUNT -1 : 0];
-		if (queuereadidx[CLOG2MASTERCOUNT -1 : 0] < slvhi)
-			queuereadidx <= queuereadidx + 1'b1;
-		else begin
-			queuereadidx <= (queuereadidx + MASTERCOUNT__less_mstrhi_hold);
-			slvhi <= mstrhi;
+		if (queuenotempty) begin
+			if (queuereadidx[CLOG2MASTERCOUNT -1 : 0] < slvhi)
+				queuereadidx <= queuereadidx + 1'b1;
+			else begin
+				queuereadidx <= (queuereadidx + MASTERCOUNT__less_mstrhi_hold);
+				slvhi <= mstrhi;
+			end
 		end
 	end
 end
