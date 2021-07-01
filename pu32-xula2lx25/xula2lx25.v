@@ -93,7 +93,7 @@ output wire [(SDRAMDQBITSIZE / 8) -1 : 0] sdram_dm;
 
 assign flash_cs2 = 1;
 
-localparam CLKFREQ   = ( 30000000);
+localparam CLKFREQ = 30000000;
 
 wire pll_locked;
 
@@ -114,9 +114,7 @@ end
 (* keep = "true" *) wire clk30mhz;
 BUFG bufg1 (.O (clk60mhz), .I (clkdiv[0]));
 BUFG bufg2 (.O (clk30mhz), .I (clkdiv[1]));
-
-wire [2 -1 : 0] clk_w    = {clk60mhz,  clk30mhz};
-wire [2 -1 : 0] clk_2x_w = {clk120mhz, clk60mhz};
+wire [2 -1 : 0] clk_w = {clk60mhz, clk30mhz};
 
 wire multipu_rst_ow;
 
