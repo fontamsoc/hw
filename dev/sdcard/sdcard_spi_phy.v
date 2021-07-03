@@ -66,7 +66,7 @@ parameter CLKFREQ = 500000;
 parameter CMDBUFDEPTH = 2;
 `endif
 
-localparam CLOG2CLKFREQBY4         = clog2(CLKFREQ/4);
+localparam CLOG2CLKFREQ            = clog2(CLKFREQ);
 localparam CLOG2CLKFREQBY200000000 = clog2(CLKFREQ/200000000);
 localparam CLOG2CLKFREQBY100000000 = clog2(CLKFREQ/100000000);
 localparam CLOG2CLKFREQBY50000000  = clog2(CLKFREQ/50000000);
@@ -123,7 +123,7 @@ output reg [ADDRBITSZ -1 : 0] blkcnt = 0;
 
 output wire err;
 
-reg [CLOG2CLKFREQBY4 -1 : 0] timeout = 0;
+reg [CLOG2CLKFREQ -1 : 0] timeout = 0;
 
 localparam RESETTING = 0;
 localparam READY     = 1;
@@ -427,7 +427,7 @@ assign cmd59[5] = dmc59[47:40];
 assign cmd59[6] = dmc59[55:48];
 assign cmd59[7] = dmc59[63:56];
 
-reg [CLOG2CLKFREQBY4 -1 : 0] cntr = 0;
+reg [CLOG2CLKFREQ -1 : 0] cntr = 0;
 
 wire tx_pop_w  = ((state == CMD24RESP) && !spitxbufferfull && cntr && cntr <= 512);
 wire rx_push_w = ((state == CMD17RESP) && !spirxbufferempty && cntr > 1 && cntr <= 513);
@@ -506,7 +506,7 @@ always @ (posedge clk_i[0]) begin
 
 		state <= RESETTING;
 
-		cntr <= -1;
+		cntr <= (CLKFREQ/4);
 
 		spisclkdivide <= (SCLKDIVIDELIMIT -1'b1);
 
