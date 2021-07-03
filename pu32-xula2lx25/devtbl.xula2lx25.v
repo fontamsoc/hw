@@ -121,7 +121,7 @@ always @ (posedge clk_i) begin
 			end else if (pi1_data_i == 2) begin
 				rst0_o <= 1;
 				rst1_o <= 1;
-			end else if (pi1_data_i == 2) begin
+			end else if (pi1_data_i == 3) begin
 				rst2_r <= 1;
 			end
 			pi1_data_o <= 0;
