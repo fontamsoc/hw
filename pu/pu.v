@@ -8,7 +8,7 @@
 
 `define PUMULDIV
 `ifdef PUMULDIV
-`include "lib/fifo_fwft.v"
+`include "lib/fifo.v"
 `endif
 
 module pu (

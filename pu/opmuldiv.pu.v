@@ -2,9 +2,9 @@
 // All rights reserved.
 
 if (opmuldivdone) begin
-	opmuldivprevtype <= opmuldivfifodataout[MULDIVISFLOAT:MULDIVSIGNED];
-	opmuldivprevgprdata1 <= opmuldivfifodataout[(ARCHBITSZ*2)-1:ARCHBITSZ];
-	opmuldivprevgprdata2 <= opmuldivfifodataout[ARCHBITSZ-1:0];
+	opmuldivprevtype <= opmuldivfifobuffero[MULDIVISFLOAT:MULDIVSIGNED];
+	opmuldivprevgprdata1 <= opmuldivfifobuffero[(ARCHBITSZ*2)-1:ARCHBITSZ];
+	opmuldivprevgprdata2 <= opmuldivfifobuffero[ARCHBITSZ-1:0];
 end
 
 if (rst_i) begin
@@ -15,7 +15,7 @@ end else if (!opmuldivdone) begin
 
 	if (opmuldivbusy) begin
 
-		if (opmuldivfifodataout[MULDIVISDIV]) begin
+		if (opmuldivfifobuffero[MULDIVISDIV]) begin
 
 			if (opmuldivdivdiff[(ARCHBITSZ*2)-1]) opmuldivcumulator <= {opmuldivcumulator[(ARCHBITSZ*2)-2:0], 1'b0};
 			else opmuldivcumulator <= {opmuldivdivdiff[(ARCHBITSZ*2)-2:0], 1'b1};
@@ -43,17 +43,17 @@ end else if (!opmuldivdone) begin
 
 	end else if (opmuldivstart) begin
 
-		opmuldivgpr <= opmuldivfifodataout[((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)-1:ARCHBITSZ*2];
+		opmuldivgpr <= opmuldivfifobuffero[((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)-1:ARCHBITSZ*2];
 
-		if (opmuldivfifodataout[MULDIVISFLOAT:MULDIVSIGNED] != opmuldivprevtype ||
-			opmuldivfifodataout[(ARCHBITSZ*2)-1:ARCHBITSZ] != opmuldivprevgprdata1 ||
-			opmuldivfifodataout[ARCHBITSZ-1:0] != opmuldivprevgprdata2) begin
+		if (opmuldivfifobuffero[MULDIVISFLOAT:MULDIVSIGNED] != opmuldivprevtype ||
+			opmuldivfifobuffero[(ARCHBITSZ*2)-1:ARCHBITSZ] != opmuldivprevgprdata1 ||
+			opmuldivfifobuffero[ARCHBITSZ-1:0] != opmuldivprevgprdata2) begin
 
 			opmuldivcounter <= 0;
 
-			if (opmuldivfifodataout[MULDIVSIGNED] && opmuldivfifodataout[(ARCHBITSZ*2)-1])
-				opmuldivcumulator <= {{ARCHBITSZ{1'b0}}, -opmuldivfifodataout[(ARCHBITSZ*2)-1:ARCHBITSZ]};
-			else opmuldivcumulator <= {{ARCHBITSZ{1'b0}}, opmuldivfifodataout[(ARCHBITSZ*2)-1:ARCHBITSZ]};
+			if (opmuldivfifobuffero[MULDIVSIGNED] && opmuldivfifobuffero[(ARCHBITSZ*2)-1])
+				opmuldivcumulator <= {{ARCHBITSZ{1'b0}}, -opmuldivfifobuffero[(ARCHBITSZ*2)-1:ARCHBITSZ]};
+			else opmuldivcumulator <= {{ARCHBITSZ{1'b0}}, opmuldivfifobuffero[(ARCHBITSZ*2)-1:ARCHBITSZ]};
 
 			opmuldivbusy <= 1;
 
@@ -64,8 +64,5 @@ end else if (!opmuldivdone) begin
 end
 
 if (opmuldivfifobufferen) begin
-
-	opmuldivfifodataout <= opmuldivfifobuffero;
-
 	opmuldivstart_a <= ~opmuldivstart_b;
 end

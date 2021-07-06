@@ -117,8 +117,6 @@ initial begin
 	opmuldivdone_a = 0;
 	opmuldivdone_b = 0;
 
-	opmuldivfifodataout = 0;
-
 	opmuldivprevtype = 0;
 	opmuldivprevgprdata1 = 0;
 	opmuldivprevgprdata2 = 0;

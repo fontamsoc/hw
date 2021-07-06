@@ -513,7 +513,7 @@ wire [(((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+MULDIVTYPEBITSZ) -1 : 0] opmuldivfifobuf
 
 wire [(((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+MULDIVTYPEBITSZ) -1 : 0] opmuldivfifobuffero;
 
-fifo_fwft #(
+fifo #(
 
 	 .DEPTH (MULDIVFIFOBUFFERSIZE)
 	,.WIDTH (((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+MULDIVTYPEBITSZ)
@@ -524,18 +524,16 @@ fifo_fwft #(
 
 	,.usage_o ()
 
-	,.clk_pop_i (clk_i)
-	,.pop_i     (opmuldivfifobufferen)
-	,.data_o    (opmuldivfifobuffero)
-	,.empty_o   (opmuldivfifoempty)
+	,.clk_read_i (clk_i)
+	,.read_i     (opmuldivfifobufferen)
+	,.data_o     (opmuldivfifobuffero)
+	,.empty_o    (opmuldivfifoempty)
 
-	,.clk_push_i (clk_i)
-	,.push_i     (opmuldivfifobufferwe)
-	,.data_i     (opmuldivfifobufferi)
-	,.full_o     ()
+	,.clk_write_i (clk_i)
+	,.write_i     (opmuldivfifobufferwe)
+	,.data_i      (opmuldivfifobufferi)
+	,.full_o      ()
 );
-
-reg[(((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+MULDIVTYPEBITSZ) -1 : 0] opmuldivfifodataout;
 
 reg[(MULDIVTYPEBITSZ-1) -1 : 0] opmuldivprevtype;
 reg[ARCHBITSZ -1 : 0] opmuldivprevgprdata1;
