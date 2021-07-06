@@ -172,7 +172,7 @@ multipu #(
 	 .CLKFREQ        (CLKFREQ)
 	,.PUCOUNT        (PUCOUNT)
 	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*(32/PUCOUNT))
-	,.TLBSETCOUNT    (2048/PUCOUNT)
+	,.TLBSETCOUNT    (256/PUCOUNT)
 
 ) multipu (
 
@@ -316,7 +316,7 @@ intctrl #(
 uart_hw #(
 
 	 .PHYCLKFREQ (CLKFREQ)
-	,.BUFSZ      (256)
+	,.BUFSZ      (2048)
 
 ) uart (
 

@@ -3,8 +3,6 @@
 
 `default_nettype none
 
-`define USE2CLK
-
 `include "lib/perint/pi1r.v"
 
 `include "pu/multipu.v"
@@ -198,7 +196,7 @@ multipu #(
 	 .CLKFREQ        (CLKFREQ)
 	,.PUCOUNT        (PUCOUNT)
 	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*(256/PUCOUNT))
-	,.TLBSETCOUNT    (8192/PUCOUNT)
+	,.TLBSETCOUNT    (1024/PUCOUNT)
 
 ) multipu (
 
@@ -351,7 +349,7 @@ intctrl #(
 uart_hw #(
 
 	 .PHYCLKFREQ (CLKFREQ)
-	,.BUFSZ      (256)
+	,.BUFSZ      (4096)
 
 ) uart (
 
