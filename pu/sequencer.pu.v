@@ -211,28 +211,35 @@ end else if (!inhalt) begin
 						end
 
 					end else if (isopalu0 || isopalu1 || isopalu2 || isopmuldiv) begin
-						ip <= ipplusone;
+
+						if (!isopmuldiv || opmuldiv_rdy_w) begin
+							ip <= ipplusone;
+						end
+
 					end else if (inkernelmode || isopfloat) begin
 
-						saved_sysopcode <= sysopcode;
-						saved_faultaddr <= faultaddr;
+						if (!isopfloat || opmuldiv_rdy_w) begin
 
-						sysopcode <= {instrbufferdataout1, instrbufferdataout0};
+							saved_sysopcode <= sysopcode;
+							saved_faultaddr <= faultaddr;
 
-						ksysopfaultmode <= inusermode;
+							sysopcode <= {instrbufferdataout1, instrbufferdataout0};
 
-						rst_o <= (!ksysopfaulthdlr);
+							ksysopfaultmode <= inusermode;
 
-						if (inusermode)
-							ip <= ksysopfaulthdlr;
-						else
-							ip <= ksysopfaulthdlrplustwo;
+							rst_o <= (!ksysopfaulthdlr);
 
-						ksysopfaultaddr <= ipplusone;
+							if (inusermode)
+								ip <= ksysopfaulthdlr;
+							else
+								ip <= ksysopfaulthdlrplustwo;
 
-						inusermode <= 0;
+							ksysopfaultaddr <= ipplusone;
 
-						instrbufferrst_a <= ~instrbufferrst_b;
+							inusermode <= 0;
+
+							instrbufferrst_a <= ~instrbufferrst_b;
+						end
 
 					end else begin
 

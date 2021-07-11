@@ -103,24 +103,6 @@ initial begin
 
 	opligpr = 0;
 
-	opmuldivcumulator = 0;
-
-	opmuldivgpr = 0;
-
-	opmuldivcounter = 0;
-
-	opmuldivbusy = 0;
-
-	opmuldivstart_a = 0;
-	opmuldivstart_b = 0;
-
-	opmuldivdone_a = 0;
-	opmuldivdone_b = 0;
-
-	opmuldivprevtype = 0;
-	opmuldivprevgprdata1 = 0;
-	opmuldivprevgprdata2 = 0;
-
 	isopgettlb_or_isopclrtlb_found_sampled = 0;
 
 	opldgpr = 0;

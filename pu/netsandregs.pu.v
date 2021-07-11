@@ -466,78 +466,40 @@ reg[ARCHBITSZ -1 : 0] opalu2result;
 
 wire opalu2done = (miscrdyandsequencerreadyandgprrdy12 && isopalu2);
 
-localparam MULDIVFIFOBUFFERSIZE = ((ARCHBITSZ < GPRCNTTOTAL) ? ARCHBITSZ : GPRCNTTOTAL);
-
 localparam MULDIVTYPEBITSZ = 4;
 
-localparam MULDIVMSBRSLT	= ((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL);
-localparam MULDIVSIGNED		= ((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL+1);
-localparam MULDIVISDIV		= ((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL+2);
-localparam MULDIVISFLOAT	= ((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL+3);
+wire opmuldiv_rdy_w;
 
-reg[ARCHBITSZ -1 : 0] opmuldivresult;
+wire opmuldiv_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopmuldiv && opmuldiv_rdy_w);
 
-reg[(ARCHBITSZ*2) -1 : 0] opmuldivcumulator;
-wire[(ARCHBITSZ*2) -1 : 0] opmuldivcumulatornegated = -opmuldivcumulator;
+wire [(((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+MULDIVTYPEBITSZ) -1 : 0] opmuldiv_data_w =
+	{1'b0, instrbufferdataout0[2:0], gprindex1, gprdata1, gprdata2};
 
-reg[(ARCHBITSZ+2) -1 : 0] opmuldivmulx;
+wire [ARCHBITSZ -1 : 0]        opmuldivresult;
+wire [CLOG2GPRCNTTOTAL -1 : 0] opmuldivgpr;
+wire                           opmuldivdone;
 
-reg[ARCHBITSZ -1 : 0] opmuldivrval;
+opmuldiv #(
 
-wire[(ARCHBITSZ*2) -1 : 0] opmuldivdivdiff = (opmuldivcumulator - ({opmuldivrval, {(ARCHBITSZ-1){1'b0}}}));
+	 .ARCHBITSZ (ARCHBITSZ)
+	,.GPRCNT    (GPRCNTTOTAL)
+	,.DEPTH     (GPRCNTPERCTX/4)
 
-wire[(ARCHBITSZ+2) -1 : 0] opmuldivcumulatoroperand = (opmuldivmulx + opmuldivcumulator[(ARCHBITSZ*2)-1:ARCHBITSZ]);
-
-reg[CLOG2GPRCNTTOTAL -1 : 0] opmuldivgpr;
-
-reg[CLOG2ARCHBITSZ -1 : 0] opmuldivcounter;
-
-reg opmuldivbusy;
-
-reg opmuldivstart_a;
-reg opmuldivstart_b;
-wire opmuldivstart = (opmuldivstart_a ^ opmuldivstart_b);
-
-reg opmuldivdone_a;
-reg opmuldivdone_b;
-wire opmuldivdone = (opmuldivdone_a ^ opmuldivdone_b);
-
-wire opmuldivfifobufferwe = (miscrdyandsequencerreadyandgprrdy12 && isopmuldiv);
-
-wire opmuldivfifoempty;
-
-wire opmuldivfifobufferen = (!opmuldivfifoempty && !opmuldivstart);
-
-wire [(((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+MULDIVTYPEBITSZ) -1 : 0] opmuldivfifobufferi =
-		{1'b0, instrbufferdataout0[2:0], gprindex1, gprdata1, gprdata2};
-
-wire [(((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+MULDIVTYPEBITSZ) -1 : 0] opmuldivfifobuffero;
-
-fifo #(
-
-	 .DEPTH (MULDIVFIFOBUFFERSIZE)
-	,.WIDTH (((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+MULDIVTYPEBITSZ)
-
-) opmuldivfifobuffer (
+) opmuldiv (
 
 	 .rst_i (rst_i)
 
-	,.usage_o ()
+	,.clk_i (clk_i)
 
-	,.clk_read_i (clk_i)
-	,.read_i     (opmuldivfifobufferen)
-	,.data_o     (opmuldivfifobuffero)
-	,.empty_o    (opmuldivfifoempty)
+	,.stb_i  (opmuldiv_stb_w)
+	,.data_i (opmuldiv_data_w)
+	,.rdy_o  (opmuldiv_rdy_w)
 
-	,.clk_write_i (clk_i)
-	,.write_i     (opmuldivfifobufferwe)
-	,.data_i      (opmuldivfifobufferi)
-	,.full_o      ()
+	,.ostb_i  (gprwriteenable && opmuldivdone && gprindex == opmuldivgpr)
+	,.data_o  (opmuldivresult)
+	,.gprid_o (opmuldivgpr)
+	,.ordy_o  (opmuldivdone)
 );
-
-reg[(MULDIVTYPEBITSZ-1) -1 : 0] opmuldivprevtype;
-reg[ARCHBITSZ -1 : 0] opmuldivprevgprdata1;
-reg[ARCHBITSZ -1 : 0] opmuldivprevgprdata2;
 
 wire opjldone = (miscrdyandsequencerreadyandgprrdy12 && isopj && isoptype2);
 
@@ -695,4 +657,4 @@ wire[ARCHBITSZ -1 : 0] dcacheslavedato = dcachemasterdati;
 wire[(ARCHBITSZ/8) -1 : 0] dcacheslavesel = dcachemastersel;
 
 wire multicycleoprdy = (miscrdyandsequencerreadyandgprrdy12 &&
-	(opldrdy || opldstrdy || isopmuldiv));
+	(opldrdy || opldstrdy || (isopmuldiv && opmuldiv_rdy_w)));

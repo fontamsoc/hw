@@ -6,10 +6,7 @@
 
 `define PUMMU
 
-`define PUMULDIV
-`ifdef PUMULDIV
-`include "lib/fifo.v"
-`endif
+`include "./opmuldiv.pu.v"
 
 module pu (
 
@@ -113,7 +110,6 @@ always @* begin
 	`include "./memctrl.comb.pu.v"
 	`include "./opalu.pu.v"
 	`include "./opgetsysreg.pu.v"
-	`include "./opmuldiv.comb.pu.v"
 	`include "./gprctrl.comb.pu.v"
 end
 
@@ -131,7 +127,6 @@ always @ (posedge clk_i[0]) begin
 	`include "./opli.pu.v"
 	`include "./opsetsysreg.pu.v"
 	`include "./gprctrl.pu.v"
-	`include "./opmuldiv.pu.v"
 end
 
 endmodule

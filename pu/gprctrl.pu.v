@@ -14,8 +14,6 @@ end
 if (rst_i) begin
 	oplddone_b <= oplddone_a;
 	opldstdone_b <= opldstdone_a;
-	opmuldivstart_b <= opmuldivstart_a;
-	opmuldivdone_b <= opmuldivdone_a;
 end else if (gprrdyoff);
 else if (sequencerready && oplicountereq1);
 else if (multicycleoprdy);
@@ -31,7 +29,4 @@ else if (oplddone)
 	oplddone_b <= oplddone_a;
 else if (opldstdone)
 	opldstdone_b <= opldstdone_a;
-else if (opmuldivdone) begin
-	opmuldivstart_b <= opmuldivstart_a;
-	opmuldivdone_b <= opmuldivdone_a;
-end
+else if (opmuldivdone);
