@@ -10,23 +10,3 @@ end else if (gprrdyoff) begin
 	else
 		gprrdyon <= 1;
 end
-
-if (rst_i) begin
-	oplddone_b <= oplddone_a;
-	opldstdone_b <= opldstdone_a;
-end else if (gprrdyoff);
-else if (sequencerready && oplicountereq1);
-else if (multicycleoprdy);
-else if (opli8done);
-else if (opalu0done);
-else if (opalu1done);
-else if (opalu2done);
-else if (opjldone);
-else if (opgetsysregdone);
-else if (opgetsysreg1done);
-else if (opsetgprdone);
-else if (oplddone)
-	oplddone_b <= oplddone_a;
-else if (opldstdone)
-	opldstdone_b <= opldstdone_a;
-else if (opmuldivdone);

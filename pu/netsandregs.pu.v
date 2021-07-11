@@ -110,6 +110,11 @@ reg[CLOG2GPRCNTTOTAL -1 : 0] gprrdyrstidx;
 reg gprrdyon;
 wire gprrdyoff = !gprrdyon;
 
+localparam GPRCTRLSTATEDONE     = 0;
+localparam GPRCTRLSTATEOPLD     = 1;
+localparam GPRCTRLSTATEOPLDST   = 2;
+localparam GPRCTRLSTATEOPMULDIV = 3;
+reg[2 -1 : 0] gprctrlstate;
 reg[CLOG2GPRCNTTOTAL -1 : 0] gprindex;
 reg[ARCHBITSZ -1 : 0] gprdata;
 reg gprwriteenable;
@@ -495,7 +500,7 @@ opmuldiv #(
 	,.data_i (opmuldiv_data_w)
 	,.rdy_o  (opmuldiv_rdy_w)
 
-	,.ostb_i  (gprwriteenable && opmuldivdone && gprindex == opmuldivgpr)
+	,.ostb_i  (gprctrlstate == GPRCTRLSTATEOPMULDIV)
 	,.data_o  (opmuldivresult)
 	,.gprid_o (opmuldivgpr)
 	,.ordy_o  (opmuldivdone)
@@ -613,9 +618,7 @@ reg[(ARCHBITSZ/8) -1 : 0] opldbyteselect;
 
 wire opldfault = ((inusermode && alignfault) || (dtlben && (dtlbnotreadable || dtlbmiss)));
 
-reg oplddone_a;
-reg oplddone_b;
-wire oplddone = (oplddone_a ^ oplddone_b);
+reg oplddone;
 
 reg opldmemrqst;
 
@@ -635,9 +638,7 @@ reg[(ARCHBITSZ/8) -1 : 0] opldstbyteselect;
 
 wire opldstfault = ((inusermode && alignfault) || (dtlben && (dtlbnotreadable || dtlbnotwritable || dtlbmiss)));
 
-reg opldstdone_a;
-reg opldstdone_b;
-wire opldstdone = (opldstdone_a ^ opldstdone_b);
+reg opldstdone;
 
 reg opldstmemrqst;
 

@@ -4,8 +4,13 @@
 if (rst_i) begin
 
 	opldstmemrqst <= 0;
+	opldstdone <= 0;
 
-end else if (!opldstdone) begin
+end else if (gprctrlstate == GPRCTRLSTATEOPLDST) begin
+
+	opldstdone <= 0;
+
+end else begin
 
 	if (opldstmemrqst) begin
 
@@ -25,7 +30,7 @@ end else if (!opldstdone) begin
 			else if (opldstbyteselect == 4'b1000)
 				opldstresult <= {{24{1'b0}}, dcachemasterdato[31:24]};
 
-			opldstdone_a <= ~opldstdone_b;
+			opldstdone <= 1;
 
 			opldstmemrqst <= 0;
 		end

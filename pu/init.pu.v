@@ -111,8 +111,7 @@ initial begin
 
 	opldbyteselect = 0;
 
-	oplddone_a = 0;
-	oplddone_b = 0;
+	oplddone = 0;
 
 	opldmemrqst = 0;
 
@@ -122,8 +121,7 @@ initial begin
 
 	opldstbyteselect = 0;
 
-	opldstdone_a = 0;
-	opldstdone_b = 0;
+	opldstdone = 0;
 
 	opldstmemrqst = 0;
 end
