@@ -65,12 +65,6 @@ initial begin
 
 	gpr13val = 0;
 
-	opldfaulted = 0;
-
-	opstfaulted = 0;
-
-	opldstfaulted = 0;
-
 	flags = 0;
 
 	icacheactive = 0;

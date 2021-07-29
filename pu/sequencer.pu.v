@@ -25,41 +25,6 @@ end else if (instrbufferrst) begin
 
 	instrfetchfaulted_b <= instrfetchfaulted_a;
 
-end else if (opldfaulted) begin
-
-	faultreason <= (opldfaulted[0] ? ALIGNFAULTINTR : READFAULTINTR);
-
-	uip <= ip;
-	ip <= kip;
-
-	inusermode <= 0;
-
-	instrbufferrst_a <= ~instrbufferrst_b;
-
-end else if (opstfaulted) begin
-
-	faultreason <= (opstfaulted[0] ? ALIGNFAULTINTR : WRITEFAULTINTR);
-
-	uip <= ip;
-	ip <= kip;
-
-	inusermode <= 0;
-
-	instrbufferrst_a <= ~instrbufferrst_b;
-
-end else if (opldstfaulted) begin
-
-	faultreason <= (
-		opldstfaulted[0] ? ALIGNFAULTINTR :
-		opldstfaulted[2] ? READFAULTINTR  : WRITEFAULTINTR);
-
-	uip <= ip;
-	ip <= kip;
-
-	inusermode <= 0;
-
-	instrbufferrst_a <= ~instrbufferrst_b;
-
 end else if (timertriggered && !isflagdistimerintr && inusermode && !oplicounter
 	`ifdef PUMMU
 	`ifdef PUHPTW
@@ -161,6 +126,17 @@ end else if (!inhalt) begin
 							) begin
 
 							if (opldfault) begin
+								// Note that I get in this state only when in usermode
+								// because pagefault occurs only when in usermode.
+
+								faultreason <= (alignfault ? ALIGNFAULTINTR : READFAULTINTR);
+
+								uip <= ip;
+								ip <= kip;
+
+								inusermode <= 0;
+
+								instrbufferrst_a <= ~instrbufferrst_b;
 
 								sysopcode <= {instrbufferdataout1, instrbufferdataout0};
 
@@ -182,6 +158,17 @@ end else if (!inhalt) begin
 							) begin
 
 							if (opstfault) begin
+								// Note that I get in this state only when in usermode
+								// because pagefault occurs only when in usermode.
+
+								faultreason <= (alignfault ? ALIGNFAULTINTR : WRITEFAULTINTR);
+
+								uip <= ip;
+								ip <= kip;
+
+								inusermode <= 0;
+
+								instrbufferrst_a <= ~instrbufferrst_b;
 
 								sysopcode <= {instrbufferdataout1, instrbufferdataout0};
 
@@ -203,6 +190,21 @@ end else if (!inhalt) begin
 							) begin
 
 							if (opldstfault) begin
+								// Note that I get in this state only when in usermode
+								// because pagefault occurs only when in usermode.
+
+								faultreason <= (
+									alignfault      ? ALIGNFAULTINTR :
+									dtlbmiss        ? READFAULTINTR  :
+									dtlbnotreadable ? READFAULTINTR  : /*dtlbnotwritable ?*/
+									                  WRITEFAULTINTR );
+
+								uip <= ip;
+								ip <= kip;
+
+								inusermode <= 0;
+
+								instrbufferrst_a <= ~instrbufferrst_b;
 
 								sysopcode <= {instrbufferdataout1, instrbufferdataout0};
 

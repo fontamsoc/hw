@@ -45,17 +45,12 @@ end else begin
 			`endif
 			) begin
 
-			if (opldstfault) begin
-				opldstfaulted <= {{dtlbmiss ? 2'b11 : {dtlbnotreadable, dtlbnotwritable}}, alignfault};
-			end else if (!instrbufferdataout0[2]) begin
+			if (!opldstfault && !instrbufferdataout0[2])
 				opldstmemrqst <= 1;
-			end
 
 			opldstgpr <= gprindex1;
 
 			opldstbyteselect <= dcachemastersel;
-
-		end else
-			opldstfaulted <= 0;
+		end
 	end
 end

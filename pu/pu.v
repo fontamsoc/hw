@@ -124,7 +124,6 @@ always @ (posedge clk_i[0]) begin
 	`include "./memctrl.pu.v"
 	`include "./instrctrl.pu.v"
 	`include "./opld.pu.v"
-	`include "./opst.pu.v"
 	`include "./opldst.pu.v"
 	`include "./sequencer.pu.v"
 	`include "./timers.pu.v"

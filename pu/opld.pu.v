@@ -45,17 +45,12 @@ end else begin
 			`endif
 			) begin
 
-			if (opldfault) begin
-				opldfaulted <= {1'b1, alignfault};
-			end else begin
+			if (!opldfault)
 				opldmemrqst <= 1;
-			end
 
 			opldgpr <= gprindex1;
 
 			opldbyteselect <= dcachemastersel;
-
-		end else
-			opldfaulted <= 0;
+		end
 	end
 end

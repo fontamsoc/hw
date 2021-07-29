@@ -203,17 +203,11 @@ reg gprrdywriteenable;
 
 reg[ARCHBITSZ -1 : 0] gpr13val;
 
-reg[2 -1 : 0] opldfaulted;
-
-reg[2 -1 : 0] opstfaulted;
-
-reg[3 -1 : 0] opldstfaulted;
-
 wire isflagdisextintr;
 wire isflagdistimerintr;
 
 wire sequencerready_ = !(
-	rst_i || gprrdyoff || instrbufferrst || opldfaulted || opstfaulted || opldstfaulted ||
+	rst_i || gprrdyoff || instrbufferrst ||
 	(timertriggered && !isflagdistimerintr && inusermode && !oplicounter
 	`ifdef PUMMU
 	`ifdef PUHPTW
