@@ -5,6 +5,8 @@
 
 `include "lib/perint/pi1r.v"
 
+`define PUMMU
+`define PUHPTW
 `include "pu/multipu.v"
 
 `include "dev/intctrl.v"

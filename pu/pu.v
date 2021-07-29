@@ -4,9 +4,6 @@
 `include "lib/ram/bram.v"
 `include "lib/ram/ram2clk1i5o.v"
 
-`define PUMMU
-`define PUHPTW
-
 `include "./opmuldiv.pu.v"
 
 module pu (
