@@ -63,6 +63,8 @@ initial begin
 	gprrdyrstidx = 0;
 	gprrdyon = 0;
 
+	gpr13val = 0;
+
 	opldfaulted = 0;
 
 	opstfaulted = 0;
@@ -76,6 +78,22 @@ initial begin
 	icachecheck = 0;
 
 	icacherstidx = 0;
+
+	`ifdef PUMMU
+	`ifdef PUHPTW
+
+	hptwpgd = 0;
+
+	hptwistate = 0;
+	hptwipte = 0;
+	hptwidone = 0;
+
+	hptwdstate = 0;
+	hptwdpte = 0;
+	hptwddone = 0;
+
+	`endif
+	`endif
 
 	`ifdef PUMMU
 

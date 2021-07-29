@@ -97,11 +97,90 @@ reg[(CLOG2ARCHBITSZBY16 + 1) -1 : 0] oplioffset;
 
 wire miscrdy = !oplicounter;
 
-wire[CLOG2GPRCNTTOTAL -1 : 0] gprindex1 = {inusermode, instrbufferdataout1[7:4]};
-wire[CLOG2GPRCNTTOTAL -1 : 0] gprindex2 = {inusermode, instrbufferdataout1[3:0]};
+wire[8 -1 : 0] dbgrcvrphydata;
 
 wire[ARCHBITSZ -1 : 0] gprdata1;
 wire[ARCHBITSZ -1 : 0] gprdata2;
+
+reg[2 -1 : 0] dcachemasterop;
+reg[ADDRBITSZ -1 : 0] dcachemasteraddr;
+wire[ARCHBITSZ -1 : 0] dcachemasterdato;
+reg[ARCHBITSZ -1 : 0] dcachemasterdati;
+reg[(ARCHBITSZ/8) -1 : 0] dcachemastersel;
+wire dcachemasterrdy;
+
+wire[2 -1 : 0] dcacheslaveop;
+wire[ADDRBITSZ -1 : 0] dcacheslaveaddr;
+wire[ARCHBITSZ -1 : 0] dcacheslavedato;
+wire[(ARCHBITSZ/8) -1 : 0] dcacheslavesel;
+
+`ifdef PUMMU
+
+wire inuserspace;
+
+wire isopld;
+wire isopst;
+wire isopldst;
+
+`ifdef PUHPTW
+
+reg[ARCHBITSZ -1 : 0] hptwpgd;
+
+localparam HPTWSTATEPGD0 = 0;
+localparam HPTWSTATEPGD1 = 1;
+localparam HPTWSTATEPTE0 = 2;
+localparam HPTWSTATEPTE1 = 3;
+localparam HPTWSTATEDONE = 4;
+
+reg[3 -1 : 0] hptwistate;
+wire hptwistate_eq_HPTWSTATEPGD0 = (hptwistate == HPTWSTATEPGD0);
+wire hptwistate_eq_HPTWSTATEPGD1 = (hptwistate == HPTWSTATEPGD1);
+wire hptwistate_eq_HPTWSTATEPTE0 = (hptwistate == HPTWSTATEPTE0);
+wire hptwistate_eq_HPTWSTATEPTE1 = (hptwistate == HPTWSTATEPTE1);
+wire hptwistate_eq_HPTWSTATEDONE = (hptwistate == HPTWSTATEDONE);
+wire hptwitlbwe = (dcachemasterrdy &&
+	dcachemasterdato[5] && (inuserspace ? dcachemasterdato[4] : 1'b1) &&
+		dcachemasterdato[0]                                       &&
+	hptwistate_eq_HPTWSTATEPTE1);
+wire[10 -1 : 0] hptwipgdoffset = instrfetchnextaddr[ADDRBITSZ -1 : ADDRBITSZ -10];
+wire[ARCHBITSZ -1 : 0] hptwpgd_plus_hptwipgdoffset = (hptwpgd + {hptwipgdoffset, {CLOG2ARCHBITSZBY8{1'b0}}});
+reg[ARCHBITSZ -1 : 0] hptwipte;
+wire[10 -1 : 0] hptwipteoffset = instrfetchnextaddr[(ADDRBITSZ -10) -1 : (ADDRBITSZ -10) -10];
+wire[ARCHBITSZ -1 : 0] hptwipte_plus_hptwipteoffset = (hptwipte + {hptwipteoffset, {CLOG2ARCHBITSZBY8{1'b0}}});
+reg hptwidone;
+
+reg[3 -1 : 0] hptwdstate;
+wire hptwdstate_eq_HPTWSTATEPGD0 = (hptwdstate == HPTWSTATEPGD0);
+wire hptwdstate_eq_HPTWSTATEPGD1 = (hptwdstate == HPTWSTATEPGD1);
+wire hptwdstate_eq_HPTWSTATEPTE0 = (hptwdstate == HPTWSTATEPTE0);
+wire hptwdstate_eq_HPTWSTATEPTE1 = (hptwdstate == HPTWSTATEPTE1);
+wire hptwdstate_eq_HPTWSTATEDONE = (hptwdstate == HPTWSTATEDONE);
+wire hptwdtlbwe = (dcachemasterrdy &&
+	dcachemasterdato[5] && (inuserspace ? dcachemasterdato[4] : 1'b1) && (
+		(isopld     && dcachemasterdato[2])                       ||
+		(isopst     && dcachemasterdato[1])                       ||
+		(isopldst   && (|dcachemasterdato[2:1])))                 &&
+	hptwdstate_eq_HPTWSTATEPTE1);
+wire[10 -1 : 0] hptwdpgdoffset = gprdata2[ARCHBITSZ -1 : ARCHBITSZ -10];
+wire[ARCHBITSZ -1 : 0] hptwpgd_plus_hptwdpgdoffset = (hptwpgd + {hptwdpgdoffset, {CLOG2ARCHBITSZBY8{1'b0}}});
+reg[ARCHBITSZ -1 : 0] hptwdpte;
+wire[10 -1 : 0] hptwdpteoffset = gprdata2[(ARCHBITSZ -10) -1 : (ARCHBITSZ -10) -10];
+wire[ARCHBITSZ -1 : 0] hptwdpte_plus_hptwdpteoffset = (hptwdpte + {hptwdpteoffset, {CLOG2ARCHBITSZBY8{1'b0}}});
+reg hptwddone;
+
+wire hptwbsy = (hptwistate || hptwdstate);
+
+localparam HPTWMEMSTATENONE  = 0;
+localparam HPTWMEMSTATEINSTR = 1;
+localparam HPTWMEMSTATEDATA  = 2;
+
+reg[2 -1 : 0] hptwmemstate;
+
+`endif
+`endif
+
+wire[CLOG2GPRCNTTOTAL -1 : 0] gprindex1 = {inusermode, instrbufferdataout1[7:4]};
+wire[CLOG2GPRCNTTOTAL -1 : 0] gprindex2 = {inusermode, instrbufferdataout1[3:0]};
 
 wire gprrdy1;
 wire gprrdy2;
@@ -122,6 +201,8 @@ reg[CLOG2GPRCNTTOTAL -1 : 0] gprrdyindex;
 reg gprrdyval;
 reg gprrdywriteenable;
 
+reg[ARCHBITSZ -1 : 0] gpr13val;
+
 reg[2 -1 : 0] opldfaulted;
 
 reg[2 -1 : 0] opstfaulted;
@@ -133,8 +214,20 @@ wire isflagdistimerintr;
 
 wire sequencerready_ = !(
 	rst_i || gprrdyoff || instrbufferrst || opldfaulted || opstfaulted || opldstfaulted ||
-	(timertriggered && !isflagdistimerintr && inusermode && !oplicounter) ||
-	(intrqst_i && !isflagdisextintr && inusermode && !oplicounter) ||
+	(timertriggered && !isflagdistimerintr && inusermode && !oplicounter
+	`ifdef PUMMU
+	`ifdef PUHPTW
+	&& !hptwbsy
+	`endif
+	`endif
+	) ||
+	(intrqst_i && !isflagdisextintr && inusermode && !oplicounter
+	`ifdef PUMMU
+	`ifdef PUHPTW
+	&& !hptwbsy
+	`endif
+	`endif
+	) ||
 	inhalt);
 wire sequencerready = sequencerready_ && instrbuffernotempty;
 
@@ -186,6 +279,7 @@ wire isopgetclkfreq = (isopgetsysreg1 && isoptype1);
 wire isopgetdcachesize = (isopgetsysreg1 && isoptype2);
 wire isopgetcachesize = (isopgeticachesize || isopgetdcachesize);
 wire isopgettlb = (isopgetsysreg1 && isoptype3);
+wire isopgetcap = (isopgetsysreg1 && isoptype4);
 wire isopsetsysreg = (instrbufferdataout0[7:3] == OPSETSYSREG);
 wire isopsetksysopfaulthdlr = (isopsetsysreg && isoptype0);
 wire isopsetksl = (isopsetsysreg && isoptype1);
@@ -197,9 +291,9 @@ wire isopsetflags = (isopsetsysreg && isoptype6);
 wire isopsettimer = (isopsetsysreg && isoptype7);
 wire isopsetgpr = (instrbufferdataout0[7:3] == OPSETGPR);
 wire isoploadorstore = (instrbufferdataout0[7:3] == OPLOADORSTORE);
-wire isopld = (isoploadorstore && instrbufferdataout0[2]);
-wire isopst = (isoploadorstore && !instrbufferdataout0[2]);
-wire isopldst = (instrbufferdataout0[7:3] == OPLDST);
+assign isopld = (isoploadorstore && instrbufferdataout0[2]);
+assign isopst = (isoploadorstore && !instrbufferdataout0[2]);
+assign isopldst = (instrbufferdataout0[7:3] == OPLDST);
 wire isopmuldiv = (instrbufferdataout0[7:3] == OPMULDIV);
 
 reg[16 -1 : 0] flags;
@@ -235,7 +329,7 @@ localparam TLBENTRYBITSZ = (12 +5 +PAGENUMBITSZ +PAGENUMBITSZMINUSCLOG2TLBSETCOU
 
 reg[ARCHBITSZ -1 : 0] ksl;
 
-wire inuserspace = asid[12];
+assign inuserspace = asid[12];
 
 localparam KERNELSPACESTART = 'h1000;
 
@@ -257,12 +351,18 @@ wire doutofrange = (gprdata2 < KERNELSPACESTART || gprdata2 >= ksl);
 wire dtlben = (inusermode && (inuserspace || doutofrange));
 reg dtlbwritten;
 reg[CLOG2TLBSETCOUNT -1 : 0] dtlbsetprev;
-wire dtlbreadenable = (isopgettlb_or_isopclrtlb_found_posedge || dtlbwritten || (dtlben && dtlbset != dtlbsetprev) || instrbufferrst);
+wire dtlbreadenable_ = (isopgettlb_or_isopclrtlb_found_posedge || dtlbwritten || (dtlben && dtlbset != dtlbsetprev));
+wire dtlbreadenable = (dtlbreadenable_ || instrbufferrst);
 wire itlbreadenable;
-wire dtlbwriteenable = (miscrdyandsequencerreadyandgprrdy12 &&
-	!(itlbreadenable || dtlbreadenable) && (
+wire itlbreadenable_;
+wire dtlbwriteenable = (
+	`ifdef PUHPTW
+	hptwdtlbwe ||
+	`endif
+	(miscrdyandsequencerreadyandgprrdy12 &&
+	!(itlbreadenable_ || dtlbreadenable_) && (
 	(isopsettlb && (inkernelmode || isflagsettlb) && (gprdata1 & 'b110)) ||
-	(isopclrtlb && (inkernelmode || isflagclrtlb) && !(({dtlbtag, dtlbset, dtlbasid} ^ gprdata2) & gprdata1))));
+	(isopclrtlb && (inkernelmode || isflagclrtlb) && !(({dtlbtag, dtlbset, dtlbasid} ^ gprdata2) & gprdata1)))));
 
 wire[CLOG2TLBSETCOUNT -1 : 0] itlbset = (tlbbsy ? dtlbset :
 	instrfetchnextaddr[(CLOG2TLBSETCOUNT +ADDRWITHINPAGEBITSZ) -1 : ADDRWITHINPAGEBITSZ]);
@@ -281,15 +381,24 @@ wire ioutofrange = (instrfetchnextaddr < (KERNELSPACESTART >> CLOG2ARCHBITSZBY8)
 assign itlben = (inusermode && (inuserspace || ioutofrange));
 reg itlbwritten;
 reg[CLOG2TLBSETCOUNT -1 : 0] itlbsetprev;
-assign itlbreadenable = (isopgettlb_or_isopclrtlb_found_posedge || itlbwritten || (itlben && itlbset != itlbsetprev) || instrbufferrst);
-wire itlbwriteenable = (miscrdyandsequencerreadyandgprrdy12 &&
-	!(itlbreadenable || dtlbreadenable) && (
+assign itlbreadenable_ = (isopgettlb_or_isopclrtlb_found_posedge || itlbwritten || (itlben && itlbset != itlbsetprev));
+assign itlbreadenable = (itlbreadenable_ || instrbufferrst);
+wire itlbwriteenable = (
+	`ifdef PUHPTW
+	hptwitlbwe ||
+	`endif
+	(miscrdyandsequencerreadyandgprrdy12 &&
+	!(itlbreadenable_ || dtlbreadenable_) && (
 	(isopsettlb && (inkernelmode || isflagsettlb) && (gprdata1 & 'b1)) ||
-	(isopclrtlb && (inkernelmode || isflagclrtlb) && !(({itlbtag, itlbset, itlbasid} ^ gprdata2) & gprdata1))));
+	(isopclrtlb && (inkernelmode || isflagclrtlb) && !(({itlbtag, itlbset, itlbasid} ^ gprdata2) & gprdata1)))));
 
-wire[TLBENTRYBITSZ -1 : 0] tlbwritedata = (isopsettlb ?
-	{gprdata2[12-1:0], gprdata1[4:0], gprdata1[ARCHBITSZ-1:12], dvpn} :
-	{TLBENTRYBITSZ{1'b0}});
+wire[TLBENTRYBITSZ -1 : 0] tlbwritedata = (
+	isopsettlb ? {gprdata2[12-1:0], gprdata1[4:0], gprdata1[ARCHBITSZ-1:12], dvpn} :
+	`ifdef PUHPTW
+	hptwitlbwe ? {asid[12-1:0], dcachemasterdato[4:3], 2'b00, dcachemasterdato[0], dcachemasterdato[ARCHBITSZ-1:12], ivpn} :
+	hptwdtlbwe ? {asid[12-1:0], dcachemasterdato[4:1], 1'b0,                       dcachemasterdato[ARCHBITSZ-1:12], dvpn} :
+	`endif
+	             {TLBENTRYBITSZ{1'b0}});
 
 bram #(
 
@@ -354,9 +463,22 @@ wire[PAGENUMBITSZ -1 : 0] dppn = gprdata2[ARCHBITSZ-1:12];
 
 `endif
 
-wire itlb_and_instrbuffer_rdy = ((!(inusermode && tlbbsy) && !itlbreadenable && instrbuffernotfull) || instrbufferrst);
+wire itlb_and_instrbuffer_rdy = (((!(inusermode && tlbbsy) && instrbuffernotfull) || instrbufferrst) && (!itlbreadenable_
+	`ifdef PUMMU
+	`ifdef PUHPTW
+	|| (hptwidone && !itlbwritten)
+	`endif
+	`endif
+	));
 
-wire itlbfault = (itlben && (itlbnotexecutable || itlbmiss));
+wire itlbfault_ = (itlben && (itlbnotexecutable || itlbmiss));
+wire itlbfault = itlbfault_;
+
+`ifdef PUMMU
+`ifdef PUHPTW
+wire itlbfault__hptwidone = (!itlbfault_ || (hptwidone && !itlbwritten));
+`endif
+`endif
 
 wire alignfault = ((instrbufferdataout0[1] && gprdata2[1:0]) || (instrbufferdataout0[0] && gprdata2[0]));
 
@@ -519,7 +641,7 @@ wire opgetsysregdone = (miscrdyandsequencerreadyandgprrdy1 && isopgetsysreg && (
 reg[ARCHBITSZ -1 : 0] opgetsysreg1result;
 
 wire opgetsysreg1done = (miscrdyandsequencerreadyandgprrdy1 && isopgetsysreg1 &&
-	(!isoptype3 || (gprrdy2 && !(itlbreadenable || dtlbreadenable))) && (
+	(!isoptype3 || (gprrdy2 && !(itlbreadenable_ || dtlbreadenable_))) && (
 	inkernelmode ||
 	(isoptype0 && isflaggetcoreid) ||
 	(isoptype1 && isflaggetclkfreq) ||
@@ -605,9 +727,7 @@ ram2clk1i5o #(
 	,.o4 ()
 );
 
-wire dcachemasterrdy;
-
-wire dtlb_and_dcache_rdy = (!dtlbreadenable && dcachemasterrdy &&
+wire dtlb_rdy = (!dtlbreadenable &&
 	!instrbuffernotempty_posedge);
 
 reg[CLOG2GPRCNTTOTAL -1 : 0] opldgpr;
@@ -616,18 +736,32 @@ reg[ARCHBITSZ -1 : 0] opldresult;
 
 reg[(ARCHBITSZ/8) -1 : 0] opldbyteselect;
 
-wire opldfault = ((inusermode && alignfault) || (dtlben && (dtlbnotreadable || dtlbmiss)));
+wire opldfault_ = (dtlben && (dtlbnotreadable || dtlbmiss));
+wire opldfault = ((inusermode && alignfault) || opldfault_);
+
+`ifdef PUMMU
+`ifdef PUHPTW
+wire opldfault__hptwddone = (!opldfault_ || (hptwddone && !dtlbwritten));
+`endif
+`endif
 
 reg oplddone;
 
 reg opldmemrqst;
 
-wire opldrdy_ = (!(opldmemrqst || oplddone) && dtlb_and_dcache_rdy);
+wire opldrdy_ = (!(opldmemrqst || oplddone) && dtlb_rdy && (dcachemasterrdy || opldfault));
 wire opldrdy = (isopld && opldrdy_ && !opldfault);
 
-wire opstfault = ((inusermode && alignfault) || (dtlben && (dtlbnotwritable || dtlbmiss)));
+wire opstfault_ = (dtlben && (dtlbnotwritable || dtlbmiss));
+wire opstfault = ((inusermode && alignfault) || opstfault_);
 
-wire opstrdy_ = (dtlb_and_dcache_rdy);
+`ifdef PUMMU
+`ifdef PUHPTW
+wire opstfault__hptwddone = (!opstfault_ || (hptwddone && !dtlbwritten));
+`endif
+`endif
+
+wire opstrdy_ = (dtlb_rdy && (dcachemasterrdy || opstfault));
 wire opstrdy = (isopst && opstrdy_ && !opstfault);
 
 reg[CLOG2GPRCNTTOTAL -1 : 0] opldstgpr;
@@ -636,26 +770,29 @@ reg[ARCHBITSZ -1 : 0] opldstresult;
 
 reg[(ARCHBITSZ/8) -1 : 0] opldstbyteselect;
 
-wire opldstfault = ((inusermode && alignfault) || (dtlben && (dtlbnotreadable || dtlbnotwritable || dtlbmiss)));
+wire opldstfault_ = (dtlben && (dtlbnotreadable || dtlbnotwritable || dtlbmiss));
+wire opldstfault = ((inusermode && alignfault) || opldstfault_);
+
+`ifdef PUMMU
+`ifdef PUHPTW
+wire opldstfault__hptwddone = (!opldstfault_ || (hptwddone && !dtlbwritten));
+`endif
+`endif
 
 reg opldstdone;
 
 reg opldstmemrqst;
 
-wire opldstrdy_ = (!(opldstmemrqst || opldstdone) && dtlb_and_dcache_rdy);
+wire opldstrdy_ = (!(opldstmemrqst || opldstdone) && dtlb_rdy && (dcachemasterrdy || opldstfault));
 wire opldstrdy = (isopldst && opldstrdy_ && !opldstfault && !instrbufferdataout0[2]);
 
-reg[2 -1 : 0] dcachemasterop;
-reg[ADDRBITSZ -1 : 0] dcachemasteraddr;
-wire[ARCHBITSZ -1 : 0] dcachemasterdato = pi1_data_i;
-reg[ARCHBITSZ -1 : 0] dcachemasterdati;
-reg[(ARCHBITSZ/8) -1 : 0] dcachemastersel;
 assign dcachemasterrdy = pi1_rdy_i;
+assign dcachemasterdato = pi1_data_i;
 
-wire[2 -1 : 0] dcacheslaveop = dcachemasterop;
-wire[ADDRBITSZ -1 : 0] dcacheslaveaddr = dcachemasteraddr;
-wire[ARCHBITSZ -1 : 0] dcacheslavedato = dcachemasterdati;
-wire[(ARCHBITSZ/8) -1 : 0] dcacheslavesel = dcachemastersel;
+assign dcacheslaveop = dcachemasterop;
+assign dcacheslaveaddr = dcachemasteraddr;
+assign dcacheslavedato = dcachemasterdati;
+assign dcacheslavesel = dcachemastersel;
 
 wire multicycleoprdy = (miscrdyandsequencerreadyandgprrdy12 &&
 	(opldrdy || opldstrdy || (isopmuldiv && opmuldiv_rdy_w)));

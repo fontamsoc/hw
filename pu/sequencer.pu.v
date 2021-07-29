@@ -60,7 +60,13 @@ end else if (opldstfaulted) begin
 
 	instrbufferrst_a <= ~instrbufferrst_b;
 
-end else if (timertriggered && !isflagdistimerintr && inusermode && !oplicounter) begin
+end else if (timertriggered && !isflagdistimerintr && inusermode && !oplicounter
+	`ifdef PUMMU
+	`ifdef PUHPTW
+	&& !hptwbsy
+	`endif
+	`endif
+	) begin
 
 	faultreason <= TIMERINTR;
 
@@ -78,7 +84,13 @@ end else if (timertriggered && !isflagdistimerintr && inusermode && !oplicounter
 
 	instrbufferrst_a <= ~instrbufferrst_b;
 
-end else if (intrqst_i && !isflagdisextintr && inusermode && !oplicounter) begin
+end else if (intrqst_i && !isflagdisextintr && inusermode && !oplicounter
+	`ifdef PUMMU
+	`ifdef PUHPTW
+	&& !hptwbsy
+	`endif
+	`endif
+	) begin
 
 	faultreason <= EXTINTR;
 
@@ -140,7 +152,13 @@ end else if (!inhalt) begin
 
 					end else if (isopld) begin
 
-						if (opldrdy_) begin
+						if (opldrdy_
+							`ifdef PUMMU
+							`ifdef PUHPTW
+							&& opldfault__hptwddone
+							`endif
+							`endif
+							) begin
 
 							if (opldfault) begin
 
@@ -155,7 +173,13 @@ end else if (!inhalt) begin
 
 					end else if (isopst) begin
 
-						if (opstrdy_) begin
+						if (opstrdy_
+							`ifdef PUMMU
+							`ifdef PUHPTW
+							&& opstfault__hptwddone
+							`endif
+							`endif
+							) begin
 
 							if (opstfault) begin
 
@@ -170,7 +194,13 @@ end else if (!inhalt) begin
 
 					end else if (isopldst) begin
 
-						if (opldstrdy_) begin
+						if (opldstrdy_
+							`ifdef PUMMU
+							`ifdef PUHPTW
+							&& opldstfault__hptwddone
+							`endif
+							`endif
+							) begin
 
 							if (opldstfault) begin
 
@@ -267,7 +297,7 @@ end else if (!inhalt) begin
 				!(isopsettlb && isflagsettlb) &&
 				!(isopclrtlb && isflagclrtlb) &&
 				!((isopgetclkcyclecnt || isopgetclkcyclecnth) && isflaggetclkcyclecnt) &&
-				!(isopgetclkfreq && isflaggetclkfreq) &&
+				!((isopgetclkfreq || isopgetcap) && isflaggetclkfreq) &&
 				!(isopgettlbsize && isflaggettlbsize) &&
 				!(isopgetcachesize && isflaggetcachesize) &&
 				!(isopgetcoreid && isflaggetcoreid) &&
@@ -329,8 +359,13 @@ end else if (!inhalt) begin
 
 				end else if (isopsetsysreg || isopgetsysreg || isopgetsysreg1) begin
 
-					if (gprrdy1 && (!istlbop || !(itlbreadenable || dtlbreadenable)) &&
-						(gprrdy2 || (isopsetksysopfaulthdlr || isopsetksl || isopsetasid ||
+					if (gprrdy1 && (!istlbop || !(itlbreadenable_ || dtlbreadenable_
+						`ifdef PUMMU
+						`ifdef PUHPTW
+						|| hptwitlbwe // There is no need to check hptwdtlbwe as istlbop will be false.
+						`endif
+						`endif
+						)) && (gprrdy2 || (isopsetksysopfaulthdlr || isopsetksl || isopsetasid ||
 							isopsetuip || isopsetflags || isopsettimer ||
 							isopgetsysopcode || isopgetuip || isopgetfaultaddr ||
 							isopgetfaultreason || (isopgetclkcyclecnt || isopgetclkcyclecnth) ||
@@ -382,6 +417,5 @@ end else if (!inhalt) begin
 		instrbufferrst_a <= ~instrbufferrst_b;
 
 		instrfetchfaulted_b <= instrfetchfaulted_a;
-
 	end
 end

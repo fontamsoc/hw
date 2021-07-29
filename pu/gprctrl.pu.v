@@ -10,3 +10,6 @@ end else if (gprrdyoff) begin
 	else
 		gprrdyon <= 1;
 end
+
+if (gprwriteenable && gprindex[CLOG2GPRCNTPERCTX -1 : 0] == 13)
+	gpr13val <= gprdata;

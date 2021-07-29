@@ -5,6 +5,7 @@
 `include "lib/ram/ram2clk1i5o.v"
 
 `define PUMMU
+`define PUHPTW
 
 `include "./opmuldiv.pu.v"
 
@@ -116,6 +117,9 @@ end
 always @ (posedge clk_i[0]) begin
 	`ifdef PUMMU
 	`include "./mmu.pu.v"
+	`ifdef PUHPTW
+	`include "./hptw.pu.v"
+	`endif
 	`endif
 	`include "./memctrl.pu.v"
 	`include "./instrctrl.pu.v"

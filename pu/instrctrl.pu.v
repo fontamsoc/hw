@@ -41,12 +41,18 @@ end else if (icachecheck && !instrbufferrst) begin
 
 	icachecheck <= 0;
 
-end else if (instrbufferrst || (!inhalt && !instrfetchfaulted)) begin
+end else if (instrbufferrst || !instrfetchfaulted) begin
 
 	if (instrbufferrst)
 		instrbufferwriteindex <= ip[CLOG2INSTRBUFFERSIZE +1 : 1];
 
-	if (itlb_and_instrbuffer_rdy) begin
+	if (!inhalt && itlb_and_instrbuffer_rdy
+		`ifdef PUMMU
+		`ifdef PUHPTW
+		&& itlbfault__hptwidone
+		`endif
+		`endif
+		) begin
 
 		if (itlbfault && !instrbufferrst_posedge) begin
 
@@ -78,15 +84,21 @@ end else if (instrbufferrst || (!inhalt && !instrfetchfaulted)) begin
 			icachecheck <= 0;
 		end
 
-		if (not_itlben_or_not_instrbufferrst_posedge)
-			instrbufferrst_b <= instrbufferrst_a;
-
 	end else begin
 
 		instrfetchmemrqst <= 0;
 
 		icachecheck <= 0;
 	end
+
+	if (itlb_and_instrbuffer_rdy
+		`ifdef PUMMU
+		`ifdef PUHPTW
+		&& itlbfault__hptwidone
+		`endif
+		`endif
+		&& not_itlben_or_not_instrbufferrst_posedge)
+		instrbufferrst_b <= instrbufferrst_a; // Clearing instrbufferrst must not depend on inhalt, otherwise the sequencer will lock.
 
 end else begin
 

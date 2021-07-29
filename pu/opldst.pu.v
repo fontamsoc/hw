@@ -37,7 +37,13 @@ end else begin
 
 	end else begin
 
-		if (miscrdyandsequencerreadyandgprrdy12 && isopldst && dtlb_and_dcache_rdy) begin
+		if (miscrdyandsequencerreadyandgprrdy12 && isopldst && dtlb_rdy && (dcachemasterrdy || opldstfault)
+			`ifdef PUMMU
+			`ifdef PUHPTW
+			&& opldstfault__hptwddone
+			`endif
+			`endif
+			) begin
 
 			if (opldstfault) begin
 				opldstfaulted <= {{dtlbmiss ? 2'b11 : {dtlbnotreadable, dtlbnotwritable}}, alignfault};

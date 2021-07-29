@@ -15,4 +15,17 @@ else if (isoptype1) opgetsysreg1result = CLKFREQ;
 `ifdef PUMMU
 else if (isoptype3) opgetsysreg1result = gettlbresult;
 `endif
+else if (isoptype4) opgetsysreg1result =
+	{{14{1'b0}}
+	`ifdef PUMMU
+	`ifdef PUHPTW
+	, 1'b1
+	`else
+	, 1'b0
+	`endif
+	, 1'b1
+	`else
+	, 2'b00
+	`endif
+	};
 else opgetsysreg1result = 0;
