@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// (c) William Fonkou Tambe
 
 `ifndef LIBSPIMASTER
 `define LIBSPIMASTER

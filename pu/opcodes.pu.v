@@ -1,5 +1,5 @@
-// Copyright (c) William Fonkou Tambe
-// All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// (c) William Fonkou Tambe
 
 localparam OPLI8A		= 16;
 localparam OPLI8B		= 17;

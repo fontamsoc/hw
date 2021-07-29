@@ -1,5 +1,5 @@
-// Copyright (c) William Fonkou Tambe
-// All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// (c) William Fonkou Tambe
 
 `ifndef PI1R_V
 `define PI1R_V

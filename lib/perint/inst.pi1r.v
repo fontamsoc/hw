@@ -1,5 +1,5 @@
-// Copyright (c) William Fonkou Tambe
-// All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// (c) William Fonkou Tambe
 
 wire [2 -1 : 0]             m_pi1r_op_w    [PI1RMASTERCOUNT -1 : 0];
 wire [ADDRBITSZ -1 : 0]     m_pi1r_addr_w  [PI1RMASTERCOUNT -1 : 0];

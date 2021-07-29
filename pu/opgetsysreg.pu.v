@@ -1,5 +1,5 @@
-// Copyright (c) William Fonkou Tambe
-// All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// (c) William Fonkou Tambe
 
 if      (isoptype0) opgetsysregresult = {{(ARCHBITSZ-16){1'b0}}, sysopcode};
 else if (isoptype1) opgetsysregresult = {uip, 1'b0};

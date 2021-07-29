@@ -1,5 +1,5 @@
-// Copyright (c) William Fonkou Tambe
-// All rights reserved.
+// SPDX-License-Identifier: GPL-2.0-only
+// (c) William Fonkou Tambe
 
 if      (isoptype0) opalu0result = {{(ARCHBITSZ-1){1'b0}}, $signed(gprdata1) > $signed(gprdata2)};
 else if (isoptype1) opalu0result = {{(ARCHBITSZ-1){1'b0}}, $signed(gprdata1) >= $signed(gprdata2)};
