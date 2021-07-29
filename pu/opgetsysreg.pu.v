@@ -28,4 +28,6 @@ else if (isoptype4) opgetsysreg1result =
 	, 2'b00
 	`endif
 	};
+else if (isoptype5) opgetsysreg1result =
+	{8'd1, 8'd0};
 else opgetsysreg1result = 0;

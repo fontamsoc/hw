@@ -299,7 +299,7 @@ end else if (!inhalt) begin
 				!(isopsettlb && isflagsettlb) &&
 				!(isopclrtlb && isflagclrtlb) &&
 				!((isopgetclkcyclecnt || isopgetclkcyclecnth) && isflaggetclkcyclecnt) &&
-				!((isopgetclkfreq || isopgetcap) && isflaggetclkfreq) &&
+				!((isopgetclkfreq || isopgetcap || isopgetver) && isflaggetclkfreq) &&
 				!(isopgettlbsize && isflaggettlbsize) &&
 				!(isopgetcachesize && isflaggetcachesize) &&
 				!(isopgetcoreid && isflaggetcoreid) &&

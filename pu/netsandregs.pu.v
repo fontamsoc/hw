@@ -274,6 +274,7 @@ wire isopgetdcachesize = (isopgetsysreg1 && isoptype2);
 wire isopgetcachesize = (isopgeticachesize || isopgetdcachesize);
 wire isopgettlb = (isopgetsysreg1 && isoptype3);
 wire isopgetcap = (isopgetsysreg1 && isoptype4);
+wire isopgetver = (isopgetsysreg1 && isoptype5);
 wire isopsetsysreg = (instrbufferdataout0[7:3] == OPSETSYSREG);
 wire isopsetksysopfaulthdlr = (isopsetsysreg && isoptype0);
 wire isopsetksl = (isopsetsysreg && isoptype1);
