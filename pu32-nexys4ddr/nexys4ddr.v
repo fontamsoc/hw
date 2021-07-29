@@ -199,6 +199,7 @@ multipu #(
 	,.PUCOUNT        (PUCOUNT)
 	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*(256/PUCOUNT))
 	,.TLBSETCOUNT    (1024/PUCOUNT)
+	,.MULDIVCNT      (8)
 
 ) multipu (
 

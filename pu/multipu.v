@@ -38,6 +38,7 @@ parameter CLKFREQ        = 1;
 parameter ICACHESETCOUNT = 2;
 parameter DCACHESETCOUNT = 2;
 parameter TLBSETCOUNT    = 2;
+parameter MULDIVCNT      = 4;
 
 parameter ARCHBITSZ = 32;
 
@@ -96,6 +97,7 @@ pu #(
 	,.ICACHESETCOUNT (ICACHESETCOUNT)
 	,.DCACHESETCOUNT (DCACHESETCOUNT)
 	,.TLBSETCOUNT    (TLBSETCOUNT)
+	,.MULDIVCNT      (MULDIVCNT)
 
 ) pu (
 

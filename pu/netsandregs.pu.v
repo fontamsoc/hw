@@ -601,11 +601,13 @@ wire [ARCHBITSZ -1 : 0]        opmuldivresult;
 wire [CLOG2GPRCNTTOTAL -1 : 0] opmuldivgpr;
 wire                           opmuldivdone;
 
+localparam OPMULDIVCNT = ((MULDIVCNT != 4 && MULDIVCNT != 8) ? 4 : MULDIVCNT); // ((GPRCNTPERCTX/4) || (GPRCNTPERCTX/2)).
+
 opmuldiv #(
 
 	 .ARCHBITSZ (ARCHBITSZ)
 	,.GPRCNT    (GPRCNTTOTAL)
-	,.DEPTH     (GPRCNTPERCTX/4)
+	,.DEPTH     (OPMULDIVCNT)
 
 ) opmuldiv (
 
