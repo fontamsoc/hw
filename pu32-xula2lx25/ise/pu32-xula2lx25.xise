@@ -365,8 +365,7 @@
     <file xil_pn:name="../../pu/pu.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../lib/ram/bram.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../lib/ram/ram2clk1i5o.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../lib/fifo_fwft.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../lib/ram/ram2clk1i2o.v" xil_pn:type="FILE_VERILOG"/>
+    <file xil_pn:name="../../pu/opmuldiv.pu.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../pu/opcodes.pu.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../pu/netsandregs.pu.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../pu/init.pu.v" xil_pn:type="FILE_VERILOG"/>
@@ -374,9 +373,9 @@
     <file xil_pn:name="../../pu/memctrl.comb.pu.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../pu/opalu.pu.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../pu/opgetsysreg.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/opmuldiv.comb.pu.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../pu/gprctrl.comb.pu.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../pu/mmu.pu.v" xil_pn:type="FILE_VERILOG"/>
+    <file xil_pn:name="../../pu/hptw.pu.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../pu/memctrl.pu.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../pu/instrctrl.pu.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../pu/opld.pu.v" xil_pn:type="FILE_VERILOG"/>
@@ -387,7 +386,6 @@
     <file xil_pn:name="../../pu/opli.pu.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../pu/opsetsysreg.pu.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../pu/gprctrl.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/opmuldiv.pu.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../lib/perint/pi1q.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../lib/ram/dram.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../lib/perint/inst.pi1q.v" xil_pn:type="FILE_VERILOG"/>
@@ -401,6 +399,8 @@
     <file xil_pn:name="../../lib/spi/spi_master_phy.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../dev/uart_hw.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../lib/uart/uart_rx.v" xil_pn:type="FILE_VERILOG"/>
+    <file xil_pn:name="../../lib/fifo_fwft.v" xil_pn:type="FILE_VERILOG"/>
+    <file xil_pn:name="../../lib/ram/ram2clk1i2o.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../lib/uart/uart_rx_phy.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../lib/uart/uart_tx.v" xil_pn:type="FILE_VERILOG"/>
     <file xil_pn:name="../../lib/uart/uart_tx_phy.v" xil_pn:type="FILE_VERILOG"/>
