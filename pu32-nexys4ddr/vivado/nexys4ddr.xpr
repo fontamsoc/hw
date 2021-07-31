@@ -3,7 +3,7 @@
 <!--                                                         -->
 <!-- Copyright 1986-2021 Xilinx, Inc. All Rights Reserved.   -->
 
-<Project Version="7" Minor="54" Path="C:/Users/William Tambe/Documents/Mine/Softcores/fontamsoc/pu32-nexys4ddr/vivado/nexys4ddr.xpr">
+<Project Version="7" Minor="54">
   <DefaultLaunch Dir="$PRUNDIR"/>
   <Configuration>
     <Option Name="Id" Val="50885c8265ab43c3b7be0e6b552ade56"/>
@@ -82,7 +82,7 @@
         <Option Name="DesignMode" Val="RTL"/>
         <Option Name="TopModule" Val="nexys4ddr"/>
         <Option Name="TopAutoSet" Val="TRUE"/>
-        <Option Name="VerilogDir" Val="$PPRDIR/../../../fontamsoc"/>
+        <Option Name="VerilogDir" Val="$PPRDIR/../../"/>
         <Option Name="VerilogDir" Val="$PPRDIR/../../pu"/>
         <Option Name="VerilogDir" Val="$PPRDIR/../../dev/pi1ddr2"/>
         <Option Name="VerilogDir" Val="$PPRDIR/../../lib/spi"/>
