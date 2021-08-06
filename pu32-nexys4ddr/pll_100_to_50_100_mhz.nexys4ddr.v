@@ -12,14 +12,12 @@ module pll_100_to_50_100_mhz (
 
   // Clocking primitive
   //------------------------------------
-  wire        clk_out1_pll_100_to_50_100_mhz;
-  wire        clk_out2_pll_100_to_50_100_mhz;
   wire [15:0] do_unused;
   wire        drdy_unused;
   wire        psdone_unused;
   wire        locked_int;
-  wire        clkfbout_pll_100_to_50_100_mhz;
-  wire        clkfbout_buf_pll_100_to_50_100_mhz;
+  wire        clkfbout;
+  wire        clkfbout_buf;
   wire        clkfboutb_unused;
   wire        clkout2_unused;
   wire        clkout3_unused;
@@ -29,13 +27,13 @@ module pll_100_to_50_100_mhz (
   wire        clkfbstopped_unused;
   wire        clkinstopped_unused;
   wire        reset_high;
-  (* KEEP = "TRUE" *)
-  (* ASYNC_REG = "TRUE" *)
-  reg  [7 :0] seq_reg1 = 0;
-  (* KEEP = "TRUE" *)
-  (* ASYNC_REG = "TRUE" *)
-  reg  [7 :0] seq_reg2 = 0;
 
+  (* BOX_TYPE = "PRIMITIVE" *)
+  BUFG clkf_buf
+   (.O (clkfbout_buf),
+    .I (clkfbout));
+
+  (* BOX_TYPE = "PRIMITIVE" *)
   PLLE2_ADV
   #(.BANDWIDTH            ("OPTIMIZED"),
     .COMPENSATION         ("ZHOLD"),
@@ -52,15 +50,15 @@ module pll_100_to_50_100_mhz (
     .CLKIN1_PERIOD        (10.000)
   ) plle2_adv_inst (
     // Output clocks
-    .CLKFBOUT            (clkfbout_pll_100_to_50_100_mhz),
-    .CLKOUT0             (clk_out1_pll_100_to_50_100_mhz),
-    .CLKOUT1             (clk_out2_pll_100_to_50_100_mhz),
+    .CLKFBOUT            (clkfbout),
+    .CLKOUT0             (clk_out1),
+    .CLKOUT1             (clk_out2),
     .CLKOUT2             (clkout2_unused),
     .CLKOUT3             (clkout3_unused),
     .CLKOUT4             (clkout4_unused),
     .CLKOUT5             (clkout5_unused),
     // Input clock control
-    .CLKFBIN             (clkfbout_buf_pll_100_to_50_100_mhz),
+    .CLKFBIN             (clkfbout_buf),
     .CLKIN1              (clk_in1),
     .CLKIN2              (1'b0),
     // Tied to always select the primary input clock
@@ -80,49 +78,5 @@ module pll_100_to_50_100_mhz (
 
   assign reset_high = reset;
   assign locked = locked_int;
-
-  //-----------------------------------
-  // Output buffering
-  //-----------------------------------
-
-  BUFG clkf_buf
-   (.O (clkfbout_buf_pll_100_to_50_100_mhz),
-    .I (clkfbout_pll_100_to_50_100_mhz));
-
-  BUFGCE clkout1_buf
-   (.O   (clk_out1),
-    .CE  (seq_reg1[7]),
-    .I   (clk_out1_pll_100_to_50_100_mhz));
-
-  wire clk_out1_pll_100_to_50_100_mhz_en_clk;
-  BUFH clkout1_buf_en
-   (.O   (clk_out1_pll_100_to_50_100_mhz_en_clk),
-    .I   (clk_out1_pll_100_to_50_100_mhz));
-  always @(posedge clk_out1_pll_100_to_50_100_mhz_en_clk or posedge reset_high) begin
-    if(reset_high == 1'b1) begin
-	    seq_reg1 <= 8'h00;
-    end
-    else begin
-        seq_reg1 <= {seq_reg1[6:0],locked_int};
-    end
-  end
-
-  BUFGCE clkout2_buf
-   (.O   (clk_out2),
-    .CE  (seq_reg2[7]),
-    .I   (clk_out2_pll_100_to_50_100_mhz));
-
-  wire clk_out2_pll_100_to_50_100_mhz_en_clk;
-  BUFH clkout2_buf_en
-   (.O   (clk_out2_pll_100_to_50_100_mhz_en_clk),
-    .I   (clk_out2_pll_100_to_50_100_mhz));
-  always @(posedge clk_out2_pll_100_to_50_100_mhz_en_clk or posedge reset_high) begin
-    if(reset_high == 1'b1) begin
-	  seq_reg2 <= 8'h00;
-    end
-    else begin
-        seq_reg2 <= {seq_reg2[6:0],locked_int};
-    end
-  end
 
 endmodule
