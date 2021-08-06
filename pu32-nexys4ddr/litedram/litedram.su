@@ -1,7 +1,7 @@
-litedram.c:32:13:cdelay	0	static
-litedram.c:225:13:sdram_read_leveling_rst_delay	0	static
-litedram.c:426:13:sdram_read_leveling_inc_delay	0	static
-litedram.c:382:22:sdram_write_read_check_test_pattern	40	static
-litedram.c:436:13:sdram_read_leveling_scan_module	20	static
-litedram.c:463:13:sdram_read_leveling_module	24	static
-litedram.c:517:6:main	40	static
+litedram.c:27:13:cdelay	0	static
+litedram.c:398:13:sdram_read_leveling_rst_delay	0	static
+litedram.c:459:13:sdram_read_leveling_inc_delay	0	static
+litedram.c:426:22:sdram_write_read_check_test_pattern	40	static
+litedram.c:467:13:sdram_read_leveling_scan_module	20	static
+litedram.c:486:13:sdram_read_leveling_module	24	static
+litedram.c:582:6:main	40	static

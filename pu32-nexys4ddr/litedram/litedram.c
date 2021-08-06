@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
+// Written using litex/soc/software/liblitedram/sdram.c
 
 #include <stdint.h>
 
@@ -51,225 +52,12 @@ static void csr_write_simple (unsigned long v, unsigned long a) {
 	MMPTR(a) = v;
 }
 
-static void sdram_dfii_pi0_address_write (unsigned long v) {
-	csr_write_simple(v >> 8, CSR_BASE + 0x80cL);
-	csr_write_simple(v, CSR_BASE + 0x810L);
-}
-
-static void sdram_dfii_pi0_baddress_write (unsigned long v) {
-	csr_write_simple(v, CSR_BASE + 0x814L);
-}
-
-static unsigned long sdram_dfii_control_read (void) {
-	return csr_read_simple(CSR_BASE + 0x800L);
-}
-
-static void sdram_dfii_control_write (unsigned long v) {
-	csr_write_simple(v, CSR_BASE + 0x800L);
-}
-
-static void sdram_dfii_pi0_command_write (unsigned long v) {
-	csr_write_simple(v, CSR_BASE + 0x804L);
-}
-
-static void sdram_dfii_pi0_command_issue_write (unsigned long v) {
-	csr_write_simple(v, CSR_BASE + 0x808L);
-}
-
-static void command_p0 (unsigned long cmd) {
-	sdram_dfii_pi0_command_write(cmd);
-	sdram_dfii_pi0_command_issue_write(1);
-}
-
-static void sdram_dfii_pi1_address_write (unsigned long v) {
-	csr_write_simple(v >> 8, CSR_BASE + 0x840L);
-	csr_write_simple(v, CSR_BASE + 0x844L);
-}
-
-static void sdram_dfii_pi1_baddress_write (unsigned long v) {
-	csr_write_simple(v, CSR_BASE + 0x848L);
-}
-
-static unsigned long ddrphy_rdphase_read (void) {
-	return csr_read_simple(CSR_BASE + 0x2cL);
-}
-
-static unsigned long ddrphy_wrphase_read (void) {
-	return csr_read_simple(CSR_BASE + 0x30L);
-}
-
-static void sdram_dfii_pix_address_write (unsigned long phase, unsigned long value) {
-	switch (phase) {
-		case 1: sdram_dfii_pi1_address_write(value); break;
-		default: sdram_dfii_pi0_address_write(value);
-	}
-}
-
-static void sdram_dfii_pird_address_write (unsigned long value) {
-	unsigned long rdphase = ddrphy_rdphase_read();
-	sdram_dfii_pix_address_write(rdphase, value);
-}
-
-static void sdram_dfii_piwr_address_write (unsigned long value) {
-	unsigned long wrphase = ddrphy_wrphase_read();
-	sdram_dfii_pix_address_write(wrphase, value);
-}
-
-static void sdram_dfii_pix_baddress_write (unsigned long phase, unsigned long value) {
-	switch (phase) {
-		case 1: sdram_dfii_pi1_baddress_write(value); break;
-		default: sdram_dfii_pi0_baddress_write(value);
-	}
-}
-
-static void sdram_dfii_pird_baddress_write (unsigned long value) {
-	unsigned long rdphase = ddrphy_rdphase_read();
-	sdram_dfii_pix_baddress_write(rdphase, value);
-}
-
-static void sdram_dfii_piwr_baddress_write (unsigned long value) {
-	unsigned long wrphase = ddrphy_wrphase_read();
-	sdram_dfii_pix_baddress_write(wrphase, value);
-}
-
-static void sdram_dfii_pi1_command_write (unsigned long v) {
-	csr_write_simple(v, CSR_BASE + 0x838L);
-}
-
-static void sdram_dfii_pi1_command_issue_write (unsigned long v) {
-	csr_write_simple(v, CSR_BASE + 0x83cL);
-}
-
-static void command_p1 (unsigned long cmd) {
-    sdram_dfii_pi1_command_write(cmd);
-    sdram_dfii_pi1_command_issue_write(1);
-}
-
-static void command_px (unsigned long phase, unsigned long value) {
-	switch (phase) {
-		case 1: command_p1(value); break;
-		default: command_p0(value);
-	}
-}
-
-static void command_prd (unsigned long value) {
-	unsigned long rdphase = ddrphy_rdphase_read();
-	command_px(rdphase, value);
-}
-
-static void command_pwr (unsigned long value) {
-	unsigned long wrphase = ddrphy_wrphase_read();
-	command_px(wrphase, value);
-}
-
-#define SDRAM_PHY_RDPHASE 1
-#define SDRAM_PHY_WRPHASE 0
-
-static void ddrphy_rdphase_write (unsigned long v) {
-	csr_write_simple(v, CSR_BASE + 0x2cL);
-}
-
-static void ddrphy_wrphase_write (unsigned long v) {
-	csr_write_simple(v, CSR_BASE + 0x30L);
-}
-
-static void ddrphy_rst_write (unsigned long v) {
-	csr_write_simple(v, CSR_BASE + 0x0L);
-}
-
-static void ddrctrl_init_done_write (unsigned long v) {
-	csr_write_simple(v, CSR_BASE + 0x1000L);
-}
-
-static void ddrctrl_init_error_write (unsigned long v) {
-	csr_write_simple(v, CSR_BASE + 0x1004L);
-}
-
-#define DFII_CONTROL_SOFTWARE (DFII_CONTROL_CKE|DFII_CONTROL_ODT|DFII_CONTROL_RESET_N)
-#define DFII_CONTROL_HARDWARE (DFII_CONTROL_SEL)
-
-static void sdram_software_control_on (void) {
-	unsigned long previous;
-	previous = sdram_dfii_control_read();
-	if (previous != DFII_CONTROL_SOFTWARE) {
-		sdram_dfii_control_write(DFII_CONTROL_SOFTWARE);
-	}
-}
-
-static void sdram_software_control_off (void) {
-	unsigned long previous;
-	previous = sdram_dfii_control_read();
-	if (previous != DFII_CONTROL_HARDWARE) {
-		sdram_dfii_control_write(DFII_CONTROL_HARDWARE);
-	}
-}
-
-static void ddrphy_dly_sel_write (unsigned long v) {
-	csr_write_simple(v, CSR_BASE + 0x10L);
-}
-
-static void ddrphy_rdly_dq_rst_write (unsigned long v) {
-	csr_write_simple(v, CSR_BASE + 0x14L);
-}
-
-static void sdram_read_leveling_rst_delay (unsigned long module) {
-	ddrphy_dly_sel_write(1 << module);
-	ddrphy_rdly_dq_rst_write(1);
-	ddrphy_dly_sel_write(0);
-}
-
-static void ddrphy_rdly_dq_bitslip_rst_write (unsigned long v) {
-	csr_write_simple(v, CSR_BASE + 0x1cL);
-}
-
-static void sdram_read_leveling_rst_bitslip (unsigned long m) {
-	ddrphy_dly_sel_write(1 << m);
-	ddrphy_rdly_dq_bitslip_rst_write(1);
-	ddrphy_dly_sel_write(0);
-}
-
-static void ddrphy_wdly_dq_bitslip_rst_write (unsigned long v) {
-	csr_write_simple(v, CSR_BASE + 0x24L);
-}
-
-static void ddrphy_wdly_dq_bitslip_write (unsigned long v) {
-	csr_write_simple(v, CSR_BASE + 0x28L);
-}
-
-static void sdram_activate_test_row (void) {
-	sdram_dfii_pi0_address_write(0);
-	sdram_dfii_pi0_baddress_write(0);
-	command_p0(DFII_COMMAND_RAS|DFII_COMMAND_CS);
-	cdelay(15);
-}
-
-static void sdram_precharge_test_row (void) {
-	sdram_dfii_pi0_address_write(0);
-	sdram_dfii_pi0_baddress_write(0);
-	command_p0(DFII_COMMAND_RAS|DFII_COMMAND_WE|DFII_COMMAND_CS);
-	cdelay(15);
-}
-
 #define CONFIG_CSR_DATA_WIDTH 8
 #define CSR_SDRAM_DFII_PI0_WRDATA_SIZE 4
 #define DFII_PIX_DATA_SIZE CSR_SDRAM_DFII_PI0_WRDATA_SIZE
 #define DFII_PIX_DATA_BYTES DFII_PIX_DATA_SIZE*CONFIG_CSR_DATA_WIDTH/8
 #define SDRAM_PHY_MODULES DFII_PIX_DATA_BYTES/2
-#define SDRAM_PHY_PHASES 2
-#include "lfsr.h"
-#define CSR_SDRAM_DFII_PI0_WRDATA_ADDR (CSR_BASE + 0x818L)
-#define CSR_SDRAM_DFII_PI1_WRDATA_ADDR (CSR_BASE + 0x84cL)
-const unsigned long sdram_dfii_pix_wrdata_addr[SDRAM_PHY_PHASES] = {
-	CSR_SDRAM_DFII_PI0_WRDATA_ADDR,
-	CSR_SDRAM_DFII_PI1_WRDATA_ADDR
-};
-#define CSR_SDRAM_DFII_PI0_RDDATA_ADDR (CSR_BASE + 0x828L)
-#define CSR_SDRAM_DFII_PI1_RDDATA_ADDR (CSR_BASE + 0x85cL)
-const unsigned long sdram_dfii_pix_rddata_addr[SDRAM_PHY_PHASES] = {
-	CSR_SDRAM_DFII_PI0_RDDATA_ADDR,
-	CSR_SDRAM_DFII_PI1_RDDATA_ADDR
-};
-#define CONFIG_CSR_DATA_WIDTH 8
+
 #define CSR_DW_BYTES (CONFIG_CSR_DATA_WIDTH/8)
 #define CSR_OFFSET_BYTES 4
 static inline int num_subregs (int csr_bytes) {
@@ -289,11 +77,13 @@ static inline uint64_t _csr_rd (unsigned long a, int csr_bytes) {
 	int i, j, nsubs, n_sub_elem; \
 	uint64_t r; \
 	if (sizeof(buf[0]) >= CSR_DW_BYTES) { \
+		/* one or more subregisters per element */ \
 		for (i = 0; i < cnt; i++) { \
 			buf[i] = _csr_rd(a, sizeof(buf[0])); \
 			a += CSR_OFFSET_BYTES * num_subregs(sizeof(buf[0])); \
 		} \
 	} else { \
+		/* multiple elements per subregister (2, 4, or 8) */ \
 		nsubs = num_subregs(sizeof(buf[0]) * cnt); \
 		n_sub_elem = CSR_DW_BYTES / sizeof(buf[0]); \
 		for (i = 0; i < nsubs; i++) { \
@@ -319,11 +109,13 @@ static inline void _csr_wr (unsigned long a, uint64_t v, int csr_bytes) {
 	int i, j, nsubs, n_sub_elem; \
 	uint64_t v; \
 	if (sizeof(buf[0]) >= CSR_DW_BYTES) { \
+		/* one or more subregisters per element */ \
 		for (i = 0; i < cnt; i++) { \
 			_csr_wr(a, buf[i], sizeof(buf[0])); \
 			a += CSR_OFFSET_BYTES * num_subregs(sizeof(buf[0])); \
 		} \
 	} else { \
+		/* multiple elements per subregister (2, 4, or 8) */ \
 		nsubs = num_subregs(sizeof(buf[0]) * cnt); \
 		n_sub_elem = CSR_DW_BYTES / sizeof(buf[0]); \
 		for (i = 0; i < nsubs; i++) { \
@@ -345,6 +137,292 @@ static inline void csr_wr_buf_uint8 (unsigned long a, const uint8_t *buf, int cn
 static inline void csr_rd_buf_uint8 (unsigned long a, uint8_t *buf, int cnt) {
 	_csr_rd_buf(a, buf, cnt);
 }
+
+#define CSR_SDRAM_DFII_PI0_ADDRESS_ADDR (CSR_BASE + 0x80cL)
+static void sdram_dfii_pi0_address_write (unsigned long v) {
+	csr_write_simple(v >> 8, CSR_SDRAM_DFII_PI0_ADDRESS_ADDR);
+	csr_write_simple(v, (CSR_SDRAM_DFII_PI0_ADDRESS_ADDR+CSR_OFFSET_BYTES));
+}
+
+#define CSR_SDRAM_DFII_PI0_BADDRESS_ADDR (CSR_BASE + 0x814L)
+static void sdram_dfii_pi0_baddress_write (unsigned long v) {
+	csr_write_simple(v, CSR_SDRAM_DFII_PI0_BADDRESS_ADDR);
+}
+
+#define CSR_SDRAM_DFII_CONTROL_ADDR (CSR_BASE + 0x800L)
+static unsigned long sdram_dfii_control_read (void) {
+	return csr_read_simple(CSR_SDRAM_DFII_CONTROL_ADDR);
+}
+static void sdram_dfii_control_write (unsigned long v) {
+	csr_write_simple(v, CSR_SDRAM_DFII_CONTROL_ADDR);
+}
+
+#define CSR_SDRAM_DFII_PI0_COMMAND_ADDR (CSR_BASE + 0x804L)
+static void sdram_dfii_pi0_command_write (unsigned long v) {
+	csr_write_simple(v, CSR_SDRAM_DFII_PI0_COMMAND_ADDR);
+}
+
+#define CSR_SDRAM_DFII_PI0_COMMAND_ISSUE_ADDR (CSR_BASE + 0x808L)
+static void sdram_dfii_pi0_command_issue_write (unsigned long v) {
+	csr_write_simple(v, CSR_SDRAM_DFII_PI0_COMMAND_ISSUE_ADDR);
+}
+
+#define CSR_SDRAM_DFII_PI1_ADDRESS_ADDR (CSR_BASE + 0x840L)
+static void sdram_dfii_pi1_address_write (unsigned long v) {
+	csr_write_simple(v >> 8, CSR_SDRAM_DFII_PI1_ADDRESS_ADDR);
+	csr_write_simple(v, (CSR_SDRAM_DFII_PI1_ADDRESS_ADDR+CSR_OFFSET_BYTES));
+}
+
+#define CSR_SDRAM_DFII_PI1_BADDRESS_ADDR (CSR_BASE + 0x848L)
+static void sdram_dfii_pi1_baddress_write (unsigned long v) {
+	csr_write_simple(v, CSR_SDRAM_DFII_PI1_BADDRESS_ADDR);
+}
+
+#define CSR_DDRPHY_RDPHASE_ADDR (CSR_BASE + 0x2cL)
+static unsigned long ddrphy_rdphase_read (void) {
+	return csr_read_simple(CSR_DDRPHY_RDPHASE_ADDR);
+}
+static void ddrphy_rdphase_write (unsigned long v) {
+	csr_write_simple(v, CSR_DDRPHY_RDPHASE_ADDR);
+}
+
+#define CSR_DDRPHY_WRPHASE_ADDR (CSR_BASE + 0x30L)
+static unsigned long ddrphy_wrphase_read (void) {
+	return csr_read_simple(CSR_DDRPHY_WRPHASE_ADDR);
+}
+static void ddrphy_wrphase_write (unsigned long v) {
+	csr_write_simple(v, CSR_DDRPHY_WRPHASE_ADDR);
+}
+
+#define CSR_SDRAM_DFII_PI1_COMMAND_ADDR (CSR_BASE + 0x838L)
+static void sdram_dfii_pi1_command_write (unsigned long v) {
+	csr_write_simple(v, CSR_SDRAM_DFII_PI1_COMMAND_ADDR);
+}
+
+#define CSR_SDRAM_DFII_PI1_COMMAND_ISSUE_ADDR (CSR_BASE + 0x83cL)
+static void sdram_dfii_pi1_command_issue_write (unsigned long v) {
+	csr_write_simple(v, CSR_SDRAM_DFII_PI1_COMMAND_ISSUE_ADDR);
+}
+
+#define CSR_DDRPHY_RST_ADDR (CSR_BASE + 0x0L)
+static void ddrphy_rst_write (unsigned long v) {
+	csr_write_simple(v, CSR_DDRPHY_RST_ADDR);
+}
+
+#define CSR_DDRCTRL_INIT_DONE_ADDR (CSR_BASE + 0x1000L)
+static void ddrctrl_init_done_write (unsigned long v) {
+	csr_write_simple(v, CSR_DDRCTRL_INIT_DONE_ADDR);
+}
+
+#define CSR_DDRCTRL_INIT_ERROR_ADDR (CSR_BASE + 0x1004L)
+static void ddrctrl_init_error_write (unsigned long v) {
+	csr_write_simple(v, CSR_DDRCTRL_INIT_ERROR_ADDR);
+}
+
+#define CSR_DDRPHY_DLY_SEL_ADDR (CSR_BASE + 0x10L)
+static void ddrphy_dly_sel_write (unsigned long v) {
+	csr_write_simple(v, CSR_DDRPHY_DLY_SEL_ADDR);
+}
+
+#define CSR_DDRPHY_RDLY_DQ_RST_ADDR (CSR_BASE + 0x14L)
+static void ddrphy_rdly_dq_rst_write (unsigned long v) {
+	csr_write_simple(v, CSR_DDRPHY_RDLY_DQ_RST_ADDR);
+}
+
+#define CSR_DDRPHY_RDLY_DQ_BITSLIP_RST_ADDR (CSR_BASE + 0x1cL)
+static void ddrphy_rdly_dq_bitslip_rst_write (unsigned long v) {
+	csr_write_simple(v, CSR_DDRPHY_RDLY_DQ_BITSLIP_RST_ADDR);
+}
+
+#define CSR_DDRPHY_WDLY_DQ_BITSLIP_RST_ADDR (CSR_BASE + 0x24L)
+static void ddrphy_wdly_dq_bitslip_rst_write (unsigned long v) {
+	csr_write_simple(v, CSR_DDRPHY_WDLY_DQ_BITSLIP_RST_ADDR);
+}
+
+#define CSR_DDRPHY_WDLY_DQ_BITSLIP_ADDR (CSR_BASE + 0x28L)
+static void ddrphy_wdly_dq_bitslip_write (unsigned long v) {
+	csr_write_simple(v, CSR_DDRPHY_WDLY_DQ_BITSLIP_ADDR);
+}
+
+#define CSR_DDRPHY_RDLY_DQ_INC_ADDR (CSR_BASE + 0x18L)
+static void ddrphy_rdly_dq_inc_write (unsigned long v) {
+	csr_write_simple(v, CSR_DDRPHY_RDLY_DQ_INC_ADDR);
+}
+
+#define CSR_DDRPHY_RDLY_DQ_BITSLIP_ADDR (CSR_BASE + 0x20L)
+static void ddrphy_rdly_dq_bitslip_write (unsigned long v) {
+	csr_write_simple(v, CSR_DDRPHY_RDLY_DQ_BITSLIP_ADDR);
+}
+
+#define SDRAM_PHY_PHASES 2
+
+#define CSR_SDRAM_DFII_PI0_WRDATA_ADDR (CSR_BASE + 0x818L)
+#define CSR_SDRAM_DFII_PI1_WRDATA_ADDR (CSR_BASE + 0x84cL)
+const unsigned long sdram_dfii_pix_wrdata_addr[SDRAM_PHY_PHASES] = {
+	CSR_SDRAM_DFII_PI0_WRDATA_ADDR,
+	CSR_SDRAM_DFII_PI1_WRDATA_ADDR
+};
+
+#define CSR_SDRAM_DFII_PI0_RDDATA_ADDR (CSR_BASE + 0x828L)
+#define CSR_SDRAM_DFII_PI1_RDDATA_ADDR (CSR_BASE + 0x85cL)
+const unsigned long sdram_dfii_pix_rddata_addr[SDRAM_PHY_PHASES] = {
+	CSR_SDRAM_DFII_PI0_RDDATA_ADDR,
+	CSR_SDRAM_DFII_PI1_RDDATA_ADDR
+};
+
+static void sdram_dfii_pix_address_write (unsigned long phase, unsigned long value) {
+	#if (SDRAM_PHY_PHASES > 8)
+		#error "More than 8 DFI phases not supported"
+	#endif
+	switch (phase) {
+		#if (SDRAM_PHY_PHASES > 4)
+		case 7: sdram_dfii_pi7_address_write(value); break;
+		case 6: sdram_dfii_pi6_address_write(value); break;
+		case 5: sdram_dfii_pi5_address_write(value); break;
+		case 4: sdram_dfii_pi4_address_write(value); break;
+		#endif
+		#if (SDRAM_PHY_PHASES > 2)
+		case 3: sdram_dfii_pi3_address_write(value); break;
+		case 2: sdram_dfii_pi2_address_write(value); break;
+		#endif
+		#if (SDRAM_PHY_PHASES > 1)
+		case 1: sdram_dfii_pi1_address_write(value); break;
+		#endif
+		default: sdram_dfii_pi0_address_write(value);
+	}
+}
+
+static void sdram_dfii_pird_address_write (unsigned long value) {
+	unsigned long rdphase = ddrphy_rdphase_read();
+	sdram_dfii_pix_address_write(rdphase, value);
+}
+
+static void sdram_dfii_piwr_address_write (unsigned long value) {
+	unsigned long wrphase = ddrphy_wrphase_read();
+	sdram_dfii_pix_address_write(wrphase, value);
+}
+
+static void sdram_dfii_pix_baddress_write (unsigned long phase, unsigned long value) {
+	#if (SDRAM_PHY_PHASES > 8)
+		#error "More than 8 DFI phases not supported"
+	#endif
+	switch (phase) {
+		#if (SDRAM_PHY_PHASES > 4)
+		case 7: sdram_dfii_pi7_baddress_write(value); break;
+		case 6: sdram_dfii_pi6_baddress_write(value); break;
+		case 5: sdram_dfii_pi5_baddress_write(value); break;
+		case 4: sdram_dfii_pi4_baddress_write(value); break;
+		#endif
+		#if (SDRAM_PHY_PHASES > 2)
+		case 3: sdram_dfii_pi3_baddress_write(value); break;
+		case 2: sdram_dfii_pi2_baddress_write(value); break;
+		#endif
+		#if (SDRAM_PHY_PHASES > 1)
+		case 1: sdram_dfii_pi1_baddress_write(value); break;
+		#endif
+		default: sdram_dfii_pi0_baddress_write(value);
+	}
+}
+
+static void sdram_dfii_pird_baddress_write (unsigned long value) {
+	unsigned long rdphase = ddrphy_rdphase_read();
+	sdram_dfii_pix_baddress_write(rdphase, value);
+}
+
+static void sdram_dfii_piwr_baddress_write (unsigned long value) {
+	unsigned long wrphase = ddrphy_wrphase_read();
+	sdram_dfii_pix_baddress_write(wrphase, value);
+}
+
+static void command_p0 (unsigned long cmd) {
+	sdram_dfii_pi0_command_write(cmd);
+	sdram_dfii_pi0_command_issue_write(1);
+}
+
+static void command_p1 (unsigned long cmd) {
+	sdram_dfii_pi1_command_write(cmd);
+	sdram_dfii_pi1_command_issue_write(1);
+}
+
+static void command_px (unsigned long phase, unsigned long value) {
+	#if (SDRAM_PHY_PHASES > 8)
+		#error "More than 8 DFI phases not supported"
+	#endif
+	switch (phase) {
+		#if (SDRAM_PHY_PHASES > 4)
+		case 7: command_p7(value); break;
+		case 6: command_p6(value); break;
+		case 5: command_p5(value); break;
+		case 4: command_p4(value); break;
+		#endif
+		#if (SDRAM_PHY_PHASES > 2)
+		case 3: command_p3(value); break;
+		case 2: command_p2(value); break;
+		#endif
+		#if (SDRAM_PHY_PHASES > 1)
+		case 1: command_p1(value); break;
+		#endif
+		default: command_p0(value);
+	}
+}
+
+static void command_prd (unsigned long value) {
+	unsigned long rdphase = ddrphy_rdphase_read();
+	command_px(rdphase, value);
+}
+
+static void command_pwr (unsigned long value) {
+	unsigned long wrphase = ddrphy_wrphase_read();
+	command_px(wrphase, value);
+}
+
+#define DFII_CONTROL_SOFTWARE (DFII_CONTROL_CKE|DFII_CONTROL_ODT|DFII_CONTROL_RESET_N)
+#define DFII_CONTROL_HARDWARE (DFII_CONTROL_SEL)
+
+static void sdram_software_control_on (void) {
+	unsigned long previous;
+	previous = sdram_dfii_control_read();
+	if (previous != DFII_CONTROL_SOFTWARE) {
+		sdram_dfii_control_write(DFII_CONTROL_SOFTWARE);
+	}
+}
+
+static void sdram_software_control_off (void) {
+	unsigned long previous;
+	previous = sdram_dfii_control_read();
+	if (previous != DFII_CONTROL_HARDWARE) {
+		sdram_dfii_control_write(DFII_CONTROL_HARDWARE);
+	}
+}
+
+static void sdram_read_leveling_rst_delay (unsigned long module) {
+	ddrphy_dly_sel_write(1 << module);
+	ddrphy_rdly_dq_rst_write(1);
+	ddrphy_dly_sel_write(0);
+}
+
+static void sdram_read_leveling_rst_bitslip (unsigned long m) {
+	ddrphy_dly_sel_write(1 << m);
+	ddrphy_rdly_dq_bitslip_rst_write(1);
+	ddrphy_dly_sel_write(0);
+}
+
+static void sdram_activate_test_row (void) {
+	sdram_dfii_pi0_address_write(0);
+	sdram_dfii_pi0_baddress_write(0);
+	command_p0(DFII_COMMAND_RAS|DFII_COMMAND_CS);
+	cdelay(15);
+}
+
+static void sdram_precharge_test_row (void) {
+	sdram_dfii_pi0_address_write(0);
+	sdram_dfii_pi0_baddress_write(0);
+	command_p0(DFII_COMMAND_RAS|DFII_COMMAND_WE|DFII_COMMAND_CS);
+	cdelay(15);
+}
+
+#include "lfsr.h"
+
 static unsigned long sdram_write_read_check_test_pattern (unsigned long module, unsigned long seed) {
 	int p, i;
 	unsigned int prv;
@@ -371,15 +449,11 @@ static unsigned long sdram_write_read_check_test_pattern (unsigned long module, 
 	sdram_precharge_test_row();
 	for(p=0;p<SDRAM_PHY_PHASES;p++) {
 		csr_rd_buf_uint8(sdram_dfii_pix_rddata_addr[p], tst, DFII_PIX_DATA_BYTES);
-		if (prs[p][  SDRAM_PHY_MODULES-1-module] != tst[  SDRAM_PHY_MODULES-1-module] ||
-		prs[p][2*SDRAM_PHY_MODULES-1-module] != tst[2*SDRAM_PHY_MODULES-1-module])
+		if (	prs[p][  SDRAM_PHY_MODULES-1-module] != tst[  SDRAM_PHY_MODULES-1-module] ||
+			prs[p][2*SDRAM_PHY_MODULES-1-module] != tst[2*SDRAM_PHY_MODULES-1-module])
 			return 0;
 	}
 	return 1;
-}
-
-static void ddrphy_rdly_dq_inc_write (unsigned long v) {
-	csr_write_simple(v, CSR_BASE + 0x18L);
 }
 
 static void sdram_read_leveling_inc_delay (unsigned long module) {
@@ -389,6 +463,7 @@ static void sdram_read_leveling_inc_delay (unsigned long module) {
 }
 
 #define SDRAM_PHY_DELAYS 32
+
 static long sdram_read_leveling_scan_module (unsigned long module) {
 	unsigned long score = 0;
 	sdram_read_leveling_rst_delay(module);
@@ -400,10 +475,6 @@ static long sdram_read_leveling_scan_module (unsigned long module) {
 		sdram_read_leveling_inc_delay(module);
 	}
 	return score;
-}
-
-static void ddrphy_rdly_dq_bitslip_write (unsigned long v) {
-	csr_write_simple(v, CSR_BASE + 0x20L);
 }
 
 static void sdram_read_leveling_inc_bitslip (unsigned long m) {
@@ -449,35 +520,7 @@ static void sdram_read_leveling_module (unsigned long module) {
 	}
 }
 
-#ifdef LITEDRAM_DEBUG
-#define UARTADDR 0x0ff8
-#define UARTBAUD 115200
-#include <hwdrvchar/hwdrvchar.h>
-hwdrvchar hwdrvchar_dev = {.addr = (void *)UARTADDR};
-int putchar (int c) {
-	while (!hwdrvchar_write_(&hwdrvchar_dev, &c, 1));
-	return c;
-}
-#include <print/print.h>
-#endif
-
-void main (void) {
-	#ifdef LITEDRAM_DEBUG
-	hwdrvchar_init (&hwdrvchar_dev, UARTBAUD);
-	printstr("begin ram initialization\n");
-	#endif
-	ddrphy_rdphase_write(SDRAM_PHY_RDPHASE);
-	ddrphy_wrphase_write(SDRAM_PHY_WRPHASE);
-	sdram_software_control_on();
-	ddrphy_rst_write(1);
-	cdelay(1000);
-	ddrphy_rst_write(0);
-	cdelay(1000);
-	ddrctrl_init_done_write(0);
-	ddrctrl_init_error_write(0);
-	#ifdef LITEDRAM_DEBUG
-	printstr("ram initialization: 0\n");
-	#endif
+static void init_sequence (void) {
 	sdram_dfii_pi0_address_write(0x0);
 	sdram_dfii_pi0_baddress_write(0);
 	sdram_dfii_control_write(DFII_CONTROL_CKE|DFII_CONTROL_ODT|DFII_CONTROL_RESET_N);
@@ -519,6 +562,41 @@ void main (void) {
 	sdram_dfii_pi0_address_write(0x0);
 	sdram_dfii_pi0_baddress_write(1);
 	command_p0(DFII_COMMAND_RAS|DFII_COMMAND_CAS|DFII_COMMAND_WE|DFII_COMMAND_CS);
+}
+
+#ifdef LITEDRAM_DEBUG
+#define UARTADDR 0x0ff8
+#define UARTBAUD 115200
+#include <hwdrvchar/hwdrvchar.h>
+hwdrvchar hwdrvchar_dev = {.addr = (void *)UARTADDR};
+int putchar (int c) {
+	while (!hwdrvchar_write_(&hwdrvchar_dev, &c, 1));
+	return c;
+}
+#include <print/print.h>
+#endif
+
+#define SDRAM_PHY_RDPHASE 1
+#define SDRAM_PHY_WRPHASE 0
+
+void main (void) {
+	#ifdef LITEDRAM_DEBUG
+	hwdrvchar_init (&hwdrvchar_dev, UARTBAUD);
+	printstr("begin ram initialization\n");
+	#endif
+	ddrphy_rdphase_write(SDRAM_PHY_RDPHASE);
+	ddrphy_wrphase_write(SDRAM_PHY_WRPHASE);
+	sdram_software_control_on();
+	ddrphy_rst_write(1);
+	cdelay(1000);
+	ddrphy_rst_write(0);
+	cdelay(1000);
+	ddrctrl_init_done_write(0);
+	ddrctrl_init_error_write(0);
+	#ifdef LITEDRAM_DEBUG
+	printstr("ram initialization: 0\n");
+	#endif
+	init_sequence();
 	#ifdef LITEDRAM_DEBUG
 	printstr("ram initialization: 1\n");
 	#endif
