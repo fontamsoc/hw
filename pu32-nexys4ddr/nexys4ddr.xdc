@@ -248,6 +248,10 @@ set_property -dict { PACKAGE_PIN M1   IOSTANDARD SSTL18_II   SLEW FAST } [get_po
 set_property -dict { PACKAGE_PIN M3   IOSTANDARD SSTL18_II   SLEW FAST } [get_ports { ddr2_odt }];
 set_property -dict { PACKAGE_PIN K6   IOSTANDARD SSTL18_II   SLEW FAST } [get_ports { ddr2_cs_n }];
 set_property INTERNAL_VREF 0.9 [get_iobanks 34];
+### LiteDRAM false path constraints
+set_false_path -quiet -through [get_nets -hierarchical -filter {mr_ff == TRUE}]
+set_false_path -quiet -to [get_pins -filter {REF_PIN_NAME == PRE} -of_objects [get_cells -hierarchical -filter {ars_ff1 == TRUE || ars_ff2 == TRUE}]]
+set_max_delay 2 -quiet -from [get_pins -filter {REF_PIN_NAME == C} -of_objects [get_cells -hierarchical -filter {ars_ff1 == TRUE}]] -to [get_pins -filter {REF_PIN_NAME == D} -of_objects [get_cells -hierarchical -filter {ars_ff2 == TRUE}]]
 
 set_property CFGBVS VCCO [current_design]
 set_property CONFIG_VOLTAGE 3.3 [current_design]
