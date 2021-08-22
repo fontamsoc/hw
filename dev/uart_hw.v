@@ -8,8 +8,6 @@ module uart_hw (
 
 	 rst_i
 
-	,rst2_i
-
 	,clk_i
 	,clk_phy_i
 
@@ -41,8 +39,6 @@ localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
 localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
 
 input wire rst_i;
-
-input wire rst2_i;
 
 `ifdef USE2CLK
 input wire [2 -1 : 0] clk_i;
@@ -137,7 +133,7 @@ uart_rx #(
 
 ) uart_rx (
 
-	 .rst_i (rst_i || rst2_i)
+	 .rst_i (rst_i)
 
 	,.clk_i     (clk_i)
 	,.clk_phy_i (clk_phy_i)
@@ -159,7 +155,7 @@ uart_tx #(
 
 ) uart_tx (
 
-	 .rst_i (rst_i || rst2_i)
+	 .rst_i (rst_i)
 
 	,.clk_i     (clk_i)
 	,.clk_phy_i (clk_phy_i)
