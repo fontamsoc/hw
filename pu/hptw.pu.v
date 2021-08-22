@@ -13,7 +13,7 @@ end else if (hptwidone) begin
 		hptwistate <= HPTWSTATEPGD0;
 	end
 
-end else if (dcachemasterrdy && (hptwmemstate == HPTWMEMSTATEINSTR || hptwistate_eq_HPTWSTATEPTE1)) begin
+end else if (dcachemasterrdy && (hptwmemstate == HPTWMEMSTATEINSTR || hptwistate_eq_HPTWSTATEPGD1 || hptwistate_eq_HPTWSTATEPTE1)) begin
 
 	if (hptwistate_eq_HPTWSTATEPGD1) begin
 		if (dcachemasterdato[5])
@@ -38,7 +38,7 @@ end else if (hptwddone) begin
 		hptwdstate <= HPTWSTATEPGD0;
 	end
 
-end else if (dcachemasterrdy && (hptwmemstate == HPTWMEMSTATEDATA || hptwdstate_eq_HPTWSTATEPTE1)) begin
+end else if (dcachemasterrdy && (hptwmemstate == HPTWMEMSTATEDATA || hptwdstate_eq_HPTWSTATEPGD1 || hptwdstate_eq_HPTWSTATEPTE1)) begin
 
 	if (hptwdstate_eq_HPTWSTATEPGD1) begin
 		if (dcachemasterdato[5])
