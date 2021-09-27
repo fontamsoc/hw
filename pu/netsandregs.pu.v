@@ -343,7 +343,7 @@ wire[12 -1 : 0] dtlbasid = dtlbentry[(PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUM
 wire[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0] dvpn = gprdata2[ARCHBITSZ -1 : (12 +CLOG2TLBSETCOUNT)];
 wire dtlbmiss = ((inuserspace && dtlbnotuser) || (asid[12 -1 : 0] != dtlbasid) || (dvpn != dtlbtag));
 wire doutofrange = (gprdata2 < KERNELSPACESTART || gprdata2 >= ksl);
-wire dtlben = (inusermode && (inuserspace || doutofrange));
+wire dtlben = (!dohalt && inusermode && (inuserspace || doutofrange));
 reg dtlbwritten;
 reg[CLOG2TLBSETCOUNT -1 : 0] dtlbsetprev;
 wire dtlbreadenable_ = (isopgettlb_or_isopclrtlb_found_posedge || dtlbwritten || (dtlben && dtlbset != dtlbsetprev));
@@ -373,7 +373,7 @@ wire[12 -1 : 0] itlbasid = itlbentry[(PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUM
 wire[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0] ivpn = instrfetchnextaddr[ADDRBITSZ -1 : (ADDRWITHINPAGEBITSZ +CLOG2TLBSETCOUNT)];
 wire itlbmiss = ((inuserspace && itlbnotuser) || (asid[12 -1 : 0] != itlbasid) || (ivpn != itlbtag));
 wire ioutofrange = (instrfetchnextaddr < (KERNELSPACESTART >> CLOG2ARCHBITSZBY8) || (instrfetchnextaddr >= ksl[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8]));
-assign itlben = (inusermode && (inuserspace || ioutofrange));
+assign itlben = (!dohalt && inusermode && (inuserspace || ioutofrange));
 reg itlbwritten;
 reg[CLOG2TLBSETCOUNT -1 : 0] itlbsetprev;
 assign itlbreadenable_ = (isopgettlb_or_isopclrtlb_found_posedge || itlbwritten || (itlben && itlbset != itlbsetprev));
@@ -495,13 +495,53 @@ localparam ICACHETAGBITSIZE = (ADDRBITSZ - CLOG2ICACHESETCOUNT);
 
 wire[ICACHETAGBITSIZE -1 : 0] icachetag = instrfetchppninstrfetchaddr[ADDRBITSZ-1:CLOG2ICACHESETCOUNT];
 
-wire [ICACHETAGBITSIZE -1 : 0] icachetago;
+wire [ICACHETAGBITSIZE -1 : 0] icachetago [ICACHEWAYCOUNT -1 : 0];
 
-wire icachevalido;
+wire [ICACHEWAYCOUNT -1 : 0] icachevalido;
 
-wire icachehit = ((itlben ? itlbcached : !ioutofrange) && icacheactive && icachevalido && (icachetag == icachetago));
+reg [CLOG2ICACHEWAYCOUNT -1 : 0] icachewayhitidx;
+reg icachehit_;
+always @* begin
+	icachehit_ = 0;
+	icachewayhitidx = 0;
+	for (j = 0; j < ICACHEWAYCOUNT; j = j + 1) begin
+		if (!icachehit_ && (icachevalido[j] && (icachetag == icachetago[j]))) begin
+			icachehit_ = 1;
+			icachewayhitidx = j;
+		end
+	end
+end
+
+wire icachehit = ((itlben ? itlbcached : !ioutofrange) && icacheactive && icachehit_);
 
 wire icachewe = (!doicacherst && icacheactive && instrfetchmemrqstdone && !instrbufferrst);
+
+wire icacheoff = !icacheactive;
+
+reg [CLOG2ICACHESETCOUNT -1 : 0] icacherstidx;
+
+wire [ARCHBITSZ -1 : 0] icachedato_ [ICACHEWAYCOUNT -1 : 0];
+wire [ARCHBITSZ -1 : 0] icachedato = icachedato_[icachewayhitidx];
+
+reg [CLOG2ICACHESETCOUNT -1 : 0] icachewecnt;
+reg [CLOG2ICACHEWAYCOUNT -1 : 0] icachewaywriteidx;
+always @ (posedge clk_i[0]) begin
+	if (rst_i) begin
+		icachewaywriteidx <= 0;
+		icachewecnt <= 0;
+	end else if (icachewe) begin
+		icachewecnt <= icachewecnt + 1'b1;
+	end else if ((icachewecnt >= (ICACHESETCOUNT-1)) || (instrbufferrst && icachewecnt)) begin
+		if (icachewaywriteidx >= (ICACHEWAYCOUNT-1))
+			icachewaywriteidx <= 0;
+		else
+			icachewaywriteidx <= icachewaywriteidx + 1'b1;
+		icachewecnt <= 0;
+	end
+end
+
+genvar i;
+generate for (i = 0; i < ICACHEWAYCOUNT; i = i + 1) begin :gen_icache
 
 bram #(
 
@@ -512,13 +552,11 @@ bram #(
 
 	 .clk0_i  (clk_i)         ,.clk1_i  (clk_i)
 	,.en0_i   (1'b1)          ,.en1_i   (1'b1)
-	                          ,.we1_i   (icachewe)
+	                          ,.we1_i   (icachewe && (icachewaywriteidx == i))
 	,.addr0_i (icachenextset) ,.addr1_i (icacheset)
 	                          ,.i1      (icachetag)
-	,.o0      (icachetago)    ,.o1      ()
+	,.o0      (icachetago[i]) ,.o1      ()
 );
-
-wire [ARCHBITSZ -1 : 0] icachedato;
 
 bram #(
 
@@ -529,15 +567,11 @@ bram #(
 
 	 .clk0_i  (clk_i)             ,.clk1_i  (clk_i)
 	,.en0_i   (1'b1)              ,.en1_i   (1'b1)
-	                              ,.we1_i   (icachewe)
+	                              ,.we1_i   (icachewe && (icachewaywriteidx == i))
 	,.addr0_i (icachenextset)     ,.addr1_i (icacheset)
 	                              ,.i1      (pi1_data_i)
-	,.o0      (icachedato)        ,.o1      ()
+	,.o0      (icachedato_[i])    ,.o1      ()
 );
-
-wire icacheoff = !icacheactive;
-
-reg [CLOG2ICACHESETCOUNT -1 : 0] icacherstidx;
 
 bram #(
 
@@ -546,13 +580,15 @@ bram #(
 
 ) icachevalids (
 
-	 .clk0_i  (clk_i)         ,.clk1_i  (clk_i)
-	,.en0_i   (1'b1)          ,.en1_i   (1'b1)
-	                          ,.we1_i   (icachewe || icacheoff)
-	,.addr0_i (icachenextset) ,.addr1_i (icacheoff ? icacherstidx : icacheset)
-	                          ,.i1      (icacheactive)
-	,.o0      (icachevalido)  ,.o1      ()
+	 .clk0_i  (clk_i)           ,.clk1_i  (clk_i)
+	,.en0_i   (1'b1)            ,.en1_i   (1'b1)
+	                            ,.we1_i   ((icachewe && (icachewaywriteidx == i)) || icacheoff)
+	,.addr0_i (icachenextset)   ,.addr1_i (icacheoff ? icacherstidx : icacheset)
+	                            ,.i1      (icacheactive)
+	,.o0      (icachevalido[i]) ,.o1      ()
 );
+
+end endgenerate
 
 wire[ARCHBITSZ -1 : 0] opli8result = {{(ARCHBITSZ-8){instrbufferdataout0[3]}}, instrbufferdataout0[3:0], instrbufferdataout1[3:0]} +
 	(isopinc8 ? gprdata1 : (isoprli8 ? {ipplusone, 1'b0} : {ARCHBITSZ{1'b0}}));
@@ -601,7 +637,7 @@ wire [ARCHBITSZ -1 : 0]        opmuldivresult;
 wire [CLOG2GPRCNTTOTAL -1 : 0] opmuldivgpr;
 wire                           opmuldivdone;
 
-localparam OPMULDIVCNT = ((MULDIVCNT != 4 && MULDIVCNT != 8) ? 4 : MULDIVCNT); // ((GPRCNTPERCTX/4) || (GPRCNTPERCTX/2)).
+localparam OPMULDIVCNT = ((MULDIVCNT != 4 && MULDIVCNT != 8) ? 4 : MULDIVCNT);
 
 opmuldiv #(
 

@@ -36,8 +36,8 @@ module multipu (
 parameter PUCOUNT        = 2;
 parameter CLKFREQ        = 1;
 parameter ICACHESETCOUNT = 2;
-parameter DCACHESETCOUNT = 2;
 parameter TLBSETCOUNT    = 2;
+parameter ICACHEWAYCOUNT = 1;
 parameter MULDIVCNT      = 4;
 
 parameter ARCHBITSZ = 32;
@@ -95,8 +95,8 @@ pu #(
 
 	 .CLKFREQ        (CLKFREQ)
 	,.ICACHESETCOUNT (ICACHESETCOUNT)
-	,.DCACHESETCOUNT (DCACHESETCOUNT)
 	,.TLBSETCOUNT    (TLBSETCOUNT)
+	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.MULDIVCNT      (MULDIVCNT)
 
 ) pu (

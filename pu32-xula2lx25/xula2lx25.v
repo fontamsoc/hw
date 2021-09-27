@@ -169,12 +169,15 @@ wire pi1r_clk_w = clk_w;
 
 localparam DCACHESZ = 4;
 
+localparam ICACHEWAYCOUNT = 1;
+
 multipu #(
 
 	 .CLKFREQ        (CLKFREQ)
 	,.PUCOUNT        (PUCOUNT)
-	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*(32/PUCOUNT))
+	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*((32/ICACHEWAYCOUNT)/PUCOUNT))
 	,.TLBSETCOUNT    (256/PUCOUNT)
+	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.MULDIVCNT      (4)
 
 ) multipu (
@@ -264,7 +267,9 @@ sdcard_spi #(
 	,.intrdy_i  (intrdysrc_w[0])
 );
 
-localparam RAMCACHESZ = ((1024/(ARCHBITSZ/8))*DCACHESZ);
+localparam RAMCACHEWAYCOUNT = 1;
+
+localparam RAMCACHESZ = ((1024/(ARCHBITSZ/8))*(DCACHESZ/RAMCACHEWAYCOUNT));
 
 devtbl #(
 
@@ -359,7 +364,8 @@ wire                        dcache_rdy_w;
 
 pi1_dcache #(
 
-	.CACHESETCOUNT (RAMCACHESZ)
+	 .CACHESETCOUNT (RAMCACHESZ)
+	,.CACHEWAYCOUNT (RAMCACHEWAYCOUNT)
 
 ) dcache (
 

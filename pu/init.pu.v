@@ -73,6 +73,8 @@ initial begin
 
 	icacherstidx = 0;
 
+	icachewecnt = 0;
+
 	`ifdef PUMMU
 	`ifdef PUHPTW
 

@@ -62,25 +62,31 @@ assign pi1_mapsz_o = 2;
 reg [CLOG2INTSRCCOUNT -1 : 0] srcindex = {CLOG2INTSRCCOUNT{1'b0}};
 reg [CLOG2INTDSTCOUNT -1 : 0] dstindex = {CLOG2INTDSTCOUNT{1'b0}};
 
-reg [CLOG2INTDSTCOUNT -1 : 0] dstindexhi = {CLOG2INTDSTCOUNT{1'b0}};
-
 localparam PINOOP = 2'b00;
 localparam PIWROP = 2'b01;
 localparam PIRDOP = 2'b10;
 localparam PIRWOP = 2'b11;
 
+localparam CMDACKINT = 2'b00;
+localparam CMDINTDST = 2'b01;
+localparam CMDENAINT = 2'b10;
+
 wire ismemreadwriteop = (pi1_op_i == PIRWOP);
 
-wire cmdintdst = (ismemreadwriteop && pi1_data_i[0]);
-reg [ARCHBITSZ -1 : 0] cmddata = {ARCHBITSZ{1'b0}};
-wire cmdintdstpending = (cmddata[0] && (dstindex != cmddata[CLOG2INTDSTCOUNT : 1]));
+wire cmdackint = (ismemreadwriteop && pi1_data_i[1:0] == CMDACKINT);
+
+wire cmdintdst = (ismemreadwriteop && pi1_data_i[1:0] == CMDINTDST);
+reg [ARCHBITSZ -1 : 0] cmdintdstdata = {ARCHBITSZ{1'b0}};
+wire cmdintdstseeking = (cmdintdstdata[1:0] == CMDINTDST && (dstindex != cmdintdstdata[(CLOG2INTDSTCOUNT +2) -1 : 2]));
+
+wire cmdenaint = (ismemreadwriteop && pi1_data_i[1:0] == CMDENAINT);
 
 reg intrqstpending = 0;
 
 genvar i;
 
 generate for (i = 0; i < INTSRCCOUNT; i = i + 1) begin :gen_intrdysrc_o
-assign intrdysrc_o[i] = !(srcindex == i && intrqstpending && !cmddata[0]);
+assign intrdysrc_o[i] = !(srcindex == i && intrqstpending && cmdintdstdata[1:0] != CMDINTDST);
 end endgenerate
 
 generate for (i = 0; i < INTDSTCOUNT; i = i + 1) begin :gen_intrqstdst_o
@@ -90,40 +96,53 @@ end endgenerate
 wire [CLOG2INTSRCCOUNT -1 : 0] nextsrcindex =
 	((srcindex < (INTSRCCOUNT-1)) ? (srcindex + 1'b1) : {CLOG2INTSRCCOUNT{1'b0}});
 wire [CLOG2INTDSTCOUNT -1 : 0] nextdstindex =
-	((dstindex < dstindexhi) ? (dstindex + 1'b1) : {CLOG2INTDSTCOUNT{1'b0}});
+	((dstindex < (INTDSTCOUNT-1)) ? (dstindex + 1'b1) : {CLOG2INTDSTCOUNT{1'b0}});
 
-wire [INTDSTCOUNT -1 : 0] intbestdst_w;
-generate for (i = 0; i < INTDSTCOUNT; i = i + 1) begin :gen_intbestdst_w
-assign intbestdst_w[i] = (intbestdst_i[i] && (i <= dstindexhi));
-end endgenerate
+reg [INTSRCCOUNT -1 : 0] intsrcen = {INTSRCCOUNT{1'b0}};
+reg [INTDSTCOUNT -1 : 0] intdsten = {INTDSTCOUNT{1'b0}};
 
 always @ (posedge clk_i) begin
 	if (rst_i) begin
 		intrqstpending <= 1'b0;
-		cmddata <= {ARCHBITSZ{1'b0}};
-		dstindexhi <= {CLOG2INTDSTCOUNT{1'b0}};
-	end else if (cmdintdst) begin
-		if (pi1_data_i[CLOG2INTDSTCOUNT : 1] < INTDSTCOUNT) begin
-			pi1_data_o <= {{(ARCHBITSZ-CLOG2INTDSTCOUNT){1'b0}}, pi1_data_i[CLOG2INTDSTCOUNT : 1]};
-			intrqstpending <= 1'b1;
-			cmddata <= pi1_data_i;
-			if (pi1_data_i[CLOG2INTDSTCOUNT : 1] > dstindexhi)
-				dstindexhi <= pi1_data_i[CLOG2INTDSTCOUNT : 1];
+		cmdintdstdata <= {ARCHBITSZ{1'b0}};
+		intsrcen <= {INTSRCCOUNT{1'b0}};
+		intdsten <= {INTDSTCOUNT{1'b0}};
+	end else if (cmdenaint) begin
+		if (pi1_data_i[ARCHBITSZ -1 : 3] < INTSRCCOUNT) begin
+			intsrcen[pi1_data_i[(CLOG2INTSRCCOUNT +3) -1 : 3]] <= pi1_data_i[2];
+			pi1_data_o <= {{(ARCHBITSZ-CLOG2INTSRCCOUNT){1'b0}}, pi1_data_i[(CLOG2INTSRCCOUNT +3) -1 : 3]};
 		end else
 			pi1_data_o <= {ARCHBITSZ{1'b1}};
-	end else if (cmdintdstpending) begin
+	end else if (cmdintdst) begin
+		if (pi1_data_i[ARCHBITSZ -1 : 2] < INTDSTCOUNT) begin
+			if (intrqstpending) begin
+				pi1_data_o <= {{(ARCHBITSZ-1){1'b1}}, 1'b0};
+			end else begin
+				pi1_data_o <= {{(ARCHBITSZ-CLOG2INTDSTCOUNT){1'b0}}, pi1_data_i[(CLOG2INTDSTCOUNT +2) -1 : 2]};
+				intrqstpending <= 1'b1;
+				cmdintdstdata <= pi1_data_i;
+			end
+		end else
+			pi1_data_o <= {ARCHBITSZ{1'b1}};
+	end else if (cmdintdstseeking) begin
 		dstindex <= nextdstindex;
-	end else if (intrqstpending) begin
-		if (ismemreadwriteop) begin
-			pi1_data_o <= (cmddata[0] ? {ARCHBITSZ{1'b1}} :
-				{{(ARCHBITSZ-CLOG2INTSRCCOUNT){1'b0}}, srcindex});
-			intrqstpending <= 1'b0;
-			cmddata <= {ARCHBITSZ{1'b0}};
-			dstindex <= {CLOG2INTDSTCOUNT{1'b0}};
-			srcindex <= nextsrcindex;
+	end else if (intrqstpending || cmdackint) begin
+		if (cmdackint) begin
+			if (pi1_data_i[ARCHBITSZ -1 : 3] == dstindex) begin
+				pi1_data_o <= ((cmdintdstdata[1:0] == CMDINTDST) ? {ARCHBITSZ{1'b1}} :
+					{{(ARCHBITSZ-CLOG2INTSRCCOUNT){1'b0}}, srcindex});
+				intrqstpending <= 1'b0;
+				cmdintdstdata <= {ARCHBITSZ{1'b0}};
+				dstindex <= {CLOG2INTDSTCOUNT{1'b0}};
+				srcindex <= nextsrcindex;
+			end else begin
+				pi1_data_o <= {{(ARCHBITSZ-1){1'b1}}, 1'b0};
+			end
+			if (pi1_data_i[ARCHBITSZ -1 : 3] < INTDSTCOUNT)
+				intdsten[pi1_data_i[(CLOG2INTDSTCOUNT +3) -1 : 3]] <= pi1_data_i[2];
 		end
-	end else if (intrqstsrc_i[srcindex]) begin
-		if ((!intbestdst_w && intrdydst_i[dstindex]) || intbestdst_i[dstindex])
+	end else if (intsrcen[srcindex] && intrqstsrc_i[srcindex]) begin
+		if (intdsten[dstindex] && ((!(intbestdst_i & intdsten) && intrdydst_i[dstindex]) || intbestdst_i[dstindex]))
 			intrqstpending <= 1'b1;
 		else
 			dstindex <= nextdstindex;

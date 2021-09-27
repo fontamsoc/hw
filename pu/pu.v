@@ -36,10 +36,12 @@ parameter CLKFREQ        = 1;
 parameter ICACHESETCOUNT = 2;
 parameter DCACHESETCOUNT = 2;
 parameter TLBSETCOUNT    = 2;
+parameter ICACHEWAYCOUNT = 1;
 parameter MULDIVCNT      = 4;
 
 localparam CLOG2ICACHESETCOUNT = clog2(ICACHESETCOUNT);
 localparam CLOG2DCACHESETCOUNT = clog2(DCACHESETCOUNT);
+localparam CLOG2ICACHEWAYCOUNT = clog2(ICACHEWAYCOUNT);
 
 parameter ARCHBITSZ = 32;
 

@@ -37,12 +37,14 @@ module pi1_dcache (
 `include "lib/clog2.v"
 
 parameter CACHESETCOUNT = 2;
+parameter CACHEWAYCOUNT = 1;
 
 parameter INITFILE = "";
 
 parameter ARCHBITSZ = 32;
 
 localparam CLOG2CACHESETCOUNT = clog2(CACHESETCOUNT);
+localparam CLOG2CACHEWAYCOUNT = clog2(CACHEWAYCOUNT);
 
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
 
@@ -170,7 +172,7 @@ fifo_fwft #(
 	,.full_o     ()
 );
 
-wire cachehit;
+reg cachehit;
 
 reg [2 -1 : 0] m_pi1_op_i_hold;
 
@@ -218,24 +220,9 @@ reg cacherdy_hold;
 
 reg cachewe_;
 
-wire cachewe = (slvreadrqstdone ? (cacherdy_hold && !slvreadwriterqst) : cachewe_);
+wire cachewe = (slvreadrqstdone ? cacherdy_hold : cachewe_);
 
-wire [CACHETAGBITSIZE -1 : 0] cachetago;
-
-bram #(
-
-	 .SZ (CACHESETCOUNT)
-	,.DW (CACHETAGBITSIZE)
-
-) cachetags (
-
-	 .clk0_i  (clk_i)        ,.clk1_i  (clk_i)
-	,.en0_i   (cacheen)      ,.en1_i   (1'b1)
-	                         ,.we1_i   (cachewe)
-	,.addr0_i (m_pi1_addr_i) ,.addr1_i (m_pi1_addr_i_hold)
-	                         ,.i1      (m_pi1_addr_i_hold[ADDRBITSZ -1 : CLOG2CACHESETCOUNT])
-	,.o0      (cachetago)    ,.o1      ()
-);
+wire [CACHETAGBITSIZE -1 : 0] cachetago [CACHEWAYCOUNT -1 : 0];
 
 wire [ARCHBITSZ -1 : 0] cachedata = (slvreadrqstdone ? s_pi1_data_i : m_pi1_data_i_hold);
 
@@ -259,27 +246,15 @@ always @* begin
 		cachedatibitsel = {ARCHBITSZ{1'b0}};
 end
 
-wire [ARCHBITSZ -1 : 0] cachedato;
+reg [CLOG2CACHEWAYCOUNT -1 : 0] cachewaywriteidx;
+
+reg                             cachetagwayhit;
+reg [CLOG2CACHEWAYCOUNT -1 : 0] cachetagwayhitidx;
+
+wire [ARCHBITSZ -1 : 0] cachedato [CACHEWAYCOUNT -1 : 0];
 
 wire [ARCHBITSZ -1 : 0] cachedati =
-	(cachedata & cachedatibitsel) | (cachedato & ~cachedatibitsel);
-
-bram #(
-
-	 .SZ (CACHESETCOUNT)
-	,.DW (ARCHBITSZ)
-
-	,.SRCFILE (INITFILE)
-
-) cachedatas (
-
-	 .clk0_i  (clk_i)        ,.clk1_i  (clk_i)
-	,.en0_i   (cacheen)      ,.en1_i   (1'b1)
-	                         ,.we1_i   (cachewe)
-	,.addr0_i (m_pi1_addr_i) ,.addr1_i (m_pi1_addr_i_hold)
-	                         ,.i1      (cachedati)
-	,.o0      (cachedato)    ,.o1      ()
-);
+	(cachedata & cachedatibitsel) | (cachedato[cachetagwayhit ? cachetagwayhitidx : cachewaywriteidx] & ~cachedatibitsel);
 
 reg cachewe__sampled;
 
@@ -295,14 +270,85 @@ reg [ARCHBITSZ -1 : 0] cachedati_sampled;
 
 reg [ARCHBITSZ -1 : 0] s_pi1_data_i_hold;
 
+reg [CLOG2CACHEWAYCOUNT -1 : 0] cachewayhitidx;
+
 assign m_pi1_data_o = (m_pi1_op_i_hold == PIRDOP) ?
-	(usesampled ? cachedati_sampled : cachedato) : s_pi1_data_i_hold;
+	(usesampled ? cachedati_sampled : cachedato[cachewayhitidx]) : s_pi1_data_i_hold;
 
 wire cacheoff = !cacheactive;
 
 reg [CLOG2CACHESETCOUNT -1 : 0] cacherstidx;
 
-wire cachevalido_;
+wire [CACHEWAYCOUNT -1 : 0] cachevalido;
+
+wire [ARCHBITSZ -1 : 0] cachedatabitselo [CACHEWAYCOUNT -1 : 0];
+
+reg [CACHEWAYCOUNT -1 : 0] cachetaghit;
+integer j;
+always @* begin
+	cachehit = 0;
+	cachewayhitidx = 0;
+	cachetagwayhit = 0;
+	for (j = 0; j < CACHEWAYCOUNT; j = j + 1) begin
+		cachetaghit[j] = (cachevalido[j] && cacherdy_hold && (m_pi1_addr_i_hold[ADDRBITSZ -1 : CLOG2CACHESETCOUNT] == cachetago[j]));
+		if (!cachehit && (cachetaghit[j] && ((cachedatibitsel & cachedatabitselo[j]) == cachedatibitsel))) begin
+			cachehit = 1;
+			cachewayhitidx = j;
+		end
+		if (!cachetagwayhit && cachetaghit[j]) begin
+			cachetagwayhit = 1;
+			cachetagwayhitidx = j;
+		end
+	end
+end
+
+always @ (posedge clk_i[0]) begin
+	if (rst_i)
+		cachewaywriteidx <= 0;
+	else if (cachewe && !cachetagwayhit) begin
+		if (cachewaywriteidx >= (CACHEWAYCOUNT-1))
+			cachewaywriteidx <= 0;
+		else
+			cachewaywriteidx <= cachewaywriteidx + 1'b1;
+	end
+end
+
+wire cacherdy_hold_and_not_slvreadwriterqst = (cacherdy_hold && !slvreadwriterqst);
+
+genvar i;
+generate for (i = 0; i < CACHEWAYCOUNT; i = i + 1) begin :gen_cache
+
+bram #(
+
+	 .SZ (CACHESETCOUNT)
+	,.DW (CACHETAGBITSIZE)
+
+) cachetags (
+
+	 .clk0_i  (clk_i)        ,.clk1_i  (clk_i)
+	,.en0_i   (cacheen)      ,.en1_i   (1'b1)
+	                         ,.we1_i   (cachewe && (cachetagwayhit ? (cachetagwayhitidx == i) : (cachewaywriteidx == i)))
+	,.addr0_i (m_pi1_addr_i) ,.addr1_i (m_pi1_addr_i_hold)
+	                         ,.i1      (m_pi1_addr_i_hold[ADDRBITSZ -1 : CLOG2CACHESETCOUNT])
+	,.o0      (cachetago[i]) ,.o1      ()
+);
+
+bram #(
+
+	 .SZ (CACHESETCOUNT)
+	,.DW (ARCHBITSZ)
+
+	,.SRCFILE (INITFILE)
+
+) cachedatas (
+
+	 .clk0_i  (clk_i)        ,.clk1_i  (clk_i)
+	,.en0_i   (cacheen)      ,.en1_i   (1'b1)
+	                         ,.we1_i   (cachewe && (cachetagwayhit ? (cachetagwayhitidx == i) : (cachewaywriteidx == i)))
+	,.addr0_i (m_pi1_addr_i) ,.addr1_i (m_pi1_addr_i_hold)
+	                         ,.i1      (cachedati)
+	,.o0      (cachedato[i]) ,.o1      ()
+);
 
 bram #(
 
@@ -311,19 +357,13 @@ bram #(
 
 ) cachevalids (
 
-	 .clk0_i  (clk_i)        ,.clk1_i  (clk_i)
-	,.en0_i   (cacheen)      ,.en1_i   (1'b1)
-	                         ,.we1_i   (cachewe || cacheoff)
-	,.addr0_i (m_pi1_addr_i) ,.addr1_i (cacheoff ? cacherstidx : m_pi1_addr_i_hold)
-	                         ,.i1      (cacheoff ? 1'b0 : cacherdy_hold)
-	,.o0      (cachevalido_) ,.o1      ()
+	 .clk0_i  (clk_i)          ,.clk1_i  (clk_i)
+	,.en0_i   (cacheen)        ,.en1_i   (1'b1)
+	                           ,.we1_i   ((cachewe && (cachetagwayhit ? (cachetagwayhitidx == i) : (cachewaywriteidx == i))) || cacheoff)
+	,.addr0_i (m_pi1_addr_i)   ,.addr1_i (cacheoff ? cacherstidx : m_pi1_addr_i_hold)
+	                           ,.i1      (cacheoff ? 1'b0 : cacherdy_hold_and_not_slvreadwriterqst)
+	,.o0      (cachevalido[i]) ,.o1      ()
 );
-
-wire cachevalido = (cachevalido_ & cacherdy_hold);
-
-wire cachetaghit = (cachevalido && (m_pi1_addr_i_hold[ADDRBITSZ -1 : CLOG2CACHESETCOUNT] == cachetago));
-
-wire [ARCHBITSZ -1 : 0] cachedatabitselo;
 
 bram #(
 
@@ -332,15 +372,16 @@ bram #(
 
 ) cachedatabitsels (
 
-	 .clk0_i  (clk_i)            ,.clk1_i  (clk_i)
-	,.en0_i   (cacheen)          ,.en1_i   (1'b1)
-	                             ,.we1_i   (cachewe)
-	,.addr0_i (m_pi1_addr_i)     ,.addr1_i (m_pi1_addr_i_hold)
-	                             ,.i1      ((cachetaghit ? cachedatabitselo : {ARCHBITSZ{1'b0}}) | cachedatibitsel)
-	,.o0      (cachedatabitselo) ,.o1      ()
+	 .clk0_i  (clk_i)               ,.clk1_i  (clk_i)
+	,.en0_i   (cacheen)             ,.en1_i   (1'b1)
+	                                ,.we1_i   ((cachewe && (cachetagwayhit ? (cachetagwayhitidx == i) : (cachewaywriteidx == i))) || cacheoff)
+	,.addr0_i (m_pi1_addr_i)        ,.addr1_i (cacheoff ? cacherstidx : m_pi1_addr_i_hold)
+	                                ,.i1      ((cacheoff || !cacherdy_hold_and_not_slvreadwriterqst) ? {ARCHBITSZ{1'b0}} :
+	                                           ((cachetaghit[i] ? cachedatabitselo[i] : {ARCHBITSZ{1'b0}}) | cachedatibitsel))
+	,.o0      (cachedatabitselo[i]) ,.o1      ()
 );
 
-assign cachehit = (cachetaghit && ((cachedatibitsel & cachedatabitselo) == cachedatibitsel));
+end endgenerate
 
 wire slv_and_buf_rdy = (!slvreadrqst && !slvreading && !buffull);
 

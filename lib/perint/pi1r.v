@@ -284,7 +284,7 @@ wire slaverdyslaveidx = slaverdy[slaveidx];
 
 reg [2 -1 : 0] slaveopsaved = PINOOP;
 
-wire slaveidxrdy_and_not_slaveidxinvalid = (slaveidxrdy && !slaveidxinvalid);
+wire slaveidxrdy_and_not_slaveidxinvalid = (!slaveidxbsy && slaveidxrdy && !slaveidxinvalid);
 
 always @ (posedge clk_i) begin
 
