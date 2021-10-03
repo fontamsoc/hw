@@ -191,9 +191,9 @@ wire pi1r_rst_w = rst;
 wire pi1r_clk_w = clk_w;
 `include "lib/perint/inst.pi1r.v"
 
-localparam DCACHESZ = 32;
+localparam DCACHESZ = ((PUCOUNT > 4) ? 32 : 64);
 
-localparam ICACHEWAYCOUNT = 1;
+localparam ICACHEWAYCOUNT = ((PUCOUNT > 1) ? 2 : 4);
 
 multipu #(
 
@@ -202,7 +202,7 @@ multipu #(
 	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*((256/ICACHEWAYCOUNT)/PUCOUNT))
 	,.TLBSETCOUNT    (1024/PUCOUNT)
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
-	,.MULDIVCNT      (8)
+	,.MULDIVCNT      ((PUCOUNT > 4) ? 4 : 8)
 
 ) multipu (
 
@@ -295,7 +295,7 @@ localparam RAMSZ = 'h2000000;
 
 localparam SDRAMCtrlIfSZ = 'h4000;
 
-localparam RAMCACHEWAYCOUNT = 1;
+localparam RAMCACHEWAYCOUNT = 4;
 
 localparam RAMCACHESZ = ((1024/(ARCHBITSZ/8))*(DCACHESZ/RAMCACHEWAYCOUNT));
 
