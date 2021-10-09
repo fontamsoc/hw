@@ -19,6 +19,7 @@ localparam OPGETSYSREG		= 5;
 localparam OPSETSYSREG		= 7;
 localparam OPNOTAVAIL		= 8;
 localparam OPSETGPR		= 15;
+localparam OPVLOADORSTORE	= 14;
 localparam OPLOADORSTORE	= 30;
 localparam OPLDST		= 31;
 localparam OPMULDIV		= 25;

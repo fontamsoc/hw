@@ -375,6 +375,7 @@ pi1_dcache #(
 
 	,.crst_i    (ram_rst_w)
 	,.cenable_i (1'b1)
+	,.cmiss_i   (1'b0)
 	,.conly_i   (1'b0)
 
 	,.m_pi1_op_i   (s_pi1r_op_w[4])

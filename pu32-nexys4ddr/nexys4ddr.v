@@ -191,6 +191,7 @@ wire pi1r_rst_w = rst;
 wire pi1r_clk_w = clk_w;
 `include "lib/perint/inst.pi1r.v"
 
+localparam ICACHESZ = 256;
 localparam DCACHESZ = ((PUCOUNT > 4) ? 32 : 64);
 
 localparam ICACHEWAYCOUNT = ((PUCOUNT > 1) ? 2 : 4);
@@ -199,7 +200,7 @@ multipu #(
 
 	 .CLKFREQ        (CLKFREQ)
 	,.PUCOUNT        (PUCOUNT)
-	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*((256/ICACHEWAYCOUNT)/PUCOUNT))
+	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*((ICACHESZ/ICACHEWAYCOUNT)/PUCOUNT))
 	,.TLBSETCOUNT    (1024/PUCOUNT)
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.MULDIVCNT      ((PUCOUNT > 4) ? 4 : 8)
@@ -445,6 +446,7 @@ pi1_dcache #(
 
 	,.crst_i    (ram_rst_w || devtbl_rst2_w)
 	,.cenable_i (1'b1)
+	,.cmiss_i   (1'b0)
 	,.conly_i   (ram_rst_w)
 
 	,.m_pi1_op_i   (dcache_m_op_w)

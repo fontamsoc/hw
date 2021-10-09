@@ -286,8 +286,9 @@ wire isopsetflags = (isopsetsysreg && isoptype6);
 wire isopsettimer = (isopsetsysreg && isoptype7);
 wire isopsetgpr = (instrbufferdataout0[7:3] == OPSETGPR);
 wire isoploadorstore = (instrbufferdataout0[7:3] == OPLOADORSTORE);
-assign isopld = (isoploadorstore && instrbufferdataout0[2]);
-assign isopst = (isoploadorstore && !instrbufferdataout0[2]);
+wire isopvloadorstore = (instrbufferdataout0[7:3] == OPVLOADORSTORE);
+assign isopld = ((isoploadorstore || isopvloadorstore) && instrbufferdataout0[2]);
+assign isopst = ((isoploadorstore || isopvloadorstore) && !instrbufferdataout0[2]);
 assign isopldst = (instrbufferdataout0[7:3] == OPLDST);
 wire isopmuldiv = (instrbufferdataout0[7:3] == OPMULDIV);
 

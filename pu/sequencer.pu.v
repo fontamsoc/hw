@@ -79,7 +79,7 @@ end else if (!inhalt) begin
 
 		if (oplicounter) begin
 			ip <= ipplusone;
-		end else if (instrbufferdataout0[7]) begin
+		end else if (instrbufferdataout0[7] || isopvloadorstore) begin
 
 			if (gprrdy1) begin
 
@@ -196,7 +196,7 @@ end else if (!inhalt) begin
 								faultreason <= (
 									alignfault      ? ALIGNFAULTINTR :
 									dtlbmiss        ? READFAULTINTR  :
-									dtlbnotreadable ? READFAULTINTR  : /*dtlbnotwritable ?*/
+									dtlbnotreadable ? READFAULTINTR  :
 									                  WRITEFAULTINTR );
 
 								uip <= ip;
@@ -250,28 +250,25 @@ end else if (!inhalt) begin
 
 					end else if (inkernelmode || isopfloat) begin
 
-						if (!isopfloat || opmuldiv_rdy_w) begin
+						saved_sysopcode <= sysopcode;
+						saved_faultaddr <= faultaddr;
 
-							saved_sysopcode <= sysopcode;
-							saved_faultaddr <= faultaddr;
+						sysopcode <= {instrbufferdataout1, instrbufferdataout0};
 
-							sysopcode <= {instrbufferdataout1, instrbufferdataout0};
+						ksysopfaultmode <= inusermode;
 
-							ksysopfaultmode <= inusermode;
+						rst_o <= (!ksysopfaulthdlr);
 
-							rst_o <= (!ksysopfaulthdlr);
+						if (inusermode)
+							ip <= ksysopfaulthdlr;
+						else
+							ip <= ksysopfaulthdlrplustwo;
 
-							if (inusermode)
-								ip <= ksysopfaulthdlr;
-							else
-								ip <= ksysopfaulthdlrplustwo;
+						ksysopfaultaddr <= ipplusone;
 
-							ksysopfaultaddr <= ipplusone;
+						inusermode <= 0;
 
-							inusermode <= 0;
-
-							instrbufferrst_a <= ~instrbufferrst_b;
-						end
+						instrbufferrst_a <= ~instrbufferrst_b;
 
 					end else begin
 
@@ -364,7 +361,7 @@ end else if (!inhalt) begin
 					if (gprrdy1 && (!istlbop || !(itlbreadenable_ || dtlbreadenable_
 						`ifdef PUMMU
 						`ifdef PUHPTW
-						|| hptwitlbwe // There is no need to check hptwdtlbwe as istlbop will be false.
+						|| hptwitlbwe
 						`endif
 						`endif
 						)) && (gprrdy2 || (isopsetksysopfaulthdlr || isopsetksl || isopsetasid ||
