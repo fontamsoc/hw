@@ -192,7 +192,7 @@ wire pi1r_clk_w = clk_w;
 `include "lib/perint/inst.pi1r.v"
 
 localparam ICACHESZ = 256;
-localparam DCACHESZ = ((PUCOUNT > 4) ? 32 : 64);
+localparam DCACHESZ = ((PUCOUNT > 2) ? 32 : 64);
 
 localparam ICACHEWAYCOUNT = ((PUCOUNT > 1) ? 2 : 4);
 

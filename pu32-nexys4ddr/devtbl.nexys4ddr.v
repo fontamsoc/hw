@@ -77,32 +77,32 @@ always @ (posedge clk_i) begin
 			if (pi1_addr_i[0] == 0)
 				pi1_data_o <= 4;
 			else
-				pi1_data_o <= {BLOCKDEVMAPSZ[ADDRBITSZ -1 : 0], 2'b01};
+				pi1_data_o <= {BLOCKDEVMAPSZ[ADDRBITSZ -1 : 0], {(CLOG2ARCHBITSZBY8-1){1'b0}}, 1'b1};
 		end else if (addrby2 == 1) begin
 			if (pi1_addr_i[0] == 0)
 				pi1_data_o <= 7;
 			else
-				pi1_data_o <= {DEVTBLMAPSZ[ADDRBITSZ -1 : 0], 2'b00};
+				pi1_data_o <= {DEVTBLMAPSZ[ADDRBITSZ -1 : 0], {(CLOG2ARCHBITSZBY8-1){1'b0}}, 1'b0};
 		end else if (addrby2 == 2) begin
 			if (pi1_addr_i[0] == 0)
 				pi1_data_o <= 3;
 			else
-				pi1_data_o <= {TINYDEVMAPSZ[ADDRBITSZ -1 : 0], 2'b00};
+				pi1_data_o <= {TINYDEVMAPSZ[ADDRBITSZ -1 : 0], {(CLOG2ARCHBITSZBY8-1){1'b0}}, 1'b0};
 		end else if (addrby2 == 3) begin
 			if (pi1_addr_i[0] == 0)
 				pi1_data_o <= 5;
 			else
-				pi1_data_o <= {TINYDEVMAPSZ[ADDRBITSZ -1 : 0], 2'b01};
+				pi1_data_o <= {TINYDEVMAPSZ[ADDRBITSZ -1 : 0], {(CLOG2ARCHBITSZBY8-1){1'b0}}, 1'b1};
 		end else if (addrby2 == 4) begin
 			if (pi1_addr_i[0] == 0)
 				pi1_data_o <= 1;
 			else
-				pi1_data_o <= {RAMSZ[ADDRBITSZ -1 : 0], 2'b00};
+				pi1_data_o <= {RAMSZ[ADDRBITSZ -1 : 0], {(CLOG2ARCHBITSZBY8-1){1'b0}}, 1'b0};
 		end else if (addrby2 == 5) begin
 			if (pi1_addr_i[0] == 0)
 				pi1_data_o <= 0;
 			else
-				pi1_data_o <= {RAMCtrlIfSZ[ADDRBITSZ -1 : 0], 2'b00};
+				pi1_data_o <= {RAMCtrlIfSZ[ADDRBITSZ -1 : 0], {(CLOG2ARCHBITSZBY8-1){1'b0}}, 1'b0};
 		end else
 			pi1_data_o <= 0;
 	end else if (pi1_rdy_o && pi1_op_i == PIRWOP) begin
