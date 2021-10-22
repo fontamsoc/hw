@@ -83,14 +83,14 @@ wire cmdenaint = (ismemreadwriteop && pi1_data_i[1:0] == CMDENAINT);
 
 reg intrqstpending = 0;
 
-genvar i;
-
-generate for (i = 0; i < INTSRCCOUNT; i = i + 1) begin :gen_intrdysrc_o
-assign intrdysrc_o[i] = !(srcindex == i && intrqstpending && cmdintdstdata[1:0] != CMDINTDST);
+genvar gen_intrdysrc_o_idx;
+generate for (gen_intrdysrc_o_idx = 0; gen_intrdysrc_o_idx < INTSRCCOUNT; gen_intrdysrc_o_idx = gen_intrdysrc_o_idx + 1) begin :gen_intrdysrc_o
+assign intrdysrc_o[gen_intrdysrc_o_idx] = !(srcindex == gen_intrdysrc_o_idx && intrqstpending && cmdintdstdata[1:0] != CMDINTDST);
 end endgenerate
 
-generate for (i = 0; i < INTDSTCOUNT; i = i + 1) begin :gen_intrqstdst_o
-assign intrqstdst_o[i] = (dstindex == i && intrqstpending);
+genvar gen_intrqstdst_o_idx;
+generate for (gen_intrqstdst_o_idx = 0; gen_intrqstdst_o_idx < INTDSTCOUNT; gen_intrqstdst_o_idx = gen_intrqstdst_o_idx + 1) begin :gen_intrqstdst_o
+assign intrqstdst_o[gen_intrqstdst_o_idx] = (dstindex == gen_intrqstdst_o_idx && intrqstpending);
 end endgenerate
 
 wire [CLOG2INTSRCCOUNT -1 : 0] nextsrcindex =

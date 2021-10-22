@@ -502,13 +502,14 @@ wire [ICACHEWAYCOUNT -1 : 0] icachevalido;
 
 reg [CLOG2ICACHEWAYCOUNT -1 : 0] icachewayhitidx;
 reg icachehit_;
+integer gen_icachehit_idx;
 always @* begin
 	icachehit_ = 0;
 	icachewayhitidx = 0;
-	for (j = 0; j < ICACHEWAYCOUNT; j = j + 1) begin
-		if (!icachehit_ && (icachevalido[j] && (icachetag == icachetago[j]))) begin
+	for (gen_icachehit_idx = 0; gen_icachehit_idx < ICACHEWAYCOUNT; gen_icachehit_idx = gen_icachehit_idx + 1) begin
+		if (!icachehit_ && (icachevalido[gen_icachehit_idx] && (icachetag == icachetago[gen_icachehit_idx]))) begin
 			icachehit_ = 1;
-			icachewayhitidx = j;
+			icachewayhitidx = gen_icachehit_idx;
 		end
 	end
 end
@@ -541,8 +542,8 @@ always @ (posedge clk_i[0]) begin
 	end
 end
 
-genvar i;
-generate for (i = 0; i < ICACHEWAYCOUNT; i = i + 1) begin :gen_icache
+genvar gen_icache_idx;
+generate for (gen_icache_idx = 0; gen_icache_idx < ICACHEWAYCOUNT; gen_icache_idx = gen_icache_idx + 1) begin :gen_icache
 
 bram #(
 
@@ -551,12 +552,12 @@ bram #(
 
 ) icachetags (
 
-	 .clk0_i  (clk_i)         ,.clk1_i  (clk_i)
-	,.en0_i   (1'b1)          ,.en1_i   (1'b1)
-	                          ,.we1_i   (icachewe && (icachewaywriteidx == i))
-	,.addr0_i (icachenextset) ,.addr1_i (icacheset)
-	                          ,.i1      (icachetag)
-	,.o0      (icachetago[i]) ,.o1      ()
+	 .clk0_i  (clk_i)                      ,.clk1_i  (clk_i)
+	,.en0_i   (1'b1)                       ,.en1_i   (1'b1)
+	                                       ,.we1_i   (icachewe && (icachewaywriteidx == gen_icache_idx))
+	,.addr0_i (icachenextset)              ,.addr1_i (icacheset)
+	                                       ,.i1      (icachetag)
+	,.o0      (icachetago[gen_icache_idx]) ,.o1      ()
 );
 
 bram #(
@@ -566,12 +567,12 @@ bram #(
 
 ) icachedatas (
 
-	 .clk0_i  (clk_i)             ,.clk1_i  (clk_i)
-	,.en0_i   (1'b1)              ,.en1_i   (1'b1)
-	                              ,.we1_i   (icachewe && (icachewaywriteidx == i))
-	,.addr0_i (icachenextset)     ,.addr1_i (icacheset)
-	                              ,.i1      (pi1_data_i)
-	,.o0      (icachedato_[i])    ,.o1      ()
+	 .clk0_i  (clk_i)                          ,.clk1_i  (clk_i)
+	,.en0_i   (1'b1)                           ,.en1_i   (1'b1)
+	                                           ,.we1_i   (icachewe && (icachewaywriteidx == gen_icache_idx))
+	,.addr0_i (icachenextset)                  ,.addr1_i (icacheset)
+	                                           ,.i1      (pi1_data_i)
+	,.o0      (icachedato_[gen_icache_idx])    ,.o1      ()
 );
 
 bram #(
@@ -581,12 +582,12 @@ bram #(
 
 ) icachevalids (
 
-	 .clk0_i  (clk_i)           ,.clk1_i  (clk_i)
-	,.en0_i   (1'b1)            ,.en1_i   (1'b1)
-	                            ,.we1_i   ((icachewe && (icachewaywriteidx == i)) || icacheoff)
-	,.addr0_i (icachenextset)   ,.addr1_i (icacheoff ? icacherstidx : icacheset)
-	                            ,.i1      (icacheactive)
-	,.o0      (icachevalido[i]) ,.o1      ()
+	 .clk0_i  (clk_i)                        ,.clk1_i  (clk_i)
+	,.en0_i   (1'b1)                         ,.en1_i   (1'b1)
+	                                         ,.we1_i   ((icachewe && (icachewaywriteidx == gen_icache_idx)) || icacheoff)
+	,.addr0_i (icachenextset)                ,.addr1_i (icacheoff ? icacherstidx : icacheset)
+	                                         ,.i1      (icacheactive)
+	,.o0      (icachevalido[gen_icache_idx]) ,.o1      ()
 );
 
 end endgenerate

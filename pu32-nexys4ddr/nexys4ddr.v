@@ -111,18 +111,17 @@ output wire [(DDR2DQBITSIZE / 8) -1 : 0]  ddr2_dm;
 inout  wire [(DDR2DQBITSIZE / 8) -1 : 0]  ddr2_dqs_p;
 inout  wire [(DDR2DQBITSIZE / 8) -1 : 0]  ddr2_dqs_n;
 
-output wire activity;
+output reg activity;
 
 wire litedram_pll_locked;
 wire litedram_init_done;
 wire litedram_init_error;
-assign activity = (~sd_cs || litedram_init_error || brkonrst_w);
 
 output wire [8 -1 : 0] an;
 
 assign an = {8{1'b1}};
 
-localparam CLKFREQ = 50000000;
+localparam CLKFREQ50MHZ = 50000000;
 
 wire pll_locked;
 
@@ -135,7 +134,6 @@ pll_100_to_50_100_mhz pll (
 	,.clk_out1 (clk50mhz)
 	,.clk_out2 (clk100mhz)
 );
-wire [2 -1 : 0] clk_w = {clk100mhz, clk50mhz};
 
 wire multipu_rst_ow;
 
@@ -153,7 +151,7 @@ localparam RST_CNTR_BITSZ = 16;
 
 reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
 wire rst = (!pll_locked || devtbl_rst0_r || (|rst_cntr));
-always @ (posedge clk_w[0]) begin
+always @ (posedge clk100mhz) begin
 	if (!multipu_rst_ow && !swwarmrst && rst_n) begin
 		if (rst_cntr)
 			rst_cntr <= rst_cntr - 1'b1;
@@ -161,7 +159,7 @@ always @ (posedge clk_w[0]) begin
 		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
 end
 
-always @ (posedge clk_w[0]) begin
+always @ (posedge clk100mhz) begin
 	if (rst_p)
 		devtbl_rst0_r <= 0;
 	if (swpwroff)
@@ -171,6 +169,21 @@ end
 assign sd_reset = rst;
 
 STARTUPE2 (.CLK (clk100mhz_i), .GSR (swcoldrst));
+
+localparam ACTIVITY_CNTR_BITSZ = 7;
+reg [ACTIVITY_CNTR_BITSZ -1 : 0] activity_cntr = 0;
+always @ (posedge clk50mhz) begin
+	if (rst) begin
+		activity <= 0;
+		activity_cntr <= 0;
+	end else if (activity_cntr) begin
+		activity <= 0;
+		activity_cntr <= activity_cntr - 1'b1;
+	end else if ((~sd_cs || litedram_init_error || brkonrst_w)) begin
+		activity <= 1;
+		activity_cntr <= {ACTIVITY_CNTR_BITSZ{1'b1}};
+	end
+end
 
 localparam PUCOUNT = 1;
 
@@ -188,7 +201,7 @@ localparam PI1RDEFAULTSLAVEINDEX = 6;
 localparam PI1RFIRSTSLAVEADDR    = 0;
 localparam PI1RARCHBITSZ         = ARCHBITSZ;
 wire pi1r_rst_w = rst;
-wire pi1r_clk_w = clk_w;
+wire pi1r_clk_w = clk100mhz;
 `include "lib/perint/inst.pi1r.v"
 
 localparam ICACHESZ = 256;
@@ -198,7 +211,7 @@ localparam ICACHEWAYCOUNT = ((PUCOUNT > 1) ? 2 : 4);
 
 multipu #(
 
-	 .CLKFREQ        (CLKFREQ)
+	 .CLKFREQ        (CLKFREQ50MHZ)
 	,.PUCOUNT        (PUCOUNT)
 	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*((ICACHESZ/ICACHEWAYCOUNT)/PUCOUNT))
 	,.TLBSETCOUNT    (1024/PUCOUNT)
@@ -211,8 +224,8 @@ multipu #(
 
 	,.rst_o (multipu_rst_ow)
 
-	,.clk_i     (clk_w)
-	,.clk_mem_i (clk_w)
+	,.clk_i     (clk50mhz)
+	,.clk_mem_i (clk100mhz)
 
 	,.pi1_op_o   (m_pi1r_op_w[0])
 	,.pi1_addr_o (m_pi1r_addr_w[0])
@@ -246,7 +259,7 @@ bootldr #(
 
 	 .rst_i (rst)
 
-	,.clk_i (clk_w)
+	,.clk_i (clk100mhz)
 
 	,.m_pi1_op_i   (s_pi1r_op_w[0])
 	,.m_pi1_addr_i (s_pi1r_addr_w[0])
@@ -265,15 +278,15 @@ bootldr #(
 
 sdcard_spi #(
 
-	.PHYCLKFREQ (CLKFREQ)
+	.PHYCLKFREQ (CLKFREQ50MHZ)
 
 ) sdcard (
 
 	 .rst_i (rst || sd_cd)
 
-	,.clk_mem_i (clk_w)
-	,.clk_i     (clk_w)
-	,.clk_phy_i (clk_w)
+	,.clk_mem_i (clk100mhz)
+	,.clk_i     (clk50mhz)
+	,.clk_phy_i (clk50mhz)
 
 	,.sclk_o (sd_sclk)
 	,.di_o   (sd_di)
@@ -317,7 +330,7 @@ devtbl #(
 	,.rst1_o (devtbl_rst1_w)
 	,.rst2_o (devtbl_rst2_w)
 
-	,.clk_i (clk_w)
+	,.clk_i (clk100mhz)
 
 	,.pi1_op_i    (s_pi1r_op_w[1])
 	,.pi1_addr_i  (s_pi1r_addr_w[1])
@@ -337,7 +350,7 @@ intctrl #(
 
 	 .rst_i (rst)
 
-	,.clk_i (clk_w)
+	,.clk_i (clk100mhz)
 
 	,.pi1_op_i    (s_pi1r_op_w[2])
 	,.pi1_addr_i  (s_pi1r_addr_w[2])
@@ -357,15 +370,15 @@ intctrl #(
 
 uart_hw #(
 
-	 .PHYCLKFREQ (CLKFREQ)
+	 .PHYCLKFREQ (CLKFREQ50MHZ*2)
 	,.BUFSZ      (4096)
 
 ) uart (
 
 	 .rst_i (!pll_locked || rst_p)
 
-	,.clk_i     (clk_w)
-	,.clk_phy_i (clk_w)
+	,.clk_i     (clk100mhz)
+	,.clk_phy_i (clk100mhz)
 
 	,.pi1_op_i    (s_pi1r_op_w[3])
 	,.pi1_addr_i  (s_pi1r_addr_w[3])
@@ -398,7 +411,7 @@ pi1_upconverter #(
 
 ) pi1_upconverter (
 
-	 .clk_i (clk_w)
+	 .clk_i (clk100mhz)
 
 	,.m_pi1_op_i   (s_pi1r_op_w[4])
 	,.m_pi1_addr_i (s_pi1r_addr_w[4])
@@ -418,7 +431,7 @@ pi1_upconverter #(
 assign s_pi1r_mapsz_w[4] = RAMSZ;
 
 reg [RST_CNTR_BITSZ -1 : 0] ram_rst_cntr = {RST_CNTR_BITSZ{1'b1}};
-always @ (posedge clk_w[0]) begin
+always @ (posedge clk100mhz) begin
 	if (pll_locked && ram_rst_cntr)
 		ram_rst_cntr <= ram_rst_cntr - 1'b1;
 end
@@ -442,7 +455,7 @@ pi1_dcache #(
 
 	 .rst_i (ram_rst_w)
 
-	,.clk_i (clk_w)
+	,.clk_i (clk100mhz)
 
 	,.crst_i    (ram_rst_w || devtbl_rst2_w)
 	,.cenable_i (1'b1)
@@ -484,7 +497,7 @@ pi1q_to_wb4 #(
 
 	 .wb4_rst_i (wb4_rst_user_port_w)
 
-	,.pi1_clk_i   (clk_w)
+	,.pi1_clk_i   (clk100mhz)
 	,.pi1_op_i    (dcache_s_op_w)
 	,.pi1_addr_i  (dcache_s_addr_w)
 	,.pi1_data_i  (dcache_s_data_w0)
@@ -522,7 +535,7 @@ pi1q_to_wb4 #(
 
 	 .wb4_rst_i (ram_rst_w)
 
-	,.pi1_clk_i   (clk_w)
+	,.pi1_clk_i   (clk100mhz)
 	,.pi1_op_i    (s_pi1r_op_w[5])
 	,.pi1_addr_i  (s_pi1r_addr_w[5])
 	,.pi1_data_i  (s_pi1r_data_w0[5])
@@ -596,5 +609,9 @@ localparam INVALIDDEVMAPSZ = 'h4000;
 assign s_pi1r_data_w1[6] = {ARCHBITSZ{1'b0}};
 assign s_pi1r_rdy_w[6]   = 1'b1;
 assign s_pi1r_mapsz_w[6] = INVALIDDEVMAPSZ;
+
+`ifdef USE2CLK
+`error USE2CLK cannot be used because it needs 200MHz clock which fails timing.
+`endif
 
 endmodule

@@ -60,71 +60,82 @@ output wire [((ARCHBITSZ/8) * SLAVECOUNT) -1 : 0] s_sel_o_flat;
 input  wire [SLAVECOUNT -1 : 0]                   s_rdy_i_flat;
 input  wire [(ADDRBITSZ * SLAVECOUNT) -1 : 0]     s_mapsz_o_flat;
 
-genvar i;
-
 wire [2 -1 : 0] masterop [MASTERCOUNT -1 : 0];
-generate for (i = 0; i < MASTERCOUNT; i = i + 1) begin :gen_masterop
-assign masterop[i] = m_op_i_flat[((i+1) * 2) -1 : i * 2];
+genvar gen_masterop_idx;
+generate for (gen_masterop_idx = 0; gen_masterop_idx < MASTERCOUNT; gen_masterop_idx = gen_masterop_idx + 1) begin :gen_masterop
+assign masterop[gen_masterop_idx] = m_op_i_flat[((gen_masterop_idx+1) * 2) -1 : gen_masterop_idx * 2];
 end endgenerate
 
 wire [ADDRBITSZ -1 : 0] masteraddr [MASTERCOUNT -1 : 0];
-generate for (i = 0; i < MASTERCOUNT; i = i + 1) begin :gen_masteraddr
-assign masteraddr[i] = m_addr_i_flat[((i+1) * ADDRBITSZ) -1 : i * ADDRBITSZ];
+genvar gen_masteraddr_idx;
+generate for (gen_masteraddr_idx = 0; gen_masteraddr_idx < MASTERCOUNT; gen_masteraddr_idx = gen_masteraddr_idx + 1) begin :gen_masteraddr
+assign masteraddr[gen_masteraddr_idx] = m_addr_i_flat[((gen_masteraddr_idx+1) * ADDRBITSZ) -1 : gen_masteraddr_idx * ADDRBITSZ];
 end endgenerate
 
 wire [ARCHBITSZ -1 : 0] masterdati [MASTERCOUNT -1 : 0];
-generate for (i = 0; i < MASTERCOUNT; i = i + 1) begin :gen_masterdati
-assign masterdati[i] = m_data_i_flat[((i+1) * ARCHBITSZ) -1 : i * ARCHBITSZ];
+genvar gen_masterdati_idx;
+generate for (gen_masterdati_idx = 0; gen_masterdati_idx < MASTERCOUNT; gen_masterdati_idx = gen_masterdati_idx + 1) begin :gen_masterdati
+assign masterdati[gen_masterdati_idx] = m_data_i_flat[((gen_masterdati_idx+1) * ARCHBITSZ) -1 : gen_masterdati_idx * ARCHBITSZ];
 end endgenerate
 
 wire [ARCHBITSZ -1 : 0] masterdato [MASTERCOUNT -1 : 0];
-generate for (i = 0; i < MASTERCOUNT; i = i + 1) begin :gen_m_data_o_flat
-assign m_data_o_flat[((i+1) * ARCHBITSZ) -1 : i * ARCHBITSZ] = masterdato[i];
+genvar gen_m_data_o_flat_idx;
+generate for (gen_m_data_o_flat_idx = 0; gen_m_data_o_flat_idx < MASTERCOUNT; gen_m_data_o_flat_idx = gen_m_data_o_flat_idx + 1) begin :gen_m_data_o_flat
+assign m_data_o_flat[((gen_m_data_o_flat_idx+1) * ARCHBITSZ) -1 : gen_m_data_o_flat_idx * ARCHBITSZ] = masterdato[gen_m_data_o_flat_idx];
 end endgenerate
 
 wire [(ARCHBITSZ/8) -1 : 0] masterbytsel [MASTERCOUNT -1 : 0];
-generate for (i = 0; i < MASTERCOUNT; i = i + 1) begin :gen_masterbytsel
-assign masterbytsel[i] = m_sel_i_flat[((i+1) * (ARCHBITSZ/8)) -1 : i * (ARCHBITSZ/8)];
+genvar gen_masterbytsel_idx;
+generate for (gen_masterbytsel_idx = 0; gen_masterbytsel_idx < MASTERCOUNT; gen_masterbytsel_idx = gen_masterbytsel_idx + 1) begin :gen_masterbytsel
+assign masterbytsel[gen_masterbytsel_idx] = m_sel_i_flat[((gen_masterbytsel_idx+1) * (ARCHBITSZ/8)) -1 : gen_masterbytsel_idx * (ARCHBITSZ/8)];
 end endgenerate
 
 wire masterrdy [MASTERCOUNT -1 : 0];
-generate for (i = 0; i < MASTERCOUNT; i = i + 1) begin :gen_m_rdy_o_flat
-assign m_rdy_o_flat[((i+1) * 1) -1 : i * 1] = masterrdy[i];
+genvar gen_m_rdy_o_flat_idx;
+generate for (gen_m_rdy_o_flat_idx = 0; gen_m_rdy_o_flat_idx < MASTERCOUNT; gen_m_rdy_o_flat_idx = gen_m_rdy_o_flat_idx + 1) begin :gen_m_rdy_o_flat
+assign m_rdy_o_flat[((gen_m_rdy_o_flat_idx+1) * 1) -1 : gen_m_rdy_o_flat_idx * 1] = masterrdy[gen_m_rdy_o_flat_idx];
 end endgenerate
 
 wire [2 -1 : 0] slaveop [SLAVECOUNT -1 : 0];
-generate for (i = 0; i < SLAVECOUNT; i = i + 1) begin :gen_s_op_o_flat
-assign s_op_o_flat[((i+1) * 2) -1 : i * 2] = slaveop[i];
+genvar gen_s_op_o_flat_idx;
+generate for (gen_s_op_o_flat_idx = 0; gen_s_op_o_flat_idx < SLAVECOUNT; gen_s_op_o_flat_idx = gen_s_op_o_flat_idx + 1) begin :gen_s_op_o_flat
+assign s_op_o_flat[((gen_s_op_o_flat_idx+1) * 2) -1 : gen_s_op_o_flat_idx * 2] = slaveop[gen_s_op_o_flat_idx];
 end endgenerate
 
 wire [ADDRBITSZ -1 : 0] slaveaddr [SLAVECOUNT -1 : 0];
-generate for (i = 0; i < SLAVECOUNT; i = i + 1) begin :gen_s_addr_o_flat
-assign s_addr_o_flat[((i+1) * ADDRBITSZ) -1 : i * ADDRBITSZ] = slaveaddr[i];
+genvar gen_s_addr_o_flat_idx;
+generate for (gen_s_addr_o_flat_idx = 0; gen_s_addr_o_flat_idx < SLAVECOUNT; gen_s_addr_o_flat_idx = gen_s_addr_o_flat_idx + 1) begin :gen_s_addr_o_flat
+assign s_addr_o_flat[((gen_s_addr_o_flat_idx+1) * ADDRBITSZ) -1 : gen_s_addr_o_flat_idx * ADDRBITSZ] = slaveaddr[gen_s_addr_o_flat_idx];
 end endgenerate
 
 wire [ARCHBITSZ -1 : 0] slavedati [SLAVECOUNT -1 : 0];
-generate for (i = 0; i < SLAVECOUNT; i = i + 1) begin :gen_slavedati
-assign slavedati[i] = s_data_i_flat[((i+1) * ARCHBITSZ) -1 : i * ARCHBITSZ];
+genvar gen_slavedati_idx;
+generate for (gen_slavedati_idx = 0; gen_slavedati_idx < SLAVECOUNT; gen_slavedati_idx = gen_slavedati_idx + 1) begin :gen_slavedati
+assign slavedati[gen_slavedati_idx] = s_data_i_flat[((gen_slavedati_idx+1) * ARCHBITSZ) -1 : gen_slavedati_idx * ARCHBITSZ];
 end endgenerate
 
 wire [ARCHBITSZ -1 : 0] slavedato [SLAVECOUNT -1 : 0];
-generate for (i = 0; i < SLAVECOUNT; i = i + 1) begin :gen_s_data_o_flat
-assign s_data_o_flat[((i+1) * ARCHBITSZ) -1 : i * ARCHBITSZ] = slavedato[i];
+genvar gen_s_data_o_flat_idx;
+generate for (gen_s_data_o_flat_idx = 0; gen_s_data_o_flat_idx < SLAVECOUNT; gen_s_data_o_flat_idx = gen_s_data_o_flat_idx + 1) begin :gen_s_data_o_flat
+assign s_data_o_flat[((gen_s_data_o_flat_idx+1) * ARCHBITSZ) -1 : gen_s_data_o_flat_idx * ARCHBITSZ] = slavedato[gen_s_data_o_flat_idx];
 end endgenerate
 
 wire [(ARCHBITSZ/8) -1 : 0] slavebytsel [SLAVECOUNT -1 : 0];
-generate for (i = 0; i < SLAVECOUNT; i = i + 1) begin :gen_s_sel_o_flat
-assign s_sel_o_flat[((i+1) * (ARCHBITSZ/8)) -1 : i * (ARCHBITSZ/8)] = slavebytsel[i];
+genvar gen_s_sel_o_flat_idx;
+generate for (gen_s_sel_o_flat_idx = 0; gen_s_sel_o_flat_idx < SLAVECOUNT; gen_s_sel_o_flat_idx = gen_s_sel_o_flat_idx + 1) begin :gen_s_sel_o_flat
+assign s_sel_o_flat[((gen_s_sel_o_flat_idx+1) * (ARCHBITSZ/8)) -1 : gen_s_sel_o_flat_idx * (ARCHBITSZ/8)] = slavebytsel[gen_s_sel_o_flat_idx];
 end endgenerate
 
 wire slaverdy [SLAVECOUNT -1 : 0];
-generate for (i = 0; i < SLAVECOUNT; i = i + 1) begin :gen_slaverdy
-assign slaverdy[i] = s_rdy_i_flat[((i+1) * 1) -1 : i * 1];
+genvar gen_slaverdy_idx;
+generate for (gen_slaverdy_idx = 0; gen_slaverdy_idx < SLAVECOUNT; gen_slaverdy_idx = gen_slaverdy_idx + 1) begin :gen_slaverdy
+assign slaverdy[gen_slaverdy_idx] = s_rdy_i_flat[((gen_slaverdy_idx+1) * 1) -1 : gen_slaverdy_idx * 1];
 end endgenerate
 
 wire [ADDRBITSZ -1 : 0] slavemapsz [SLAVECOUNT -1 : 0];
-generate for (i = 0; i < SLAVECOUNT; i = i + 1) begin :gen_slavemapsz
-assign slavemapsz[i] = s_mapsz_o_flat[((i+1) * ADDRBITSZ) -1 : i * ADDRBITSZ];
+genvar gen_slavemapsz_idx;
+generate for (gen_slavemapsz_idx = 0; gen_slavemapsz_idx < SLAVECOUNT; gen_slavemapsz_idx = gen_slavemapsz_idx + 1) begin :gen_slavemapsz
+assign slavemapsz[gen_slavemapsz_idx] = s_mapsz_o_flat[((gen_slavemapsz_idx+1) * ADDRBITSZ) -1 : gen_slavemapsz_idx * ADDRBITSZ];
 end endgenerate
 
 localparam PINOOP = 2'b00;
@@ -174,10 +185,10 @@ always @ (posedge clk_i) begin
 end
 
 reg [ADDRBITSZ -1 : 0] addrspace [SLAVECOUNT -1 : 0];
-integer m;
+integer genaddrspace_idx;
 initial begin
-	for (m = 0; m < SLAVECOUNT; m = m + 1) begin
-		addrspace[m] = 0;
+	for (genaddrspace_idx = 0; genaddrspace_idx < SLAVECOUNT; genaddrspace_idx = genaddrspace_idx + 1) begin
+		addrspace[genaddrspace_idx] = 0;
 	end
 end
 reg addrspacerdy = 0;
@@ -316,31 +327,37 @@ wire nextoprdy = ((slaverdyslaveidxsaved_and_slaverdyslaveidxreadoppending || !s
 	slaveidxrdy_and_not_slaveidxinvalid && (slaverdyslaveidx /*|| slaveopsaved == PINOOP*/));
 
 wire [ARCHBITSZ -1 : 0] masterdatoi = (slaverdyslaveidxsaved_and_slaverdyslaveidxreadoppending ? slavedatislaveidxsaved : masterdatomasteridx);
-generate for (i = 0; i < MASTERCOUNT; i = i + 1) begin :gen_masterdato
-assign masterdato[i] = masterdatoi;
+genvar gen_masterdato_idx;
+generate for (gen_masterdato_idx = 0; gen_masterdato_idx < MASTERCOUNT; gen_masterdato_idx = gen_masterdato_idx + 1) begin :gen_masterdato
+assign masterdato[gen_masterdato_idx] = masterdatoi;
 end endgenerate
 
-generate for (i = 0; i < MASTERCOUNT; i = i + 1) begin :gen_masterrdy
-assign masterrdy[i] = (masteridx == i && nextoprdy) ? 1'b1 : 1'b0;
+genvar gen_masterrdy_idx;
+generate for (gen_masterrdy_idx = 0; gen_masterrdy_idx < MASTERCOUNT; gen_masterrdy_idx = gen_masterrdy_idx + 1) begin :gen_masterrdy
+assign masterrdy[gen_masterrdy_idx] = (masteridx == gen_masterrdy_idx && nextoprdy) ? 1'b1 : 1'b0;
 end endgenerate
 
-generate for (i = 0; i < SLAVECOUNT; i = i + 1) begin :gen_slaveop
-assign slaveop[i] = (slaveidx == i && nextoprdy) ? masteropmasteridx : PINOOP;
+genvar gen_slaveop_idx;
+generate for (gen_slaveop_idx = 0; gen_slaveop_idx < SLAVECOUNT; gen_slaveop_idx = gen_slaveop_idx + 1) begin :gen_slaveop
+assign slaveop[gen_slaveop_idx] = (slaveidx == gen_slaveop_idx && nextoprdy) ? masteropmasteridx : PINOOP;
 end endgenerate
 
 wire [ADDRBITSZ -1 : 0] slaveaddri = (masteraddrmasteridx-((addrspaceslaveidx+1'b1)-slavemapszslaveidx));
-generate for (i = 0; i < SLAVECOUNT; i = i + 1) begin :gen_slaveaddr
-assign slaveaddr[i] = slaveaddri;
+genvar gen_slaveaddr_idx;
+generate for (gen_slaveaddr_idx = 0; gen_slaveaddr_idx < SLAVECOUNT; gen_slaveaddr_idx = gen_slaveaddr_idx + 1) begin :gen_slaveaddr
+assign slaveaddr[gen_slaveaddr_idx] = slaveaddri;
 end endgenerate
 
 wire [ARCHBITSZ -1 : 0] masterdatimasteridx = masterdati[masteridx];
-generate for (i = 0; i < SLAVECOUNT; i = i + 1) begin :gen_slavedato
-assign slavedato[i] = masterdatimasteridx;
+genvar gen_slavedato_idx;
+generate for (gen_slavedato_idx = 0; gen_slavedato_idx < SLAVECOUNT; gen_slavedato_idx = gen_slavedato_idx + 1) begin :gen_slavedato
+assign slavedato[gen_slavedato_idx] = masterdatimasteridx;
 end endgenerate
 
 wire [(ARCHBITSZ/8) -1 : 0] masterbytselmasteridx = masterbytsel[masteridx];
-generate for (i = 0; i < SLAVECOUNT; i = i + 1) begin :gen_slavebytsel
-assign slavebytsel[i] = masterbytselmasteridx;
+genvar gen_slavebytsel_idx;
+generate for (gen_slavebytsel_idx = 0; gen_slavebytsel_idx < SLAVECOUNT; gen_slavebytsel_idx = gen_slavebytsel_idx + 1) begin :gen_slavebytsel
+assign slavebytsel[gen_slavebytsel_idx] = masterbytselmasteridx;
 end endgenerate
 
 endmodule

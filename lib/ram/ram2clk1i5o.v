@@ -140,12 +140,11 @@ bram #(
 
 `else
 
-integer idx;
-
 reg [DW -1 : 0] u [SZ -1 : 0];
+integer init_u_idx;
 initial begin
-	for (idx = 0; idx < SZ; idx = idx + 1)
-		u[idx] = 0;
+	for (init_u_idx = 0; init_u_idx < SZ; init_u_idx = init_u_idx + 1)
+		u[init_u_idx] = 0;
 	if (SRCFILE != "") begin
 		$readmemh (SRCFILE, u);
 	end

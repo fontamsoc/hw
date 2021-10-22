@@ -27,12 +27,11 @@ input wire  [DW-1:0]        i1;
 output wire [DW-1:0]        o0;
 output wire [DW-1:0]        o1;
 
-integer idx;
-
 reg [DW-1:0] u [0:SZ-1];
+integer init_u_idx;
 initial begin
-	for (idx = 0; idx < SZ; idx = idx + 1)
-		u[idx] = 0;
+	for (init_u_idx = 0; init_u_idx < SZ; init_u_idx = init_u_idx + 1)
+		u[init_u_idx] = 0;
 	if (SRCFILE != "") begin
 		$readmemh (SRCFILE, u);
 	end

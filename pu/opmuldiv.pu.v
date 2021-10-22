@@ -250,9 +250,8 @@ always @ (posedge clk_i) begin
 		wridx <= wridx + 1'b1;
 end
 
-genvar i;
-
-generate for (i = 0; i < MULDIVCNT; i = i + 1) begin :gen_muldiv
+genvar gen_muldiv_idx;
+generate for (gen_muldiv_idx = 0; gen_muldiv_idx < MULDIVCNT; gen_muldiv_idx = gen_muldiv_idx + 1) begin :gen_muldiv
 muldiv #(
 
 	 .ARCHBITSZ (ARCHBITSZ)
@@ -264,13 +263,13 @@ muldiv #(
 
 	,.clk_i (clk_i)
 
-	,.stb_i (stb_i && (wridx[CLOG2MULDIVCNT -1 : 0] == i))
+	,.stb_i (stb_i && (wridx[CLOG2MULDIVCNT -1 : 0] == gen_muldiv_idx))
 
 	,.data_i  (data_i)
-	,.data_o  (data_w[i])
-	,.gprid_o (gprid_w[i])
+	,.data_o  (data_w[gen_muldiv_idx])
+	,.gprid_o (gprid_w[gen_muldiv_idx])
 
-	,.rdy_o (rdy_w[i])
+	,.rdy_o (rdy_w[gen_muldiv_idx])
 );
 end endgenerate
 

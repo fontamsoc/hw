@@ -231,10 +231,10 @@ reg issdcardmmc = 0;
 reg issdcardaddrblockaligned = 0;
 
 reg [8 -1 : 0] sdcardcsd [16 -1 : 0];
-integer i;
+integer init_sdcardcsd_idx;
 initial begin
-	for (i = 0; i < 16; i = i + 1)
-		sdcardcsd[i] = 0;
+	for (init_sdcardcsd_idx = 0; init_sdcardcsd_idx < 16; init_sdcardcsd_idx = init_sdcardcsd_idx + 1)
+		sdcardcsd[init_sdcardcsd_idx] = 0;
 end
 
 always @ (posedge clk_i[0]) begin

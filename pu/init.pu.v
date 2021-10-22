@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-integer j;
+integer init_instrbuffer_idx;
 
 initial begin
 
@@ -32,8 +32,8 @@ initial begin
 
 	clkcyclecnt = 0;
 
-	for (j = 0; j < INSTRBUFFERSIZE; j = j + 1)
-		instrbuffer[j] = 0;
+	for (init_instrbuffer_idx = 0; init_instrbuffer_idx < INSTRBUFFERSIZE; init_instrbuffer_idx = init_instrbuffer_idx + 1)
+		instrbuffer[init_instrbuffer_idx] = 0;
 
 	instrbufferwriteindex = 0;
 

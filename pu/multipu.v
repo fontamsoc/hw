@@ -90,7 +90,8 @@ assign s_pi1q_rdy_w   = pi1_rdy_i;
 wire [PUCOUNT -1 : 0] rst_ow;
 assign rst_o = |rst_ow;
 
-generate for (i = 0; i < PUCOUNT; i = i + 1) begin :genpu
+genvar genpu_idx;
+generate for (genpu_idx = 0; genpu_idx < PUCOUNT; genpu_idx = genpu_idx + 1) begin :genpu
 pu #(
 
 	 .CLKFREQ        (CLKFREQ)
@@ -103,24 +104,24 @@ pu #(
 
 	 .rst_i (rst_i)
 
-	,.rst_o (rst_ow[i])
+	,.rst_o (rst_ow[genpu_idx])
 
 	,.clk_i (clk_i)
 
-	,.pi1_op_o   (m_pi1q_op_w[i])
-	,.pi1_addr_o (m_pi1q_addr_w[i])
-	,.pi1_data_o (m_pi1q_data_w1[i])
-	,.pi1_data_i (m_pi1q_data_w0[i])
-	,.pi1_sel_o  (m_pi1q_sel_w[i])
-	,.pi1_rdy_i  (m_pi1q_rdy_w[i])
+	,.pi1_op_o   (m_pi1q_op_w[genpu_idx])
+	,.pi1_addr_o (m_pi1q_addr_w[genpu_idx])
+	,.pi1_data_o (m_pi1q_data_w1[genpu_idx])
+	,.pi1_data_i (m_pi1q_data_w0[genpu_idx])
+	,.pi1_sel_o  (m_pi1q_sel_w[genpu_idx])
+	,.pi1_rdy_i  (m_pi1q_rdy_w[genpu_idx])
 
-	,.intrqst_i (intrqst_i[i])
-	,.intrdy_o  (intrdy_o[i])
-	,.halted_o  (halted_o[i])
+	,.intrqst_i (intrqst_i[genpu_idx])
+	,.intrdy_o  (intrdy_o[genpu_idx])
+	,.halted_o  (halted_o[genpu_idx])
 
-	,.rstaddr_i (i ? rstaddr2_i : rstaddr_i)
+	,.rstaddr_i (genpu_idx ? rstaddr2_i : rstaddr_i)
 
-	,.id_i (id_i + i)
+	,.id_i (id_i + genpu_idx)
 );
 end endgenerate
 

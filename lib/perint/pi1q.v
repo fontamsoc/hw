@@ -58,36 +58,40 @@ input  wire [ARCHBITSZ -1 : 0]     s_data_i;
 output wire [(ARCHBITSZ/8) -1 : 0] s_sel_o;
 input  wire                        s_rdy_i;
 
-genvar i;
-
 wire [2 -1 : 0] masterop [MASTERCOUNT -1 : 0];
-generate for (i = 0; i < MASTERCOUNT; i = i + 1) begin :gen_masterop
-assign masterop[i] = m_op_i_flat[((i+1) * 2) -1 : i * 2];
+genvar gen_masterop_idx;
+generate for (gen_masterop_idx = 0; gen_masterop_idx < MASTERCOUNT; gen_masterop_idx = gen_masterop_idx + 1) begin :gen_masterop
+assign masterop[gen_masterop_idx] = m_op_i_flat[((gen_masterop_idx+1) * 2) -1 : gen_masterop_idx * 2];
 end endgenerate
 
 wire [ADDRBITSZ -1 : 0] masteraddr [MASTERCOUNT -1 : 0];
-generate for (i = 0; i < MASTERCOUNT; i = i + 1) begin :gen_masteraddr
-assign masteraddr[i] = m_addr_i_flat[((i+1) * ADDRBITSZ) -1 : i * ADDRBITSZ];
+genvar gen_masteraddr_idx;
+generate for (gen_masteraddr_idx = 0; gen_masteraddr_idx < MASTERCOUNT; gen_masteraddr_idx = gen_masteraddr_idx + 1) begin :gen_masteraddr
+assign masteraddr[gen_masteraddr_idx] = m_addr_i_flat[((gen_masteraddr_idx+1) * ADDRBITSZ) -1 : gen_masteraddr_idx * ADDRBITSZ];
 end endgenerate
 
 wire [ARCHBITSZ -1 : 0] masterdati [MASTERCOUNT -1 : 0];
-generate for (i = 0; i < MASTERCOUNT; i = i + 1) begin :gen_masterdati
-assign masterdati[i] = m_data_i_flat[((i+1) * ARCHBITSZ) -1 : i * ARCHBITSZ];
+genvar gen_masterdati_idx;
+generate for (gen_masterdati_idx = 0; gen_masterdati_idx < MASTERCOUNT; gen_masterdati_idx = gen_masterdati_idx + 1) begin :gen_masterdati
+assign masterdati[gen_masterdati_idx] = m_data_i_flat[((gen_masterdati_idx+1) * ARCHBITSZ) -1 : gen_masterdati_idx * ARCHBITSZ];
 end endgenerate
 
 reg [ARCHBITSZ -1 : 0] masterdato [MASTERCOUNT -1 : 0];
-generate for (i = 0; i < MASTERCOUNT; i = i + 1) begin :gen_m_data_o_flat
-assign m_data_o_flat[((i+1) * ARCHBITSZ) -1 : i * ARCHBITSZ] = masterdato[i];
+genvar gen_m_data_o_flat_idx;
+generate for (gen_m_data_o_flat_idx = 0; gen_m_data_o_flat_idx < MASTERCOUNT; gen_m_data_o_flat_idx = gen_m_data_o_flat_idx + 1) begin :gen_m_data_o_flat
+assign m_data_o_flat[((gen_m_data_o_flat_idx+1) * ARCHBITSZ) -1 : gen_m_data_o_flat_idx * ARCHBITSZ] = masterdato[gen_m_data_o_flat_idx];
 end endgenerate
 
 wire [(ARCHBITSZ/8) -1 : 0] masterbytsel [MASTERCOUNT -1 : 0];
-generate for (i = 0; i < MASTERCOUNT; i = i + 1) begin :gen_masterbytsel
-assign masterbytsel[i] = m_sel_i_flat[((i+1) * (ARCHBITSZ/8)) -1 : i * (ARCHBITSZ/8)];
+genvar gen_masterbytsel_idx;
+generate for (gen_masterbytsel_idx = 0; gen_masterbytsel_idx < MASTERCOUNT; gen_masterbytsel_idx = gen_masterbytsel_idx + 1) begin :gen_masterbytsel
+assign masterbytsel[gen_masterbytsel_idx] = m_sel_i_flat[((gen_masterbytsel_idx+1) * (ARCHBITSZ/8)) -1 : gen_masterbytsel_idx * (ARCHBITSZ/8)];
 end endgenerate
 
 wire masterrdy [MASTERCOUNT -1 : 0];
-generate for (i = 0; i < MASTERCOUNT; i = i + 1) begin :gen_m_rdy_o_flat
-assign m_rdy_o_flat[((i+1) * 1) -1 : i * 1] = masterrdy[i];
+genvar gen_m_rdy_o_flat_idx;
+generate for (gen_m_rdy_o_flat_idx = 0; gen_m_rdy_o_flat_idx < MASTERCOUNT; gen_m_rdy_o_flat_idx = gen_m_rdy_o_flat_idx + 1) begin :gen_m_rdy_o_flat
+assign m_rdy_o_flat[((gen_m_rdy_o_flat_idx+1) * 1) -1 : gen_m_rdy_o_flat_idx * 1] = masterrdy[gen_m_rdy_o_flat_idx];
 end endgenerate
 
 localparam PINOOP = 2'b00;
@@ -180,8 +184,9 @@ wire queuenotalmostfull = (queueusage < (MASTERCOUNT_-1));
 reg [CLOG2MASTERCOUNT -1 : 0] mstrhi;
 reg [CLOG2MASTERCOUNT -1 : 0] slvhi;
 
-generate for (i = 0; i < MASTERCOUNT; i = i + 1) begin :gen_masterrdy
-assign masterrdy[i] = (queuewriteidx[CLOG2MASTERCOUNT -1 : 0] == i &&
+genvar gen_masterrdy_idx;
+generate for (gen_masterrdy_idx = 0; gen_masterrdy_idx < MASTERCOUNT; gen_masterrdy_idx = gen_masterrdy_idx + 1) begin :gen_masterrdy
+assign masterrdy[gen_masterrdy_idx] = (queuewriteidx[CLOG2MASTERCOUNT -1 : 0] == gen_masterrdy_idx &&
 	mstrhi == slvhi && queuenotfull && (queuenotalmostfull || !queueop_w1[1]));
 end endgenerate
 
@@ -242,10 +247,10 @@ always @ (posedge s_clk_i) begin
 	end
 end
 
-integer j;
+integer init_masterdato_idx;
 initial begin
-	for (j = 0; j < MASTERCOUNT; j = j + 1)
-		masterdato[j] = 0;
+	for (init_masterdato_idx = 0; init_masterdato_idx < MASTERCOUNT; init_masterdato_idx = init_masterdato_idx + 1)
+		masterdato[init_masterdato_idx] = 0;
 	queuereadidx = 0;
 	queuewriteidx = 0;
 	mstrhinxt = (MASTERCOUNT - 1);
