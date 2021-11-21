@@ -25,13 +25,13 @@ module intctrl (
 
 `include "lib/clog2.v"
 
+parameter ARCHBITSZ = 0;
+
 parameter INTSRCCOUNT = 0;
 parameter INTDSTCOUNT = 0;
 
 localparam CLOG2INTSRCCOUNT = clog2(INTSRCCOUNT);
 localparam CLOG2INTDSTCOUNT = clog2(INTDSTCOUNT);
-
-parameter ARCHBITSZ = 32;
 
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
 localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
@@ -57,7 +57,7 @@ output wire [INTSRCCOUNT -1 : 0] intrdysrc_o;
 
 assign pi1_rdy_o   = 1;
 
-assign pi1_mapsz_o = 2;
+assign pi1_mapsz_o = (64/ARCHBITSZ);
 
 reg [CLOG2INTSRCCOUNT -1 : 0] srcindex = {CLOG2INTSRCCOUNT{1'b0}};
 reg [CLOG2INTDSTCOUNT -1 : 0] dstindex = {CLOG2INTDSTCOUNT{1'b0}};

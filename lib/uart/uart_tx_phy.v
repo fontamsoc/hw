@@ -49,7 +49,9 @@ reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] clockcyclesperbit = 0;
 reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] cntr = 0;
 wire                                     txen = (cntr >= clockcyclesperbit);
 
-assign rdy_o = (txen && txstate == TXIDLE && !bitcnt);
+wire bsy = (txstate != TXIDLE || bitcnt);
+
+assign rdy_o = !bsy;
 
 always @ (posedge clk_i) begin
 
@@ -60,7 +62,7 @@ always @ (posedge clk_i) begin
 		cntr <= 0;
 		tx_o <= 1'b1;
 
-	end else if (txen) begin
+	end else if ((stb_i && !bsy) || (txen && bsy)) begin
 
 		if (txstate == TXIDLE) begin
 
@@ -90,7 +92,7 @@ always @ (posedge clk_i) begin
 
 		cntr <= 0;
 
-	end else
+	end else if (!txen)
 		cntr <= cntr + 1'b1;
 end
 

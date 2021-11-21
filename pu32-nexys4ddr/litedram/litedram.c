@@ -18,10 +18,6 @@ __asm__ (
 	".p2align 1\n"
 	"_start:\n"
 
-	// Adjust %ksl to enable caching throughout the memory
-	// region where litedram.bin will be running.
-	"rli16 %sr, _end\n" // ### Manually encoding rli16 since linker-relaxation is not yet implemented.
-	"setksl %sr\n"
 	// Initialize %sp and %fp.
 	"rli16 %sp, stack + "__xstr__(STACKSZ)"\n" // ### Manually encoding rli16 since linker-relaxation is not yet implemented.
 	//"li8 %fp, 0\n" // ### Disabled, as it is unnecessary.

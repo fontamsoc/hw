@@ -33,7 +33,7 @@ parameter SLAVECOUNT        = 1;
 parameter DEFAULTSLAVEINDEX = 0;
 parameter FIRSTSLAVEADDR    = 0;
 
-parameter ARCHBITSZ = 32;
+parameter ARCHBITSZ = 0;
 
 localparam CLOG2MASTERCOUNT = clog2(MASTERCOUNT);
 localparam CLOG2SLAVECOUNT  = clog2(SLAVECOUNT);
@@ -168,11 +168,27 @@ wire [ADDRBITSZ -1 : 0] masteraddrmasteridx = masteraddr[masteridx];
 
 wire masterrdymasteridx = masterrdy[masteridx];
 
+reg [2 -1 : 0] masteropsaved = PINOOP;
+always @ (posedge clk_i) begin
+	if (rst_i)
+		masteropsaved <= PINOOP;
+	if (masterrdymasteridx)
+		masteropsaved <= masteropmasteridx;
+end
+
+wire slaverdyslaveidx;
+
+reg [2 -1 : 0] slaveopsaved = PIWROP;
+
+wire slaveidxrdy_and_not_slaveidxinvalid;
+
 always @ (posedge clk_i) begin
 	if (MASTERCOUNT > 1) begin
 		if (rst_i)
 			mstrhi <= (MASTERCOUNT - 1);
-		else if (masterrdymasteridx && masteropmasteridx == PINOOP) begin
+		else if (masterrdymasteridx && masteropmasteridx == PINOOP ||
+			(!slaverdyslaveidx && slaveidxrdy_and_not_slaveidxinvalid && slaveopsaved == PINOOP &&
+				!masteropmasteridx[1])) begin
 			if (masteridx < mstrhi)
 				masteridx <= masteridx + 1'b1;
 			else begin
@@ -291,11 +307,9 @@ wire [ARCHBITSZ -1 : 0] slavedatislaveidxsaved = slavedati[slaveidxsaved];
 
 wire readoprdy = (masterrdymasteridx && (masteropmasteridx == PIRDOP || masteropmasteridx == PIRWOP));
 
-wire slaverdyslaveidx = slaverdy[slaveidx];
+assign slaverdyslaveidx = slaverdy[slaveidx];
 
-reg [2 -1 : 0] slaveopsaved = PINOOP;
-
-wire slaveidxrdy_and_not_slaveidxinvalid = (!slaveidxbsy && slaveidxrdy && !slaveidxinvalid);
+assign slaveidxrdy_and_not_slaveidxinvalid = (!slaveidxbsy && slaveidxrdy && !slaveidxinvalid);
 
 always @ (posedge clk_i) begin
 
@@ -316,15 +330,17 @@ always @ (posedge clk_i) begin
 		slaveidxsaved <= slaveidx;
 		slaverdyslaveidxreadoppending <= 1'b1;
 	end
+end
 
-	if (rst_i) begin
+always @ (posedge clk_i) begin
+	if (rst_i)
 		slaveopsaved <= PIWROP;
-	end else if (slaveidxrdy_and_not_slaveidxinvalid && slaverdyslaveidx)
+	else if (slaveidxrdy_and_not_slaveidxinvalid && slaverdyslaveidx)
 		slaveopsaved <= slaveop[slaveidx];
 end
 
 wire nextoprdy = ((slaverdyslaveidxsaved_and_slaverdyslaveidxreadoppending || !slaverdyslaveidxreadoppending) &&
-	slaveidxrdy_and_not_slaveidxinvalid && (slaverdyslaveidx /*|| slaveopsaved == PINOOP*/));
+	slaveidxrdy_and_not_slaveidxinvalid && slaverdyslaveidx);
 
 wire [ARCHBITSZ -1 : 0] masterdatoi = (slaverdyslaveidxsaved_and_slaverdyslaveidxreadoppending ? slavedatislaveidxsaved : masterdatomasteridx);
 genvar gen_masterdato_idx;

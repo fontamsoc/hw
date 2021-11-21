@@ -52,6 +52,9 @@ input  wire                push_i;
 input  wire [WIDTH -1 : 0] data_i;
 output wire                full_o;
 
+wire en = (pop_i && !empty_o);
+wire we = (push_i && !full_o);
+
 reg [(CLOG2DEPTH +1) -1 : 0] readidx = 0;
 reg [(CLOG2DEPTH +1) -1 : 0] writeidx = 0;
 
@@ -65,7 +68,7 @@ ram2clk1i2o #(
 	  .rst_i (rst_i)
 
 	,.clk0_i  (clk_pop_i)                  ,.clk1_i  (clk_push_i)
-	                                       ,.we1_i   (push_i)
+	                                       ,.we1_i   (we)
 	,.addr0_i (readidx[CLOG2DEPTH -1 : 0]) ,.addr1_i (writeidx[CLOG2DEPTH -1 : 0])
 	                                       ,.i1      (data_i)
 	,.o0      (data_o)                     ,.o1      ()
@@ -80,12 +83,12 @@ assign empty_o = (usage_o == 0);
 always @ (posedge clk_pop_i[0]) begin
 	if (rst_i)
 		readidx <= writeidx;
-	else if (pop_i)
+	else if (en)
 		readidx <= readidx + 1'b1;
 end
 
 always @ (posedge clk_push_i[0]) begin
-	if (push_i)
+	if (we)
 		writeidx <= writeidx + 1'b1;
 end
 

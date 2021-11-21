@@ -15,20 +15,36 @@ end else begin
 	if (opldstmemrqst) begin
 
 		if (dcachemasterrdy) begin
-			if (opldstbyteselect == 4'b1111)
+			if (opldstbyteselect == 'b11)
+				opldstresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-16)){1'b0}}, dcachemasterdato[15:0]};
+			else if (opldstbyteselect == 'b01)
+				opldstresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[7:0]};
+			else if (opldstbyteselect == 'b10)
+				opldstresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[15:8]};
+			else if (opldstbyteselect == 'b1111)
+				opldstresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-32)){1'b0}}, dcachemasterdato[31:0]};
+			else if (opldstbyteselect == 'b1100)
+				opldstresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-16)){1'b0}}, dcachemasterdato[31:16]};
+			else if (opldstbyteselect == 'b0100)
+				opldstresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[23:16]};
+			else if (opldstbyteselect == 'b1000)
+				opldstresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[31:24]};
+			else if (opldstbyteselect == 'b11111111)
 				opldstresult <= dcachemasterdato;
-			else if (opldstbyteselect == 4'b0011)
-				opldstresult <= {{16{1'b0}}, dcachemasterdato[15:0]};
-			else if (opldstbyteselect == 4'b1100)
-				opldstresult <= {{16{1'b0}}, dcachemasterdato[31:16]};
-			else if (opldstbyteselect == 4'b0001)
-				opldstresult <= {{24{1'b0}}, dcachemasterdato[7:0]};
-			else if (opldstbyteselect == 4'b0010)
-				opldstresult <= {{24{1'b0}}, dcachemasterdato[15:8]};
-			else if (opldstbyteselect == 4'b0100)
-				opldstresult <= {{24{1'b0}}, dcachemasterdato[23:16]};
-			else if (opldstbyteselect == 4'b1000)
-				opldstresult <= {{24{1'b0}}, dcachemasterdato[31:24]};
+			else if (opldstbyteselect == 'b11110000)
+				opldstresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-32)){1'b0}}, dcachemasterdato[63:32]};
+			else if (opldstbyteselect == 'b00110000)
+				opldstresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-16)){1'b0}}, dcachemasterdato[47:32]};
+			else if (opldstbyteselect == 'b11000000)
+				opldstresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-16)){1'b0}}, dcachemasterdato[63:48]};
+			else if (opldstbyteselect == 'b00010000)
+				opldstresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[39:32]};
+			else if (opldstbyteselect == 'b00100000)
+				opldstresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[47:40]};
+			else if (opldstbyteselect == 'b01000000)
+				opldstresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[55:48]};
+			else if (opldstbyteselect == 'b10000000)
+				opldstresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[63:56]};
 
 			opldstdone <= 1;
 

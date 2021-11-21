@@ -28,6 +28,10 @@ module pu (
 	,rstaddr_i
 
 	,id_i
+
+	`ifdef SIMULATION
+	,pc_o
+	`endif
 );
 
 `include "lib/clog2.v"
@@ -37,13 +41,14 @@ parameter ICACHESETCOUNT = 2;
 parameter DCACHESETCOUNT = 2;
 parameter TLBSETCOUNT    = 2;
 parameter ICACHEWAYCOUNT = 1;
+parameter DCACHEWAYCOUNT = 1;
 parameter MULDIVCNT      = 4;
 
 localparam CLOG2ICACHESETCOUNT = clog2(ICACHESETCOUNT);
 localparam CLOG2DCACHESETCOUNT = clog2(DCACHESETCOUNT);
 localparam CLOG2ICACHEWAYCOUNT = clog2(ICACHEWAYCOUNT);
 
-parameter ARCHBITSZ = 32;
+parameter ARCHBITSZ = 0;
 
 localparam CLOG2ARCHBITSZ = clog2(ARCHBITSZ);
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
@@ -76,6 +81,10 @@ input wire[(ARCHBITSZ-1) -1 : 0] rstaddr_i;
 
 input wire[ARCHBITSZ -1 : 0] id_i;
 
+`ifdef SIMULATION
+output wire [ARCHBITSZ -1 : 0] pc_o;
+`endif
+
 localparam MEMNOOP		= 2'b00;
 localparam MEMWRITEOP		= 2'b01;
 localparam MEMREADOP		= 2'b10;
@@ -96,6 +105,8 @@ localparam CLOG2GPRCNTTOTAL = clog2(GPRCNTTOTAL);
 localparam ADDRWITHINPAGEBITSZ = (12-CLOG2ARCHBITSZBY8);
 
 localparam PAGENUMBITSZ = (ARCHBITSZ-12);
+
+localparam ARCHBITSZMAX = 64;
 
 `include "./opcodes.pu.v"
 `include "./netsandregs.pu.v"

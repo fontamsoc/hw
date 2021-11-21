@@ -35,7 +35,12 @@ end else if (miscrdyandsequencerreadyandgprrdy1 && (isopimm || isopinc)) begin
 
 	opligpr <= instrbufferdataout1[7:4];
 
-	oplicounter <= instrbufferdataout0[1:0];
+	if (ARCHBITSZ == 16)
+		oplicounter <= instrbufferdataout0[0];
+	else if (ARCHBITSZ == 32)
+		oplicounter <= instrbufferdataout0[1:0];
+	else
+		oplicounter <= ((instrbufferdataout0[1:0] == 2'b11) ? 3'd4 : {1'b0, instrbufferdataout0[1:0]});
 
 	oplioffset <= 1;
 end

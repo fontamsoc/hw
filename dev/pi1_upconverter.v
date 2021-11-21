@@ -22,9 +22,8 @@ module pi1_upconverter (
 
 `include "lib/clog2.v"
 
-parameter MARCHBITSZ = 32;
-
-parameter SARCHBITSZ = 64;
+parameter MARCHBITSZ = 0;
+parameter SARCHBITSZ = 0;
 
 localparam CLOG2MARCHBITSZBY8 = clog2(MARCHBITSZ/8);
 localparam CLOG2SARCHBITSZBY8 = clog2(SARCHBITSZ/8);

@@ -38,12 +38,12 @@ module pi1_dcache (
 
 `include "lib/clog2.v"
 
+parameter ARCHBITSZ = 0;
+
 parameter CACHESETCOUNT = 2;
 parameter CACHEWAYCOUNT = 1;
 
 parameter INITFILE = "";
-
-parameter ARCHBITSZ = 32;
 
 localparam CLOG2CACHESETCOUNT = clog2(CACHESETCOUNT);
 localparam CLOG2CACHEWAYCOUNT = clog2(CACHEWAYCOUNT);
@@ -118,7 +118,7 @@ fifo_fwft #(
 	,.usage_o ()
 
 	,.clk_pop_i (clk_i)
-	,.pop_i     (slvwriterdy && !bufempty)
+	,.pop_i     (slvwriterdy)
 	,.data_o    (addrbufdato)
 	,.empty_o   ()
 
@@ -142,7 +142,7 @@ fifo_fwft #(
 	,.usage_o (bufusage)
 
 	,.clk_pop_i (clk_i)
-	,.pop_i     (slvwriterdy && !bufempty)
+	,.pop_i     (slvwriterdy)
 	,.data_o    (databufdato)
 	,.empty_o   (bufempty)
 
@@ -166,7 +166,7 @@ fifo_fwft #(
 	,.usage_o ()
 
 	,.clk_pop_i (clk_i)
-	,.pop_i     (slvwriterdy && !bufempty)
+	,.pop_i     (slvwriterdy)
 	,.data_o    (bytselbufdato)
 	,.empty_o   ()
 

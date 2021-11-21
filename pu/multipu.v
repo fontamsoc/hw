@@ -29,6 +29,10 @@ module multipu (
 	,rstaddr2_i
 
 	,id_i
+
+	`ifdef SIMULATION
+	,pc_o
+	`endif
 );
 
 `include "lib/clog2.v"
@@ -36,11 +40,13 @@ module multipu (
 parameter PUCOUNT        = 2;
 parameter CLKFREQ        = 1;
 parameter ICACHESETCOUNT = 2;
+parameter DCACHESETCOUNT = 2;
 parameter TLBSETCOUNT    = 2;
 parameter ICACHEWAYCOUNT = 1;
+parameter DCACHEWAYCOUNT = 1;
 parameter MULDIVCNT      = 4;
 
-parameter ARCHBITSZ = 32;
+parameter ARCHBITSZ = 0;
 
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
 localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
@@ -73,6 +79,10 @@ input wire [(ARCHBITSZ-1) -1 : 0] rstaddr2_i;
 
 input wire [ARCHBITSZ -1 : 0] id_i;
 
+`ifdef SIMULATION
+output wire [(ARCHBITSZ * PUCOUNT) -1 : 0] pc_o;
+`endif
+
 localparam PI1QMASTERCOUNT = PUCOUNT;
 localparam PI1QARCHBITSZ   = ARCHBITSZ;
 wire pi1q_rst_w = rst_i;
@@ -90,14 +100,24 @@ assign s_pi1q_rdy_w   = pi1_rdy_i;
 wire [PUCOUNT -1 : 0] rst_ow;
 assign rst_o = |rst_ow;
 
+`ifdef SIMULATION
+wire [ARCHBITSZ -1 : 0] pc_w [PUCOUNT -1 : 0];
+`endif
+
 genvar genpu_idx;
 generate for (genpu_idx = 0; genpu_idx < PUCOUNT; genpu_idx = genpu_idx + 1) begin :genpu
+`ifdef SIMULATION
+assign pc_o[((genpu_idx+1) * ARCHBITSZ) -1 : genpu_idx * ARCHBITSZ] = pc_w[genpu_idx];
+`endif
 pu #(
 
-	 .CLKFREQ        (CLKFREQ)
+	 .ARCHBITSZ      (ARCHBITSZ)
+	,.CLKFREQ        (CLKFREQ)
 	,.ICACHESETCOUNT (ICACHESETCOUNT)
+	,.DCACHESETCOUNT (DCACHESETCOUNT)
 	,.TLBSETCOUNT    (TLBSETCOUNT)
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
+	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
 	,.MULDIVCNT      (MULDIVCNT)
 
 ) pu (
@@ -122,6 +142,10 @@ pu #(
 	,.rstaddr_i (genpu_idx ? rstaddr2_i : rstaddr_i)
 
 	,.id_i (id_i + genpu_idx)
+
+	`ifdef SIMULATION
+	,.pc_o (pc_w[genpu_idx])
+	`endif
 );
 end endgenerate
 

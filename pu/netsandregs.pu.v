@@ -6,6 +6,11 @@ wire inkernelmode = ~inusermode;
 
 reg[(ARCHBITSZ-1) -1 : 0] ip;
 
+`ifdef SIMULATION
+assign pc_o = ({1'b0, ip} << 1'b1);
+reg [ARCHBITSZ -1 : 0] pc_o_saved = 0;
+`endif
+
 reg[(ARCHBITSZ-1) -1 : 0] kip;
 reg[(ARCHBITSZ-1) -1 : 0] uip;
 
@@ -46,9 +51,14 @@ reg[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufferwriteindex;
 wire[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufferusage =
 	(instrbufferwriteindex - ip[CLOG2INSTRBUFFERSIZE +1 : 1]);
 
-wire[ARCHBITSZ -1 : 0] instrbufferip = instrbuffer[ip[CLOG2INSTRBUFFERSIZE : 1]];
+wire[ARCHBITSZMAX -1 : 0] instrbufferip = instrbuffer[ip[CLOG2INSTRBUFFERSIZE : 1]];
 wire[16 -1 : 0] instrbufferdataout =
-	(ip[CLOG2ARCHBITSZBY16 -1 : 0] ? instrbufferip[31:16] : instrbufferip[15:0]);
+	(ARCHBITSZ == 16) ? instrbufferip :
+	(ARCHBITSZ == 32) ? (ip[CLOG2ARCHBITSZBY16 -1 : 0] ? instrbufferip[31:16] : instrbufferip[15:0]) : (
+			ip[CLOG2ARCHBITSZBY16 -1 : 0] == 0 ? instrbufferip[15:0] :
+			ip[CLOG2ARCHBITSZBY16 -1 : 0] == 1 ? instrbufferip[31:16] :
+			ip[CLOG2ARCHBITSZBY16 -1 : 0] == 2 ? instrbufferip[47:32] :
+							instrbufferip[63:48]);
 
 wire[8 -1 : 0] instrbufferdataout0 = instrbufferdataout[7:0];
 wire[8 -1 : 0] instrbufferdataout1 = instrbufferdataout[15:8];
@@ -89,24 +99,22 @@ wire instrfetchmemrqstdone = (instrfetchmemrqstinprogress && pi1_rdy_i && !instr
 
 wire instrfetchmemaccesspending = (instrfetchmemrqst && !instrfetchmemrqstinprogress && !instrbufferrst);
 
-reg[(CLOG2ARCHBITSZBY16 + 1) -1 : 0] oplicounter;
+reg[3 -1 : 0] oplicounter;
 
 wire oplicountereq1 = (oplicounter == 1);
 
-reg[(CLOG2ARCHBITSZBY16 + 1) -1 : 0] oplioffset;
+reg[3 -1 : 0] oplioffset;
 
 wire miscrdy = !oplicounter;
-
-wire[8 -1 : 0] dbgrcvrphydata;
 
 wire[ARCHBITSZ -1 : 0] gprdata1;
 wire[ARCHBITSZ -1 : 0] gprdata2;
 
 reg[2 -1 : 0] dcachemasterop;
 reg[ADDRBITSZ -1 : 0] dcachemasteraddr;
-wire[ARCHBITSZ -1 : 0] dcachemasterdato;
-reg[ARCHBITSZ -1 : 0] dcachemasterdati;
-reg[(ARCHBITSZ/8) -1 : 0] dcachemastersel;
+wire[ARCHBITSZMAX -1 : 0] dcachemasterdato;
+reg[ARCHBITSZMAX -1 : 0] dcachemasterdati;
+reg[(ARCHBITSZMAX/8) -1 : 0] dcachemastersel;
 wire dcachemasterrdy;
 
 wire[2 -1 : 0] dcacheslaveop;
@@ -202,6 +210,10 @@ reg gprrdyval;
 reg gprrdywriteenable;
 
 reg[ARCHBITSZ -1 : 0] gpr13val;
+
+`ifdef SIMULATION
+reg [ARCHBITSZ -1 : 0] sequencerstate;
+`endif
 
 wire isflagdisextintr;
 wire isflagdistimerintr;
@@ -476,7 +488,10 @@ wire itlbfault__hptwidone = (!itlbfault_ || (hptwidone && !itlbwritten));
 `endif
 `endif
 
-wire alignfault = ((instrbufferdataout0[1] && gprdata2[1:0]) || (instrbufferdataout0[0] && gprdata2[0]));
+wire alignfault =
+	(ARCHBITSZ == 16) ? (instrbufferdataout0[0] && gprdata2[0]) :
+	(ARCHBITSZ == 32) ? ((instrbufferdataout0[1] && gprdata2[1:0]) || (instrbufferdataout0[0] && gprdata2[0])) :
+		((&instrbufferdataout0[1:0] && gprdata2[2:0]) || (instrbufferdataout0[1] && gprdata2[1:0]) || (instrbufferdataout0[0] && gprdata2[0]));
 
 reg icacheactive;
 
@@ -605,11 +620,18 @@ reg[ARCHBITSZ -1 : 0] opligprdata1;
 
 reg[2 -1 : 0] oplitype;
 
-reg[(ARCHBITSZ -16) -1 : 0] oplilsb;
+reg[(ARCHBITSZMAX -16) -1 : 0] oplilsb;
 
-wire[ARCHBITSZ -1 : 0] opliresult =
-	((oplitype == 1) ? {{(ARCHBITSZ-16){instrbufferdataout1[7]}}, instrbufferdataout1, instrbufferdataout0} :
-	                   {instrbufferdataout1, instrbufferdataout0, oplilsb[((16*(0+1))-1):(16*(0))]}) +
+wire[ARCHBITSZMAX -1 : 0] opliresult = (
+	(ARCHBITSZ == 16) ? ({instrbufferdataout1, instrbufferdataout0}) :
+	(ARCHBITSZ == 32) ? ((oplitype == 1) ? {{(ARCHBITSZ-16){instrbufferdataout1[7]}}, instrbufferdataout1, instrbufferdataout0} :
+			{instrbufferdataout1, instrbufferdataout0, oplilsb[((16*(0+1))-1):(16*(0))]}) :
+		((oplitype == 1) ? {{(ARCHBITSZ-16){instrbufferdataout1[7]}}, instrbufferdataout1, instrbufferdataout0} :
+		 (oplitype == 2) ? {{(ARCHBITSZ-32){instrbufferdataout1[7]}}, instrbufferdataout1, instrbufferdataout0,
+					oplilsb[((16*(0+1))-1):(16*(0))]} :
+				{instrbufferdataout1, instrbufferdataout0,
+					oplilsb[((16*(0+1))-1):(16*(0))], oplilsb[((16*(1+1))-1):(16*(1))],
+						oplilsb[((16*(2+1))-1):(16*(2))]})) +
 	(wasopinc ? opligprdata1 : (wasoprli ? {ipplusone, 1'b0} : {ARCHBITSZ{1'b0}}));
 
 reg[CLOG2GPRCNTPERCTX -1 : 0] opligpr;
@@ -767,9 +789,9 @@ wire dtlb_rdy = (!dtlbreadenable &&
 
 reg[CLOG2GPRCNTTOTAL -1 : 0] opldgpr;
 
-reg[ARCHBITSZ -1 : 0] opldresult;
+reg[ARCHBITSZMAX -1 : 0] opldresult;
 
-reg[(ARCHBITSZ/8) -1 : 0] opldbyteselect;
+reg[(ARCHBITSZMAX/8) -1 : 0] opldbyteselect;
 
 wire opldfault_ = (dtlben && (dtlbnotreadable || dtlbmiss));
 wire opldfault = ((inusermode && alignfault) || opldfault_);

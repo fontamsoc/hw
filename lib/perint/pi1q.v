@@ -32,9 +32,11 @@ module pi1q (
 
 parameter MASTERCOUNT = 2;
 
-parameter ARCHBITSZ = 32;
+parameter ARCHBITSZ = 0;
 
 localparam CLOG2MASTERCOUNT = clog2(MASTERCOUNT);
+
+localparam MASTERCOUNT_ = (1 << CLOG2MASTERCOUNT);
 
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
 localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
@@ -175,11 +177,9 @@ dram #(
 	,.o0      (queuebytsel_w0)                        ,.o1      ()
 );
 
-localparam MASTERCOUNT_ = (1 << CLOG2MASTERCOUNT);
+wire queuenotfull = (queueusage < MASTERCOUNT);
 
-wire queuenotfull = (queueusage < MASTERCOUNT_);
-
-wire queuenotalmostfull = (queueusage < (MASTERCOUNT_-1));
+wire queuenotalmostfull = (queueusage < (MASTERCOUNT-1));
 
 reg [CLOG2MASTERCOUNT -1 : 0] mstrhi;
 reg [CLOG2MASTERCOUNT -1 : 0] slvhi;

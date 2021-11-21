@@ -15,20 +15,36 @@ end else begin
 	if (opldmemrqst) begin
 
 		if (dcachemasterrdy) begin
-			if (opldbyteselect == 4'b1111)
+			if (opldbyteselect == 'b11)
+				opldresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-16)){1'b0}}, dcachemasterdato[15:0]};
+			else if (opldbyteselect == 'b01)
+				opldresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[7:0]};
+			else if (opldbyteselect == 'b10)
+				opldresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[15:8]};
+			else if (opldbyteselect == 'b1111)
+				opldresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-32)){1'b0}}, dcachemasterdato[31:0]};
+			else if (opldbyteselect == 'b1100)
+				opldresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-16)){1'b0}}, dcachemasterdato[31:16]};
+			else if (opldbyteselect == 'b0100)
+				opldresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[23:16]};
+			else if (opldbyteselect == 'b1000)
+				opldresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[31:24]};
+			else if (opldbyteselect == 'b11111111)
 				opldresult <= dcachemasterdato;
-			else if (opldbyteselect == 4'b0011)
-				opldresult <= {{16{1'b0}}, dcachemasterdato[15:0]};
-			else if (opldbyteselect == 4'b1100)
-				opldresult <= {{16{1'b0}}, dcachemasterdato[31:16]};
-			else if (opldbyteselect == 4'b0001)
-				opldresult <= {{24{1'b0}}, dcachemasterdato[7:0]};
-			else if (opldbyteselect == 4'b0010)
-				opldresult <= {{24{1'b0}}, dcachemasterdato[15:8]};
-			else if (opldbyteselect == 4'b0100)
-				opldresult <= {{24{1'b0}}, dcachemasterdato[23:16]};
-			else if (opldbyteselect == 4'b1000)
-				opldresult <= {{24{1'b0}}, dcachemasterdato[31:24]};
+			else if (opldbyteselect == 'b11110000)
+				opldresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-32)){1'b0}}, dcachemasterdato[63:32]};
+			else if (opldbyteselect == 'b00110000)
+				opldresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-16)){1'b0}}, dcachemasterdato[47:32]};
+			else if (opldbyteselect == 'b11000000)
+				opldresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-16)){1'b0}}, dcachemasterdato[63:48]};
+			else if (opldbyteselect == 'b00010000)
+				opldresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[39:32]};
+			else if (opldbyteselect == 'b00100000)
+				opldresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[47:40]};
+			else if (opldbyteselect == 'b01000000)
+				opldresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[55:48]};
+			else if (opldbyteselect == 'b10000000)
+				opldresult <= {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[63:56]};
 
 			oplddone <= 1;
 

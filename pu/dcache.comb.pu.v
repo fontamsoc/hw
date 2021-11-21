@@ -42,22 +42,68 @@ if (miscrdyandsequencerreadyandgprrdy12) begin
 
 			dcachemasterdati = 0;
 
-			if (instrbufferdataout0[1])
-				dcachemastersel = 4'b1111;
-			else if (instrbufferdataout0[0]) begin
-				if (gprdata2[1])
-					dcachemastersel = 4'b1100;
-				else
-					dcachemastersel = 4'b0011;
+			if (ARCHBITSZ == 16) begin
+				if (instrbufferdataout0[0])
+					dcachemastersel = 'b11;
+				else begin
+					if (gprdata2[0] == 0)
+						dcachemastersel = 'b01;
+					else
+						dcachemastersel = 'b10;
+				end
+			end else if (ARCHBITSZ == 32) begin
+				if (instrbufferdataout0[1])
+					dcachemastersel = 'b1111;
+				else if (instrbufferdataout0[0]) begin
+					if (gprdata2[1])
+						dcachemastersel = 'b1100;
+					else
+						dcachemastersel = 'b0011;
+				end else begin
+					if (gprdata2[1:0] == 0)
+						dcachemastersel = 'b0001;
+					else if (gprdata2[1:0] == 1)
+						dcachemastersel = 'b0010;
+					else if (gprdata2[1:0] == 2)
+						dcachemastersel = 'b0100;
+					else
+						dcachemastersel = 'b1000;
+				end
 			end else begin
-				if (gprdata2[1:0] == 0)
-					dcachemastersel = 4'b0001;
-				else if (gprdata2[1:0] == 1)
-					dcachemastersel = 4'b0010;
-				else if (gprdata2[1:0] == 2)
-					dcachemastersel = 4'b0100;
-				else
-					dcachemastersel = 4'b1000;
+				if (&instrbufferdataout0[1:0])
+					dcachemastersel = 'b11111111;
+				else if (instrbufferdataout0[1]) begin
+					if (gprdata2[2])
+						dcachemastersel = 'b11110000;
+					else
+						dcachemastersel = 'b00001111;
+				end else if (instrbufferdataout0[0]) begin
+					if (gprdata2[2:1] == 0)
+						dcachemastersel = 'b00000011;
+					else if (gprdata2[2:1] == 1)
+						dcachemastersel = 'b00001100;
+					else if (gprdata2[2:1] == 2)
+						dcachemastersel = 'b00110000;
+					else
+						dcachemastersel = 'b11000000;
+				end else begin
+					if (gprdata2[2:0] == 0)
+						dcachemastersel = 'b00000001;
+					else if (gprdata2[2:0] == 1)
+						dcachemastersel = 'b00000010;
+					else if (gprdata2[2:0] == 2)
+						dcachemastersel = 'b00000100;
+					else if (gprdata2[2:0] == 3)
+						dcachemastersel = 'b00001000;
+					else if (gprdata2[2:0] == 4)
+						dcachemastersel = 'b00010000;
+					else if (gprdata2[2:0] == 5)
+						dcachemastersel = 'b00100000;
+					else if (gprdata2[2:0] == 6)
+						dcachemastersel = 'b01000000;
+					else
+						dcachemastersel = 'b10000000;
+				end
 			end
 		`ifdef PUMMU
 		`ifdef PUHPTW
@@ -102,30 +148,98 @@ if (miscrdyandsequencerreadyandgprrdy12) begin
 
 			dcachemasteraddr = {dppn, gprdata2[12-1:CLOG2ARCHBITSZBY8]};
 
-			if (instrbufferdataout0[1]) begin
-				dcachemastersel = 4'b1111;
-				dcachemasterdati = gprdata1;
-			end else if (instrbufferdataout0[0]) begin
-				if (gprdata2[1]) begin
-					dcachemastersel = 4'b1100;
-					dcachemasterdati = {gprdata1[15:0], {16{1'b0}}};
+			if (ARCHBITSZ == 16) begin
+				if (instrbufferdataout0[0]) begin
+					dcachemastersel = 'b11;
+					dcachemasterdati = gprdata1;
 				end else begin
-					dcachemastersel = 4'b0011;
-					dcachemasterdati = {{16{1'b0}}, gprdata1[15:0]};
+					if (gprdata2[0] == 0) begin
+						dcachemastersel = 'b01;
+						dcachemasterdati = {{8{1'b0}}, gprdata1[7:0]};
+					end else begin
+						dcachemastersel = 'b10;
+						dcachemasterdati = {gprdata1[7:0], {8{1'b0}}};
+					end
+				end
+			end else if (ARCHBITSZ == 32) begin
+				if (instrbufferdataout0[1]) begin
+					dcachemastersel = 'b1111;
+					dcachemasterdati = gprdata1;
+				end else if (instrbufferdataout0[0]) begin
+					if (gprdata2[1]) begin
+						dcachemastersel = 'b1100;
+						dcachemasterdati = {gprdata1[15:0], {16{1'b0}}};
+					end else begin
+						dcachemastersel = 'b0011;
+						dcachemasterdati = {{16{1'b0}}, gprdata1[15:0]};
+					end
+				end else begin
+					if (gprdata2[1:0] == 0) begin
+						dcachemastersel = 'b0001;
+						dcachemasterdati = {{24{1'b0}}, gprdata1[7:0]};
+					end else if (gprdata2[1:0] == 1) begin
+						dcachemastersel = 'b0010;
+						dcachemasterdati = {{16{1'b0}}, gprdata1[7:0], {8{1'b0}}};
+					end else if (gprdata2[1:0] == 2) begin
+						dcachemastersel = 'b0100;
+						dcachemasterdati = {{8{1'b0}}, gprdata1[7:0], {16{1'b0}}};
+					end else begin
+						dcachemastersel = 'b1000;
+						dcachemasterdati = {gprdata1[7:0], {24{1'b0}}};
+					end
 				end
 			end else begin
-				if (gprdata2[1:0] == 0) begin
-					dcachemastersel = 4'b0001;
-					dcachemasterdati = {{24{1'b0}}, gprdata1[7:0]};
-				end else if (gprdata2[1:0] == 1) begin
-					dcachemastersel = 4'b0010;
-					dcachemasterdati = {{16{1'b0}}, gprdata1[7:0], {8{1'b0}}};
-				end else if (gprdata2[1:0] == 2) begin
-					dcachemastersel = 4'b0100;
-					dcachemasterdati = {{8{1'b0}}, gprdata1[7:0], {16{1'b0}}};
+				if (&instrbufferdataout0[1:0]) begin
+					dcachemastersel = 'b11111111;
+					dcachemasterdati = gprdata1;
+				end else if (instrbufferdataout0[1]) begin
+					if (gprdata2[2]) begin
+						dcachemastersel = 'b11110000;
+						dcachemasterdati = {gprdata1[31:0], {32{1'b0}}};
+					end else begin
+						dcachemastersel = 'b00001111;
+						dcachemasterdati = {{32{1'b0}}, gprdata1[31:0]};
+					end
+				end else if (instrbufferdataout0[0]) begin
+					if (gprdata2[2:1] == 0) begin
+						dcachemastersel = 'b00000011;
+						dcachemasterdati = {{48{1'b0}}, gprdata1[15:0]};
+					end else if (gprdata2[2:1] == 1) begin
+						dcachemastersel = 'b00001100;
+						dcachemasterdati = {{32{1'b0}}, gprdata1[15:0], {16{1'b0}}};
+					end else if (gprdata2[2:1] == 2) begin
+						dcachemastersel = 'b00110000;
+						dcachemasterdati = {{16{1'b0}}, gprdata1[15:0], {32{1'b0}}};
+					end else begin
+						dcachemastersel = 'b11000000;
+						dcachemasterdati = {gprdata1[15:0], {48{1'b0}}};
+					end
 				end else begin
-					dcachemastersel = 4'b1000;
-					dcachemasterdati = {gprdata1[7:0], {24{1'b0}}};
+					if (gprdata2[2:0] == 0) begin
+						dcachemastersel = 'b00000001;
+						dcachemasterdati = {{56{1'b0}}, gprdata1[7:0]};
+					end else if (gprdata2[2:0] == 1) begin
+						dcachemastersel = 'b00000010;
+						dcachemasterdati = {{48{1'b0}}, gprdata1[7:0], {8{1'b0}}};
+					end else if (gprdata2[2:0] == 2) begin
+						dcachemastersel = 'b00000100;
+						dcachemasterdati = {{40{1'b0}}, gprdata1[7:0], {16{1'b0}}};
+					end else if (gprdata2[2:0] == 3) begin
+						dcachemastersel = 'b00001000;
+						dcachemasterdati = {{32{1'b0}}, gprdata1[7:0], {24{1'b0}}};
+					end else if (gprdata2[2:0] == 4) begin
+						dcachemastersel = 'b00010000;
+						dcachemasterdati = {{24{1'b0}}, gprdata1[7:0], {32{1'b0}}};
+					end else if (gprdata2[2:0] == 5) begin
+						dcachemastersel = 'b00100000;
+						dcachemasterdati = {{16{1'b0}}, gprdata1[7:0], {40{1'b0}}};
+					end else if (gprdata2[2:0] == 6) begin
+						dcachemastersel = 'b01000000;
+						dcachemasterdati = {{8{1'b0}}, gprdata1[7:0], {48{1'b0}}};
+					end else begin
+						dcachemastersel = 'b10000000;
+						dcachemasterdati = {gprdata1[7:0], {56{1'b0}}};
+					end
 				end
 			end
 		`ifdef PUMMU
@@ -171,30 +285,98 @@ if (miscrdyandsequencerreadyandgprrdy12) begin
 
 			dcachemasteraddr = {dppn, gprdata2[12-1:CLOG2ARCHBITSZBY8]};
 
-			if (instrbufferdataout0[1]) begin
-				dcachemastersel = 4'b1111;
-				dcachemasterdati = gprdata1;
-			end else if (instrbufferdataout0[0]) begin
-				if (gprdata2[1]) begin
-					dcachemastersel = 4'b1100;
-					dcachemasterdati = {gprdata1[15:0], {16{1'b0}}};
+			if (ARCHBITSZ == 16) begin
+				if (instrbufferdataout0[0]) begin
+					dcachemastersel = 'b11;
+					dcachemasterdati = gprdata1;
 				end else begin
-					dcachemastersel = 4'b0011;
-					dcachemasterdati = {{16{1'b0}}, gprdata1[15:0]};
+					if (gprdata2[0] == 0) begin
+						dcachemastersel = 'b01;
+						dcachemasterdati = {{8{1'b0}}, gprdata1[7:0]};
+					end else begin
+						dcachemastersel = 'b10;
+						dcachemasterdati = {gprdata1[7:0], {8{1'b0}}};
+					end
+				end
+			end else if (ARCHBITSZ == 32) begin
+				if (instrbufferdataout0[1]) begin
+					dcachemastersel = 'b1111;
+					dcachemasterdati = gprdata1;
+				end else if (instrbufferdataout0[0]) begin
+					if (gprdata2[1]) begin
+						dcachemastersel = 'b1100;
+						dcachemasterdati = {gprdata1[15:0], {16{1'b0}}};
+					end else begin
+						dcachemastersel = 'b0011;
+						dcachemasterdati = {{16{1'b0}}, gprdata1[15:0]};
+					end
+				end else begin
+					if (gprdata2[1:0] == 0) begin
+						dcachemastersel = 'b0001;
+						dcachemasterdati = {{24{1'b0}}, gprdata1[7:0]};
+					end else if (gprdata2[1:0] == 1) begin
+						dcachemastersel = 'b0010;
+						dcachemasterdati = {{16{1'b0}}, gprdata1[7:0], {8{1'b0}}};
+					end else if (gprdata2[1:0] == 2) begin
+						dcachemastersel = 'b0100;
+						dcachemasterdati = {{8{1'b0}}, gprdata1[7:0], {16{1'b0}}};
+					end else begin
+						dcachemastersel = 'b1000;
+						dcachemasterdati = {gprdata1[7:0], {24{1'b0}}};
+					end
 				end
 			end else begin
-				if (gprdata2[1:0] == 0) begin
-					dcachemastersel = 4'b0001;
-					dcachemasterdati = {{24{1'b0}}, gprdata1[7:0]};
-				end else if (gprdata2[1:0] == 1) begin
-					dcachemastersel = 4'b0010;
-					dcachemasterdati = {{16{1'b0}}, gprdata1[7:0], {8{1'b0}}};
-				end else if (gprdata2[1:0] == 2) begin
-					dcachemastersel = 4'b0100;
-					dcachemasterdati = {{8{1'b0}}, gprdata1[7:0], {16{1'b0}}};
+				if (&instrbufferdataout0[1:0]) begin
+					dcachemastersel = 'b11111111;
+					dcachemasterdati = gprdata1;
+				end else if (instrbufferdataout0[1]) begin
+					if (gprdata2[2]) begin
+						dcachemastersel = 'b11110000;
+						dcachemasterdati = {gprdata1[31:0], {32{1'b0}}};
+					end else begin
+						dcachemastersel = 'b00001111;
+						dcachemasterdati = {{32{1'b0}}, gprdata1[31:0]};
+					end
+				end else if (instrbufferdataout0[0]) begin
+					if (gprdata2[2:1] == 0) begin
+						dcachemastersel = 'b00000011;
+						dcachemasterdati = {{48{1'b0}}, gprdata1[15:0]};
+					end else if (gprdata2[2:1] == 1) begin
+						dcachemastersel = 'b00001100;
+						dcachemasterdati = {{32{1'b0}}, gprdata1[15:0], {16{1'b0}}};
+					end else if (gprdata2[2:1] == 2) begin
+						dcachemastersel = 'b00110000;
+						dcachemasterdati = {{16{1'b0}}, gprdata1[15:0], {32{1'b0}}};
+					end else begin
+						dcachemastersel = 'b11000000;
+						dcachemasterdati = {gprdata1[15:0], {48{1'b0}}};
+					end
 				end else begin
-					dcachemastersel = 4'b1000;
-					dcachemasterdati = {gprdata1[7:0], {24{1'b0}}};
+					if (gprdata2[2:0] == 0) begin
+						dcachemastersel = 'b00000001;
+						dcachemasterdati = {{56{1'b0}}, gprdata1[7:0]};
+					end else if (gprdata2[2:0] == 1) begin
+						dcachemastersel = 'b00000010;
+						dcachemasterdati = {{48{1'b0}}, gprdata1[7:0], {8{1'b0}}};
+					end else if (gprdata2[2:0] == 2) begin
+						dcachemastersel = 'b00000100;
+						dcachemasterdati = {{40{1'b0}}, gprdata1[7:0], {16{1'b0}}};
+					end else if (gprdata2[2:0] == 3) begin
+						dcachemastersel = 'b00001000;
+						dcachemasterdati = {{32{1'b0}}, gprdata1[7:0], {24{1'b0}}};
+					end else if (gprdata2[2:0] == 4) begin
+						dcachemastersel = 'b00010000;
+						dcachemasterdati = {{24{1'b0}}, gprdata1[7:0], {32{1'b0}}};
+					end else if (gprdata2[2:0] == 5) begin
+						dcachemastersel = 'b00100000;
+						dcachemasterdati = {{16{1'b0}}, gprdata1[7:0], {40{1'b0}}};
+					end else if (gprdata2[2:0] == 6) begin
+						dcachemastersel = 'b01000000;
+						dcachemasterdati = {{8{1'b0}}, gprdata1[7:0], {48{1'b0}}};
+					end else begin
+						dcachemastersel = 'b10000000;
+						dcachemasterdati = {gprdata1[7:0], {56{1'b0}}};
+					end
 				end
 			end
 		`ifdef PUMMU

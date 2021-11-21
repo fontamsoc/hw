@@ -53,7 +53,6 @@ input wire rx_i;
 
 wire [8 -1 : 0] rx_data_w;
 wire            rx_push_w;
-wire            rx_full_w;
 
 fifo_fwft #(
 
@@ -72,9 +71,8 @@ fifo_fwft #(
 	,.empty_o   (empty_o)
 
 	,.clk_push_i (clk_phy_i)
-	,.push_i     (rx_push_w && !rx_full_w)
+	,.push_i     (rx_push_w)
 	,.data_i     (rx_data_w)
-	,.full_o     (rx_full_w)
 );
 
 uart_rx_phy #(

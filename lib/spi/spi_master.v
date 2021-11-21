@@ -97,7 +97,7 @@ fifo #(
 	.usage_o (rxbufferusage),
 
 	.clk_read_i (clk_i),
-	.read_i (rxbufferreadenable && !rxbufferempty),
+	.read_i (rxbufferreadenable),
 	.data_o (rxbufferdataout),
 	.empty_o (rxbufferempty),
 
@@ -127,7 +127,7 @@ fifo #(
 	.empty_o (txbufferempty),
 
 	.clk_write_i (clk_i),
-	.write_i (txbufferwriteenable && !txbufferfull),
+	.write_i (txbufferwriteenable),
 	.data_i (txbufferdatain),
 	.full_o (txbufferfull)
 );

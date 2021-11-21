@@ -28,12 +28,12 @@ module uart_hw (
 
 `include "lib/clog2.v"
 
+parameter ARCHBITSZ = 0;
+
 parameter PHYCLKFREQ = 1;
 parameter BUFSZ      = 2;
 
 localparam CLOG2BUFSZ = clog2(BUFSZ);
-
-parameter ARCHBITSZ = 32;
 
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
 localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
@@ -64,7 +64,7 @@ output wire tx_o;
 
 assign pi1_rdy_o = 1;
 
-assign pi1_mapsz_o = 2;
+assign pi1_mapsz_o = (64/ARCHBITSZ);
 
 localparam PINOOP = 2'b00;
 localparam PIWROP = 2'b01;

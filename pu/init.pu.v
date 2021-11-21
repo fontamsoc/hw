@@ -65,6 +65,10 @@ initial begin
 
 	gpr13val = 0;
 
+	`ifdef SIMULATION
+	sequencerstate = 0;
+	`endif
+
 	flags = 0;
 
 	icacheactive = 0;

@@ -44,6 +44,9 @@ input  wire                write_i;
 input  wire [WIDTH -1 : 0] data_i;
 output wire                full_o;
 
+wire en = (read_i && !empty_o);
+wire we = (write_i && !full_o);
+
 reg [(CLOG2DEPTH +1) -1 : 0] readidx = 0;
 reg [(CLOG2DEPTH +1) -1 : 0] writeidx = 0;
 
@@ -55,8 +58,8 @@ bram #(
 ) fifobuf (
 
 	 .clk0_i  (clk_read_i)                  ,.clk1_i  (clk_write_i)
-	,.en0_i   (read_i)                      ,.en1_i   (1'b1)
-	                                        ,.we1_i   (write_i)
+	,.en0_i   (en)                          ,.en1_i   (1'b1)
+	                                        ,.we1_i   (we)
 	,.addr0_i (readidx[CLOG2DEPTH -1 : 0])  ,.addr1_i (writeidx[CLOG2DEPTH -1 : 0])
 	                                        ,.i1      (data_i)
 	,.o0      (data_o)                      ,.o1      ()
@@ -71,12 +74,12 @@ assign empty_o = (usage_o == 0);
 always @ (posedge clk_read_i) begin
 	if (rst_i)
 		readidx <= writeidx;
-	else if (read_i)
+	else if (en)
 		readidx <= readidx + 1'b1;
 end
 
 always @ (posedge clk_write_i) begin
-	if (write_i)
+	if (we)
 		writeidx <= writeidx + 1'b1;
 end
 

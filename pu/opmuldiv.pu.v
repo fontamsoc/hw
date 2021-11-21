@@ -41,7 +41,6 @@ input wire [(((ARCHBITSZ*2)+CLOG2GPRCNT)+MULDIVTYPEBITSZ) -1 : 0] data_i;
 output reg [ARCHBITSZ -1 : 0] data_o;
 
 output wire [CLOG2GPRCNT -1 : 0] gprid_o;
-assign gprid_o = operands[((ARCHBITSZ*2)+CLOG2GPRCNT)-1:ARCHBITSZ*2];
 
 output reg rdy_o = 0;
 
@@ -63,6 +62,8 @@ reg inprogress = 0;
 reg start = 0;
 
 reg [(((ARCHBITSZ*2)+CLOG2GPRCNT)+MULDIVTYPEBITSZ) -1 : 0] operands = 0;
+
+assign gprid_o = operands[((ARCHBITSZ*2)+CLOG2GPRCNT)-1:ARCHBITSZ*2];
 
 always @* begin
 

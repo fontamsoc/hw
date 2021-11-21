@@ -3,11 +3,15 @@
 
 `default_nettype none
 
+`define USE2CLK
+
 `include "lib/perint/pi1r.v"
 
 `define PUMMU
 `define PUHPTW
 `include "pu/multipu.v"
+
+`include "dev/dma.v"
 
 `include "dev/intctrl.v"
 
@@ -55,6 +59,7 @@ module xula2lx25 (
 `include "lib/clog2.v"
 
 localparam ARCHBITSZ = 32;
+
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
 localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
 
@@ -150,7 +155,7 @@ STARTUP_SPARTAN6 (.CLK (clk12mhz_i), .GSR (swcoldrst));
 
 localparam PUCOUNT = 1;
 
-localparam INTCTRLSRCCOUNT = 2;
+localparam INTCTRLSRCCOUNT = 3;
 localparam INTCTRLDSTCOUNT = PUCOUNT;
 wire [INTCTRLSRCCOUNT -1 : 0] intrqstsrc_w;
 wire [INTCTRLSRCCOUNT -1 : 0] intrdysrc_w;
@@ -158,9 +163,9 @@ wire [INTCTRLDSTCOUNT -1 : 0] intrqstdst_w;
 wire [INTCTRLDSTCOUNT -1 : 0] intrdydst_w;
 wire [INTCTRLDSTCOUNT -1 : 0] intbestdst_w;
 
-localparam PI1RMASTERCOUNT       = 1;
-localparam PI1RSLAVECOUNT        = 6;
-localparam PI1RDEFAULTSLAVEINDEX = 5;
+localparam PI1RMASTERCOUNT       = 2;
+localparam PI1RSLAVECOUNT        = 7;
+localparam PI1RDEFAULTSLAVEINDEX = 6;
 localparam PI1RFIRSTSLAVEADDR    = 0;
 localparam PI1RARCHBITSZ         = ARCHBITSZ;
 wire pi1r_rst_w = rst;
@@ -170,14 +175,17 @@ wire pi1r_clk_w = clk_w;
 localparam DCACHESZ = 4;
 
 localparam ICACHEWAYCOUNT = 1;
+localparam DCACHEWAYCOUNT = 1;
 
 multipu #(
 
-	 .CLKFREQ        (CLKFREQ)
+	 .ARCHBITSZ      (ARCHBITSZ)
+	,.CLKFREQ        (CLKFREQ)
 	,.PUCOUNT        (PUCOUNT)
 	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*((32/ICACHEWAYCOUNT)/PUCOUNT))
 	,.TLBSETCOUNT    (256/PUCOUNT)
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
+	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
 	,.MULDIVCNT      (4)
 
 ) multipu (
@@ -201,7 +209,7 @@ multipu #(
 	,.halted_o  (intbestdst_w)
 
 	,.rstaddr_i  (0)
-	,.rstaddr2_i (('h4000-14)>>1)
+	,.rstaddr2_i (('h8000-14)>>1)
 
 	,.id_i (0)
 );
@@ -215,7 +223,8 @@ wire                        bootldr_rdy_w;
 
 bootldr #(
 
-	.BOOTBLOCK (0)
+	 .ARCHBITSZ (ARCHBITSZ)
+	,.BOOTBLOCK (0)
 
 ) bootldr (
 
@@ -240,7 +249,8 @@ bootldr #(
 
 sdcard_spi #(
 
-	.PHYCLKFREQ (CLKFREQ)
+	 .ARCHBITSZ  (ARCHBITSZ)
+	,.PHYCLKFREQ (CLKFREQ)
 
 ) sdcard (
 
@@ -273,7 +283,8 @@ localparam RAMCACHESZ = ((1024/(ARCHBITSZ/8))*(DCACHESZ/RAMCACHEWAYCOUNT));
 
 devtbl #(
 
-	 .RAMSZ      (RAMSZ)
+	 .ARCHBITSZ  (ARCHBITSZ)
+	,.RAMSZ      (RAMSZ)
 	,.RAMCACHESZ (RAMCACHESZ)
 
 ) devtbl (
@@ -294,9 +305,40 @@ devtbl #(
 	,.pi1_mapsz_o (s_pi1r_mapsz_w[1])
 );
 
+dma #(
+
+	 .ARCHBITSZ  (ARCHBITSZ)
+	,.CHANNELCNT (1)
+
+) dma (
+
+	 .rst_i (rst)
+
+	,.clk_i (clk_w)
+
+	,.m_pi1_op_o   (m_pi1r_op_w[1])
+	,.m_pi1_addr_o (m_pi1r_addr_w[1])
+	,.m_pi1_data_o (m_pi1r_data_w1[1])
+	,.m_pi1_data_i (m_pi1r_data_w0[1])
+	,.m_pi1_sel_o  (m_pi1r_sel_w[1])
+	,.m_pi1_rdy_i  (m_pi1r_rdy_w[1])
+
+	,.s_pi1_op_i    (s_pi1r_op_w[2])
+	,.s_pi1_addr_i  (s_pi1r_addr_w[2])
+	,.s_pi1_data_i  (s_pi1r_data_w0[2])
+	,.s_pi1_data_o  (s_pi1r_data_w1[2])
+	,.s_pi1_sel_i   (s_pi1r_sel_w[2])
+	,.s_pi1_rdy_o   (s_pi1r_rdy_w[2])
+	,.s_pi1_mapsz_o (s_pi1r_mapsz_w[2])
+
+	,.intrqst_o (intrqstsrc_w[1])
+	,.intrdy_i  (intrdysrc_w[1])
+);
+
 intctrl #(
 
-	 .INTSRCCOUNT (INTCTRLSRCCOUNT)
+	 .ARCHBITSZ   (ARCHBITSZ)
+	,.INTSRCCOUNT (INTCTRLSRCCOUNT)
 	,.INTDSTCOUNT (INTCTRLDSTCOUNT)
 
 ) intctrl (
@@ -305,13 +347,13 @@ intctrl #(
 
 	,.clk_i (clk_w)
 
-	,.pi1_op_i    (s_pi1r_op_w[2])
-	,.pi1_addr_i  (s_pi1r_addr_w[2])
-	,.pi1_data_i  (s_pi1r_data_w0[2])
-	,.pi1_data_o  (s_pi1r_data_w1[2])
-	,.pi1_sel_i   (s_pi1r_sel_w[2])
-	,.pi1_rdy_o   (s_pi1r_rdy_w[2])
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[2])
+	,.pi1_op_i    (s_pi1r_op_w[3])
+	,.pi1_addr_i  (s_pi1r_addr_w[3])
+	,.pi1_data_i  (s_pi1r_data_w0[3])
+	,.pi1_data_o  (s_pi1r_data_w1[3])
+	,.pi1_sel_i   (s_pi1r_sel_w[3])
+	,.pi1_rdy_o   (s_pi1r_rdy_w[3])
+	,.pi1_mapsz_o (s_pi1r_mapsz_w[3])
 
 	,.intrqstdst_o (intrqstdst_w)
 	,.intrdydst_i  (intrdydst_w)
@@ -323,7 +365,8 @@ intctrl #(
 
 uart_hw #(
 
-	 .PHYCLKFREQ (CLKFREQ)
+	 .ARCHBITSZ  (ARCHBITSZ)
+	,.PHYCLKFREQ (CLKFREQ)
 	,.BUFSZ      (2048)
 
 ) uart (
@@ -333,16 +376,16 @@ uart_hw #(
 	,.clk_i     (clk_w)
 	,.clk_phy_i (clk_w)
 
-	,.pi1_op_i    (s_pi1r_op_w[3])
-	,.pi1_addr_i  (s_pi1r_addr_w[3])
-	,.pi1_data_i  (s_pi1r_data_w0[3])
-	,.pi1_data_o  (s_pi1r_data_w1[3])
-	,.pi1_sel_i   (s_pi1r_sel_w[3])
-	,.pi1_rdy_o   (s_pi1r_rdy_w[3])
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[3])
+	,.pi1_op_i    (s_pi1r_op_w[4])
+	,.pi1_addr_i  (s_pi1r_addr_w[4])
+	,.pi1_data_i  (s_pi1r_data_w0[4])
+	,.pi1_data_o  (s_pi1r_data_w1[4])
+	,.pi1_sel_i   (s_pi1r_sel_w[4])
+	,.pi1_rdy_o   (s_pi1r_rdy_w[4])
+	,.pi1_mapsz_o (s_pi1r_mapsz_w[4])
 
-	,.intrqst_o (intrqstsrc_w[1])
-	,.intrdy_i  (intrdysrc_w[1])
+	,.intrqst_o (intrqstsrc_w[2])
+	,.intrdy_i  (intrdysrc_w[2])
 
 	,.rx_i (uart_rx)
 	,.tx_o (uart_tx)
@@ -364,7 +407,8 @@ wire                        dcache_rdy_w;
 
 pi1_dcache #(
 
-	 .CACHESETCOUNT (RAMCACHESZ)
+	 .ARCHBITSZ     (ARCHBITSZ)
+	,.CACHESETCOUNT (RAMCACHESZ)
 	,.CACHEWAYCOUNT (RAMCACHEWAYCOUNT)
 
 ) dcache (
@@ -378,12 +422,12 @@ pi1_dcache #(
 	,.cmiss_i   (1'b0)
 	,.conly_i   (1'b0)
 
-	,.m_pi1_op_i   (s_pi1r_op_w[4])
-	,.m_pi1_addr_i (s_pi1r_addr_w[4])
-	,.m_pi1_data_i (s_pi1r_data_w0[4])
-	,.m_pi1_data_o (s_pi1r_data_w1[4])
-	,.m_pi1_sel_i  (s_pi1r_sel_w[4])
-	,.m_pi1_rdy_o  (s_pi1r_rdy_w[4])
+	,.m_pi1_op_i   (s_pi1r_op_w[5])
+	,.m_pi1_addr_i (s_pi1r_addr_w[5])
+	,.m_pi1_data_i (s_pi1r_data_w0[5])
+	,.m_pi1_data_o (s_pi1r_data_w1[5])
+	,.m_pi1_sel_i  (s_pi1r_sel_w[5])
+	,.m_pi1_rdy_o  (s_pi1r_rdy_w[5])
 
 	,.s_pi1_op_o   (dcache_op_w)
 	,.s_pi1_addr_o (dcache_addr_w)
@@ -469,11 +513,11 @@ wb4sdram #(
 	,.ack_o   (wb4_ack_w)
 );
 
-assign s_pi1r_mapsz_w[4] = RAMSZ;
+assign s_pi1r_mapsz_w[5] = RAMSZ;
 
 localparam INVALIDDEVMAPSZ = 'h4000;
-assign s_pi1r_data_w1[5] = {ARCHBITSZ{1'b0}};
-assign s_pi1r_rdy_w[5]   = 1'b1;
-assign s_pi1r_mapsz_w[5] = INVALIDDEVMAPSZ;
+assign s_pi1r_data_w1[6] = {ARCHBITSZ{1'b0}};
+assign s_pi1r_rdy_w[6]   = 1'b1;
+assign s_pi1r_mapsz_w[6] = INVALIDDEVMAPSZ;
 
 endmodule

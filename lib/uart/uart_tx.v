@@ -55,7 +55,6 @@ wire tx_phy_rdy_w;
 
 wire            tx_empty_w;
 wire [8 -1 : 0] tx_data_w;
-wire            tx_pop_w = (tx_phy_rdy_w && !tx_empty_w);
 
 fifo_fwft #(
 
@@ -69,7 +68,7 @@ fifo_fwft #(
 	,.usage_o (usage_o)
 
 	,.clk_pop_i (clk_phy_i)
-	,.pop_i     (tx_pop_w)
+	,.pop_i     (tx_phy_rdy_w)
 	,.data_o    (tx_data_w)
 	,.empty_o   (tx_empty_w)
 
@@ -91,7 +90,7 @@ uart_tx_phy #(
 
 	,.clockcyclesperbit_i (clockcyclesperbit_i)
 
-	,.stb_i  (tx_pop_w)
+	,.stb_i  (!tx_empty_w)
 	,.data_i (tx_data_w)
 	,.rdy_o  (tx_phy_rdy_w)
 	,.tx_o   (tx_o)

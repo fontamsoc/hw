@@ -22,7 +22,7 @@ end else if (instrfetchmemaccesspending) begin
 
 	pi1_data_o = 0;
 
-	pi1_sel_o = 4'b1111;
+	pi1_sel_o = {(ARCHBITSZ/8){1'b1}};
 
 	pi1_op_o = MEMREADOP;
 

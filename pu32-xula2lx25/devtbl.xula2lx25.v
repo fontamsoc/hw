@@ -22,16 +22,17 @@ module devtbl (
 
 `include "lib/clog2.v"
 
+parameter ARCHBITSZ   = 0;
 parameter RAMSZ       = 0;
 parameter RAMCACHESZ  = 0;
 parameter PRELDRADDR  = 0;
 
-localparam ARCHBITSZ = 32;
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
 localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
 
+localparam DMADEVMAPSZ = 4;
 localparam TINYDEVMAPSZ = (1*(64/ARCHBITSZ));
-localparam DEVTBLMAPSZ = (((4096-512)/(ARCHBITSZ/8)) - (TINYDEVMAPSZ+TINYDEVMAPSZ));
+localparam DEVTBLMAPSZ = (((4096-512)/(ARCHBITSZ/8)) - (DMADEVMAPSZ +TINYDEVMAPSZ +TINYDEVMAPSZ));
 localparam CLOG2DEVTBLMAPSZ = clog2(DEVTBLMAPSZ);
 
 input wire clk_i;
@@ -84,15 +85,20 @@ always @ (posedge clk_i) begin
 				pi1_data_o <= {DEVTBLMAPSZ[ADDRBITSZ -1 : 0], {(CLOG2ARCHBITSZBY8-1){1'b0}}, 1'b0};
 		end else if (addrby2 == 2) begin
 			if (pi1_addr_i[0] == 0)
+				pi1_data_o <= 2;
+			else
+				pi1_data_o <= {DMADEVMAPSZ[ADDRBITSZ -1 : 0], {(CLOG2ARCHBITSZBY8-1){1'b0}}, 1'b1};
+		end else if (addrby2 == 3) begin
+			if (pi1_addr_i[0] == 0)
 				pi1_data_o <= 3;
 			else
 				pi1_data_o <= {TINYDEVMAPSZ[ADDRBITSZ -1 : 0], {(CLOG2ARCHBITSZBY8-1){1'b0}}, 1'b0};
-		end else if (addrby2 == 3) begin
+		end else if (addrby2 == 4) begin
 			if (pi1_addr_i[0] == 0)
 				pi1_data_o <= 5;
 			else
 				pi1_data_o <= {TINYDEVMAPSZ[ADDRBITSZ -1 : 0], {(CLOG2ARCHBITSZBY8-1){1'b0}}, 1'b1};
-		end else if (addrby2 == 4) begin
+		end else if (addrby2 == 5) begin
 			if (pi1_addr_i[0] == 0)
 				pi1_data_o <= 1;
 			else

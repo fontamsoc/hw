@@ -1367,7 +1367,7 @@ fifo_fwft #(
 	,.usage_o ()
 
 	,.clk_pop_i (clk_i)
-	,.pop_i     (cmd_pop_w && !cmd_empty_w)
+	,.pop_i     (cmd_pop_w)
 	,.data_o    (cmd_data_w)
 	,.empty_o   (cmd_empty_w)
 
@@ -1389,7 +1389,7 @@ fifo_fwft #(
 	,.usage_o ()
 
 	,.clk_pop_i (clk_i)
-	,.pop_i     (cmd_pop_w && !cmd_empty_w)
+	,.pop_i     (cmd_pop_w)
 	,.data_o    (cmdaddr_data_w)
 	,.empty_o   (cmd_empty_w)
 
