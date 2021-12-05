@@ -21,8 +21,6 @@
 
 `include "dev/uart_sim.v"
 
-`include "dev/pi1_dcache.v"
-
 `include "dev/smem.v"
 
 `include "./devtbl.sim.v"
@@ -233,17 +231,12 @@ sdcard_spi #(
 
 localparam RAMSZ = (8388608);
 
-localparam RAMCACHEWAYCOUNT = 2;
-
-localparam RAMCACHESZ = ((1024/(ARCHBITSZ/8))*(32/RAMCACHEWAYCOUNT));
-
 wire devtbl_rst2_w;
 
 devtbl #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.RAMSZ      (RAMSZ)
-	,.RAMCACHESZ (RAMCACHESZ)
 
 ) devtbl (
 
@@ -294,6 +287,8 @@ dma #(
 	,.s_pi1_sel_i   (s_pi1r_sel_w[2])
 	,.s_pi1_rdy_o   (s_pi1r_rdy_w[2])
 	,.s_pi1_mapsz_o (s_pi1r_mapsz_w[2])
+
+	,.wait_i (|m_pi1r_op_w[0])
 
 	,.intrqst_o (intrqstsrc_w[1])
 	,.intrdy_i  (intrdysrc_w[1])
@@ -350,44 +345,6 @@ uart_sim #(
 	,.intrdy_i  (intrdysrc_w[2])
 );
 
-wire [2 -1 : 0]             dcache_op_w;
-wire [ADDRBITSZ -1 : 0]     dcache_addr_w;
-wire [ARCHBITSZ -1 : 0]     dcache_data_w1;
-wire [ARCHBITSZ -1 : 0]     dcache_data_w0;
-wire [(ARCHBITSZ/8) -1 : 0] dcache_sel_w;
-wire                        dcache_rdy_w;
-
-pi1_dcache #(
-
-	 .ARCHBITSZ     (ARCHBITSZ)
-	,.CACHESETCOUNT (RAMCACHESZ)
-	,.CACHEWAYCOUNT (RAMCACHEWAYCOUNT)
-
-) dcache (
-
-	 .rst_i (rst)
-
-	,.clk_i (clk_2x_w)
-
-	,.crst_i    (rst)
-	,.cenable_i (1'b1)
-	,.conly_i   (1'b0)
-
-	,.m_pi1_op_i   (s_pi1r_op_w[5])
-	,.m_pi1_addr_i (s_pi1r_addr_w[5])
-	,.m_pi1_data_i (s_pi1r_data_w0[5])
-	,.m_pi1_data_o (s_pi1r_data_w1[5])
-	,.m_pi1_sel_i  (s_pi1r_sel_w[5])
-	,.m_pi1_rdy_o  (s_pi1r_rdy_w[5])
-
-	,.s_pi1_op_o   (dcache_op_w)
-	,.s_pi1_addr_o (dcache_addr_w)
-	,.s_pi1_data_i (dcache_data_w1)
-	,.s_pi1_data_o (dcache_data_w0)
-	,.s_pi1_sel_o  (dcache_sel_w)
-	,.s_pi1_rdy_i  (dcache_rdy_w)
-);
-
 smem #(
 
 	 .ARCHBITSZ (ARCHBITSZ)
@@ -400,12 +357,12 @@ smem #(
 
 	,.clk_i (clk_2x_w)
 
-	,.pi1_op_i    (dcache_op_w)
-	,.pi1_addr_i  (dcache_addr_w)
-	,.pi1_data_i  (dcache_data_w0)
-	,.pi1_data_o  (dcache_data_w1)
-	,.pi1_sel_i   (dcache_sel_w)
-	,.pi1_rdy_o   (dcache_rdy_w)
+	,.pi1_op_i    (s_pi1r_op_w[5])
+	,.pi1_addr_i  (s_pi1r_addr_w[5])
+	,.pi1_data_i  (s_pi1r_data_w0[5])
+	,.pi1_data_o  (s_pi1r_data_w1[5])
+	,.pi1_sel_i   (s_pi1r_sel_w[5])
+	,.pi1_rdy_o   (s_pi1r_rdy_w[5])
 	,.pi1_mapsz_o (s_pi1r_mapsz_w[5])
 );
 

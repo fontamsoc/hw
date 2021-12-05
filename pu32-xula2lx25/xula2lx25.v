@@ -331,6 +331,8 @@ dma #(
 	,.s_pi1_rdy_o   (s_pi1r_rdy_w[2])
 	,.s_pi1_mapsz_o (s_pi1r_mapsz_w[2])
 
+	,.wait_i (|m_pi1r_op_w[0])
+
 	,.intrqst_o (intrqstsrc_w[1])
 	,.intrdy_i  (intrdysrc_w[1])
 );
