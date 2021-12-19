@@ -9,6 +9,8 @@
 
 `define PUMMU
 `define PUHPTW
+`define PUMULDIVCLK
+`define PUDSPMUL
 `include "pu/multipu.v"
 
 `include "dev/dma.v"
@@ -112,6 +114,10 @@ wire [INTCTRLDSTCOUNT -1 : 0] intrqstdst_w;
 wire [INTCTRLDSTCOUNT -1 : 0] intrdydst_w;
 wire [INTCTRLDSTCOUNT -1 : 0] intbestdst_w;
 
+localparam INTCTRLSRC_SDCARD = 0;
+localparam INTCTRLSRC_DMA    = (INTCTRLSRC_SDCARD + 1);
+localparam INTCTRLSRC_UART   = (INTCTRLSRC_DMA + 1);
+
 localparam PI1RMASTERCOUNT       = 2;
 localparam PI1RSLAVECOUNT        = 7;
 localparam PI1RDEFAULTSLAVEINDEX = 6;
@@ -121,6 +127,16 @@ wire pi1r_rst_w = rst;
 wire pi1r_clk_w = clk_2x_w;
 `include "lib/perint/inst.pi1r.v"
 
+localparam M_PI1R_MULTIPU    = 0;
+localparam M_PI1R_DMA        = (M_PI1R_MULTIPU + 1);
+localparam S_PI1R_SDCARD     = 0;
+localparam S_PI1R_DEVTBL     = (S_PI1R_SDCARD + 1);
+localparam S_PI1R_DMA        = (S_PI1R_DEVTBL + 1);
+localparam S_PI1R_INTCTRL    = (S_PI1R_DMA + 1);
+localparam S_PI1R_UART       = (S_PI1R_INTCTRL + 1);
+localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
+localparam S_PI1R_INVALIDDEV = (S_PI1R_RAM + 1);
+
 wire [(ARCHBITSZ * PUCOUNT) -1 : 0] pc_w_flat;
 wire [ARCHBITSZ -1 : 0]             pc_w      [PUCOUNT -1 : 0] /* verilator public */;
 genvar gen_pc_w_idx;
@@ -129,7 +145,6 @@ assign pc_w[gen_pc_w_idx] = pc_w_flat[((gen_pc_w_idx+1) * ARCHBITSZ) -1 : gen_pc
 end endgenerate
 
 localparam ICACHEWAYCOUNT = 2;
-localparam DCACHEWAYCOUNT = 2;
 
 multipu #(
 
@@ -139,7 +154,6 @@ multipu #(
 	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*(4/ICACHEWAYCOUNT))
 	,.TLBSETCOUNT    (16)
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
-	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
 	,.MULDIVCNT      (8)
 
 ) multipu (
@@ -148,15 +162,20 @@ multipu #(
 
 	,.rst_o (multipu_rst_ow)
 
-	,.clk_i     (clk_w)
-	,.clk_mem_i (clk_2x_w)
+	,.clk_i        (clk_w)
+	`ifdef USE2CLK
+	,.clk_muldiv_i (clk_2x_w)
+	`else
+	,.clk_muldiv_i (clk_2x_w[1])
+	`endif
+	,.clk_mem_i    (clk_2x_w)
 
-	,.pi1_op_o   (m_pi1r_op_w[0])
-	,.pi1_addr_o (m_pi1r_addr_w[0])
-	,.pi1_data_o (m_pi1r_data_w1[0])
-	,.pi1_data_i (m_pi1r_data_w0[0])
-	,.pi1_sel_o  (m_pi1r_sel_w[0])
-	,.pi1_rdy_i  (m_pi1r_rdy_w[0])
+	,.pi1_op_o   (m_pi1r_op_w[M_PI1R_MULTIPU])
+	,.pi1_addr_o (m_pi1r_addr_w[M_PI1R_MULTIPU])
+	,.pi1_data_o (m_pi1r_data_w1[M_PI1R_MULTIPU])
+	,.pi1_data_i (m_pi1r_data_w0[M_PI1R_MULTIPU])
+	,.pi1_sel_o  (m_pi1r_sel_w[M_PI1R_MULTIPU])
+	,.pi1_rdy_i  (m_pi1r_rdy_w[M_PI1R_MULTIPU])
 
 	,.intrqst_i (intrqstdst_w)
 	,.intrdy_o  (intrdydst_w)
@@ -188,12 +207,12 @@ bootldr #(
 
 	,.clk_i (clk_2x_w)
 
-	,.m_pi1_op_i   (s_pi1r_op_w[0])
-	,.m_pi1_addr_i (s_pi1r_addr_w[0])
-	,.m_pi1_data_i (s_pi1r_data_w0[0])
-	,.m_pi1_data_o (s_pi1r_data_w1[0])
-	,.m_pi1_sel_i  (s_pi1r_sel_w[0])
-	,.m_pi1_rdy_o  (s_pi1r_rdy_w[0])
+	,.m_pi1_op_i   (s_pi1r_op_w[S_PI1R_SDCARD])
+	,.m_pi1_addr_i (s_pi1r_addr_w[S_PI1R_SDCARD])
+	,.m_pi1_data_i (s_pi1r_data_w0[S_PI1R_SDCARD])
+	,.m_pi1_data_o (s_pi1r_data_w1[S_PI1R_SDCARD])
+	,.m_pi1_sel_i  (s_pi1r_sel_w[S_PI1R_SDCARD])
+	,.m_pi1_rdy_o  (s_pi1r_rdy_w[S_PI1R_SDCARD])
 
 	,.s_pi1_op_o   (bootldr_op_w)
 	,.s_pi1_addr_o (bootldr_addr_w)
@@ -223,10 +242,10 @@ sdcard_spi #(
 	,.pi1_data_o  (bootldr_data_w1)
 	,.pi1_sel_i   (bootldr_sel_w)
 	,.pi1_rdy_o   (bootldr_rdy_w)
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[0])
+	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_SDCARD])
 
-	,.intrqst_o (intrqstsrc_w[0])
-	,.intrdy_i  (intrdysrc_w[0])
+	,.intrqst_o (intrqstsrc_w[INTCTRLSRC_SDCARD])
+	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_SDCARD])
 );
 
 localparam RAMSZ = (8388608);
@@ -248,13 +267,13 @@ devtbl #(
 
 	,.clk_i (clk_2x_w)
 
-	,.pi1_op_i    (s_pi1r_op_w[1])
-	,.pi1_addr_i  (s_pi1r_addr_w[1])
-	,.pi1_data_i  (s_pi1r_data_w0[1])
-	,.pi1_data_o  (s_pi1r_data_w1[1])
-	,.pi1_sel_i   (s_pi1r_sel_w[1])
-	,.pi1_rdy_o   (s_pi1r_rdy_w[1])
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[1])
+	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_DEVTBL])
+	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_DEVTBL])
+	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_DEVTBL])
+	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_DEVTBL])
+	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_DEVTBL])
+	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_DEVTBL])
+	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_DEVTBL])
 );
 
 always @* begin
@@ -273,25 +292,25 @@ dma #(
 
 	,.clk_i (clk_2x_w)
 
-	,.m_pi1_op_o   (m_pi1r_op_w[1])
-	,.m_pi1_addr_o (m_pi1r_addr_w[1])
-	,.m_pi1_data_o (m_pi1r_data_w1[1])
-	,.m_pi1_data_i (m_pi1r_data_w0[1])
-	,.m_pi1_sel_o  (m_pi1r_sel_w[1])
-	,.m_pi1_rdy_i  (m_pi1r_rdy_w[1])
+	,.m_pi1_op_o   (m_pi1r_op_w[M_PI1R_DMA])
+	,.m_pi1_addr_o (m_pi1r_addr_w[M_PI1R_DMA])
+	,.m_pi1_data_o (m_pi1r_data_w1[M_PI1R_DMA])
+	,.m_pi1_data_i (m_pi1r_data_w0[M_PI1R_DMA])
+	,.m_pi1_sel_o  (m_pi1r_sel_w[M_PI1R_DMA])
+	,.m_pi1_rdy_i  (m_pi1r_rdy_w[M_PI1R_DMA])
 
-	,.s_pi1_op_i    (s_pi1r_op_w[2])
-	,.s_pi1_addr_i  (s_pi1r_addr_w[2])
-	,.s_pi1_data_i  (s_pi1r_data_w0[2])
-	,.s_pi1_data_o  (s_pi1r_data_w1[2])
-	,.s_pi1_sel_i   (s_pi1r_sel_w[2])
-	,.s_pi1_rdy_o   (s_pi1r_rdy_w[2])
-	,.s_pi1_mapsz_o (s_pi1r_mapsz_w[2])
+	,.s_pi1_op_i    (s_pi1r_op_w[S_PI1R_DMA])
+	,.s_pi1_addr_i  (s_pi1r_addr_w[S_PI1R_DMA])
+	,.s_pi1_data_i  (s_pi1r_data_w0[S_PI1R_DMA])
+	,.s_pi1_data_o  (s_pi1r_data_w1[S_PI1R_DMA])
+	,.s_pi1_sel_i   (s_pi1r_sel_w[S_PI1R_DMA])
+	,.s_pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_DMA])
+	,.s_pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_DMA])
 
-	,.wait_i (|m_pi1r_op_w[0])
+	,.wait_i (|m_pi1r_op_w[M_PI1R_MULTIPU])
 
-	,.intrqst_o (intrqstsrc_w[1])
-	,.intrdy_i  (intrdysrc_w[1])
+	,.intrqst_o (intrqstsrc_w[INTCTRLSRC_DMA])
+	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_DMA])
 );
 
 intctrl #(
@@ -306,13 +325,13 @@ intctrl #(
 
 	,.clk_i (clk_2x_w)
 
-	,.pi1_op_i    (s_pi1r_op_w[3])
-	,.pi1_addr_i  (s_pi1r_addr_w[3])
-	,.pi1_data_i  (s_pi1r_data_w0[3])
-	,.pi1_data_o  (s_pi1r_data_w1[3])
-	,.pi1_sel_i   (s_pi1r_sel_w[3])
-	,.pi1_rdy_o   (s_pi1r_rdy_w[3])
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[3])
+	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_INTCTRL])
+	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_INTCTRL])
+	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_INTCTRL])
+	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_INTCTRL])
+	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_INTCTRL])
+	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_INTCTRL])
+	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_INTCTRL])
 
 	,.intrqstdst_o (intrqstdst_w)
 	,.intrdydst_i  (intrdydst_w)
@@ -333,16 +352,16 @@ uart_sim #(
 
 	,.clk_i (clk_2x_w)
 
-	,.pi1_op_i    (s_pi1r_op_w[4])
-	,.pi1_addr_i  (s_pi1r_addr_w[4])
-	,.pi1_data_i  (s_pi1r_data_w0[4])
-	,.pi1_data_o  (s_pi1r_data_w1[4])
-	,.pi1_sel_i   (s_pi1r_sel_w[4])
-	,.pi1_rdy_o   (s_pi1r_rdy_w[4])
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[4])
+	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_UART])
+	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_UART])
+	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_UART])
+	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_UART])
+	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_UART])
+	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_UART])
+	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_UART])
 
-	,.intrqst_o (intrqstsrc_w[2])
-	,.intrdy_i  (intrdysrc_w[2])
+	,.intrqst_o (intrqstsrc_w[INTCTRLSRC_UART])
+	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_UART])
 );
 
 smem #(
@@ -357,23 +376,23 @@ smem #(
 
 	,.clk_i (clk_2x_w)
 
-	,.pi1_op_i    (s_pi1r_op_w[5])
-	,.pi1_addr_i  (s_pi1r_addr_w[5])
-	,.pi1_data_i  (s_pi1r_data_w0[5])
-	,.pi1_data_o  (s_pi1r_data_w1[5])
-	,.pi1_sel_i   (s_pi1r_sel_w[5])
-	,.pi1_rdy_o   (s_pi1r_rdy_w[5])
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[5])
+	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_RAM])
+	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_RAM])
+	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_RAM])
+	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_RAM])
+	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_RAM])
+	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_RAM])
+	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_RAM])
 );
 
 localparam INVALIDDEVMAPSZ = 'h4000;
-assign s_pi1r_data_w1[6] = {ARCHBITSZ{1'b0}};
-assign s_pi1r_rdy_w[6]   = 1'b1;
-assign s_pi1r_mapsz_w[6] = INVALIDDEVMAPSZ;
+assign s_pi1r_data_w1[S_PI1R_INVALIDDEV] = {ARCHBITSZ{1'b0}};
+assign s_pi1r_rdy_w[S_PI1R_INVALIDDEV]   = 1'b1;
+assign s_pi1r_mapsz_w[S_PI1R_INVALIDDEV] = INVALIDDEVMAPSZ;
 always @ (posedge clk_2x_w[0]) begin
-	if (!rst_i && s_pi1r_op_w[6]) begin
-		$write("!!! s_pi1r_op_w[6] == 0b%b; s_pi1r_addr_w[6] == 0x%x\n",
-			s_pi1r_op_w[6], {2'b00, s_pi1r_addr_w[6]}<<CLOG2ARCHBITSZBY8);
+	if (!rst_i && s_pi1r_op_w[S_PI1R_INVALIDDEV]) begin
+		$write("!!! s_pi1r_op_w[S_PI1R_INVALIDDEV] == 0b%b; s_pi1r_addr_w[S_PI1R_INVALIDDEV] == 0x%x\n",
+			s_pi1r_op_w[S_PI1R_INVALIDDEV], {2'b00, s_pi1r_addr_w[S_PI1R_INVALIDDEV]}<<CLOG2ARCHBITSZBY8);
 		$fflush(1);
 		$finish;
 	end

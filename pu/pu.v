@@ -13,6 +13,7 @@ module pu (
 	,rst_o
 
 	,clk_i
+	,clk_muldiv_i
 
 	,pi1_op_o
 	,pi1_addr_o
@@ -41,7 +42,6 @@ parameter ICACHESETCOUNT = 2;
 parameter DCACHESETCOUNT = 2;
 parameter TLBSETCOUNT    = 2;
 parameter ICACHEWAYCOUNT = 1;
-parameter DCACHEWAYCOUNT = 1;
 parameter MULDIVCNT      = 4;
 
 localparam CLOG2ICACHESETCOUNT = clog2(ICACHESETCOUNT);
@@ -62,8 +62,10 @@ output reg rst_o;
 
 `ifdef USE2CLK
 input wire [2 -1 : 0] clk_i;
+input wire [2 -1 : 0] clk_muldiv_i;
 `else
 input wire [1 -1 : 0] clk_i;
+input wire [1 -1 : 0] clk_muldiv_i;
 `endif
 
 output reg[2 -1 : 0] pi1_op_o;

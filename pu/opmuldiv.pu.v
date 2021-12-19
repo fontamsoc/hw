@@ -47,13 +47,17 @@ output reg rdy_o = 0;
 reg  [(ARCHBITSZ*2) -1 : 0] cumulator        = 0;
 wire [(ARCHBITSZ*2) -1 : 0] cumulatornegated = -cumulator;
 
+`ifndef PUDSPMUL
 reg [(ARCHBITSZ+2) -1 : 0] mulx;
+`endif
 
 reg [ARCHBITSZ -1 : 0] rval;
 
 wire [(ARCHBITSZ*2) -1 : 0] divdiff = (cumulator - ({rval, {(ARCHBITSZ-1){1'b0}}}));
 
+`ifndef PUDSPMUL
 wire [(ARCHBITSZ+2) -1 : 0] cumulatoroperand = (mulx + cumulator[(ARCHBITSZ*2)-1:ARCHBITSZ]);
+`endif
 
 reg [CLOG2ARCHBITSZ -1 : 0] cntr = 0;
 
@@ -72,6 +76,7 @@ always @* begin
 	else
 		rval = operands[ARCHBITSZ-1:0];
 
+	`ifndef PUDSPMUL
 	if (cumulator[1:0] == 1)
 		mulx = {{2{1'b0}}, rval};
 	else if (cumulator[1:0] == 2)
@@ -80,8 +85,11 @@ always @* begin
 		mulx = {rval, 1'b0} + rval;
 	else
 		mulx = 0;
+	`endif
 
+	`ifndef PUDSPMUL
 	if (operands[MULDIVISDIV]) begin
+	`endif
 
 		if (operands[MULDIVMSBRSLT]) begin
 
@@ -97,7 +105,7 @@ always @* begin
 			else
 				data_o = cumulator[ARCHBITSZ-1:0];
 		end
-
+	`ifndef PUDSPMUL
 	end else begin
 
 		if (operands[MULDIVMSBRSLT]) begin
@@ -112,6 +120,7 @@ always @* begin
 			data_o = cumulator[ARCHBITSZ-1:0];
 		end
 	end
+	`endif
 end
 
 always @ (posedge clk_i) begin
@@ -132,9 +141,9 @@ always @ (posedge clk_i) begin
 	end else begin
 
 		if (inprogress) begin
-
+			`ifndef PUDSPMUL
 			if (operands[MULDIVISDIV]) begin
-
+			`endif
 				if (divdiff[(ARCHBITSZ*2)-1])
 					cumulator <= {cumulator[(ARCHBITSZ*2)-2:0], 1'b0};
 				else
@@ -145,7 +154,7 @@ always @ (posedge clk_i) begin
 					inprogress <= 0;
 					start <= 0;
 				end
-
+			`ifndef PUDSPMUL
 			end else begin
 
 				cumulator <= {cumulatoroperand, cumulator[ARCHBITSZ-1:2]};
@@ -156,6 +165,7 @@ always @ (posedge clk_i) begin
 					start <= 0;
 				end
 			end
+			`endif
 
 			cntr <= cntr + 1'b1;
 
@@ -180,6 +190,7 @@ module opmuldiv (
 	 rst_i
 
 	,clk_i
+	,clk_muldiv_i
 
 	,stb_i
 	,data_i
@@ -208,6 +219,7 @@ localparam CLOG2MULDIVCNT = clog2(MULDIVCNT);
 input wire rst_i;
 
 input wire clk_i;
+input wire clk_muldiv_i;
 
 input wire stb_i;
 
@@ -236,19 +248,36 @@ wire [CLOG2GPRCNT -1 : 0] gprid_w [MULDIVCNT -1 : 0];
 assign gprid_o = gprid_w[rdidx];
 
 wire [MULDIVCNT -1 : 0] rdy_w;
+
 assign rdy_o = ((usage < MULDIVCNT) && rdy_w[wridx]);
 
 assign ordy_o = ((usage != 0) && rdy_w[rdidx]);
 
+`ifdef PUMULDIVCLK
+reg                                                        stb_r = 0;
+reg                                                        rdy_r = 0;
+reg [(((ARCHBITSZ*2)+CLOG2GPRCNT)+MULDIVTYPEBITSZ) -1 : 0] data_r;
+`else
+wire                                                        stb_r  = stb_i;
+wire                                                        rdy_r  = rdy_o;
+wire [(((ARCHBITSZ*2)+CLOG2GPRCNT)+MULDIVTYPEBITSZ) -1 : 0] data_r = data_i;
+`endif
+
 always @ (posedge clk_i) begin
+
+	if (rdy_r && stb_r)
+		wridx <= wridx + 1'b1;
+
+	`ifdef PUMULDIVCLK
+	stb_r  <= stb_i;
+	rdy_r  <= rdy_o;
+	data_r <= data_i;
+	`endif
 
 	if (rst_i) begin
 		rdidx <= wridx;
-	end else if (ostb_i)
+	end else if (ordy_o && ostb_i)
 		rdidx <= rdidx + 1'b1;
-
-	if (stb_i)
-		wridx <= wridx + 1'b1;
 end
 
 genvar gen_muldiv_idx;
@@ -262,11 +291,15 @@ muldiv #(
 
 	 .rst_i (rst_i)
 
+	`ifdef PUMULDIVCLK
+	,.clk_i (clk_muldiv_i)
+	`else
 	,.clk_i (clk_i)
+	`endif
 
-	,.stb_i (stb_i && (wridx[CLOG2MULDIVCNT -1 : 0] == gen_muldiv_idx))
+	,.stb_i (stb_r && (wridx[CLOG2MULDIVCNT -1 : 0] == gen_muldiv_idx))
 
-	,.data_i  (data_i)
+	,.data_i  (data_r)
 	,.data_o  (data_w[gen_muldiv_idx])
 	,.gprid_o (gprid_w[gen_muldiv_idx])
 

@@ -65,6 +65,16 @@ end else if (opalu2done) begin
 	gprrdyindex = 0;
 	gprrdyval = 0;
 	gprrdywriteenable = 0;
+`ifdef PUDSPMUL
+end else if (opdspmuldone) begin
+	gprctrlstate = GPRCTRLSTATEDONE;
+	gprindex = gprindex1;
+	gprdata = opdspmulresult;
+	gprwriteenable = 1;
+	gprrdyindex = 0;
+	gprrdyval = 0;
+	gprrdywriteenable = 0;
+`endif
 end else if (opjldone) begin
 	gprctrlstate = GPRCTRLSTATEDONE;
 	gprindex = gprindex1;

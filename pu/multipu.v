@@ -12,6 +12,7 @@ module multipu (
 	,rst_o
 
 	,clk_i
+	,clk_muldiv_i
 	,clk_mem_i
 
 	,pi1_op_o
@@ -43,7 +44,6 @@ parameter ICACHESETCOUNT = 2;
 parameter DCACHESETCOUNT = 2;
 parameter TLBSETCOUNT    = 2;
 parameter ICACHEWAYCOUNT = 1;
-parameter DCACHEWAYCOUNT = 1;
 parameter MULDIVCNT      = 4;
 
 parameter ARCHBITSZ = 0;
@@ -57,9 +57,11 @@ output wire rst_o;
 
 `ifdef USE2CLK
 input wire [2 -1 : 0] clk_i;
+input wire [2 -1 : 0] clk_muldiv_i;
 input wire [2 -1 : 0] clk_mem_i;
 `else
 input wire [1 -1 : 0] clk_i;
+input wire [1 -1 : 0] clk_muldiv_i;
 input wire [1 -1 : 0] clk_mem_i;
 `endif
 
@@ -117,7 +119,6 @@ pu #(
 	,.DCACHESETCOUNT (DCACHESETCOUNT)
 	,.TLBSETCOUNT    (TLBSETCOUNT)
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
-	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
 	,.MULDIVCNT      (MULDIVCNT)
 
 ) pu (
@@ -126,7 +127,8 @@ pu #(
 
 	,.rst_o (rst_ow[genpu_idx])
 
-	,.clk_i (clk_i)
+	,.clk_i        (clk_i)
+	,.clk_muldiv_i (clk_muldiv_i)
 
 	,.pi1_op_o   (m_pi1q_op_w[genpu_idx])
 	,.pi1_addr_o (m_pi1q_addr_w[genpu_idx])

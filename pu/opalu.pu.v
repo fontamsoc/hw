@@ -23,3 +23,10 @@ else if (isoptype4) opalu2result = gprdata1 | gprdata2;
 else if (isoptype5) opalu2result = gprdata1 ^ gprdata2;
 else if (isoptype6) opalu2result = ~gprdata2;
 else                opalu2result = gprdata2;
+
+`ifdef PUDSPMUL
+if      (isoptype0) opdspmulresult = opdspmulresult_unsigned[ARCHBITSZ-1:0];
+else if (isoptype1) opdspmulresult = opdspmulresult_unsigned[(ARCHBITSZ*2)-1:ARCHBITSZ];
+else if (isoptype2) opdspmulresult = opdspmulresult_signed[ARCHBITSZ-1:0];
+else                opdspmulresult = opdspmulresult_signed[(ARCHBITSZ*2)-1:ARCHBITSZ];
+`endif

@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-if (rst_i) begin
+if (rst_i
+	`ifdef PUHPTW
+	|| (ARCHBITSZ != 32)
+	`endif
+	) begin
 
 	rst_o <= 0;
 
@@ -20,10 +24,23 @@ if (rst_i) begin
 
 	instrfetchfaulted_b <= instrfetchfaulted_a;
 
+	`ifdef SIMULATION
+	sequencerstate <= 0;
+	`endif
+
 end else if (gprrdyoff) begin
+
+	`ifdef SIMULATION
+	sequencerstate <= 1;
+	`endif
+
 end else if (instrbufferrst) begin
 
 	instrfetchfaulted_b <= instrfetchfaulted_a;
+
+	`ifdef SIMULATION
+	sequencerstate <= 2;
+	`endif
 
 end else if (timertriggered && !isflagdistimerintr && inusermode && !oplicounter
 	`ifdef PUMMU
@@ -49,6 +66,10 @@ end else if (timertriggered && !isflagdistimerintr && inusermode && !oplicounter
 
 	instrbufferrst_a <= ~instrbufferrst_b;
 
+	`ifdef SIMULATION
+	sequencerstate <= 6;
+	`endif
+
 end else if (intrqst_i && !isflagdisextintr && inusermode && !oplicounter
 	`ifdef PUMMU
 	`ifdef PUHPTW
@@ -73,12 +94,19 @@ end else if (intrqst_i && !isflagdisextintr && inusermode && !oplicounter
 
 	instrbufferrst_a <= ~instrbufferrst_b;
 
+	`ifdef SIMULATION
+	sequencerstate <= 7;
+	`endif
+
 end else if (!inhalt) begin
 
 	if (instrbuffernotempty) begin
 
 		if (oplicounter) begin
 			ip <= ipplusone;
+			`ifdef SIMULATION
+			sequencerstate <= 8;
+			`endif
 		end else if (instrbufferdataout0[7] || isopvloadorstore) begin
 
 			if (gprrdy1) begin
@@ -97,8 +125,15 @@ end else if (!inhalt) begin
 
 						instrbufferrst_a <= ~instrbufferrst_b;
 
+						`ifdef SIMULATION
+						sequencerstate <= 10;
+						`endif
+
 					end else begin
 						ip <= ipplusone;
+						`ifdef SIMULATION
+						sequencerstate <= 11;
+						`endif
 					end
 
 				end else if (gprrdy2) begin
@@ -111,8 +146,15 @@ end else if (!inhalt) begin
 
 							instrbufferrst_a <= ~instrbufferrst_b;
 
+							`ifdef SIMULATION
+							sequencerstate <= 12;
+							`endif
+
 						end else begin
 							ip <= ipplusone;
+							`ifdef SIMULATION
+							sequencerstate <= 13;
+							`endif
 						end
 
 					end else if (isopld) begin
@@ -126,8 +168,6 @@ end else if (!inhalt) begin
 							) begin
 
 							if (opldfault) begin
-								// Note that I get in this state only when in usermode
-								// because pagefault occurs only when in usermode.
 
 								faultreason <= (alignfault ? ALIGNFAULTINTR : READFAULTINTR);
 
@@ -142,9 +182,21 @@ end else if (!inhalt) begin
 
 								faultaddr <= gprdata2;
 
+								`ifdef SIMULATION
+								sequencerstate <= 14;
+								`endif
+
 							end else begin
 								ip <= ipplusone;
+								`ifdef SIMULATION
+								sequencerstate <= 15;
+								`endif
 							end
+
+						end else begin
+							`ifdef SIMULATION
+							sequencerstate <= 16;
+							`endif
 						end
 
 					end else if (isopst) begin
@@ -158,8 +210,6 @@ end else if (!inhalt) begin
 							) begin
 
 							if (opstfault) begin
-								// Note that I get in this state only when in usermode
-								// because pagefault occurs only when in usermode.
 
 								faultreason <= (alignfault ? ALIGNFAULTINTR : WRITEFAULTINTR);
 
@@ -174,9 +224,21 @@ end else if (!inhalt) begin
 
 								faultaddr <= gprdata2;
 
+								`ifdef SIMULATION
+								sequencerstate <= 17;
+								`endif
+
 							end else begin
 								ip <= ipplusone;
+								`ifdef SIMULATION
+								sequencerstate <= 18;
+								`endif
 							end
+
+						end else begin
+							`ifdef SIMULATION
+							sequencerstate <= 19;
+							`endif
 						end
 
 					end else if (isopldst) begin
@@ -190,8 +252,6 @@ end else if (!inhalt) begin
 							) begin
 
 							if (opldstfault) begin
-								// Note that I get in this state only when in usermode
-								// because pagefault occurs only when in usermode.
 
 								faultreason <= (
 									alignfault      ? ALIGNFAULTINTR :
@@ -209,6 +269,10 @@ end else if (!inhalt) begin
 								sysopcode <= {instrbufferdataout1, instrbufferdataout0};
 
 								faultaddr <= gprdata2;
+
+								`ifdef SIMULATION
+								sequencerstate <= 20;
+								`endif
 
 							end else begin
 
@@ -236,16 +300,39 @@ end else if (!inhalt) begin
 
 									instrbufferrst_a <= ~instrbufferrst_b;
 
+									`ifdef SIMULATION
+									sequencerstate <= 21;
+									`endif
+
 								end else begin
 									ip <= ipplusone;
+									`ifdef SIMULATION
+									sequencerstate <= 22;
+									`endif
 								end
 							end
+
+						end else begin
+							`ifdef SIMULATION
+							sequencerstate <= 23;
+							`endif
 						end
 
 					end else if (isopalu0 || isopalu1 || isopalu2 || isopmuldiv) begin
 
-						if (!isopmuldiv || opmuldiv_rdy_w) begin
+						if ((!isopmuldiv
+							`ifdef PUDSPMUL
+							|| !instrbufferdataout0[2]
+							`endif
+							) || opmuldiv_rdy_w) begin
 							ip <= ipplusone;
+							`ifdef SIMULATION
+							sequencerstate <= 24;
+							`endif
+						end else begin
+							`ifdef SIMULATION
+							sequencerstate <= 25;
+							`endif
 						end
 
 					end else if (inkernelmode || isopfloat) begin
@@ -270,6 +357,10 @@ end else if (!inhalt) begin
 
 						instrbufferrst_a <= ~instrbufferrst_b;
 
+						`ifdef SIMULATION
+						sequencerstate <= 26;
+						`endif
+
 					end else begin
 
 						faultreason <= SYSOPINTR;
@@ -284,8 +375,22 @@ end else if (!inhalt) begin
 						inusermode <= 0;
 
 						instrbufferrst_a <= ~instrbufferrst_b;
+
+						`ifdef SIMULATION
+						sequencerstate <= 28;
+						`endif
 					end
+
+				end else begin
+					`ifdef SIMULATION
+					sequencerstate <= 29;
+					`endif
 				end
+
+			end else begin
+				`ifdef SIMULATION
+				sequencerstate <= 30;
+				`endif
 			end
 
 		end else begin
@@ -318,6 +423,10 @@ end else if (!inhalt) begin
 
 				instrbufferrst_a <= ~instrbufferrst_b;
 
+				`ifdef SIMULATION
+				sequencerstate <= 31;
+				`endif
+
 			end else begin
 
 				if (isophalt) begin
@@ -325,6 +434,10 @@ end else if (!inhalt) begin
 					dohalt <= 1;
 
 					ip <= ipplusone;
+
+					`ifdef SIMULATION
+					sequencerstate <= 32;
+					`endif
 
 				end else if (isopsysret) begin
 
@@ -334,6 +447,10 @@ end else if (!inhalt) begin
 					inusermode <= 1;
 
 					instrbufferrst_a <= ~instrbufferrst_b;
+
+					`ifdef SIMULATION
+					sequencerstate <= 33;
+					`endif
 
 				end else if (isopksysret) begin
 
@@ -346,14 +463,29 @@ end else if (!inhalt) begin
 
 					instrbufferrst_a <= ~instrbufferrst_b;
 
+					`ifdef SIMULATION
+					sequencerstate <= 34;
+					`endif
+
 				end else if (isopcacherst) begin
 
 					ip <= ipplusone;
+
+					`ifdef SIMULATION
+					sequencerstate <= 35;
+					`endif
 
 				end else if (isopsetgpr) begin
 
 					if (opsetgprrdy1 && opsetgprrdy2) begin
 						ip <= ipplusone;
+						`ifdef SIMULATION
+						sequencerstate <= 36;
+						`endif
+					end else begin
+						`ifdef SIMULATION
+						sequencerstate <= 37;
+						`endif
 					end
 
 				end else if (isopsetsysreg || isopgetsysreg || isopgetsysreg1) begin
@@ -373,6 +505,13 @@ end else if (!inhalt) begin
 						ip <= ipplusone;
 						if (isopsetuip)
 							uip <= gprdata1[ARCHBITSZ-1:1];
+						`ifdef SIMULATION
+						sequencerstate <= 38;
+						`endif
+					end else begin
+						`ifdef SIMULATION
+						sequencerstate <= 39;
+						`endif
 					end
 
 				end else begin
@@ -396,6 +535,10 @@ end else if (!inhalt) begin
 					inusermode <= 0;
 
 					instrbufferrst_a <= ~instrbufferrst_b;
+
+					`ifdef SIMULATION
+					sequencerstate <= 40;
+					`endif
 				end
 			end
 		end
@@ -416,5 +559,14 @@ end else if (!inhalt) begin
 		instrbufferrst_a <= ~instrbufferrst_b;
 
 		instrfetchfaulted_b <= instrfetchfaulted_a;
+
+		`ifdef SIMULATION
+		sequencerstate <= 41;
+		`endif
+
+	end else begin
+		`ifdef SIMULATION
+		sequencerstate <= 42;
+		`endif
 	end
 end

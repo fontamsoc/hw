@@ -652,7 +652,11 @@ localparam MULDIVTYPEBITSZ = 4;
 
 wire opmuldiv_rdy_w;
 
-wire opmuldiv_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopmuldiv && opmuldiv_rdy_w);
+wire opmuldiv_stb_w = (miscrdyandsequencerreadyandgprrdy12 && ((isopmuldiv
+	`ifdef PUDSPMUL
+	&& instrbufferdataout0[2]
+	`endif
+	)) && opmuldiv_rdy_w);
 
 wire [(((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+MULDIVTYPEBITSZ) -1 : 0] opmuldiv_data_w =
 	{1'b0, instrbufferdataout0[2:0], gprindex1, gprdata1, gprdata2};
@@ -673,7 +677,12 @@ opmuldiv #(
 
 	 .rst_i (rst_i)
 
-	,.clk_i (clk_i)
+	,.clk_i        (clk_i)
+	`ifdef USE2CLK
+	,.clk_muldiv_i (clk_muldiv_i[1])
+	`else
+	,.clk_muldiv_i (clk_muldiv_i[0])
+	`endif
 
 	,.stb_i  (opmuldiv_stb_w)
 	,.data_i (opmuldiv_data_w)
@@ -684,6 +693,15 @@ opmuldiv #(
 	,.gprid_o (opmuldivgpr)
 	,.ordy_o  (opmuldivdone)
 );
+
+`ifdef PUDSPMUL
+wire [(ARCHBITSZ*2) -1 : 0] opdspmulresult_unsigned = (gprdata1 * gprdata2);
+wire [(ARCHBITSZ*2) -1 : 0] opdspmulresult_signed   = ($signed(gprdata1) * $signed(gprdata2));
+
+reg [ARCHBITSZ -1 : 0] opdspmulresult;
+
+wire opdspmuldone = (miscrdyandsequencerreadyandgprrdy12 && isopmuldiv && !instrbufferdataout0[2]);
+`endif
 
 wire opjldone = (miscrdyandsequencerreadyandgprrdy12 && isopj && isoptype2);
 
@@ -852,4 +870,8 @@ assign dcacheslavedato = dcachemasterdati;
 assign dcacheslavesel = dcachemastersel;
 
 wire multicycleoprdy = (miscrdyandsequencerreadyandgprrdy12 &&
-	(opldrdy || opldstrdy || (isopmuldiv && opmuldiv_rdy_w)));
+	(opldrdy || opldstrdy || (((isopmuldiv
+		`ifdef PUDSPMUL
+		&& instrbufferdataout0[2]
+		`endif
+		)) && opmuldiv_rdy_w)));
