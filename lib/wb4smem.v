@@ -53,8 +53,10 @@ assign wb4_stall_o = |cntr;
 reg [ARCHBITSZ -1 : 0] u[SIZE -1 : 0];
 integer i;
 initial begin
+	`ifdef SIMULATION
 	for (i = 0; i < SIZE; i = i + 1)
 		u[i] = 0;
+	`endif
 	if (SRCFILE != "") begin
 		$readmemh (SRCFILE, u);
 		`ifdef SIMULATION

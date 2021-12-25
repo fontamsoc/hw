@@ -490,13 +490,20 @@ end else if (!inhalt) begin
 
 				end else if (isopsetsysreg || isopgetsysreg || isopgetsysreg1) begin
 
-					if (gprrdy1 && (!istlbop || !(itlbreadenable_ || dtlbreadenable_
-						`ifdef PUMMU
-						`ifdef PUHPTW
-						|| hptwitlbwe
-						`endif
-						`endif
-						)) && (gprrdy2 || (isopsetksysopfaulthdlr || isopsetksl || isopsetasid ||
+					if (gprrdy1 &&
+						(!istlbop || (!(itlbreadenable_ || dtlbreadenable_
+							`ifdef PUMMU
+							`ifdef PUHPTW
+							|| hptwitlbwe
+							`endif
+							`endif
+							) && (!isopgettlb || (opgettlbrdy_
+								`ifdef PUMMU
+								`ifdef PUHPTW
+								&& opgettlbfault__hptwddone
+								`endif
+								`endif
+						)))) && (gprrdy2 || (isopsetksysopfaulthdlr || isopsetksl || isopsetasid ||
 							isopsetuip || isopsetflags || isopsettimer ||
 							isopgetsysopcode || isopgetuip || isopgetfaultaddr ||
 							isopgetfaultreason || (isopgetclkcyclecnt || isopgetclkcyclecnth) ||

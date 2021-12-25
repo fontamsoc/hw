@@ -165,6 +165,7 @@ wire hptwdstate_eq_HPTWSTATEPTE1 = (hptwdstate == HPTWSTATEPTE1);
 wire hptwdstate_eq_HPTWSTATEDONE = (hptwdstate == HPTWSTATEDONE);
 wire hptwdtlbwe = (dcachemasterrdy &&
 	dcachemasterdato[5] && (inuserspace ? dcachemasterdato[4] : 1'b1) && (
+		isopgettlb                                                ||
 		(isopld     && dcachemasterdato[2])                       ||
 		(isopst     && dcachemasterdato[1])                       ||
 		(isopldst   && (|dcachemasterdato[2:1])))                 &&
@@ -484,9 +485,12 @@ wire itlbfault = itlbfault_;
 
 `ifdef PUMMU
 `ifdef PUHPTW
-wire itlbfault__hptwidone = (!itlbfault_ || (hptwidone && !itlbwritten));
+wire itlbfault__hptwidone = (!itlbfault_ || !hptwpgd || (hptwidone && !itlbwritten));
 `endif
 `endif
+
+wire dtlb_rdy = (!dtlbreadenable &&
+	!instrbuffernotempty_posedge);
 
 wire alignfault =
 	(ARCHBITSZ == 16) ? (instrbufferdataout0[0] && gprdata2[0]) :
@@ -715,11 +719,31 @@ wire opgetsysregdone = (miscrdyandsequencerreadyandgprrdy1 && isopgetsysreg && (
 
 reg[ARCHBITSZ -1 : 0] opgetsysreg1result;
 
+`ifdef PUMMU
+`ifdef PUHPTW
+wire opgettlbfault__hptwddone = (!dtlben || !hptwpgd || (hptwddone && !dtlbwritten));
+`endif
+`endif
+
+wire opgettlbrdy_ = dtlb_rdy;
+
 wire opgetsysreg1done = (miscrdyandsequencerreadyandgprrdy1 && isopgetsysreg1 &&
-	(!isoptype3 || (gprrdy2 && !(itlbreadenable_ || dtlbreadenable_))) && (
-	inkernelmode ||
+	(!isoptype3 ||
+		(gprrdy2 && (!(itlbreadenable_ || dtlbreadenable_
+		`ifdef PUMMU
+		`ifdef PUHPTW
+		|| hptwitlbwe
+		`endif
+		`endif
+		) && (opgettlbrdy_
+			`ifdef PUMMU
+			`ifdef PUHPTW
+			&& opgettlbfault__hptwddone
+			`endif
+			`endif
+	)))) && (inkernelmode ||
 	(isoptype0 && isflaggetcoreid) ||
-	(isoptype1 && isflaggetclkfreq) ||
+	((isoptype1 || isoptype4 || isoptype5) && isflaggetclkfreq) ||
 	(isoptype2 && isflaggetcachesize) ||
 	(isoptype3 && isflaggettlb)));
 
@@ -802,9 +826,6 @@ ram2clk1i5o #(
 	,.o4 ()
 );
 
-wire dtlb_rdy = (!dtlbreadenable &&
-	!instrbuffernotempty_posedge);
-
 reg[CLOG2GPRCNTTOTAL -1 : 0] opldgpr;
 
 reg[ARCHBITSZMAX -1 : 0] opldresult;
@@ -816,7 +837,7 @@ wire opldfault = ((inusermode && alignfault) || opldfault_);
 
 `ifdef PUMMU
 `ifdef PUHPTW
-wire opldfault__hptwddone = (!opldfault_ || (hptwddone && !dtlbwritten));
+wire opldfault__hptwddone = (!opldfault_ || !hptwpgd || (hptwddone && !dtlbwritten));
 `endif
 `endif
 
@@ -832,7 +853,7 @@ wire opstfault = ((inusermode && alignfault) || opstfault_);
 
 `ifdef PUMMU
 `ifdef PUHPTW
-wire opstfault__hptwddone = (!opstfault_ || (hptwddone && !dtlbwritten));
+wire opstfault__hptwddone = (!opstfault_ || !hptwpgd || (hptwddone && !dtlbwritten));
 `endif
 `endif
 
@@ -850,7 +871,7 @@ wire opldstfault = ((inusermode && alignfault) || opldstfault_);
 
 `ifdef PUMMU
 `ifdef PUHPTW
-wire opldstfault__hptwddone = (!opldstfault_ || (hptwddone && !dtlbwritten));
+wire opldstfault__hptwddone = (!opldstfault_ || !hptwpgd || (hptwddone && !dtlbwritten));
 `endif
 `endif
 

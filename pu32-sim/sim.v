@@ -248,7 +248,7 @@ sdcard_spi #(
 	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_SDCARD])
 );
 
-localparam RAMSZ = (8388608);
+localparam RAMSZ = 'h800000;
 
 wire devtbl_rst2_w;
 

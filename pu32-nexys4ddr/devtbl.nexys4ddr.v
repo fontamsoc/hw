@@ -69,47 +69,56 @@ localparam BLOCKDEVMAPSZ = (512/(ARCHBITSZ/8));
 
 `include "version.v"
 
+localparam ADDRBY2_BLKDEV  = 0;
+localparam ADDRBY2_DEVTBL  = (ADDRBY2_BLKDEV + 1);
+localparam ADDRBY2_GPIO    = (ADDRBY2_DEVTBL + 1);
+localparam ADDRBY2_DMA     = (ADDRBY2_GPIO + 1);
+localparam ADDRBY2_INTCTRL = (ADDRBY2_DMA + 1);
+localparam ADDRBY2_UART    = (ADDRBY2_INTCTRL + 1);
+localparam ADDRBY2_RAM     = (ADDRBY2_UART + 1);
+localparam ADDRBY2_RAMCTRL = (ADDRBY2_RAM + 1);
+
 always @ (posedge clk_i) begin
 	if (rst_i) begin
 		rst0_o <= 0;
 		rst1_o <= 0;
 	end else if (pi1_rdy_o && pi1_op_i == PIRDOP) begin
-		if (addrby2 == 0) begin
+		if (addrby2 == ADDRBY2_BLKDEV) begin
 			if (pi1_addr_i[0] == 0)
 				pi1_data_o <= 4;
 			else
 				pi1_data_o <= {BLOCKDEVMAPSZ[ADDRBITSZ -1 : 0], {(CLOG2ARCHBITSZBY8-1){1'b0}}, 1'b1};
-		end else if (addrby2 == 1) begin
+		end else if (addrby2 == ADDRBY2_DEVTBL) begin
 			if (pi1_addr_i[0] == 0)
 				pi1_data_o <= 7;
 			else
 				pi1_data_o <= {DEVTBLMAPSZ[ADDRBITSZ -1 : 0], {(CLOG2ARCHBITSZBY8-1){1'b0}}, 1'b0};
-		end else if (addrby2 == 2) begin
+		end else if (addrby2 == ADDRBY2_GPIO) begin
 			if (pi1_addr_i[0] == 0)
 				pi1_data_o <= 6;
 			else
 				pi1_data_o <= {TINYDEVMAPSZ[ADDRBITSZ -1 : 0], {(CLOG2ARCHBITSZBY8-1){1'b0}}, 1'b1};
-		end else if (addrby2 == 3) begin
+		end else if (addrby2 == ADDRBY2_DMA) begin
 			if (pi1_addr_i[0] == 0)
 				pi1_data_o <= 2;
 			else
 				pi1_data_o <= {DMADEVMAPSZ[ADDRBITSZ -1 : 0], {(CLOG2ARCHBITSZBY8-1){1'b0}}, 1'b1};
-		end else if (addrby2 == 4) begin
+		end else if (addrby2 == ADDRBY2_INTCTRL) begin
 			if (pi1_addr_i[0] == 0)
 				pi1_data_o <= 3;
 			else
 				pi1_data_o <= {TINYDEVMAPSZ[ADDRBITSZ -1 : 0], {(CLOG2ARCHBITSZBY8-1){1'b0}}, 1'b0};
-		end else if (addrby2 == 5) begin
+		end else if (addrby2 == ADDRBY2_UART) begin
 			if (pi1_addr_i[0] == 0)
 				pi1_data_o <= 5;
 			else
 				pi1_data_o <= {TINYDEVMAPSZ[ADDRBITSZ -1 : 0], {(CLOG2ARCHBITSZBY8-1){1'b0}}, 1'b1};
-		end else if (addrby2 == 6) begin
+		end else if (addrby2 == ADDRBY2_RAM) begin
 			if (pi1_addr_i[0] == 0)
 				pi1_data_o <= 1;
 			else
 				pi1_data_o <= {RAMSZ[ADDRBITSZ -1 : 0], {(CLOG2ARCHBITSZBY8-1){1'b0}}, 1'b0};
-		end else if (addrby2 == 7) begin
+		end else if (addrby2 == ADDRBY2_RAMCTRL) begin
 			if (pi1_addr_i[0] == 0)
 				pi1_data_o <= 0;
 			else

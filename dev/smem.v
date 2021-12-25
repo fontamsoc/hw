@@ -80,8 +80,10 @@ wire we_w = (pi1_rdy_o && (pi1_op_i == PIWROP || pi1_op_i == PIRWOP));
 reg [ARCHBITSZ -1 : 0] u [0 : SIZE -1];
 integer init_u_idx;
 initial begin
+	`ifdef SIMULATION
 	for (init_u_idx = 0; init_u_idx < SIZE; init_u_idx = init_u_idx + 1)
 		u[init_u_idx] = 0;
+	`endif
 	if (SRCFILE != "") begin
 		$readmemh (SRCFILE, u);
 		`ifdef SIMULATION

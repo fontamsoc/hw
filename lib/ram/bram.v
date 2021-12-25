@@ -34,10 +34,19 @@ output reg [DW-1:0]        o1;
 reg [DW-1:0] u [0:SZ-1];
 integer init_u_idx;
 initial begin
+	`ifdef SIMULATION
 	for (init_u_idx = 0; init_u_idx < SZ; init_u_idx = init_u_idx + 1)
 		u[init_u_idx] = 0;
+	`endif
 	if (SRCFILE != "") begin
 		$readmemh (SRCFILE, u);
+		`ifdef SIMULATION
+		$display ("%s loaded", SRCFILE);
+		// Initial state initialized here, otherwise
+		// block ram fails to be inferred by yosys.
+		o0 = 0;
+		o1 = 0;
+		`endif
 	end
 end
 

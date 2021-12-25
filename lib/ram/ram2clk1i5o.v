@@ -143,10 +143,15 @@ bram #(
 reg [DW -1 : 0] u [SZ -1 : 0];
 integer init_u_idx;
 initial begin
+	`ifdef SIMULATION
 	for (init_u_idx = 0; init_u_idx < SZ; init_u_idx = init_u_idx + 1)
 		u[init_u_idx] = 0;
+	`endif
 	if (SRCFILE != "") begin
 		$readmemh (SRCFILE, u);
+		`ifdef SIMULATION
+		$display ("%s loaded", SRCFILE);
+		`endif
 	end
 end
 

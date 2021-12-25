@@ -2,12 +2,40 @@
 // (c) William Fonkou Tambe
 
 if (miscrdyandsequencerreadyandgprrdy12) begin
+	`ifdef PUMMU
+	`ifdef PUHPTW
+	if (isopgettlb && opgettlbrdy_ && !opgettlbfault__hptwddone) begin
 
+		hptwmemstate = HPTWMEMSTATEDATA;
+
+		if (hptwdstate_eq_HPTWSTATEPGD0) begin
+			dcachemasterop = MEMREADOP;
+			dcachemasteraddr = hptwpgd_plus_hptwdpgdoffset[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8];
+			dcachemasterdati = 0;
+			dcachemastersel = {(ARCHBITSZ/8){1'b1}};
+		end else if (hptwdstate_eq_HPTWSTATEPTE0) begin
+			dcachemasterop = MEMREADOP;
+			dcachemasteraddr = hptwdpte_plus_hptwdpteoffset[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8];
+			dcachemasterdati = 0;
+			dcachemastersel = {(ARCHBITSZ/8){1'b1}};
+		end else begin
+			dcachemasterop = MEMNOOP;
+			dcachemasteraddr = 0;
+			dcachemasterdati = 0;
+			dcachemastersel = 0;
+		end
+
+	end else
+	`endif
+	`endif
 	if (isopld && opldrdy_
-		`ifndef PUHPTW
-		&& !opldfault
-		`endif
-		) begin
+		&& (!opldfault
+			`ifdef PUMMU
+			`ifdef PUHPTW
+			|| !opldfault__hptwddone
+			`endif
+			`endif
+		)) begin
 		`ifdef PUMMU
 		`ifdef PUHPTW
 		if (!opldfault__hptwddone) begin
@@ -112,10 +140,13 @@ if (miscrdyandsequencerreadyandgprrdy12) begin
 		`endif
 
 	end else if (isopst && opstrdy_
-		`ifndef PUHPTW
-		&& !opstfault
-		`endif
-		) begin
+		&& (!opstfault
+			`ifdef PUMMU
+			`ifdef PUHPTW
+			|| !opstfault__hptwddone
+			`endif
+			`endif
+		)) begin
 		`ifdef PUMMU
 		`ifdef PUHPTW
 		if (!opstfault__hptwddone) begin
@@ -249,10 +280,13 @@ if (miscrdyandsequencerreadyandgprrdy12) begin
 		`endif
 
 	end else if (isopldst && opldstrdy_
-		`ifndef PUHPTW
-		&& !opldstfault && !instrbufferdataout0[2]
-		`endif
-		) begin
+		&& (!opldstfault && !instrbufferdataout0[2]
+			`ifdef PUMMU
+			`ifdef PUHPTW
+			|| !opldstfault__hptwddone
+			`endif
+			`endif
+		)) begin
 		`ifdef PUMMU
 		`ifdef PUHPTW
 		if (!opldstfault__hptwddone) begin
