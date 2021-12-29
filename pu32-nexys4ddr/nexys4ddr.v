@@ -232,7 +232,7 @@ localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
 localparam S_PI1R_RAMCTRL    = (S_PI1R_RAM + 1);
 localparam S_PI1R_INVALIDDEV = (S_PI1R_RAMCTRL + 1);
 
-localparam ICACHESZ = 256;
+localparam ICACHESZ = (256/2);
 localparam DCACHESZ = ((PUCOUNT > 2) ? 32 : 64);
 
 localparam ICACHEWAYCOUNT = ((PUCOUNT > 1) ? 2 : 4);
