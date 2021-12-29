@@ -1,7 +1,7 @@
 
 ## Clock Signal
 set_property -dict { PACKAGE_PIN R4    IOSTANDARD LVCMOS33 } [get_ports { clk100mhz_i }]; #IO_L13P_T2_MRCC_34 Sch=sysclk
-create_clock -add -name clk100mhz_i -period 10.00 -waveform {0 5} [get_ports clk100mhz_i]
+create_clock -name clk100mhz_i -period 10 -waveform {0 5} [get_ports clk100mhz_i]
 
 ## FMC Transceiver clocks (Must be set to value provided by Mezzanine card, currently set to 156.25 MHz)
 ## Note: This clock is attached to a MGTREFCLK pin
@@ -329,10 +329,6 @@ set_property -dict { PACKAGE_PIN J6   IOSTANDARD SSTL15   SLEW FAST } [get_ports
 set_property -dict { PACKAGE_PIN K4   IOSTANDARD SSTL15   SLEW FAST } [get_ports { ddr3_odt }];
 set_property -dict { PACKAGE_PIN G1   IOSTANDARD SSTL15   SLEW FAST } [get_ports { ddr3_reset_n }];
 set_property INTERNAL_VREF 0.750 [get_iobanks 35]
-### LiteDRAM false path constraints
-set_false_path -quiet -through [get_nets -hierarchical -filter {mr_ff == TRUE}]
-set_false_path -quiet -to [get_pins -filter {REF_PIN_NAME == PRE} -of_objects [get_cells -hierarchical -filter {ars_ff1 == TRUE || ars_ff2 == TRUE}]]
-set_max_delay 2 -quiet -from [get_pins -filter {REF_PIN_NAME == C} -of_objects [get_cells -hierarchical -filter {ars_ff1 == TRUE}]] -to [get_pins -filter {REF_PIN_NAME == D} -of_objects [get_cells -hierarchical -filter {ars_ff2 == TRUE}]]
 
 set_property CONFIG_VOLTAGE 3.3 [current_design]
 set_property CFGBVS VCCO [current_design]
