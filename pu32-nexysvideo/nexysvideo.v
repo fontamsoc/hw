@@ -174,7 +174,7 @@ end
 
 assign sd_reset = rst;
 
-STARTUPE2 (.CLK (clk100mhz_i), .GSR (swcoldrst));
+STARTUPE2 startupe2 (.CLK (clk100mhz_i), .GSR (swcoldrst));
 
 localparam ACTIVITY_CNTR_BITSZ = 7;
 reg [ACTIVITY_CNTR_BITSZ -1 : 0] activity_cntr = 0;
