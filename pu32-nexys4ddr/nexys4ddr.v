@@ -3,6 +3,8 @@
 
 `default_nettype none
 
+`include "./pll_100_to_50_100_mhz.v"
+
 `include "lib/perint/pi1r.v"
 
 `define PUMMU
@@ -11,27 +13,24 @@
 `define PUDSPMUL
 `include "pu/multipu.v"
 
+`include "dev/bootldr.v"
+
+`include "dev/sdcard/sdcard_spi.v"
+
+`include "dev/devtbl.v"
+
 `include "dev/gpio.v"
 
 `include "dev/dma.v"
 
 `include "dev/intctrl.v"
 
-`include "dev/bootldr.v"
-
-`include "dev/sdcard/sdcard_spi.v"
-
 `include "dev/uart_hw.v"
 
-`include "dev/pi1_dcache.v"
-
 `include "dev/pi1_upconverter.v"
+`include "dev/pi1_dcache.v"
 `include "dev/pi1q_to_wb4.v"
 `include "./litedram/litedram.v"
-
-`include "./devtbl.nexys4ddr.v"
-
-`include "./pll_100_to_50_100_mhz.nexys4ddr.v"
 
 module nexys4ddr (
 
@@ -216,6 +215,7 @@ localparam PI1RSLAVECOUNT        = 9;
 localparam PI1RDEFAULTSLAVEINDEX = 8;
 localparam PI1RFIRSTSLAVEADDR    = 0;
 localparam PI1RARCHBITSZ         = ARCHBITSZ;
+localparam PI1RCLKFREQ           = (CLKFREQ50MHZ*2);
 wire pi1r_rst_w = rst;
 wire pi1r_clk_w = clk100mhz;
 `include "lib/perint/inst.pi1r.v"
@@ -232,6 +232,18 @@ localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
 localparam S_PI1R_RAMCTRL    = (S_PI1R_RAM + 1);
 localparam S_PI1R_INVALIDDEV = (S_PI1R_RAMCTRL + 1);
 
+wire [(ARCHBITSZ * PI1RSLAVECOUNT) -1 : 0] devtbl_id_flat_w;
+wire [ARCHBITSZ -1 : 0]                    devtbl_id_w           [PI1RSLAVECOUNT -1 : 0];
+wire [(ADDRBITSZ * PI1RSLAVECOUNT) -1 : 0] devtbl_mapsz_flat_w;
+wire [PI1RSLAVECOUNT -1 : 0]               devtbl_useintr_flat_w;
+wire [PI1RSLAVECOUNT -1 : 0]               devtbl_useintr_w;
+genvar gen_devtbl_id_flat_w_idx;
+generate for (gen_devtbl_id_flat_w_idx = 0; gen_devtbl_id_flat_w_idx < PI1RSLAVECOUNT; gen_devtbl_id_flat_w_idx = gen_devtbl_id_flat_w_idx + 1) begin :gen_devtbl_id_flat_w
+assign devtbl_id_flat_w[((gen_devtbl_id_flat_w_idx+1) * ARCHBITSZ) -1 : gen_devtbl_id_flat_w_idx * ARCHBITSZ] = devtbl_id_w[gen_devtbl_id_flat_w_idx];
+end endgenerate
+assign devtbl_mapsz_flat_w = s_pi1r_mapsz_w_flat;
+assign devtbl_useintr_flat_w = devtbl_useintr_w;
+
 localparam ICACHESZ = 256;
 localparam DCACHESZ = ((PUCOUNT > 2) ? 32 : 64);
 
@@ -243,7 +255,7 @@ multipu #(
 	,.CLKFREQ        (CLKFREQ50MHZ)
 	,.PUCOUNT        (PUCOUNT)
 	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*((ICACHESZ/ICACHEWAYCOUNT)/PUCOUNT))
-	,.TLBSETCOUNT    (1024/PUCOUNT)
+	,.TLBSETCOUNT    (128)
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.MULDIVCNT      ((PUCOUNT > 4) ? 4 : 8)
 
@@ -255,7 +267,7 @@ multipu #(
 
 	,.clk_i        (clk50mhz)
 	,.clk_muldiv_i (clk100mhz)
-	,.clk_mem_i    (clk100mhz)
+	,.clk_mem_i    (pi1r_clk_w)
 
 	,.pi1_op_o   (m_pi1r_op_w[M_PI1R_MULTIPU])
 	,.pi1_addr_o (m_pi1r_addr_w[M_PI1R_MULTIPU])
@@ -290,7 +302,7 @@ bootldr #(
 
 	 .rst_i (rst)
 
-	,.clk_i (clk100mhz)
+	,.clk_i (pi1r_clk_w)
 
 	,.m_pi1_op_i   (s_pi1r_op_w[S_PI1R_SDCARD])
 	,.m_pi1_addr_i (s_pi1r_addr_w[S_PI1R_SDCARD])
@@ -316,7 +328,7 @@ sdcard_spi #(
 
 	 .rst_i (rst || sd_cd)
 
-	,.clk_mem_i (clk100mhz)
+	,.clk_mem_i (pi1r_clk_w)
 	,.clk_i     (clk50mhz)
 	,.clk_phy_i (clk50mhz)
 
@@ -337,9 +349,8 @@ sdcard_spi #(
 	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_SDCARD])
 );
 
-localparam RAMSZ = 'h2000000;
-
-localparam SDRAMCtrlIfSZ = 'h4000;
+assign devtbl_id_w     [S_PI1R_SDCARD] = 4;
+assign devtbl_useintr_w[S_PI1R_SDCARD] = 1;
 
 localparam RAMCACHEWAYCOUNT = 4;
 
@@ -349,11 +360,10 @@ wire devtbl_rst2_w;
 
 devtbl #(
 
-	 .ARCHBITSZ   (ARCHBITSZ)
-	,.RAMSZ       (RAMSZ)
-	,.RAMCtrlIfSZ (SDRAMCtrlIfSZ)
-	,.RAMCACHESZ  (RAMCACHESZ)
-	,.PRELDRADDR  ('h1000)
+	 .ARCHBITSZ  (ARCHBITSZ)
+	,.RAMCACHESZ (RAMCACHESZ)
+	,.PRELDRADDR ('h1000)
+	,.DEVMAPCNT  (PI1RSLAVECOUNT)
 
 ) devtbl (
 
@@ -363,7 +373,7 @@ devtbl #(
 	,.rst1_o (devtbl_rst1_w)
 	,.rst2_o (devtbl_rst2_w)
 
-	,.clk_i (clk100mhz)
+	,.clk_i (pi1r_clk_w)
 
 	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_DEVTBL])
 	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_DEVTBL])
@@ -372,19 +382,26 @@ devtbl #(
 	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_DEVTBL])
 	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_DEVTBL])
 	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_DEVTBL])
+
+	,.devtbl_id_flat_i      (devtbl_id_flat_w)
+	,.devtbl_mapsz_flat_i   (devtbl_mapsz_flat_w)
+	,.devtbl_useintr_flat_i (devtbl_useintr_flat_w)
 );
+
+assign devtbl_id_w     [S_PI1R_DEVTBL] = 7;
+assign devtbl_useintr_w[S_PI1R_DEVTBL] = 0;
 
 gpio #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
-	,.CLKFREQ    (CLKFREQ50MHZ*2)
+	,.CLKFREQ    (PI1RCLKFREQ)
 	,.IOCOUNT    (GPIOCOUNT)
 
 ) gpio (
 
 	 .rst_i (rst)
 
-	,.clk_i (clk100mhz)
+	,.clk_i (pi1r_clk_w)
 
 	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_GPIO])
 	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_GPIO])
@@ -401,6 +418,9 @@ gpio #(
 	,.o (gp_o)
 );
 
+assign devtbl_id_w     [S_PI1R_GPIO] = 6;
+assign devtbl_useintr_w[S_PI1R_GPIO] = 1;
+
 dma #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
@@ -410,7 +430,7 @@ dma #(
 
 	 .rst_i (rst)
 
-	,.clk_i (clk100mhz)
+	,.clk_i (pi1r_clk_w)
 
 	,.m_pi1_op_o   (m_pi1r_op_w[M_PI1R_DMA])
 	,.m_pi1_addr_o (m_pi1r_addr_w[M_PI1R_DMA])
@@ -433,6 +453,9 @@ dma #(
 	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_DMA])
 );
 
+assign devtbl_id_w     [S_PI1R_DMA] = 2;
+assign devtbl_useintr_w[S_PI1R_DMA] = 1;
+
 intctrl #(
 
 	 .ARCHBITSZ   (ARCHBITSZ)
@@ -443,7 +466,7 @@ intctrl #(
 
 	 .rst_i (rst)
 
-	,.clk_i (clk100mhz)
+	,.clk_i (pi1r_clk_w)
 
 	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_INTCTRL])
 	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_INTCTRL])
@@ -461,6 +484,9 @@ intctrl #(
 	,.intrdysrc_o  (intrdysrc_w)
 );
 
+assign devtbl_id_w     [S_PI1R_INTCTRL] = 3;
+assign devtbl_useintr_w[S_PI1R_INTCTRL] = 0;
+
 uart_hw #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
@@ -471,7 +497,7 @@ uart_hw #(
 
 	 .rst_i (!pll_locked || rst_p)
 
-	,.clk_i     (clk100mhz)
+	,.clk_i     (pi1r_clk_w)
 	,.clk_phy_i (clk100mhz)
 
 	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_UART])
@@ -489,6 +515,9 @@ uart_hw #(
 	,.tx_o (uart_tx)
 );
 
+assign devtbl_id_w     [S_PI1R_UART] = 5;
+assign devtbl_useintr_w[S_PI1R_UART] = 1;
+
 localparam LITEDRAM_ARCHBITSZ = 64;
 
 wire [2 -1 : 0]                                                  dcache_m_op_w;
@@ -505,7 +534,7 @@ pi1_upconverter #(
 
 ) pi1_upconverter (
 
-	 .clk_i (clk100mhz)
+	 .clk_i (pi1r_clk_w)
 
 	,.m_pi1_op_i   (s_pi1r_op_w[S_PI1R_RAM])
 	,.m_pi1_addr_i (s_pi1r_addr_w[S_PI1R_RAM])
@@ -522,10 +551,13 @@ pi1_upconverter #(
 	,.s_pi1_rdy_i  (dcache_m_rdy_w)
 );
 
-assign s_pi1r_mapsz_w[S_PI1R_RAM] = RAMSZ;
+assign s_pi1r_mapsz_w[S_PI1R_RAM] = 'h2000000 /* 128MB */;
+
+assign devtbl_id_w     [S_PI1R_RAM] = 1;
+assign devtbl_useintr_w[S_PI1R_RAM] = 0;
 
 reg [RST_CNTR_BITSZ -1 : 0] ram_rst_cntr = {RST_CNTR_BITSZ{1'b1}};
-always @ (posedge clk100mhz) begin
+always @ (posedge pi1r_clk_w) begin
 	if (pll_locked && ram_rst_cntr)
 		ram_rst_cntr <= ram_rst_cntr - 1'b1;
 end
@@ -549,7 +581,7 @@ pi1_dcache #(
 
 	 .rst_i (ram_rst_w)
 
-	,.clk_i (clk100mhz)
+	,.clk_i (pi1r_clk_w)
 
 	,.crst_i    (ram_rst_w || devtbl_rst2_w)
 	,.cenable_i (1'b1)
@@ -591,7 +623,7 @@ pi1q_to_wb4 #(
 
 	 .wb4_rst_i (wb4_rst_user_port_w)
 
-	,.pi1_clk_i   (clk100mhz)
+	,.pi1_clk_i   (pi1r_clk_w)
 	,.pi1_op_i    (dcache_s_op_w)
 	,.pi1_addr_i  (dcache_s_addr_w)
 	,.pi1_data_i  (dcache_s_data_w0)
@@ -629,7 +661,7 @@ pi1q_to_wb4 #(
 
 	 .wb4_rst_i (ram_rst_w)
 
-	,.pi1_clk_i   (clk100mhz)
+	,.pi1_clk_i   (pi1r_clk_w)
 	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_RAMCTRL])
 	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_RAMCTRL])
 	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_RAMCTRL])
@@ -649,7 +681,7 @@ pi1q_to_wb4 #(
 	,.wb4_data_i  (wb4_data_wb_ctrl_w1)
 );
 
-assign s_pi1r_mapsz_w[S_PI1R_RAMCTRL] = SDRAMCtrlIfSZ;
+assign s_pi1r_mapsz_w[S_PI1R_RAMCTRL] = 'h4000 /* 64KB */;
 
 litedram litedram (
 
@@ -699,10 +731,15 @@ litedram litedram (
 	,.wb_ctrl_bte   (2'b00)
 );
 
+assign devtbl_id_w     [S_PI1R_RAMCTRL] = 0;
+assign devtbl_useintr_w[S_PI1R_RAMCTRL] = 0;
+
 localparam INVALIDDEVMAPSZ = 'h4000;
 assign s_pi1r_data_w1[S_PI1R_INVALIDDEV] = {ARCHBITSZ{1'b0}};
 assign s_pi1r_rdy_w[S_PI1R_INVALIDDEV]   = 1'b1;
 assign s_pi1r_mapsz_w[S_PI1R_INVALIDDEV] = INVALIDDEVMAPSZ;
+assign devtbl_id_w     [S_PI1R_INVALIDDEV] = 0;
+assign devtbl_useintr_w[S_PI1R_INVALIDDEV] = 0;
 
 `ifdef USE2CLK
 `error USE2CLK cannot be used because it needs 200MHz clock which fails timing.

@@ -13,19 +13,19 @@
 `define PUDSPMUL
 `include "pu/multipu.v"
 
-`include "dev/dma.v"
-
-`include "dev/intctrl.v"
-
 `include "dev/bootldr.v"
 
 `include "dev/sdcard/sdcard_spi.v"
 
+`include "dev/devtbl.v"
+
+`include "dev/dma.v"
+
+`include "dev/intctrl.v"
+
 `include "dev/uart_sim.v"
 
 `include "dev/smem.v"
-
-`include "./devtbl.sim.v"
 
 module clkdiv (
 	 clk_4x_i
@@ -123,8 +123,9 @@ localparam PI1RSLAVECOUNT        = 7;
 localparam PI1RDEFAULTSLAVEINDEX = 6;
 localparam PI1RFIRSTSLAVEADDR    = 0;
 localparam PI1RARCHBITSZ         = ARCHBITSZ;
-wire pi1r_rst_w = rst;
-wire pi1r_clk_w = clk_2x_w;
+localparam PI1RCLKFREQ           = CLK2XFREQ;
+wire            pi1r_rst_w = rst;
+wire [2 -1 : 0] pi1r_clk_w = clk_2x_w;
 `include "lib/perint/inst.pi1r.v"
 
 localparam M_PI1R_MULTIPU    = 0;
@@ -136,6 +137,18 @@ localparam S_PI1R_INTCTRL    = (S_PI1R_DMA + 1);
 localparam S_PI1R_UART       = (S_PI1R_INTCTRL + 1);
 localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
 localparam S_PI1R_INVALIDDEV = (S_PI1R_RAM + 1);
+
+wire [(ARCHBITSZ * PI1RSLAVECOUNT) -1 : 0] devtbl_id_flat_w;
+wire [ARCHBITSZ -1 : 0]                    devtbl_id_w           [PI1RSLAVECOUNT -1 : 0];
+wire [(ADDRBITSZ * PI1RSLAVECOUNT) -1 : 0] devtbl_mapsz_flat_w;
+wire [PI1RSLAVECOUNT -1 : 0]               devtbl_useintr_flat_w;
+wire [PI1RSLAVECOUNT -1 : 0]               devtbl_useintr_w;
+genvar gen_devtbl_id_flat_w_idx;
+generate for (gen_devtbl_id_flat_w_idx = 0; gen_devtbl_id_flat_w_idx < PI1RSLAVECOUNT; gen_devtbl_id_flat_w_idx = gen_devtbl_id_flat_w_idx + 1) begin :gen_devtbl_id_flat_w
+assign devtbl_id_flat_w[((gen_devtbl_id_flat_w_idx+1) * ARCHBITSZ) -1 : gen_devtbl_id_flat_w_idx * ARCHBITSZ] = devtbl_id_w[gen_devtbl_id_flat_w_idx];
+end endgenerate
+assign devtbl_mapsz_flat_w = s_pi1r_mapsz_w_flat;
+assign devtbl_useintr_flat_w = devtbl_useintr_w;
 
 wire [(ARCHBITSZ * PUCOUNT) -1 : 0] pc_w_flat;
 wire [ARCHBITSZ -1 : 0]             pc_w      [PUCOUNT -1 : 0] /* verilator public */;
@@ -168,7 +181,7 @@ multipu #(
 	`else
 	,.clk_muldiv_i (clk_2x_w[1])
 	`endif
-	,.clk_mem_i    (clk_2x_w)
+	,.clk_mem_i    (pi1r_clk_w)
 
 	,.pi1_op_o   (m_pi1r_op_w[M_PI1R_MULTIPU])
 	,.pi1_addr_o (m_pi1r_addr_w[M_PI1R_MULTIPU])
@@ -205,7 +218,7 @@ bootldr #(
 
 	.rst_i (rst)
 
-	,.clk_i (clk_2x_w)
+	,.clk_i (pi1r_clk_w)
 
 	,.m_pi1_op_i   (s_pi1r_op_w[S_PI1R_SDCARD])
 	,.m_pi1_addr_i (s_pi1r_addr_w[S_PI1R_SDCARD])
@@ -232,7 +245,7 @@ sdcard_spi #(
 
 	.rst_i (rst)
 
-	,.clk_mem_i (clk_2x_w)
+	,.clk_mem_i (pi1r_clk_w)
 	,.clk_i     (clk_w)
 	,.clk_phy_i (clk_w)
 
@@ -248,14 +261,15 @@ sdcard_spi #(
 	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_SDCARD])
 );
 
-localparam RAMSZ = 'h800000;
+assign devtbl_id_w     [S_PI1R_SDCARD] = 4;
+assign devtbl_useintr_w[S_PI1R_SDCARD] = 1;
 
 wire devtbl_rst2_w;
 
 devtbl #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
-	,.RAMSZ      (RAMSZ)
+	,.DEVMAPCNT  (PI1RSLAVECOUNT)
 
 ) devtbl (
 
@@ -265,7 +279,7 @@ devtbl #(
 	,.rst1_o (devtbl_rst1_w)
 	,.rst2_o (devtbl_rst2_w)
 
-	,.clk_i (clk_2x_w)
+	,.clk_i (pi1r_clk_w)
 
 	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_DEVTBL])
 	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_DEVTBL])
@@ -274,7 +288,14 @@ devtbl #(
 	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_DEVTBL])
 	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_DEVTBL])
 	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_DEVTBL])
+
+	,.devtbl_id_flat_i      (devtbl_id_flat_w)
+	,.devtbl_mapsz_flat_i   (devtbl_mapsz_flat_w)
+	,.devtbl_useintr_flat_i (devtbl_useintr_flat_w)
 );
+
+assign devtbl_id_w     [S_PI1R_DEVTBL] = 7;
+assign devtbl_useintr_w[S_PI1R_DEVTBL] = 0;
 
 always @* begin
 	if (swpwroff)
@@ -290,7 +311,7 @@ dma #(
 
 	 .rst_i (rst)
 
-	,.clk_i (clk_2x_w)
+	,.clk_i (pi1r_clk_w)
 
 	,.m_pi1_op_o   (m_pi1r_op_w[M_PI1R_DMA])
 	,.m_pi1_addr_o (m_pi1r_addr_w[M_PI1R_DMA])
@@ -313,6 +334,9 @@ dma #(
 	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_DMA])
 );
 
+assign devtbl_id_w     [S_PI1R_DMA] = 2;
+assign devtbl_useintr_w[S_PI1R_DMA] = 1;
+
 intctrl #(
 
 	 .ARCHBITSZ   (ARCHBITSZ)
@@ -323,7 +347,7 @@ intctrl #(
 
 	 .rst_i (rst)
 
-	,.clk_i (clk_2x_w)
+	,.clk_i (pi1r_clk_w)
 
 	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_INTCTRL])
 	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_INTCTRL])
@@ -341,6 +365,9 @@ intctrl #(
 	,.intrdysrc_o  (intrdysrc_w)
 );
 
+assign devtbl_id_w     [S_PI1R_INTCTRL] = 3;
+assign devtbl_useintr_w[S_PI1R_INTCTRL] = 0;
+
 uart_sim #(
 
 	 .ARCHBITSZ (ARCHBITSZ)
@@ -350,7 +377,7 @@ uart_sim #(
 
 	 .rst_i (rst)
 
-	,.clk_i (clk_2x_w)
+	,.clk_i (pi1r_clk_w)
 
 	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_UART])
 	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_UART])
@@ -364,6 +391,11 @@ uart_sim #(
 	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_UART])
 );
 
+assign devtbl_id_w     [S_PI1R_UART] = 5;
+assign devtbl_useintr_w[S_PI1R_UART] = 1;
+
+localparam RAMSZ = ('h800000);
+
 smem #(
 
 	 .ARCHBITSZ (ARCHBITSZ)
@@ -374,7 +406,7 @@ smem #(
 
 	 .rst_i (rst)
 
-	,.clk_i (clk_2x_w)
+	,.clk_i (pi1r_clk_w)
 
 	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_RAM])
 	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_RAM])
@@ -385,11 +417,16 @@ smem #(
 	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_RAM])
 );
 
+assign devtbl_id_w     [S_PI1R_RAM] = 1;
+assign devtbl_useintr_w[S_PI1R_RAM] = 0;
+
 localparam INVALIDDEVMAPSZ = 'h4000;
 assign s_pi1r_data_w1[S_PI1R_INVALIDDEV] = {ARCHBITSZ{1'b0}};
 assign s_pi1r_rdy_w[S_PI1R_INVALIDDEV]   = 1'b1;
 assign s_pi1r_mapsz_w[S_PI1R_INVALIDDEV] = INVALIDDEVMAPSZ;
-always @ (posedge clk_2x_w[0]) begin
+assign devtbl_id_w     [S_PI1R_INVALIDDEV] = 0;
+assign devtbl_useintr_w[S_PI1R_INVALIDDEV] = 0;
+always @ (posedge pi1r_clk_w[0]) begin
 	if (!rst_i && s_pi1r_op_w[S_PI1R_INVALIDDEV]) begin
 		$write("!!! s_pi1r_op_w[S_PI1R_INVALIDDEV] == 0b%b; s_pi1r_addr_w[S_PI1R_INVALIDDEV] == 0x%x\n",
 			s_pi1r_op_w[S_PI1R_INVALIDDEV], {2'b00, s_pi1r_addr_w[S_PI1R_INVALIDDEV]}<<CLOG2ARCHBITSZBY8);

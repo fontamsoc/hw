@@ -201,22 +201,22 @@ set_property -dict { PACKAGE_PIN D4    IOSTANDARD LVCMOS33 } [get_ports { uart_t
 #set_property -dict { PACKAGE_PIN L13   IOSTANDARD LVCMOS33 } [get_ports { QSPI_CSN }]; #IO_L6P_T0_FCS_B_14 Sch=qspi_csn
 
 ## Micron MT47H64M16HR-25E:H DDR2 SDRAM
-set_property -dict { PACKAGE_PIN R7   IOSTANDARD SSTL18_II   SLEW FAST } [get_ports { ddr2_dq[0] }];
-set_property -dict { PACKAGE_PIN V6   IOSTANDARD SSTL18_II   SLEW FAST } [get_ports { ddr2_dq[1] }];
-set_property -dict { PACKAGE_PIN R8   IOSTANDARD SSTL18_II   SLEW FAST } [get_ports { ddr2_dq[2] }];
-set_property -dict { PACKAGE_PIN U7   IOSTANDARD SSTL18_II   SLEW FAST } [get_ports { ddr2_dq[3] }];
-set_property -dict { PACKAGE_PIN V7   IOSTANDARD SSTL18_II   SLEW FAST } [get_ports { ddr2_dq[4] }];
-set_property -dict { PACKAGE_PIN R6   IOSTANDARD SSTL18_II   SLEW FAST } [get_ports { ddr2_dq[5] }];
-set_property -dict { PACKAGE_PIN U6   IOSTANDARD SSTL18_II   SLEW FAST } [get_ports { ddr2_dq[6] }];
-set_property -dict { PACKAGE_PIN R5   IOSTANDARD SSTL18_II   SLEW FAST } [get_ports { ddr2_dq[7] }];
-set_property -dict { PACKAGE_PIN T5   IOSTANDARD SSTL18_II   SLEW FAST } [get_ports { ddr2_dq[8] }];
-set_property -dict { PACKAGE_PIN U3   IOSTANDARD SSTL18_II   SLEW FAST } [get_ports { ddr2_dq[9] }];
-set_property -dict { PACKAGE_PIN V5   IOSTANDARD SSTL18_II   SLEW FAST } [get_ports { ddr2_dq[10] }];
-set_property -dict { PACKAGE_PIN U4   IOSTANDARD SSTL18_II   SLEW FAST } [get_ports { ddr2_dq[11] }];
-set_property -dict { PACKAGE_PIN V4   IOSTANDARD SSTL18_II   SLEW FAST } [get_ports { ddr2_dq[12] }];
-set_property -dict { PACKAGE_PIN T4   IOSTANDARD SSTL18_II   SLEW FAST } [get_ports { ddr2_dq[13] }];
-set_property -dict { PACKAGE_PIN V1   IOSTANDARD SSTL18_II   SLEW FAST } [get_ports { ddr2_dq[14] }];
-set_property -dict { PACKAGE_PIN T3   IOSTANDARD SSTL18_II   SLEW FAST } [get_ports { ddr2_dq[15] }];
+set_property -dict { PACKAGE_PIN R7   IOSTANDARD SSTL18_II   SLEW FAST   IN_TERM UNTUNED_SPLIT_50 } [get_ports { ddr2_dq[0] }];
+set_property -dict { PACKAGE_PIN V6   IOSTANDARD SSTL18_II   SLEW FAST   IN_TERM UNTUNED_SPLIT_50 } [get_ports { ddr2_dq[1] }];
+set_property -dict { PACKAGE_PIN R8   IOSTANDARD SSTL18_II   SLEW FAST   IN_TERM UNTUNED_SPLIT_50 } [get_ports { ddr2_dq[2] }];
+set_property -dict { PACKAGE_PIN U7   IOSTANDARD SSTL18_II   SLEW FAST   IN_TERM UNTUNED_SPLIT_50 } [get_ports { ddr2_dq[3] }];
+set_property -dict { PACKAGE_PIN V7   IOSTANDARD SSTL18_II   SLEW FAST   IN_TERM UNTUNED_SPLIT_50 } [get_ports { ddr2_dq[4] }];
+set_property -dict { PACKAGE_PIN R6   IOSTANDARD SSTL18_II   SLEW FAST   IN_TERM UNTUNED_SPLIT_50 } [get_ports { ddr2_dq[5] }];
+set_property -dict { PACKAGE_PIN U6   IOSTANDARD SSTL18_II   SLEW FAST   IN_TERM UNTUNED_SPLIT_50 } [get_ports { ddr2_dq[6] }];
+set_property -dict { PACKAGE_PIN R5   IOSTANDARD SSTL18_II   SLEW FAST   IN_TERM UNTUNED_SPLIT_50 } [get_ports { ddr2_dq[7] }];
+set_property -dict { PACKAGE_PIN T5   IOSTANDARD SSTL18_II   SLEW FAST   IN_TERM UNTUNED_SPLIT_50 } [get_ports { ddr2_dq[8] }];
+set_property -dict { PACKAGE_PIN U3   IOSTANDARD SSTL18_II   SLEW FAST   IN_TERM UNTUNED_SPLIT_50 } [get_ports { ddr2_dq[9] }];
+set_property -dict { PACKAGE_PIN V5   IOSTANDARD SSTL18_II   SLEW FAST   IN_TERM UNTUNED_SPLIT_50 } [get_ports { ddr2_dq[10] }];
+set_property -dict { PACKAGE_PIN U4   IOSTANDARD SSTL18_II   SLEW FAST   IN_TERM UNTUNED_SPLIT_50 } [get_ports { ddr2_dq[11] }];
+set_property -dict { PACKAGE_PIN V4   IOSTANDARD SSTL18_II   SLEW FAST   IN_TERM UNTUNED_SPLIT_50 } [get_ports { ddr2_dq[12] }];
+set_property -dict { PACKAGE_PIN T4   IOSTANDARD SSTL18_II   SLEW FAST   IN_TERM UNTUNED_SPLIT_50 } [get_ports { ddr2_dq[13] }];
+set_property -dict { PACKAGE_PIN V1   IOSTANDARD SSTL18_II   SLEW FAST   IN_TERM UNTUNED_SPLIT_50 } [get_ports { ddr2_dq[14] }];
+set_property -dict { PACKAGE_PIN T3   IOSTANDARD SSTL18_II   SLEW FAST   IN_TERM UNTUNED_SPLIT_50 } [get_ports { ddr2_dq[15] }];
 set_property -dict { PACKAGE_PIN T6   IOSTANDARD SSTL18_II   SLEW FAST } [get_ports { ddr2_dm[0] }];
 set_property -dict { PACKAGE_PIN U1   IOSTANDARD SSTL18_II   SLEW FAST } [get_ports { ddr2_dm[1] }];
 set_property -dict { PACKAGE_PIN U9   IOSTANDARD DIFF_SSTL18_II   SLEW FAST } [get_ports { ddr2_dqs_p[0] }];

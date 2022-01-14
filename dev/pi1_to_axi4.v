@@ -164,7 +164,7 @@ reg cyc;
 
 assign pi1_rdy_o = (!rst_i && (!cyc || not_wrpending_and_ack));
 
-wire [(128/8) -1 : 0] _pi1_sel_i = pi1_sel_i;
+wire [(256/8) -1 : 0] _pi1_sel_i = pi1_sel_i;
 reg [ARCHBITSZ -1 : 0] axi4_axaddr_w;
 always @* begin
 	if (ARCHBITSZ == 16)
@@ -205,6 +205,40 @@ always @* begin
 			_pi1_sel_i[13] ? 4'b1101 :
 			_pi1_sel_i[14] ? 4'b1110 :
 			_pi1_sel_i[15] ? 4'b1111 : 4'b0000 }};
+	else if (ARCHBITSZ == 256)
+		axi4_axaddr_w = {pi1_addr_i, {
+			_pi1_sel_i[0]  ? 5'b00000 :
+			_pi1_sel_i[1]  ? 5'b00001 :
+			_pi1_sel_i[2]  ? 5'b00010 :
+			_pi1_sel_i[3]  ? 5'b00011 :
+			_pi1_sel_i[4]  ? 5'b00100 :
+			_pi1_sel_i[5]  ? 5'b00101 :
+			_pi1_sel_i[6]  ? 5'b00110 :
+			_pi1_sel_i[7]  ? 5'b00111 :
+			_pi1_sel_i[8]  ? 5'b01000 :
+			_pi1_sel_i[9]  ? 5'b01001 :
+			_pi1_sel_i[10] ? 5'b01010 :
+			_pi1_sel_i[11] ? 5'b01011 :
+			_pi1_sel_i[12] ? 5'b01100 :
+			_pi1_sel_i[13] ? 5'b01101 :
+			_pi1_sel_i[14] ? 5'b01110 :
+			_pi1_sel_i[15] ? 5'b01111 :
+			_pi1_sel_i[16] ? 5'b10000 :
+			_pi1_sel_i[17] ? 5'b10001 :
+			_pi1_sel_i[18] ? 5'b10010 :
+			_pi1_sel_i[19] ? 5'b10011 :
+			_pi1_sel_i[20] ? 5'b10100 :
+			_pi1_sel_i[21] ? 5'b10101 :
+			_pi1_sel_i[22] ? 5'b10110 :
+			_pi1_sel_i[23] ? 5'b10111 :
+			_pi1_sel_i[24] ? 5'b11000 :
+			_pi1_sel_i[25] ? 5'b11001 :
+			_pi1_sel_i[26] ? 5'b11010 :
+			_pi1_sel_i[27] ? 5'b11011 :
+			_pi1_sel_i[28] ? 5'b11100 :
+			_pi1_sel_i[29] ? 5'b11101 :
+			_pi1_sel_i[30] ? 5'b11110 :
+			_pi1_sel_i[31] ? 5'b11111 : 5'b00000 }};
 	else
 		axi4_axaddr_w = {ARCHBITSZ{1'b0}};
 end

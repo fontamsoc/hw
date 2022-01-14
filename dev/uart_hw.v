@@ -64,7 +64,7 @@ output wire tx_o;
 
 assign pi1_rdy_o = 1;
 
-assign pi1_mapsz_o = (64/ARCHBITSZ);
+assign pi1_mapsz_o = ((ARCHBITSZ<64)?(64/ARCHBITSZ):1);
 
 localparam PINOOP = 2'b00;
 localparam PIWROP = 2'b01;

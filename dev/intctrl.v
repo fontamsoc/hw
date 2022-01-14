@@ -57,7 +57,7 @@ output wire [INTSRCCOUNT -1 : 0] intrdysrc_o;
 
 assign pi1_rdy_o   = 1;
 
-assign pi1_mapsz_o = (64/ARCHBITSZ);
+assign pi1_mapsz_o = ((ARCHBITSZ<64)?(64/ARCHBITSZ):1);
 
 reg [CLOG2INTSRCCOUNT -1 : 0] srcindex = {CLOG2INTSRCCOUNT{1'b0}};
 reg [CLOG2INTDSTCOUNT -1 : 0] dstindex = {CLOG2INTDSTCOUNT{1'b0}};

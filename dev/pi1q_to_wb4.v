@@ -91,7 +91,7 @@ assign s_pi1q_data_w1 = not_wrpending_and_wb4_ack_i ?
 
 assign s_pi1q_rdy_w = (!wb4_rst_i && (!wb4_cyc_o || not_wrpending_and_wb4_ack_i));
 
-wire [(128/8) -1 : 0] _s_pi1q_sel_w = s_pi1q_sel_w;
+wire [(256/8) -1 : 0] _s_pi1q_sel_w = s_pi1q_sel_w;
 reg [ARCHBITSZ -1 : 0] wb4_addr_w;
 always @* begin
 	if (ARCHBITSZ == 16)
@@ -132,6 +132,40 @@ always @* begin
 			_s_pi1q_sel_w[13] ? 4'b1101 :
 			_s_pi1q_sel_w[14] ? 4'b1110 :
 			_s_pi1q_sel_w[15] ? 4'b1111 : 4'b0000 }};
+	else if (ARCHBITSZ == 256)
+		wb4_addr_w = {s_pi1q_addr_w, {
+			_s_pi1q_sel_w[0]  ? 5'b00000 :
+			_s_pi1q_sel_w[1]  ? 5'b00001 :
+			_s_pi1q_sel_w[2]  ? 5'b00010 :
+			_s_pi1q_sel_w[3]  ? 5'b00011 :
+			_s_pi1q_sel_w[4]  ? 5'b00100 :
+			_s_pi1q_sel_w[5]  ? 5'b00101 :
+			_s_pi1q_sel_w[6]  ? 5'b00110 :
+			_s_pi1q_sel_w[7]  ? 5'b00111 :
+			_s_pi1q_sel_w[8]  ? 5'b01000 :
+			_s_pi1q_sel_w[9]  ? 5'b01001 :
+			_s_pi1q_sel_w[10] ? 5'b01010 :
+			_s_pi1q_sel_w[11] ? 5'b01011 :
+			_s_pi1q_sel_w[12] ? 5'b01100 :
+			_s_pi1q_sel_w[13] ? 5'b01101 :
+			_s_pi1q_sel_w[14] ? 5'b01110 :
+			_s_pi1q_sel_w[15] ? 5'b01111 :
+			_s_pi1q_sel_w[16] ? 5'b10000 :
+			_s_pi1q_sel_w[17] ? 5'b10001 :
+			_s_pi1q_sel_w[18] ? 5'b10010 :
+			_s_pi1q_sel_w[19] ? 5'b10011 :
+			_s_pi1q_sel_w[20] ? 5'b10100 :
+			_s_pi1q_sel_w[21] ? 5'b10101 :
+			_s_pi1q_sel_w[22] ? 5'b10110 :
+			_s_pi1q_sel_w[23] ? 5'b10111 :
+			_s_pi1q_sel_w[24] ? 5'b11000 :
+			_s_pi1q_sel_w[25] ? 5'b11001 :
+			_s_pi1q_sel_w[26] ? 5'b11010 :
+			_s_pi1q_sel_w[27] ? 5'b11011 :
+			_s_pi1q_sel_w[28] ? 5'b11100 :
+			_s_pi1q_sel_w[29] ? 5'b11101 :
+			_s_pi1q_sel_w[30] ? 5'b11110 :
+			_s_pi1q_sel_w[31] ? 5'b11111 : 5'b00000 }};
 	else
 		wb4_addr_w = {ARCHBITSZ{1'b0}};
 end

@@ -249,19 +249,22 @@ always @ (posedge s_clk_i) begin
 	end
 end
 
+`ifdef SIMULATION
 integer init_masterdato_idx;
 initial begin
 	for (init_masterdato_idx = 0; init_masterdato_idx < MASTERCOUNT; init_masterdato_idx = init_masterdato_idx + 1)
 		masterdato[init_masterdato_idx] = 0;
 	queuereadidx = 0;
 	queuewriteidx = 0;
-	mstrhinxt = (MASTERCOUNT - 1);
-	mstrhiidx = (MASTERCOUNT - 1);
+	s_op_o_saved = PINOOP;
 	mstrhi = (MASTERCOUNT - 1);
 	slvhi = (MASTERCOUNT - 1);
+	mstrhinxt = (MASTERCOUNT - 1);
+	mstrhiidx = (MASTERCOUNT - 1);
 	MASTERCOUNT__less_mstrhi_hold = 1;
 	prevqueuereadidx = 0;
 end
+`endif
 
 endmodule
 

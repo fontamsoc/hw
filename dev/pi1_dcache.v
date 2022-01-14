@@ -205,7 +205,7 @@ reg [ADDRBITSZ -1 : 0] m_pi1_addr_i_hold;
 
 reg [ARCHBITSZ -1 : 0] m_pi1_data_i_hold;
 
-reg [(128/8) -1 : 0] m_pi1_sel_i_hold;
+reg [(256/8) -1 : 0] m_pi1_sel_i_hold;
 
 assign s_pi1_op_o   = {slvreadrdy, slvwriterdy};
 assign s_pi1_addr_o = (slvreadrdy ? m_pi1_addr_i_hold : addrbufdato);
@@ -242,6 +242,16 @@ always @* begin
 			{8{m_pi1_sel_i_hold[3]}}, {8{m_pi1_sel_i_hold[2]}}, {8{m_pi1_sel_i_hold[1]}}, {8{m_pi1_sel_i_hold[0]}}};
 	else if (ARCHBITSZ == 128)
 		cachedatibitsel = {
+			{8{m_pi1_sel_i_hold[15]}}, {8{m_pi1_sel_i_hold[14]}}, {8{m_pi1_sel_i_hold[13]}}, {8{m_pi1_sel_i_hold[12]}},
+			{8{m_pi1_sel_i_hold[11]}}, {8{m_pi1_sel_i_hold[10]}}, {8{m_pi1_sel_i_hold[9]}}, {8{m_pi1_sel_i_hold[8]}},
+			{8{m_pi1_sel_i_hold[7]}}, {8{m_pi1_sel_i_hold[6]}}, {8{m_pi1_sel_i_hold[5]}}, {8{m_pi1_sel_i_hold[4]}},
+			{8{m_pi1_sel_i_hold[3]}}, {8{m_pi1_sel_i_hold[2]}}, {8{m_pi1_sel_i_hold[1]}}, {8{m_pi1_sel_i_hold[0]}}};
+	else if (ARCHBITSZ == 256)
+		cachedatibitsel = {
+			{8{m_pi1_sel_i_hold[31]}}, {8{m_pi1_sel_i_hold[30]}}, {8{m_pi1_sel_i_hold[29]}}, {8{m_pi1_sel_i_hold[28]}},
+			{8{m_pi1_sel_i_hold[27]}}, {8{m_pi1_sel_i_hold[26]}}, {8{m_pi1_sel_i_hold[25]}}, {8{m_pi1_sel_i_hold[24]}},
+			{8{m_pi1_sel_i_hold[23]}}, {8{m_pi1_sel_i_hold[22]}}, {8{m_pi1_sel_i_hold[21]}}, {8{m_pi1_sel_i_hold[20]}},
+			{8{m_pi1_sel_i_hold[19]}}, {8{m_pi1_sel_i_hold[18]}}, {8{m_pi1_sel_i_hold[17]}}, {8{m_pi1_sel_i_hold[16]}},
 			{8{m_pi1_sel_i_hold[15]}}, {8{m_pi1_sel_i_hold[14]}}, {8{m_pi1_sel_i_hold[13]}}, {8{m_pi1_sel_i_hold[12]}},
 			{8{m_pi1_sel_i_hold[11]}}, {8{m_pi1_sel_i_hold[10]}}, {8{m_pi1_sel_i_hold[9]}}, {8{m_pi1_sel_i_hold[8]}},
 			{8{m_pi1_sel_i_hold[7]}}, {8{m_pi1_sel_i_hold[6]}}, {8{m_pi1_sel_i_hold[5]}}, {8{m_pi1_sel_i_hold[4]}},

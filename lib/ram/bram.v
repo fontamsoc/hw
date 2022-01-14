@@ -32,7 +32,9 @@ output reg [DW-1:0]        o0;
 output reg [DW-1:0]        o1;
 
 reg [DW-1:0] u [0:SZ-1];
+`ifdef SIMULATION
 integer init_u_idx;
+`endif
 initial begin
 	`ifdef SIMULATION
 	for (init_u_idx = 0; init_u_idx < SZ; init_u_idx = init_u_idx + 1)

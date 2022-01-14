@@ -54,7 +54,7 @@ output reg  [IOCOUNT -1 : 0] t;
 
 assign pi1_rdy_o = 1;
 
-assign pi1_mapsz_o = (64/ARCHBITSZ);
+assign pi1_mapsz_o = ((ARCHBITSZ<64)?(64/ARCHBITSZ):1);
 
 wire [IOCOUNT -1 : 0] _i;
 

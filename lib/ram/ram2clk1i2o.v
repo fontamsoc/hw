@@ -78,7 +78,9 @@ bram #(
 `else
 
 reg [DW -1 : 0] u [SZ -1 : 0];
+`ifdef SIMULATION
 integer init_u_idx;
+`endif
 initial begin
 	`ifdef SIMULATION
 	for (init_u_idx = 0; init_u_idx < SZ; init_u_idx = init_u_idx + 1)

@@ -126,6 +126,7 @@ wire[(ARCHBITSZ/8) -1 : 0] dcacheslavesel;
 
 wire inuserspace;
 
+wire isopgettlb;
 wire isopld;
 wire isopst;
 wire isopldst;
@@ -285,7 +286,7 @@ wire isopgetcoreid = (isopgetsysreg1 && isoptype0);
 wire isopgetclkfreq = (isopgetsysreg1 && isoptype1);
 wire isopgetdcachesize = (isopgetsysreg1 && isoptype2);
 wire isopgetcachesize = (isopgeticachesize || isopgetdcachesize);
-wire isopgettlb = (isopgetsysreg1 && isoptype3);
+assign isopgettlb = (isopgetsysreg1 && isoptype3);
 wire isopgetcap = (isopgetsysreg1 && isoptype4);
 wire isopgetver = (isopgetsysreg1 && isoptype5);
 wire isopsetsysreg = (instrbufferdataout0[7:3] == OPSETSYSREG);

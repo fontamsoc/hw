@@ -51,11 +51,13 @@ reg [CNTRBITSZ -1 : 0] cntr = 0;
 assign wb4_stall_o = |cntr;
 
 reg [ARCHBITSZ -1 : 0] u[SIZE -1 : 0];
-integer i;
+`ifdef SIMULATION
+integer init_u_idx;
+`endif
 initial begin
 	`ifdef SIMULATION
-	for (i = 0; i < SIZE; i = i + 1)
-		u[i] = 0;
+	for (init_u_idx = 0; init_u_idx < SIZE; init_u_idx = init_u_idx + 1)
+		u[init_u_idx] = 0;
 	`endif
 	if (SRCFILE != "") begin
 		$readmemh (SRCFILE, u);
@@ -66,7 +68,7 @@ initial begin
 	end
 end
 
-wire [(128/8) -1 : 0] _wb4_sel_i = wb4_sel_i;
+wire [(256/8) -1 : 0] _wb4_sel_i = wb4_sel_i;
 reg [ARCHBITSZ -1 : 0] sel_w;
 always @* begin
 	if (ARCHBITSZ == 16)
@@ -83,10 +85,19 @@ always @* begin
 			{8{_wb4_sel_i[11]}}, {8{_wb4_sel_i[10]}}, {8{_wb4_sel_i[9]}}, {8{_wb4_sel_i[8]}},
 			{8{_wb4_sel_i[7]}}, {8{_wb4_sel_i[6]}}, {8{_wb4_sel_i[5]}}, {8{_wb4_sel_i[4]}},
 			{8{_wb4_sel_i[3]}}, {8{_wb4_sel_i[2]}}, {8{_wb4_sel_i[1]}}, {8{_wb4_sel_i[0]}}};
+	else if (ARCHBITSZ == 256)
+		sel_w = {
+			{8{_wb4_sel_i[31]}}, {8{_wb4_sel_i[30]}}, {8{_wb4_sel_i[29]}}, {8{_wb4_sel_i[28]}},
+			{8{_wb4_sel_i[27]}}, {8{_wb4_sel_i[26]}}, {8{_wb4_sel_i[25]}}, {8{_wb4_sel_i[24]}},
+			{8{_wb4_sel_i[23]}}, {8{_wb4_sel_i[22]}}, {8{_wb4_sel_i[21]}}, {8{_wb4_sel_i[20]}},
+			{8{_wb4_sel_i[19]}}, {8{_wb4_sel_i[18]}}, {8{_wb4_sel_i[17]}}, {8{_wb4_sel_i[16]}},
+			{8{_wb4_sel_i[15]}}, {8{_wb4_sel_i[14]}}, {8{_wb4_sel_i[13]}}, {8{_wb4_sel_i[12]}},
+			{8{_wb4_sel_i[11]}}, {8{_wb4_sel_i[10]}}, {8{_wb4_sel_i[9]}}, {8{_wb4_sel_i[8]}},
+			{8{_wb4_sel_i[7]}}, {8{_wb4_sel_i[6]}}, {8{_wb4_sel_i[5]}}, {8{_wb4_sel_i[4]}},
+			{8{_wb4_sel_i[3]}}, {8{_wb4_sel_i[2]}}, {8{_wb4_sel_i[1]}}, {8{_wb4_sel_i[0]}}};
 	else
 		sel_w = {ARCHBITSZ{1'b0}};
 end
-
 
 wire [ADDRBITSZ -1 : 0] addr_w = wb4_addr_i[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8];
 

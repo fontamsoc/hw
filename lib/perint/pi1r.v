@@ -143,10 +143,10 @@ localparam PIWROP = 2'b01;
 localparam PIRDOP = 2'b10;
 localparam PIRWOP = 2'b11;
 
-reg [CLOG2MASTERCOUNT -1 : 0] masteridx = 0;
+reg [CLOG2MASTERCOUNT -1 : 0] masteridx;
 
-reg [CLOG2MASTERCOUNT -1 : 0] mstrhinxt = (MASTERCOUNT - 1);
-reg [CLOG2MASTERCOUNT -1 : 0] mstrhiidx = (MASTERCOUNT - 1);
+reg [CLOG2MASTERCOUNT -1 : 0] mstrhinxt;
+reg [CLOG2MASTERCOUNT -1 : 0] mstrhiidx;
 
 wire masterop_mstrhiidx_not_PINOOP = (masterop[mstrhiidx] != PINOOP);
 always @ (posedge clk_i) begin
@@ -160,7 +160,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-reg [CLOG2MASTERCOUNT -1 : 0] mstrhi = (MASTERCOUNT - 1);
+reg [CLOG2MASTERCOUNT -1 : 0] mstrhi;
 
 wire [2 -1 : 0] masteropmasteridx = masterop[masteridx];
 
@@ -168,7 +168,7 @@ wire [ADDRBITSZ -1 : 0] masteraddrmasteridx = masteraddr[masteridx];
 
 wire masterrdymasteridx = masterrdy[masteridx];
 
-reg [2 -1 : 0] masteropsaved = PINOOP;
+reg [2 -1 : 0] masteropsaved;
 always @ (posedge clk_i) begin
 	if (rst_i)
 		masteropsaved <= PINOOP;
@@ -178,7 +178,7 @@ end
 
 wire slaverdyslaveidx;
 
-reg [2 -1 : 0] slaveopsaved = PIWROP;
+reg [2 -1 : 0] slaveopsaved;
 
 wire slaveidxrdy_and_not_slaveidxinvalid;
 
@@ -201,20 +201,14 @@ always @ (posedge clk_i) begin
 end
 
 reg [ADDRBITSZ -1 : 0] addrspace [SLAVECOUNT -1 : 0];
-integer genaddrspace_idx;
-initial begin
-	for (genaddrspace_idx = 0; genaddrspace_idx < SLAVECOUNT; genaddrspace_idx = genaddrspace_idx + 1) begin
-		addrspace[genaddrspace_idx] = 0;
-	end
-end
-reg addrspacerdy = 0;
+reg addrspacerdy;
 
-reg [CLOG2SLAVECOUNT -1 : 0] slaveidx = 0;
-reg [ADDRBITSZ -1 : 0] slavemapszslaveidx = 0;
-reg [ADDRBITSZ -1 : 0] addrspaceslaveidx = 0;
-reg [ADDRBITSZ -1 : 0] addrspaceslaveidxlo = 0;
-reg slaveidxrdy = 0;
-reg slaveidxbsy = 0;
+reg [CLOG2SLAVECOUNT -1 : 0] slaveidx;
+reg [ADDRBITSZ -1 : 0] slavemapszslaveidx;
+reg [ADDRBITSZ -1 : 0] addrspaceslaveidx;
+reg [ADDRBITSZ -1 : 0] addrspaceslaveidxlo;
+reg slaveidxrdy;
+reg slaveidxbsy;
 
 wire slaveidx_not_max = (slaveidx < (SLAVECOUNT-1));
 
@@ -295,9 +289,9 @@ always @ (posedge clk_i) begin
 	end
 end
 
-reg [CLOG2SLAVECOUNT -1 : 0] slaveidxsaved = 0;
-reg slaverdyslaveidxreadoppending = 0;
-reg [ARCHBITSZ -1 : 0] masterdatomasteridx = 0;
+reg [CLOG2SLAVECOUNT -1 : 0] slaveidxsaved;
+reg slaverdyslaveidxreadoppending;
+reg [ARCHBITSZ -1 : 0] masterdatomasteridx;
 
 wire slaverdyslaveidxsaved = slaverdy[slaveidxsaved];
 
@@ -375,6 +369,31 @@ genvar gen_slavebytsel_idx;
 generate for (gen_slavebytsel_idx = 0; gen_slavebytsel_idx < SLAVECOUNT; gen_slavebytsel_idx = gen_slavebytsel_idx + 1) begin :gen_slavebytsel
 assign slavebytsel[gen_slavebytsel_idx] = masterbytselmasteridx;
 end endgenerate
+
+`ifdef SIMULATION
+integer genaddrspace_idx;
+initial begin
+	masteridx = 0;
+	mstrhinxt = (MASTERCOUNT - 1);
+	mstrhiidx = (MASTERCOUNT - 1);
+	mstrhi = (MASTERCOUNT - 1);
+	masteropsaved = PINOOP;
+	slaveopsaved = PIWROP;
+	for (genaddrspace_idx = 0; genaddrspace_idx < SLAVECOUNT; genaddrspace_idx = genaddrspace_idx + 1) begin
+		addrspace[genaddrspace_idx] = 0;
+	end
+	addrspacerdy = 0;
+	slaveidx = 0;
+	slavemapszslaveidx = 0;
+	addrspaceslaveidx = 0;
+	addrspaceslaveidxlo = 0;
+	slaveidxrdy = 0;
+	slaveidxbsy = 0;
+	slaveidxsaved = 0;
+	slaverdyslaveidxreadoppending = 0;
+	masterdatomasteridx = 0;
+end
+`endif
 
 endmodule
 
