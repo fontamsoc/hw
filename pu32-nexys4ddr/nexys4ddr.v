@@ -30,6 +30,8 @@
 
 `include "dev/devtbl.v"
 
+`include "dev/pwm.v"
+
 `include "dev/gpio.v"
 
 `include "dev/dma.v"
@@ -291,7 +293,8 @@ localparam M_PI1R_DMA        = (M_PI1R_MULTIPU + 1);
 localparam M_PI1R_LAST       = M_PI1R_DMA;
 localparam S_PI1R_SDCARD     = 0;
 localparam S_PI1R_DEVTBL     = (S_PI1R_SDCARD + 1);
-localparam S_PI1R_GPIO       = (S_PI1R_DEVTBL + 1);
+localparam S_PI1R_PWM0       = (S_PI1R_DEVTBL + 1);
+localparam S_PI1R_GPIO       = (S_PI1R_PWM0 + 1);
 localparam S_PI1R_DMA        = (S_PI1R_GPIO + 1);
 localparam S_PI1R_INTCTRL    = (S_PI1R_DMA + 1);
 localparam S_PI1R_UART       = (S_PI1R_INTCTRL + 1);
@@ -508,6 +511,38 @@ devtbl #(
 assign devtbl_id_w     [S_PI1R_DEVTBL] = 7;
 assign devtbl_useintr_w[S_PI1R_DEVTBL] = 0;
 
+wire [GPIOCOUNT -1 : 0] pwm0_o;
+
+pwm #(
+
+	 .ARCHBITSZ  (ARCHBITSZ)
+	,.CLKFREQ    (PI1RCLKFREQ)
+	,.IOCOUNT    (GPIOCOUNT)
+	,.BUFFERSIZE (256)
+
+) pwm_leds (
+
+	 .rst_i (rst_w)
+
+	,.clk_i (pi1r_clk_w)
+
+	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_PWM0])
+	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_PWM0])
+	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_PWM0])
+	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_PWM0])
+	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_PWM0])
+	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_PWM0])
+	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_PWM0])
+
+	,.i (0)
+	,.o (pwm0_o)
+);
+
+assign devtbl_id_w     [S_PI1R_PWM0] = 9;
+assign devtbl_useintr_w[S_PI1R_PWM0] = 0;
+
+wire [GPIOCOUNT -1 : 0] gpio_o;
+
 gpio #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
@@ -532,11 +567,13 @@ gpio #(
 	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_GPIO])
 
 	,.i (gp_i)
-	,.o (gp_o)
+	,.o (gpio_o)
 );
 
 assign devtbl_id_w     [S_PI1R_GPIO] = 6;
 assign devtbl_useintr_w[S_PI1R_GPIO] = 1;
+
+assign gp_o = (pwm0_o | gpio_o);
 
 dma #(
 
