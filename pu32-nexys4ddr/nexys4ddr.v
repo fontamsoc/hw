@@ -3,7 +3,7 @@
 
 `default_nettype none
 
-`include "./pll_100_to_50_100_mhz.v"
+`include "./pll_100_to_50_100_200_mhz.v"
 
 `include "lib/perint/pi1r.v"
 
@@ -138,12 +138,14 @@ wire pll_locked;
 
 wire clk50mhz;
 wire clk100mhz;
-pll_100_to_50_100_mhz pll (
+wire clk200mhz;
+pll_100_to_50_100_200_mhz pll (
 	 .reset    (1'b0)
 	,.locked   (pll_locked)
 	,.clk_in1  (clk100mhz_i)
 	,.clk_out1 (clk50mhz)
 	,.clk_out2 (clk100mhz)
+	,.clk_out3 (clk200mhz)
 );
 
 wire multipu_rst_ow;
@@ -161,7 +163,7 @@ wire rst_p = !rst_n;
 localparam RST_CNTR_BITSZ = 16;
 
 reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
-wire rst = (!pll_locked || devtbl_rst0_r || (|rst_cntr));
+wire rst_w = (!pll_locked || devtbl_rst0_r || (|rst_cntr));
 always @ (posedge clk100mhz) begin
 	if (!multipu_rst_ow && !swwarmrst && rst_n) begin
 		if (rst_cntr)
@@ -177,7 +179,7 @@ always @ (posedge clk100mhz) begin
 		devtbl_rst0_r <= 1;
 end
 
-assign sd_reset = rst;
+assign sd_reset = rst_w;
 
 `ifdef FONTAMSOC_USE_STARTUPE2
 STARTUPE2 startupe (.CLK (clk100mhz_i), .GSR (swcoldrst));
@@ -210,16 +212,6 @@ localparam INTCTRLSRC_GPIO   = (INTCTRLSRC_SDCARD + 1);
 localparam INTCTRLSRC_DMA    = (INTCTRLSRC_GPIO + 1);
 localparam INTCTRLSRC_UART   = (INTCTRLSRC_DMA + 1);
 
-localparam PI1RMASTERCOUNT       = 2;
-localparam PI1RSLAVECOUNT        = 9;
-localparam PI1RDEFAULTSLAVEINDEX = 8;
-localparam PI1RFIRSTSLAVEADDR    = 0;
-localparam PI1RARCHBITSZ         = ARCHBITSZ;
-localparam PI1RCLKFREQ           = (CLKFREQ50MHZ*2);
-wire pi1r_rst_w = rst;
-wire pi1r_clk_w = clk100mhz;
-`include "lib/perint/inst.pi1r.v"
-
 localparam M_PI1R_MULTIPU    = 0;
 localparam M_PI1R_DMA        = (M_PI1R_MULTIPU + 1);
 localparam S_PI1R_SDCARD     = 0;
@@ -231,6 +223,16 @@ localparam S_PI1R_UART       = (S_PI1R_INTCTRL + 1);
 localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
 localparam S_PI1R_RAMCTRL    = (S_PI1R_RAM + 1);
 localparam S_PI1R_INVALIDDEV = (S_PI1R_RAMCTRL + 1);
+
+localparam PI1RMASTERCOUNT       = 2;
+localparam PI1RSLAVECOUNT        = (S_PI1R_INVALIDDEV + 1);
+localparam PI1RDEFAULTSLAVEINDEX = S_PI1R_INVALIDDEV;
+localparam PI1RFIRSTSLAVEADDR    = 0;
+localparam PI1RARCHBITSZ         = ARCHBITSZ;
+localparam PI1RCLKFREQ           = (CLKFREQ50MHZ*2);
+wire pi1r_rst_w = rst_w;
+wire pi1r_clk_w = clk100mhz;
+`include "lib/perint/inst.pi1r.v"
 
 wire [(ARCHBITSZ * PI1RSLAVECOUNT) -1 : 0] devtbl_id_flat_w;
 wire [ARCHBITSZ -1 : 0]                    devtbl_id_w           [PI1RSLAVECOUNT -1 : 0];
@@ -252,7 +254,7 @@ localparam ICACHEWAYCOUNT = ((PUCOUNT > 1) ? 2 : 4);
 multipu #(
 
 	 .ARCHBITSZ      (ARCHBITSZ)
-	,.CLKFREQ        (CLKFREQ50MHZ)
+	,.CLKFREQ        ((CLKFREQ50MHZ*2))
 	,.PUCOUNT        (PUCOUNT)
 	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*((ICACHESZ/ICACHEWAYCOUNT)/PUCOUNT))
 	,.TLBSETCOUNT    (128)
@@ -261,12 +263,12 @@ multipu #(
 
 ) multipu (
 
-	 .rst_i (rst || !litedram_pll_locked)
+	 .rst_i (rst_w || !litedram_pll_locked)
 
 	,.rst_o (multipu_rst_ow)
 
-	,.clk_i        (clk50mhz)
-	,.clk_muldiv_i (clk100mhz)
+	,.clk_i        (clk100mhz)
+	,.clk_muldiv_i (clk200mhz)
 	,.clk_mem_i    (pi1r_clk_w)
 
 	,.pi1_op_o   (m_pi1r_op_w[M_PI1R_MULTIPU])
@@ -300,7 +302,7 @@ bootldr #(
 
 ) bootldr (
 
-	 .rst_i (rst)
+	 .rst_i (rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
@@ -326,7 +328,7 @@ sdcard_spi #(
 
 ) sdcard (
 
-	 .rst_i (rst || sd_cd)
+	 .rst_i (rst_w || sd_cd)
 
 	,.clk_mem_i (pi1r_clk_w)
 	,.clk_i     (clk50mhz)
@@ -367,7 +369,7 @@ devtbl #(
 
 ) devtbl (
 
-	 .rst_i (rst)
+	 .rst_i (rst_w)
 
 	,.rst0_o (devtbl_rst0_w)
 	,.rst1_o (devtbl_rst1_w)
@@ -399,7 +401,7 @@ gpio #(
 
 ) gpio (
 
-	 .rst_i (rst)
+	 .rst_i (rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
@@ -428,7 +430,7 @@ dma #(
 
 ) dma (
 
-	 .rst_i (rst)
+	 .rst_i (rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
@@ -464,7 +466,7 @@ intctrl #(
 
 ) intctrl (
 
-	 .rst_i (rst)
+	 .rst_i (rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
@@ -734,7 +736,7 @@ litedram litedram (
 assign devtbl_id_w     [S_PI1R_RAMCTRL] = 0;
 assign devtbl_useintr_w[S_PI1R_RAMCTRL] = 0;
 
-localparam INVALIDDEVMAPSZ = 'h4000;
+localparam INVALIDDEVMAPSZ = ('h1000/(ARCHBITSZ/8));
 assign s_pi1r_data_w1[S_PI1R_INVALIDDEV] = {ARCHBITSZ{1'b0}};
 assign s_pi1r_rdy_w[S_PI1R_INVALIDDEV]   = 1'b1;
 assign s_pi1r_mapsz_w[S_PI1R_INVALIDDEV] = INVALIDDEVMAPSZ;

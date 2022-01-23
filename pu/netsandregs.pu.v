@@ -683,11 +683,7 @@ opmuldiv #(
 	 .rst_i (rst_i)
 
 	,.clk_i        (clk_i)
-	`ifdef USE2CLK
-	,.clk_muldiv_i (clk_muldiv_i[1])
-	`else
-	,.clk_muldiv_i (clk_muldiv_i[0])
-	`endif
+	,.clk_muldiv_i (clk_muldiv_i)
 
 	,.stb_i  (opmuldiv_stb_w)
 	,.data_i (opmuldiv_data_w)

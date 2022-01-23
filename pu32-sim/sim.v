@@ -75,7 +75,7 @@ wire swpwroff  = (devtbl_rst0_w && !devtbl_rst1_w);
 localparam RST_CNTR_BITSZ = 4;
 
 reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
-wire rst = (devtbl_rst0_r || (|rst_cntr));
+wire rst_w = (devtbl_rst0_r || (|rst_cntr));
 always @ (posedge clk_i) begin
 	if (multipu_rst_ow || swwarmrst || rst_i)
 		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
@@ -118,16 +118,6 @@ localparam INTCTRLSRC_SDCARD = 0;
 localparam INTCTRLSRC_DMA    = (INTCTRLSRC_SDCARD + 1);
 localparam INTCTRLSRC_UART   = (INTCTRLSRC_DMA + 1);
 
-localparam PI1RMASTERCOUNT       = 2;
-localparam PI1RSLAVECOUNT        = 7;
-localparam PI1RDEFAULTSLAVEINDEX = 6;
-localparam PI1RFIRSTSLAVEADDR    = 0;
-localparam PI1RARCHBITSZ         = ARCHBITSZ;
-localparam PI1RCLKFREQ           = CLK2XFREQ;
-wire            pi1r_rst_w = rst;
-wire [2 -1 : 0] pi1r_clk_w = clk_2x_w;
-`include "lib/perint/inst.pi1r.v"
-
 localparam M_PI1R_MULTIPU    = 0;
 localparam M_PI1R_DMA        = (M_PI1R_MULTIPU + 1);
 localparam S_PI1R_SDCARD     = 0;
@@ -137,6 +127,16 @@ localparam S_PI1R_INTCTRL    = (S_PI1R_DMA + 1);
 localparam S_PI1R_UART       = (S_PI1R_INTCTRL + 1);
 localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
 localparam S_PI1R_INVALIDDEV = (S_PI1R_RAM + 1);
+
+localparam PI1RMASTERCOUNT       = 2;
+localparam PI1RSLAVECOUNT        = (S_PI1R_INVALIDDEV + 1);
+localparam PI1RDEFAULTSLAVEINDEX = S_PI1R_INVALIDDEV;
+localparam PI1RFIRSTSLAVEADDR    = 0;
+localparam PI1RARCHBITSZ         = ARCHBITSZ;
+localparam PI1RCLKFREQ           = CLK2XFREQ;
+wire            pi1r_rst_w = rst_w;
+wire [2 -1 : 0] pi1r_clk_w = clk_2x_w;
+`include "lib/perint/inst.pi1r.v"
 
 wire [(ARCHBITSZ * PI1RSLAVECOUNT) -1 : 0] devtbl_id_flat_w;
 wire [ARCHBITSZ -1 : 0]                    devtbl_id_w           [PI1RSLAVECOUNT -1 : 0];
@@ -171,16 +171,12 @@ multipu #(
 
 ) multipu (
 
-	 .rst_i (rst)
+	 .rst_i (rst_w)
 
 	,.rst_o (multipu_rst_ow)
 
 	,.clk_i        (clk_w)
-	`ifdef USE2CLK
 	,.clk_muldiv_i (clk_2x_w)
-	`else
-	,.clk_muldiv_i (clk_2x_w[1])
-	`endif
 	,.clk_mem_i    (pi1r_clk_w)
 
 	,.pi1_op_o   (m_pi1r_op_w[M_PI1R_MULTIPU])
@@ -216,7 +212,7 @@ bootldr #(
 
 ) bootldr (
 
-	.rst_i (rst)
+	.rst_i (rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
@@ -243,7 +239,7 @@ sdcard_spi #(
 
 ) sdcard (
 
-	.rst_i (rst)
+	.rst_i (rst_w)
 
 	,.clk_mem_i (pi1r_clk_w)
 	,.clk_i     (clk_w)
@@ -273,7 +269,7 @@ devtbl #(
 
 ) devtbl (
 
-	 .rst_i (rst)
+	 .rst_i (rst_w)
 
 	,.rst0_o (devtbl_rst0_w)
 	,.rst1_o (devtbl_rst1_w)
@@ -309,7 +305,7 @@ dma #(
 
 ) dma (
 
-	 .rst_i (rst)
+	 .rst_i (rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
@@ -345,7 +341,7 @@ intctrl #(
 
 ) intctrl (
 
-	 .rst_i (rst)
+	 .rst_i (rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
@@ -375,7 +371,7 @@ uart_sim #(
 
 ) uart (
 
-	 .rst_i (rst)
+	 .rst_i (rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
@@ -404,7 +400,7 @@ smem #(
 
 ) smem (
 
-	 .rst_i (rst)
+	 .rst_i (rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
@@ -420,7 +416,7 @@ smem #(
 assign devtbl_id_w     [S_PI1R_RAM] = 1;
 assign devtbl_useintr_w[S_PI1R_RAM] = 0;
 
-localparam INVALIDDEVMAPSZ = 'h4000;
+localparam INVALIDDEVMAPSZ = ('h1000/(ARCHBITSZ/8));
 assign s_pi1r_data_w1[S_PI1R_INVALIDDEV] = {ARCHBITSZ{1'b0}};
 assign s_pi1r_rdy_w[S_PI1R_INVALIDDEV]   = 1'b1;
 assign s_pi1r_mapsz_w[S_PI1R_INVALIDDEV] = INVALIDDEVMAPSZ;
