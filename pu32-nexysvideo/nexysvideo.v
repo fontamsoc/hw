@@ -262,7 +262,7 @@ multipu #(
 	,.rst_o (multipu_rst_ow)
 
 	,.clk_i        (clk100mhz)
-	,.clk_muldiv_i (clk200mhz)
+	,.clk_muldiv_i (clk100mhz)
 	,.clk_mem_i    (pi1r_clk_w)
 
 	,.pi1_op_o   (m_pi1r_op_w[M_PI1R_MULTIPU])
