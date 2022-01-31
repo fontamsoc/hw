@@ -149,6 +149,7 @@
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design">
+          <Option Id="ReTiming">1</Option>
           <Option Id="FlattenHierarchy">1</Option>
           <Option Id="KeepEquivalentRegisters">1</Option>
           <Option Id="MoreOptsStr"><![CDATA[-verilog_define FONTAMSOC_USE_STARTUPE2=1]]></Option>
