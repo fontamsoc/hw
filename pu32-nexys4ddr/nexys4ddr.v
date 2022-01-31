@@ -254,7 +254,7 @@ localparam ICACHEWAYCOUNT = ((PUCOUNT > 1) ? 2 : 4);
 multipu #(
 
 	 .ARCHBITSZ      (ARCHBITSZ)
-	,.CLKFREQ        ((CLKFREQ50MHZ*2))
+	,.CLKFREQ        (CLKFREQ50MHZ*2)
 	,.PUCOUNT        (PUCOUNT)
 	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*((ICACHESZ/ICACHEWAYCOUNT)/PUCOUNT))
 	,.TLBSETCOUNT    (128)
@@ -268,7 +268,7 @@ multipu #(
 	,.rst_o (multipu_rst_ow)
 
 	,.clk_i        (clk100mhz)
-	,.clk_muldiv_i (clk200mhz)
+	,.clk_muldiv_i (clk100mhz)
 	,.clk_mem_i    (pi1r_clk_w)
 
 	,.pi1_op_o   (m_pi1r_op_w[M_PI1R_MULTIPU])
