@@ -153,6 +153,7 @@
           <Option Id="FlattenHierarchy">1</Option>
           <Option Id="KeepEquivalentRegisters">1</Option>
           <Option Id="MoreOptsStr"><![CDATA[-verilog_define FONTAMSOC_USE_STARTUPE2=1]]></Option>
+          <Option Id="FsmExtraction">0</Option>
           <Option Id="NoCombineLuts">1</Option>
           <Option Id="ResourceSharing">2</Option>
         </Step>
