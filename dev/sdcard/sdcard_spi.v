@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-`include "lib/ram/ram2clk1i1o.v"
+`include "lib/ram/dram.v"
 
 `ifdef SIMULATION
 `include "./sdcard_sim_phy.v"
@@ -55,15 +55,9 @@ localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
 
 input wire rst_i;
 
-`ifdef USE2CLK
-input wire [2 -1 : 0] clk_mem_i;
-input wire [2 -1 : 0] clk_i;
-input wire [2 -1 : 0] clk_phy_i;
-`else
-input wire [1 -1 : 0] clk_mem_i;
-input wire [1 -1 : 0] clk_i;
-input wire [1 -1 : 0] clk_phy_i;
-`endif
+input wire clk_mem_i;
+input wire clk_i;
+input wire clk_phy_i;
 
 `ifndef SIMULATION
 output wire sclk_o;
@@ -137,16 +131,9 @@ wire phy_err_w;
 
 wire phy_rst_w = (rst_i | (s_pi1q_op_w == PIRWOP && s_pi1q_addr_w == CMDRESET && s_pi1q_data_w0));
 
-reg  phy_cmd_pending_a = 0;
-reg  phy_cmd_pending_b = 0;
-wire phy_cmd_pending = (phy_cmd_pending_a ^ phy_cmd_pending_b);
+reg phy_cmd_pending = 0;
 
 wire phy_cmd_pop_w;
-
-always @ (posedge clk_phy_i[0]) begin
-	if (rst_i || (phy_cmd_pop_w && phy_cmd_pending))
-		phy_cmd_pending_b <= phy_cmd_pending_a;
-end
 
 wire phy_bsy = (phy_cmd_pending || !phy_cmd_pop_w);
 
@@ -157,7 +144,7 @@ sdcard_spi_phy
 `endif
 #(
 	`ifndef SIMULATION
-	 .CLKFREQ (PHYCLKFREQ)
+	 .PHYCLKFREQ (PHYCLKFREQ)
 	`else
 	 .SRCFILE      (SRCFILE)
 	,.SIMSTORAGESZ (SIMSTORAGESZ)
@@ -166,9 +153,11 @@ sdcard_spi_phy
 
 	 .rst_i (phy_rst_w)
 
-	,.clk_i (clk_phy_i)
+	,.clk_i (clk_i)
 
 `ifndef SIMULATION
+	,.clk_phy_i (clk_phy_i)
+
 	,.sclk_o (sclk_o)
 	,.di_o   (di_o)
 	,.do_i   (do_i)
@@ -177,7 +166,7 @@ sdcard_spi_phy
 
 	,.cmd_pop_o      (phy_cmd_pop_w)
 	,.cmd_data_i     (phy_cmd)
-	,.cmdaddr_data_i (phy_cmdaddr)
+	,.cmd_addr_i     (phy_cmdaddr)
 	,.cmd_empty_i    (!phy_cmd_pending)
 
 	,.rx_push_o (phy_rx_push_w)
@@ -186,9 +175,9 @@ sdcard_spi_phy
 	,.tx_pop_o   (phy_tx_pop_w)
 	,.tx_data_i  (phy_tx_data_w)
 
-	,.blkcnt (phy_blkcnt_w)
+	,.blkcnt_o (phy_blkcnt_w)
 
-	,.err (phy_err_w)
+	,.err_o (phy_err_w)
 );
 
 wire pi1_op_is_rdop = (s_pi1q_op_w == PIRDOP || (s_pi1q_op_w == PIRWOP && s_pi1q_addr_w >= CMD_CNT));
@@ -280,36 +269,32 @@ wire cache1read  = cacheselect ? phy_tx_pop_w : pi1_op_is_rdop;
 wire cache0write = cacheselect ? pi1_op_is_wrop : phy_rx_push_w;
 wire cache1write = cacheselect ? phy_rx_push_w : pi1_op_is_wrop;
 
-ram2clk1i1o #(
+dram #(
 
 	 .SZ (PHYBLKSZ/(ARCHBITSZ/8))
 	,.DW (ARCHBITSZ)
 
 ) cache0 (
 
-	 .rst_i (rst_i)
-
-	,.clk_i  (clk_i)
-	,.we_i   (cache0write)
-	,.addr_i (cache0addr)
-	,.i      (cache0dati)
-	,.o      (cache0dato)
+	 .clk1_i  (clk_mem_i)
+	,.we1_i   (cache0write)
+	,.addr1_i (cache0addr)
+	,.i1      (cache0dati)
+	,.o1      (cache0dato)
 );
 
-ram2clk1i1o #(
+dram #(
 
 	 .SZ (PHYBLKSZ/(ARCHBITSZ/8))
 	,.DW (ARCHBITSZ)
 
 ) cache1 (
 
-	  .rst_i (rst_i)
-
-	,.clk_i  (clk_i)
-	,.we_i   (cache1write)
-	,.addr_i (cache1addr)
-	,.i      (cache1dati)
-	,.o      (cache1dato)
+	 .clk1_i  (clk_mem_i)
+	,.we1_i   (cache1write)
+	,.addr1_i (cache1addr)
+	,.i1      (cache1dati)
+	,.o1      (cache1dato)
 );
 
 reg [2 -1 : 0] status;
@@ -325,7 +310,7 @@ always @* begin
 		status = STATUSREADY;
 end
 
-always @ (posedge clk_i[0]) begin
+always @ (posedge clk_i) begin
 
 	intrqst_o <= intrqst_o ? ~intrdy_i_negedge : (phy_err_w_posedge || phy_bsy_negedge);
 
@@ -348,8 +333,12 @@ always @ (posedge clk_i[0]) begin
 	else if (cacheselect ? (cache1read | cache1write) : (cache0read | cache0write))
 		cachephyaddr <= cachephyaddr + 1'b1;
 
+	if (rst_i || (phy_cmd_pop_w && phy_cmd_pending))
+		phy_cmd_pending <= 0;
+	else if (s_pi1q_op_w == PIRWOP && (s_pi1q_addr_w == CMDREAD || s_pi1q_addr_w == CMDWRITE))
+		phy_cmd_pending <= 1;
+
 	if (s_pi1q_op_w == PIRWOP && (s_pi1q_addr_w == CMDREAD || s_pi1q_addr_w == CMDWRITE)) begin
-		phy_cmd_pending_a <= ((!phy_cmd_pending) ^ phy_cmd_pending_a);
 		phy_cmd <= (s_pi1q_addr_w == CMDWRITE);
 		phy_cmdaddr <= s_pi1q_data_w0;
 	end

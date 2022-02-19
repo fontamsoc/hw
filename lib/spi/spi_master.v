@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-`ifndef LIBSPIMASTER
-`define LIBSPIMASTER
+`ifndef SPI_MASTER_V
+`define SPI_MASTER_V
 
 `include "lib/fifo.v"
 
@@ -10,138 +10,139 @@
 
 module spi_master (
 
-	rst_i,
+	 rst_i
 
-	clk_i, clk_phy_i,
+	,clk_i ,clk_phy_i,
 
-	sclk, mosi, miso, ss,
+	,sclk_o ,mosi_o ,miso_i ,cs_o
 
-	sclkdivide,
+	,sclkdiv_i
 
-	txbufferwriteenable, txbufferdatain, txbufferusage, txbufferfull,
+	,write_i ,data_i ,tx_usage_o ,full_o
 
-	rxbufferreadenable, rxbufferdataout, rxbufferusage, rxbufferempty,
+	,read_i ,data_o ,rx_usage_o ,empty_o
 );
 
 `include "lib/clog2.v"
 
-parameter BUFFERSIZE = 2;
-parameter DATABITSIZE = 2;
-parameter SCLKDIVIDELIMIT = 1;
+parameter BUFSZ        = 2;
+parameter DATABITSZ    = 2;
+parameter SCLKDIVLIMIT = 1;
 
-localparam CLOG2BUFFERSIZE = clog2(BUFFERSIZE);
-localparam CLOG2SCLKDIVIDELIMIT = clog2(SCLKDIVIDELIMIT);
+localparam CLOG2BUFSZ        = clog2(BUFSZ);
+localparam CLOG2SCLKDIVLIMIT = clog2(SCLKDIVLIMIT);
 
 input wire rst_i;
 
 input wire clk_i;
 input wire clk_phy_i;
 
-output wire sclk;
-output wire mosi;
-input wire miso;
-output wire ss;
+output wire sclk_o;
+output wire mosi_o;
+input  wire miso_i;
+output wire cs_o;
 
-input wire[CLOG2SCLKDIVIDELIMIT -1 : 0] sclkdivide;
+input wire [CLOG2SCLKDIVLIMIT -1 : 0] sclkdiv_i;
 
-input wire txbufferwriteenable;
-input wire[DATABITSIZE -1 : 0] txbufferdatain;
-output wire[(CLOG2BUFFERSIZE +1) -1 : 0] txbufferusage;
-output wire txbufferfull;
+input  wire                          write_i;
+input  wire [DATABITSZ -1 : 0]       data_i;
+output wire [(CLOG2BUFSZ +1) -1 : 0] tx_usage_o;
+output wire                          full_o;
 
-input wire rxbufferreadenable;
-output wire[DATABITSIZE -1 : 0] rxbufferdataout;
-output wire[(CLOG2BUFFERSIZE +1) -1 : 0] rxbufferusage;
-output wire rxbufferempty;
+input  wire                          read_i;
+output wire [DATABITSZ -1 : 0]       data_o;
+output wire [(CLOG2BUFSZ +1) -1 : 0] rx_usage_o;
+output wire                          empty_o;
 
-reg txfifowasread = 0;
+reg fifo_tx_wasread = 0;
 
-wire phydataneeded;
+wire phy_rdy_w;
+wire phy_rcvd_w;
 
-wire phydatareceived;
-
-wire[DATABITSIZE -1 : 0] phydataout;
-
-wire[DATABITSIZE -1 : 0] txfifodataout;
+wire [DATABITSZ -1 : 0] phy_data_w0;
+wire [DATABITSZ -1 : 0] phy_data_w1;
 
 spi_master_phy #(
 
-	.SCLKDIVIDELIMIT (SCLKDIVIDELIMIT),
-	.DATABITSIZE (DATABITSIZE)
+	 .SCLKDIVLIMIT (SCLKDIVLIMIT)
+	,.DATABITSZ    (DATABITSZ)
 
 ) phy (
 
-	.clk_i (clk_phy_i),
+	 .clk_i (clk_phy_i)
 
-	.sclk (sclk),
-	.mosi (mosi),
-	.miso (miso),
-	.ss (ss),
+	,.sclk_o (sclk_o)
+	,.mosi_o (mosi_o)
+	,.miso_i (miso_i)
+	,.cs_o   (cs_o)
 
-	.transmit (phydataneeded && txfifowasread),
-	.dataneeded (phydataneeded),
-	.datareceived (phydatareceived),
-	.sclkdivide (sclkdivide),
-	.dataout (phydataout),
-	.datain (txfifodataout)
+	,.stb_i     (fifo_tx_wasread)
+	,.rdy_o     (phy_rdy_w)
+	,.rcvd_o    (phy_rcvd_w)
+	,.sclkdiv_i (sclkdiv_i)
+
+	,.data_o (phy_data_w0)
+	,.data_i (phy_data_w1)
 );
 
 fifo #(
-	.WIDTH (DATABITSIZE),
-	.DEPTH (BUFFERSIZE)
 
-) rxfifo (
+	 .WIDTH (DATABITSZ)
+	,.DEPTH (BUFSZ)
 
-	.rst_i (rst_i),
+) fifo_rx (
 
-	.usage_o (rxbufferusage),
+	 .rst_i (rst_i)
 
-	.clk_read_i (clk_i),
-	.read_i (rxbufferreadenable),
-	.data_o (rxbufferdataout),
-	.empty_o (rxbufferempty),
+	,.usage_o (rx_usage_o)
 
-	.clk_write_i (clk_phy_i),
-	.write_i (phydatareceived),
-	.data_i (phydataout),
-	.full_o ()
+	,.clk_read_i (clk_i)
+	,.read_i     (read_i)
+	,.data_o     (data_o)
+	,.empty_o    (empty_o)
+
+	,.clk_write_i (clk_phy_i)
+	,.write_i     (phy_rcvd_w)
+	,.data_i      (phy_data_w0)
+	,.full_o      ()
 );
 
-wire txbufferempty;
-
-wire txfiforeadenable = (!txbufferempty && !txfifowasread);
+wire fifo_tx_empty_w;
 
 fifo #(
-	.WIDTH (DATABITSIZE),
-	.DEPTH (BUFFERSIZE)
 
-) txfifo (
+	 .WIDTH (DATABITSZ)
+	,.DEPTH (BUFSZ)
 
-	.rst_i (rst_i),
+) fifo_tx (
 
-	.usage_o (txbufferusage),
+	 .rst_i (rst_i)
 
-	.clk_read_i (clk_phy_i),
-	.read_i (txfiforeadenable),
-	.data_o (txfifodataout),
-	.empty_o (txbufferempty),
+	,.usage_o (tx_usage_o)
 
-	.clk_write_i (clk_i),
-	.write_i (txbufferwriteenable),
-	.data_i (txbufferdatain),
-	.full_o (txbufferfull)
+	,.clk_read_i (clk_phy_i)
+	,.read_i     (!fifo_tx_wasread)
+	,.data_o     (phy_data_w1)
+	,.empty_o    (fifo_tx_empty_w)
+
+	,.clk_write_i (clk_i)
+	,.write_i     (write_i)
+	,.data_i      (data_i)
+	,.full_o      (full_o)
 );
 
-reg phydataneededsampled = 1;
+reg phy_rdy_w_sampled = 1;
 
-wire phydataneedednegedge = (phydataneeded < phydataneededsampled);
+wire phy_rdy_w_negedge = (phy_rdy_w < phy_rdy_w_sampled);
 
 always @ (posedge clk_phy_i) begin
 
-	if (rst_i || (txfifowasread && phydataneedednegedge)) txfifowasread <= 0;
-	else if (txfiforeadenable) txfifowasread <= 1;
+	if (rst_i || (fifo_tx_wasread && phy_rdy_w_negedge))
+		fifo_tx_wasread <= 0;
+	else if (!fifo_tx_empty_w && !fifo_tx_wasread)
+		fifo_tx_wasread <= 1;
 
-	phydataneededsampled <= phydataneeded;
+	phy_rdy_w_sampled <= phy_rdy_w;
 end
 
 endmodule

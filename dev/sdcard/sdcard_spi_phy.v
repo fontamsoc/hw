@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-`ifndef SDCARD_PHY_SPI_V
-`define SDCARD_PHY_SPI_V
-
-`ifdef SDCARD_PHY_RCVE_CMD
-`include "lib/fifo_fwft.v"
-`endif
+`ifndef SDCARD_SPI_PHY_V
+`define SDCARD_SPI_PHY_V
 
 `include "lib/spi/spi_master.v"
 
@@ -15,27 +11,11 @@ module sdcard_spi_phy (
 	 rst_i
 
 	,clk_i
-
-`ifdef SDCARD_PHY_RCVE_CMD
-
-	,cmd_push_i
-	,cmd_data_i
-	,cmdaddr_data_i
-	,cmd_full_o
-
-	,rx_pop_i
-	,rx_data_o
-	,rx_empty_o
-
-	,tx_push_i
-	,tx_data_i
-	,tx_full_o
-
-`else
+	,clk_phy_i
 
 	,cmd_pop_o
 	,cmd_data_i
-	,cmdaddr_data_i
+	,cmd_addr_i
 	,cmd_empty_i
 
 	,rx_push_o
@@ -46,62 +26,37 @@ module sdcard_spi_phy (
 	,tx_data_i
 	,tx_empty_i
 
-`endif
-
 	,sclk_o
 	,di_o
 	,do_i
 	,cs_o
 
-	,blkcnt
+	,blkcnt_o
 
-	,err
+	,err_o
 );
 
 `include "lib/clog2.v"
 
-parameter CLKFREQ = 500000;
+parameter PHYCLKFREQ = 250000;
 
-`ifdef SDCARD_PHY_RCVE_CMD
-parameter CMDBUFDEPTH = 2;
-`endif
+localparam CLOG2PHYCLKFREQ = clog2(PHYCLKFREQ);
 
-localparam CLOG2CLKFREQ            = clog2(CLKFREQ);
-localparam CLOG2CLKFREQBY200000000 = clog2(CLKFREQ/200000000);
-localparam CLOG2CLKFREQBY100000000 = clog2(CLKFREQ/100000000);
-localparam CLOG2CLKFREQBY50000000  = clog2(CLKFREQ/50000000);
-localparam CLOG2CLKFREQBY25000000  = clog2(CLKFREQ/25000000);
+localparam SCLKDIV200000000 = ((PHYCLKFREQ <= 200000000) ? 0 : clog2(PHYCLKFREQ/200000000));
+localparam SCLKDIV100000000 = ((PHYCLKFREQ <= 100000000) ? 0 : clog2(PHYCLKFREQ/100000000));
+localparam SCLKDIV50000000  = ((PHYCLKFREQ <= 50000000 ) ? 0 : clog2(PHYCLKFREQ/50000000));
+localparam SCLKDIV25000000  = ((PHYCLKFREQ <= 25000000 ) ? 0 : clog2(PHYCLKFREQ/25000000));
 
 input wire rst_i;
 
-`ifdef USE2CLK
-input wire [2 -1 : 0] clk_i;
-`else
-input wire [1 -1 : 0] clk_i;
-`endif
+input wire clk_i;
+input wire clk_phy_i;
 
 localparam ADDRBITSZ = 32;
 
-`ifdef SDCARD_PHY_RCVE_CMD
-
-input  wire                    cmd_push_i;
-input  wire                    cmd_data_i;
-input  wire [ADDRBITSZ -1 : 0] cmdaddr_data_i;
-output wire                    cmd_full_o;
-
-input  wire            rx_pop_i;
-output wire [8 -1 : 0] rx_data_o;
-output wire            rx_empty_o;
-
-input  wire            tx_push_i;
-input  wire [8 -1 : 0] tx_data_i;
-output wire            tx_full_o;
-
-`else
-
 output wire                    cmd_pop_o;
 input  wire                    cmd_data_i;
-input  wire [ADDRBITSZ -1 : 0] cmdaddr_data_i;
+input  wire [ADDRBITSZ -1 : 0] cmd_addr_i;
 input  wire                    cmd_empty_i;
 
 output wire            rx_push_o;
@@ -112,18 +67,16 @@ output wire            tx_pop_o;
 input  wire [8 -1 : 0] tx_data_i;
 input  wire            tx_empty_i;
 
-`endif
-
 output wire sclk_o;
 output wire di_o;
 input wire  do_i;
 output wire cs_o;
 
-output reg [ADDRBITSZ -1 : 0] blkcnt = 0;
+output reg [ADDRBITSZ -1 : 0] blkcnt_o = 0;
 
-output wire err;
+output wire err_o;
 
-reg [CLOG2CLKFREQ -1 : 0] timeout = 0;
+reg [CLOG2PHYCLKFREQ -1 : 0] timeout = 0;
 
 localparam RESETTING = 0;
 localparam READY     = 1;
@@ -166,14 +119,14 @@ localparam STATEBITSZ = clog2(64);
 
 reg [STATEBITSZ -1 : 0] state = 0;
 
-assign err = (state == ERROR);
+assign err_o = (state == ERROR);
 
-wire spiss;
+wire cs_w;
 
-localparam SCLKDIVIDELIMIT = clog2(CLKFREQ/250000);
-localparam CLOG2SCLKDIVIDELIMIT = clog2(SCLKDIVIDELIMIT);
+localparam SCLKDIVLIMIT = (((PHYCLKFREQ == 250000) ? 0 : clog2(PHYCLKFREQ/250000))+1);
+localparam CLOG2SCLKDIVLIMIT = clog2(SCLKDIVLIMIT);
 
-reg [CLOG2SCLKDIVIDELIMIT -1 : 0] spisclkdivide = 0;
+reg [CLOG2SCLKDIVLIMIT -1 : 0] sclkdiv_r = 0;
 
 reg spitxbufferwriteenable = 0;
 
@@ -186,41 +139,39 @@ wire spitxbufferfull;
 
 reg spirxbufferreadenable = 0;
 
-wire [8 -1 : 0] rx_data_w;
-
 wire spirxbufferempty;
 
 spi_master #(
 
-	 .SCLKDIVIDELIMIT (SCLKDIVIDELIMIT)
-	,.DATABITSIZE     (8)
-	,.BUFFERSIZE      (SPIBUFFERSIZE)
+	 .SCLKDIVLIMIT (SCLKDIVLIMIT)
+	,.DATABITSZ    (8)
+	,.BUFSZ        (SPIBUFFERSIZE)
 
 ) spi (
 	 .rst_i (state == RESETTING)
 
 	,.clk_i     (clk_i)
-	,.clk_phy_i (clk_i)
+	,.clk_phy_i (clk_phy_i)
 
-	,.sclk (sclk_o)
-	,.mosi (di_o)
-	,.miso (do_i)
-	,.ss   (spiss)
+	,.sclk_o (sclk_o)
+	,.mosi_o (di_o)
+	,.miso_i (do_i)
+	,.cs_o   (cs_w)
 
-	,.sclkdivide (spisclkdivide)
+	,.sclkdiv_i (sclkdiv_r)
 
-	,.txbufferwriteenable (spitxbufferwriteenable)
-	,.txbufferdatain      (spitxbufferdatain)
-	,.txbufferfull        (spitxbufferfull)
+	,.write_i (spitxbufferwriteenable)
+	,.data_i  (spitxbufferdatain)
+	,.full_o  (spitxbufferfull)
 
-	,.rxbufferreadenable (spirxbufferreadenable)
-	,.rxbufferdataout    (rx_data_w)
-	,.rxbufferempty      (spirxbufferempty)
+	,.read_i  (spirxbufferreadenable)
+	,.data_o  (rx_data_o)
+	,.empty_o (spirxbufferempty)
 );
 
 reg keepsdcardcshigh = 0;
 
-assign cs_o = (spiss | keepsdcardcshigh);
+assign cs_o = (cs_w | keepsdcardcshigh);
 
 reg miscflag = 0;
 
@@ -237,9 +188,9 @@ initial begin
 		sdcardcsd[init_sdcardcsd_idx] = 0;
 end
 
-always @ (posedge clk_i[0]) begin
+always @ (posedge clk_i) begin
 	if (sdcardcsd[0][7:6] == 'b00) begin
-		blkcnt <= ((
+		blkcnt_o <= ((
 			(({sdcardcsd[6], sdcardcsd[7], sdcardcsd[8]} & 'h03ffc0) >> 6)
 				+ 1) << (
 					(({sdcardcsd[9], sdcardcsd[10]} & 'h0380) >> 7)
@@ -247,27 +198,27 @@ always @ (posedge clk_i[0]) begin
 							(sdcardcsd[5] & 'h0f)
 								)) >> 9;
 	end else if (sdcardcsd[0][7:6] == 'b01) begin
-		blkcnt <= (
+		blkcnt_o <= (
 			({sdcardcsd[7], sdcardcsd[8], sdcardcsd[9]} & 'h3fffff)
 				+ 1) << 10;
 	end else begin
-		blkcnt <= 1;
+		blkcnt_o <= 1;
 	end
 end
 
-reg [CLOG2SCLKDIVIDELIMIT -1 : 0] safemaxspisclkdivide = 0;
+reg [CLOG2SCLKDIVLIMIT -1 : 0] safemaxsclkdiv_r = 0;
 
-always @ (posedge clk_i[0]) begin
+always @ (posedge clk_i) begin
 	if (sdcardcsd[3] == 'h2b)
-		safemaxspisclkdivide <= (CLOG2CLKFREQBY200000000 -1);
+		safemaxsclkdiv_r <= SCLKDIV200000000;
 	else if (sdcardcsd[3] == 'h0b)
-		safemaxspisclkdivide <= (CLOG2CLKFREQBY100000000 -1);
+		safemaxsclkdiv_r <= SCLKDIV100000000;
 	else if (sdcardcsd[3] == 'h5a)
-		safemaxspisclkdivide <= (CLOG2CLKFREQBY50000000 -1);
+		safemaxsclkdiv_r <= SCLKDIV50000000;
 	else if (sdcardcsd[3] == 'h32)
-		safemaxspisclkdivide <= (CLOG2CLKFREQBY25000000 -1);
+		safemaxsclkdiv_r <= SCLKDIV25000000;
 	else
-		safemaxspisclkdivide <= (SCLKDIVIDELIMIT -1'b1);
+		safemaxsclkdiv_r <= (SCLKDIVLIMIT-1);
 end
 
 wire [64 -1 : 0] dmc0 = 64'hff400000000001ff;
@@ -427,41 +378,34 @@ assign cmd59[5] = dmc59[47:40];
 assign cmd59[6] = dmc59[55:48];
 assign cmd59[7] = dmc59[63:56];
 
-reg [CLOG2CLKFREQ -1 : 0] cntr = 0;
+reg [CLOG2PHYCLKFREQ -1 : 0] cntr = 0;
 
-wire tx_pop_w  = ((state == CMD24RESP) && !spitxbufferfull && cntr && cntr <= 512);
-wire rx_push_w = ((state == CMD17RESP) && !spirxbufferempty && cntr > 1 && cntr <= 513);
+assign tx_pop_o  = ((state == CMD24RESP) && !spitxbufferfull && cntr && cntr <= 512);
+assign rx_push_o = ((state == CMD17RESP) && !spirxbufferempty && cntr > 1 && cntr <= 513);
 
 reg [7 -1 : 0] crc7 = 0;
 
 reg [16 -1 : 0] crc16 = 0;
 
 reg [8 -1 : 0] crcarg = 0;
+reg [8 -1 : 0] _crcarg = 0;
+
+wire crc7in = (_crcarg[7] ^ crc7[6]);
+
+wire crc16in = (_crcarg[7] ^ crc16[15]);
 
 localparam CRCCOUNTERBITSZ = clog2(8 + 1);
 
 reg [CRCCOUNTERBITSZ -1 : 0] crccounter = 0;
+reg [CRCCOUNTERBITSZ -1 : 0] _crccounter = 0;
 
-wire crc7in = (crcarg[7] ^ crc7[6]);
-
-wire crc16in = (crcarg[7] ^ crc16[15]);
-
-wire cmd_pop_w = (state == READY);
-wire cmd_data_w;
-wire cmd_empty_w;
-
-wire [ADDRBITSZ -1 : 0] cmdaddr_data_w;
-
-wire [8 -1 : 0] tx_data_w;
-
-wire rx_full_w;
-wire tx_empty_w;
+assign cmd_pop_o = (state == READY);
 
 reg resetting = 1;
 
-always @ (posedge clk_i[0]) begin
+always @ (posedge clk_phy_i) begin
 
-	if (crccounter) begin
+	if (_crccounter) begin
 
 		crc7[6] <= crc7[5];
 		crc7[5] <= crc7[4];
@@ -488,15 +432,25 @@ always @ (posedge clk_i[0]) begin
 		crc16[1]  <= crc16[0];
 		crc16[0]  <= crc16in;
 
-		crcarg <= crcarg << 1'b1;
+		_crcarg <= _crcarg << 1'b1;
 
-		crccounter <= crccounter - 1'b1;
+		_crccounter <= _crccounter - 1'b1;
 
 	end else if (!cntr) begin
 
 		crc7 <= 0;
 		crc16 <= 0;
+
+	end else if (crccounter) begin
+		_crcarg <= crcarg;
+		_crccounter <= crccounter;
 	end
+end
+
+always @ (posedge clk_i) begin
+
+	if (_crccounter)
+		crccounter <= 0;
 
 	if (rst_i || state == RESET) begin
 
@@ -506,9 +460,9 @@ always @ (posedge clk_i[0]) begin
 
 		state <= RESETTING;
 
-		cntr <= (CLKFREQ/4);
+		cntr <= (PHYCLKFREQ/4);
 
-		spisclkdivide <= (SCLKDIVIDELIMIT -1'b1);
+		sclkdiv_r <= (SCLKDIVLIMIT-1);
 
 		keepsdcardcshigh <= 1;
 
@@ -524,7 +478,7 @@ always @ (posedge clk_i[0]) begin
 
 			end else begin
 
-				if (spiss) begin
+				if (cs_w) begin
 
 					keepsdcardcshigh <= 0;
 
@@ -556,9 +510,9 @@ always @ (posedge clk_i[0]) begin
 
 	end else if (state == READY) begin
 
-		if (!cmd_empty_w) begin
-			cmdaddr <= cmdaddr_data_w;
-			if (cmd_data_w) begin
+		if (!cmd_empty_i) begin
+			cmdaddr <= cmd_addr_i;
+			if (cmd_data_i) begin
 				state <= SENDCMD24;
 			end else begin
 				state <= SENDCMD17;
@@ -754,9 +708,7 @@ always @ (posedge clk_i[0]) begin
 					spitxbufferdatain <= cmd6[cntr];
 
 				if (cntr > 1) begin
-
 					crcarg <= cmd6[cntr];
-
 					crccounter <= 8;
 				end
 			end
@@ -860,9 +812,7 @@ always @ (posedge clk_i[0]) begin
 					spitxbufferdatain <= cmd17[cntr];
 
 				if (cntr > 1) begin
-
 					crcarg <= cmd17[cntr];
-
 					crccounter <= 8;
 				end
 			end
@@ -928,9 +878,9 @@ always @ (posedge clk_i[0]) begin
 
 	end else if (state == CMD0RESP) begin
 
-		if (rx_data_w != 'hff) begin
+		if (rx_data_o != 'hff) begin
 
-			if (rx_data_w[6:1])
+			if (rx_data_o[6:1])
 				state <= ERROR;
 			else
 				state <= PREPCMD59;
@@ -938,9 +888,9 @@ always @ (posedge clk_i[0]) begin
 
 	end else if (state == CMD59RESP) begin
 
-		if (rx_data_w != 'hff) begin
+		if (rx_data_o != 'hff) begin
 
-			if (rx_data_w[6:1])
+			if (rx_data_o[6:1])
 				state <= ERROR;
 			else
 				state <= PREPCMD8;
@@ -953,11 +903,10 @@ always @ (posedge clk_i[0]) begin
 			if (!spirxbufferempty) begin
 
 				if (cntr == 3) begin
-					if (rx_data_w[0] != 1)
+					if (rx_data_o[0] != 1)
 						state <= ERROR;
 				end else if (cntr == 4) begin
-
-					if (rx_data_w != 'haa)
+					if (rx_data_o != 'haa)
 						state <= ERROR;
 					else
 						state <= PREPINIT;
@@ -966,36 +915,36 @@ always @ (posedge clk_i[0]) begin
 				cntr <= cntr + 1'b1;
 			end
 
-		end else if (rx_data_w != 'hff) begin
+		end else if (rx_data_o != 'hff) begin
 
-			issdcardver2 <= !rx_data_w[2];
+			issdcardver2 <= !rx_data_o[2];
 
 			issdcardmmc <= 0;
 
-			if (rx_data_w[2])
+			if (rx_data_o[2])
 				state <= PREPINIT;
 		end
 
 	end else if (state == INITRESP) begin
 
-		if (rx_data_w != 'hff) begin
+		if (rx_data_o != 'hff) begin
 
 			if (cntr[0]) begin
 
-				if (rx_data_w[6:1])
+				if (rx_data_o[6:1])
 					state <= ERROR;
 				else
 					state <= PREPCMD41;
 
 			end else begin
 
-				miscflag <= rx_data_w[0];
+				miscflag <= rx_data_o[0];
 
-				if (!issdcardver2 && !issdcardmmc && rx_data_w[2]) begin
+				if (!issdcardver2 && !issdcardmmc && rx_data_o[2]) begin
 					issdcardmmc <= 1;
 				end
 
-				if (rx_data_w[6:1])
+				if (rx_data_o[6:1])
 					state <= ERROR;
 				else
 					state <= PREPINIT;
@@ -1008,7 +957,7 @@ always @ (posedge clk_i[0]) begin
 
 			if (!cntr) begin
 
-				if (rx_data_w == 'hfe) begin
+				if (rx_data_o == 'hfe) begin
 					cntr <= cntr + 1'b1;
 				end else if (timeout)
 					timeout <= timeout - 1'b1;
@@ -1027,9 +976,9 @@ always @ (posedge clk_i[0]) begin
 				end
 			end
 
-		end else if (rx_data_w != 'hff) begin
+		end else if (rx_data_o != 'hff) begin
 
-			if (rx_data_w[6:1])
+			if (rx_data_o[6:1])
 				state <= PREPCMD9;
 			else begin
 				miscflag <= 1;
@@ -1043,11 +992,12 @@ always @ (posedge clk_i[0]) begin
 
 			if (!cntr) begin
 
-				if (rx_data_w == 'hfe) begin
+				if (rx_data_o == 'hfe) begin
 					cntr <= cntr + 1'b1;
 				end else if (timeout)
 					timeout <= timeout - 1'b1;
-				else state <= ERROR;
+				else
+					state <= ERROR;
 
 			end else begin
 
@@ -1055,23 +1005,23 @@ always @ (posedge clk_i[0]) begin
 
 					if (cntr == 19) begin
 
-						if (rx_data_w != crc16[7:0])
+						if (rx_data_o != crc16[7:0])
 							state <= ERROR;
 						else begin
-							spisclkdivide <= safemaxspisclkdivide;
+							sclkdiv_r <= safemaxsclkdiv_r;
 							state <= PREPCMD58;
 						end
 
 					end else if (cntr == 18) begin
 
-						if (rx_data_w != crc16[15:8]) state <= ERROR;
+						if (rx_data_o != crc16[15:8])
+							state <= ERROR;
 
 					end else if (cntr > 1) begin
 
-						sdcardcsd[cntr -2] <= rx_data_w;
+						sdcardcsd[cntr -2] <= rx_data_o;
 
-						crcarg <= rx_data_w;
-
+						crcarg <= rx_data_o;
 						crccounter <= 8;
 
 					end
@@ -1084,9 +1034,9 @@ always @ (posedge clk_i[0]) begin
 				end
 			end
 
-		end else if (rx_data_w != 'hff) begin
+		end else if (rx_data_o != 'hff) begin
 
-			if (rx_data_w[6:1])
+			if (rx_data_o[6:1])
 				state <= ERROR;
 			else begin
 				miscflag <= 0;
@@ -1101,7 +1051,7 @@ always @ (posedge clk_i[0]) begin
 			if (!spirxbufferempty) begin
 
 				if (cntr == 1) begin
-					issdcardaddrblockaligned <= |(rx_data_w & 'h40);
+					issdcardaddrblockaligned <= |(rx_data_o & 'h40);
 				end else if (cntr == 4) begin
 					state <= PREPCMD16;
 				end
@@ -1109,9 +1059,9 @@ always @ (posedge clk_i[0]) begin
 				cntr <= cntr + 1'b1;
 			end
 
-		end else if (rx_data_w != 'hff) begin
+		end else if (rx_data_o != 'hff) begin
 
-			if (rx_data_w[6:1])
+			if (rx_data_o[6:1])
 				state <= ERROR;
 			else
 				miscflag <= 1;
@@ -1119,9 +1069,9 @@ always @ (posedge clk_i[0]) begin
 
 	end else if (state == CMD16RESP) begin
 
-		if (rx_data_w != 'hff) begin
+		if (rx_data_o != 'hff) begin
 
-			if (rx_data_w[6:1])
+			if (rx_data_o[6:1])
 				state <= ERROR;
 			else
 				state <= PREPREADY;
@@ -1133,7 +1083,7 @@ always @ (posedge clk_i[0]) begin
 
 			if (!cntr) begin
 
-				if (rx_data_w == 'hfe) begin
+				if (rx_data_o == 'hfe) begin
 					cntr <= cntr + 1'b1;
 				end else if (timeout)
 					timeout <= timeout - 1'b1;
@@ -1145,18 +1095,15 @@ always @ (posedge clk_i[0]) begin
 				if (!spirxbufferempty) begin
 
 					if (cntr == 515) begin
-
-						if (rx_data_w != crc16[7:0]) state <= ERROR;
+						if (rx_data_o != crc16[7:0])
+							state <= ERROR;
 						else begin
 							state <= PREPREADY;
 						end
-
 					end else if (cntr == 514) begin
-
-						if (rx_data_w != crc16[15:8]) state <= ERROR;
-
+						if (rx_data_o != crc16[15:8])
+							state <= ERROR;
 					end else if (cntr > 1) begin
-						crcarg <= rx_data_w;
 						crccounter <= 8;
 					end
 
@@ -1168,9 +1115,9 @@ always @ (posedge clk_i[0]) begin
 				end
 			end
 
-		end else if (rx_data_w != 'hff) begin
+		end else if (rx_data_o != 'hff) begin
 
-			if (rx_data_w[6:1])
+			if (rx_data_o[6:1])
 				state <= ERROR;
 			else begin
 				miscflag <= 0;
@@ -1184,11 +1131,12 @@ always @ (posedge clk_i[0]) begin
 
 			if (cntr == 516) begin
 
-				if (rx_data_w != 'hff) begin
+				if (rx_data_o != 'hff) begin
 
-					if ((rx_data_w[3:1]) == 'b010) begin
+					if ((rx_data_o[3:1]) == 'b010) begin
 						state <= PREPCMD13;
-					end else state <= ERROR;
+					end else
+						state <= ERROR;
 
 					cntr <= 0;
 				end
@@ -1198,7 +1146,6 @@ always @ (posedge clk_i[0]) begin
 				if (!spitxbufferfull) begin
 
 					if (cntr) begin
-
 						if (cntr == 515)
 							spitxbufferdatain <= 'hff;
 						else if (cntr == 514)
@@ -1206,11 +1153,10 @@ always @ (posedge clk_i[0]) begin
 						else if (cntr == 513)
 							spitxbufferdatain <= crc16[15:8];
 						else begin
-							spitxbufferdatain <= tx_data_w;
-							crcarg <= tx_data_w;
+							spitxbufferdatain <= tx_data_i;
+							crcarg <= tx_data_i;
 							crccounter <= 8;
 						end
-
 					end else begin
 						spitxbufferdatain <= 'hfe;
 					end
@@ -1219,9 +1165,9 @@ always @ (posedge clk_i[0]) begin
 				end
 			end
 
-		end else if (rx_data_w != 'hff) begin
+		end else if (rx_data_o != 'hff) begin
 
-			if (rx_data_w[6:1])
+			if (rx_data_o[6:1])
 				state <= ERROR;
 			else
 				miscflag <= 0;
@@ -1235,7 +1181,7 @@ always @ (posedge clk_i[0]) begin
 
 				if (cntr == 1) begin
 
-					if (rx_data_w)
+					if (rx_data_o)
 						state <= ERROR;
 					else
 						state <= PREPREADY;
@@ -1244,9 +1190,9 @@ always @ (posedge clk_i[0]) begin
 				cntr <= cntr + 1'b1;
 			end
 
-		end else if (rx_data_w != 'hff) begin
+		end else if (rx_data_o != 'hff) begin
 
-			if (rx_data_w[6:1])
+			if (rx_data_o[6:1])
 				state <= ERROR;
 			else
 				miscflag <= 1;
@@ -1254,7 +1200,7 @@ always @ (posedge clk_i[0]) begin
 
 	end else if (state == PREPCMD59) begin
 
-		if (spiss) begin
+		if (cs_w) begin
 			state <= SENDCMD59;
 			cntr <= (6 + SPIBUFFERSIZE + 2);
 		end
@@ -1263,7 +1209,7 @@ always @ (posedge clk_i[0]) begin
 
 	end else if (state == PREPCMD8) begin
 
-		if (spiss) begin
+		if (cs_w) begin
 			state <= SENDCMD8;
 			cntr <= (6 + SPIBUFFERSIZE + 2);
 		end
@@ -1272,23 +1218,21 @@ always @ (posedge clk_i[0]) begin
 
 	end else if (state == PREPINIT) begin
 
-		if (spiss) begin
-
+		if (cs_w) begin
 			if (cntr)
 				cntr <= cntr - 1'b1;
 			else begin
 				state <= SENDINIT;
 				cntr <= (6 + SPIBUFFERSIZE + 2);
 			end
-
 		end else
-			cntr <= (CLKFREQ/20) -1;
+			cntr <= (PHYCLKFREQ/20) -1;
 
 		spitxbufferwriteenable <= 0;
 
 	end else if (state == PREPCMD41) begin
 
-		if (spiss) begin
+		if (cs_w) begin
 			state <= SENDCMD41;
 			cntr <= (6 + SPIBUFFERSIZE + 2);
 		end
@@ -1297,7 +1241,7 @@ always @ (posedge clk_i[0]) begin
 
 	end else if (state == PREPCMD9) begin
 
-		if (spiss) begin
+		if (cs_w) begin
 			state <= SENDCMD9;
 			cntr <= (6 + SPIBUFFERSIZE + 2);
 		end
@@ -1306,7 +1250,7 @@ always @ (posedge clk_i[0]) begin
 
 	end else if (state == PREPCMD58) begin
 
-		if (spiss) begin
+		if (cs_w) begin
 			state <= SENDCMD58;
 			cntr <= (6 + SPIBUFFERSIZE + 2);
 		end
@@ -1315,7 +1259,7 @@ always @ (posedge clk_i[0]) begin
 
 	end else if (state == PREPCMD16) begin
 
-		if (spiss) begin
+		if (cs_w) begin
 			state <= SENDCMD16;
 			cntr <= (6 + SPIBUFFERSIZE + 2);
 		end
@@ -1324,18 +1268,19 @@ always @ (posedge clk_i[0]) begin
 
 	end else if (state == PREPCMD13) begin
 
-		if (spiss) begin
+		if (cs_w) begin
 			state <= SENDCMD13;
 			cntr <= (6 + SPIBUFFERSIZE + 2);
 		end
 
-		if (rx_data_w == 'hff) spitxbufferwriteenable <= 0;
+		if (rx_data_o == 'hff)
+			spitxbufferwriteenable <= 0;
 
 	end else if (state == PREPREADY) begin
 
 		miscflag <= 1;
 
-		if (spiss) begin
+		if (cs_w) begin
 			state <= READY;
 			cntr <= (6 + SPIBUFFERSIZE + 2);
 		end
@@ -1352,113 +1297,6 @@ always @ (posedge clk_i[0]) begin
 	end else
 		state <= ERROR;
 end
-
-`ifdef SDCARD_PHY_RCVE_CMD
-
-fifo_fwft #(
-
-	 .WIDTH (1)
-	,.DEPTH (CMDBUFDEPTH)
-
-) cmdbuf (
-
-	 .rst_i (cmd_rst_i)
-
-	,.usage_o ()
-
-	,.clk_pop_i (clk_i)
-	,.pop_i     (cmd_pop_w)
-	,.data_o    (cmd_data_w)
-	,.empty_o   (cmd_empty_w)
-
-	,.clk_push_i (clk_i)
-	,.push_i     (cmd_push_i)
-	,.data_i     (cmd_data_i)
-	,.full_o     (cmd_full_o)
-);
-
-fifo_fwft #(
-
-	 .WIDTH (ADDRBITSZ)
-	,.DEPTH (CMDBUFDEPTH)
-
-) cmdaddrbuf (
-
-	 .rst_i (cmd_rst_i)
-
-	,.usage_o ()
-
-	,.clk_pop_i (clk_i)
-	,.pop_i     (cmd_pop_w)
-	,.data_o    (cmdaddr_data_w)
-	,.empty_o   (cmd_empty_w)
-
-	,.clk_push_i (clk_i)
-	,.push_i     (cmd_push_i)
-	,.data_i     (cmdaddr_data_i)
-	,.full_o     (cmd_full_o)
-);
-
-fifo_fwft #(
-
-	 .WIDTH (8)
-	,.DEPTH (512*CMDBUFDEPTH)
-
-) rx (
-
-	 .rst_i (rx_rst_i)
-
-	,.usage_o ()
-
-	,.clk_pop_i (clk_i)
-	,.pop_i     (rx_pop_i)
-	,.data_o    (rx_data_o)
-	,.empty_o   (rx_empty_o)
-
-	,.clk_push_i (clk_i)
-	,.push_i     (rx_push_w)
-	,.data_i     (rx_data_w)
-	,.full_o     (rx_full_w)
-);
-
-fifo_fwft #(
-
-	 .WIDTH (8)
-	,.DEPTH (512*CMDBUFDEPTH)
-
-) tx (
-
-	 .rst_i (tx_rst_i)
-
-	,.usage_o ()
-
-	,.clk_pop_i (clk_i)
-	,.pop_i     (tx_pop_w)
-	,.data_o    (tx_data_w)
-	,.empty_o   (tx_empty_w)
-
-	,.clk_push_i (clk_i)
-	,.push_i     (tx_push_i)
-	,.data_i     (tx_data_i)
-	,.full_o     (tx_full_o)
-);
-
-`else
-
-assign cmd_pop_o      = cmd_pop_w;
-assign cmd_data_w     = cmd_data_i;
-assign cmdaddr_data_w = cmdaddr_data_i;
-assign cmd_empty_w    = cmd_empty_i;
-
-assign rx_push_o = rx_push_w;
-assign rx_data_o = rx_data_w;
-assign rx_full_w = rx_full_i;
-
-assign tx_pop_o   = tx_pop_w;
-assign tx_data_w  = tx_data_i;
-assign tx_empty_w = tx_empty_i;
-
-`endif
 
 endmodule
 
