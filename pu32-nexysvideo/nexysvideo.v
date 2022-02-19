@@ -242,8 +242,10 @@ assign devtbl_useintr_flat_w = devtbl_useintr_w;
 
 localparam ICACHESZ = 512;
 localparam DCACHESZ = ((PUCOUNT > 8) ? 128 : 256);
+localparam TLBSZ    = 128;
 
 localparam ICACHEWAYCOUNT = ((PUCOUNT > 4) ? 4 : 8);
+localparam TLBWAYCOUNT    = 4;
 
 multipu #(
 
@@ -251,8 +253,9 @@ multipu #(
 	,.CLKFREQ        (CLKFREQ50MHZ*2)
 	,.PUCOUNT        (PUCOUNT)
 	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*((ICACHESZ/ICACHEWAYCOUNT)/PUCOUNT))
-	,.TLBSETCOUNT    (128)
+	,.TLBSETCOUNT    (TLBSZ/TLBWAYCOUNT)
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
+	,.TLBWAYCOUNT    (TLBWAYCOUNT)
 	,.MULDIVCNT      (8)
 
 ) multipu (

@@ -343,20 +343,22 @@ assign inuserspace = asid[12];
 
 localparam KERNELSPACESTART = 'h1000;
 
+reg [CLOG2TLBWAYCOUNT -1 : 0] dtlbwayhitidx;
+reg [CLOG2TLBWAYCOUNT -1 : 0] dtlbwaywriteidx;
 wire[CLOG2TLBSETCOUNT -1 : 0] dtlbset = gprdata2[(CLOG2TLBSETCOUNT +12) -1 : 12];
-wire[TLBENTRYBITSZ -1 : 0] dtlbentry;
-wire[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0] dtlbtag = dtlbentry[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0];
-wire[PAGENUMBITSZ -1 : 0] dtlbppn = dtlbentry[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ -1 : PAGENUMBITSZMINUSCLOG2TLBSETCOUNT];
-wire dtlbwritable = dtlbentry[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +1];
-wire dtlbnotwritable = ~dtlbwritable;
-wire dtlbreadable = dtlbentry[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +2];
-wire dtlbnotreadable = ~dtlbreadable;
-wire dtlbcached = dtlbentry[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +3];
-wire dtlbuser = dtlbentry[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +4];
-wire dtlbnotuser = ~dtlbuser;
-wire[12 -1 : 0] dtlbasid = dtlbentry[(PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +5) +12 -1 : PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +5];
+wire[TLBENTRYBITSZ -1 : 0] dtlbentry [TLBWAYCOUNT -1 : 0];
+wire[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0] dtlbtag [TLBWAYCOUNT -1 : 0];
+wire[PAGENUMBITSZ -1 : 0] dtlbppn [TLBWAYCOUNT -1 : 0];
+wire dtlbwritable [TLBWAYCOUNT -1 : 0];
+wire dtlbnotwritable [TLBWAYCOUNT -1 : 0];
+wire dtlbreadable [TLBWAYCOUNT -1 : 0];
+wire dtlbnotreadable [TLBWAYCOUNT -1 : 0];
+wire dtlbcached [TLBWAYCOUNT -1 : 0];
+wire dtlbuser [TLBWAYCOUNT -1 : 0];
+wire dtlbnotuser [TLBWAYCOUNT -1 : 0];
+wire[12 -1 : 0] dtlbasid [TLBWAYCOUNT -1 : 0];
 wire[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0] dvpn = gprdata2[ARCHBITSZ -1 : (12 +CLOG2TLBSETCOUNT)];
-wire dtlbmiss = ((inuserspace && dtlbnotuser) || (asid[12 -1 : 0] != dtlbasid) || (dvpn != dtlbtag));
+wire dtlbmiss_ [TLBWAYCOUNT -1 : 0];
 wire doutofrange = (gprdata2 < KERNELSPACESTART || gprdata2 >= ksl);
 wire dtlben = (!dohalt && inusermode && (inuserspace || doutofrange));
 reg dtlbwritten;
@@ -372,21 +374,23 @@ wire dtlbwriteenable = (
 	(miscrdyandsequencerreadyandgprrdy12 &&
 	!(itlbreadenable_ || dtlbreadenable_) && (
 	(isopsettlb && (inkernelmode || isflagsettlb) && (gprdata1 & 'b110)) ||
-	(isopclrtlb && (inkernelmode || isflagclrtlb) && !(({dtlbtag, dtlbset, dtlbasid} ^ gprdata2) & gprdata1)))));
+	(isopclrtlb && (inkernelmode || isflagclrtlb) && !(({dtlbtag[dtlbwayhitidx], dtlbset, dtlbasid[dtlbwayhitidx]} ^ gprdata2) & gprdata1)))));
 
+reg [CLOG2TLBWAYCOUNT -1 : 0] itlbwayhitidx;
+reg [CLOG2TLBWAYCOUNT -1 : 0] itlbwaywriteidx;
 wire[CLOG2TLBSETCOUNT -1 : 0] itlbset = (tlbbsy ? dtlbset :
 	instrfetchnextaddr[(CLOG2TLBSETCOUNT +ADDRWITHINPAGEBITSZ) -1 : ADDRWITHINPAGEBITSZ]);
-wire[TLBENTRYBITSZ -1 : 0] itlbentry;
-wire[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0] itlbtag = itlbentry[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0];
-wire[PAGENUMBITSZ -1 : 0] itlbppn = itlbentry[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ -1 : PAGENUMBITSZMINUSCLOG2TLBSETCOUNT];
-wire itlbexecutable = itlbentry[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ];
-wire itlbnotexecutable = ~itlbexecutable;
-wire itlbcached = itlbentry[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +3];
-wire itlbuser = itlbentry[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +4];
-wire itlbnotuser = ~itlbuser;
-wire[12 -1 : 0] itlbasid = itlbentry[(PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +5) +12 -1 : PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +5];
+wire[TLBENTRYBITSZ -1 : 0] itlbentry [TLBWAYCOUNT -1 : 0];
+wire[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0] itlbtag [TLBWAYCOUNT -1 : 0];
+wire[PAGENUMBITSZ -1 : 0] itlbppn [TLBWAYCOUNT -1 : 0];
+wire itlbexecutable [TLBWAYCOUNT -1 : 0];
+wire itlbnotexecutable [TLBWAYCOUNT -1 : 0];
+wire itlbcached [TLBWAYCOUNT -1 : 0];
+wire itlbuser [TLBWAYCOUNT -1 : 0];
+wire itlbnotuser [TLBWAYCOUNT -1 : 0];
+wire[12 -1 : 0] itlbasid [TLBWAYCOUNT -1 : 0];
 wire[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0] ivpn = instrfetchnextaddr[ADDRBITSZ -1 : (ADDRWITHINPAGEBITSZ +CLOG2TLBSETCOUNT)];
-wire itlbmiss = ((inuserspace && itlbnotuser) || (asid[12 -1 : 0] != itlbasid) || (ivpn != itlbtag));
+wire itlbmiss_ [TLBWAYCOUNT -1 : 0];
 wire ioutofrange = (instrfetchnextaddr < (KERNELSPACESTART >> CLOG2ARCHBITSZBY8) || (instrfetchnextaddr >= ksl[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8]));
 assign itlben = (!dohalt && inusermode && (inuserspace || ioutofrange));
 reg itlbwritten;
@@ -400,7 +404,7 @@ wire itlbwriteenable = (
 	(miscrdyandsequencerreadyandgprrdy12 &&
 	!(itlbreadenable_ || dtlbreadenable_) && (
 	(isopsettlb && (inkernelmode || isflagsettlb) && (gprdata1 & 'b1)) ||
-	(isopclrtlb && (inkernelmode || isflagclrtlb) && !(({itlbtag, itlbset, itlbasid} ^ gprdata2) & gprdata1)))));
+	(isopclrtlb && (inkernelmode || isflagclrtlb) && !(({itlbtag[itlbwayhitidx], itlbset, itlbasid[itlbwayhitidx]} ^ gprdata2) & gprdata1)))));
 
 wire[TLBENTRYBITSZ -1 : 0] tlbwritedata = (
 	isopsettlb ? {gprdata2[12-1:0], gprdata1[4:0], gprdata1[ARCHBITSZ-1:12], dvpn} :
@@ -410,6 +414,57 @@ wire[TLBENTRYBITSZ -1 : 0] tlbwritedata = (
 	`endif
 	             {TLBENTRYBITSZ{1'b0}});
 
+reg itlbmiss;
+integer gen_itlbhit_idx;
+always @* begin
+	itlbmiss = 1;
+	itlbwayhitidx = 0;
+	for (gen_itlbhit_idx = 0; gen_itlbhit_idx < TLBWAYCOUNT; gen_itlbhit_idx = gen_itlbhit_idx + 1) begin
+		if (itlbmiss && !itlbmiss_[gen_itlbhit_idx]) begin
+			itlbmiss = 0;
+			itlbwayhitidx = gen_itlbhit_idx;
+		end
+	end
+end
+
+reg dtlbmiss;
+integer gen_dtlbhit_idx;
+always @* begin
+	dtlbmiss = 1;
+	dtlbwayhitidx = 0;
+	for (gen_dtlbhit_idx = 0; gen_dtlbhit_idx < TLBWAYCOUNT; gen_dtlbhit_idx = gen_dtlbhit_idx + 1) begin
+		if (dtlbmiss && !dtlbmiss_[gen_dtlbhit_idx]) begin
+			dtlbmiss = 0;
+			dtlbwayhitidx = gen_dtlbhit_idx;
+		end
+	end
+end
+
+always @ (posedge clk_i[0]) begin
+	if (rst_i)
+		itlbwaywriteidx <= 0;
+	else if (itlbwriteenable && !isopclrtlb) begin
+		if (itlbwaywriteidx >= (TLBWAYCOUNT-1))
+			itlbwaywriteidx <= 0;
+		else
+			itlbwaywriteidx <= itlbwaywriteidx + 1'b1;
+	end
+end
+
+always @ (posedge clk_i[0]) begin
+	if (rst_i)
+		dtlbwaywriteidx <= 0;
+	else if (dtlbwriteenable && !isopclrtlb) begin
+		if (dtlbwaywriteidx >= (TLBWAYCOUNT-1))
+			dtlbwaywriteidx <= 0;
+		else
+			dtlbwaywriteidx <= dtlbwaywriteidx + 1'b1;
+	end
+end
+
+genvar gen_tlb_idx;
+generate for (gen_tlb_idx = 0; gen_tlb_idx < TLBWAYCOUNT; gen_tlb_idx = gen_tlb_idx + 1) begin :gen_tlb
+
 bram #(
 
 	 .SZ (TLBSETCOUNT)
@@ -417,12 +472,12 @@ bram #(
 
 ) itlb (
 
-	 .clk0_i  (clk_i)                 ,.clk1_i  (clk_i)
-	,.en0_i   (itlbreadenable)        ,.en1_i   (1'b1)
-	                                  ,.we1_i   (itlbwriteenable)
-	,.addr0_i (itlbset)               ,.addr1_i (itlbset)
-	                                  ,.i1      (tlbwritedata)
-	,.o0      (itlbentry)             ,.o1      ()
+	 .clk0_i  (clk_i)                  ,.clk1_i  (clk_i)
+	,.en0_i   (itlbreadenable)         ,.en1_i   (1'b1)
+	                                   ,.we1_i   (itlbwriteenable && ((itlbwaywriteidx == gen_tlb_idx) || isopclrtlb))
+	,.addr0_i (itlbset)                ,.addr1_i (itlbset)
+	                                   ,.i1      (tlbwritedata)
+	,.o0      (itlbentry[gen_tlb_idx]) ,.o1      ()
 );
 
 bram #(
@@ -432,42 +487,69 @@ bram #(
 
 ) dtlb (
 
-	 .clk0_i  (clk_i)                 ,.clk1_i  (clk_i)
-	,.en0_i   (dtlbreadenable)        ,.en1_i   (1'b1)
-	                                  ,.we1_i   (dtlbwriteenable)
-	,.addr0_i (dtlbset)               ,.addr1_i (dtlbset)
-	                                  ,.i1      (tlbwritedata)
-	,.o0      (dtlbentry)             ,.o1      ()
+	 .clk0_i  (clk_i)                  ,.clk1_i  (clk_i)
+	,.en0_i   (dtlbreadenable)         ,.en1_i   (1'b1)
+	                                   ,.we1_i   (dtlbwriteenable && ((dtlbwaywriteidx == gen_tlb_idx) || isopclrtlb))
+	,.addr0_i (dtlbset)                ,.addr1_i (dtlbset)
+	                                   ,.i1      (tlbwritedata)
+	,.o0      (dtlbentry[gen_tlb_idx]) ,.o1      ()
 );
 
-wire itlbgettlbhit = ((gprdata2[12 -1 : 0] == itlbasid) && (gprdata2[(ARCHBITSZ-1) : 12 +CLOG2TLBSETCOUNT] == itlbtag));
-wire dtlbgettlbhit = ((gprdata2[12 -1 : 0] == dtlbasid) && (gprdata2[(ARCHBITSZ-1) : 12 +CLOG2TLBSETCOUNT] == dtlbtag));
+assign itlbtag[gen_tlb_idx] = itlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0];
+assign itlbppn[gen_tlb_idx] = itlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ -1 : PAGENUMBITSZMINUSCLOG2TLBSETCOUNT];
+assign itlbexecutable[gen_tlb_idx] = itlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ];
+assign itlbnotexecutable[gen_tlb_idx] = ~itlbexecutable[gen_tlb_idx];
+assign itlbcached[gen_tlb_idx] = itlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +3];
+assign itlbuser[gen_tlb_idx] = itlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +4];
+assign itlbnotuser[gen_tlb_idx] = ~itlbuser[gen_tlb_idx];
+assign itlbasid[gen_tlb_idx] = itlbentry[gen_tlb_idx][(PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +5) +12 -1 : PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +5];
+assign itlbmiss_[gen_tlb_idx] = ((inuserspace && itlbnotuser[gen_tlb_idx]) || (asid[12 -1 : 0] != itlbasid[gen_tlb_idx]) || (ivpn != itlbtag[gen_tlb_idx]));
+
+assign dtlbtag[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0];
+assign dtlbppn[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ -1 : PAGENUMBITSZMINUSCLOG2TLBSETCOUNT];
+assign dtlbwritable[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +1];
+assign dtlbnotwritable[gen_tlb_idx] = ~dtlbwritable[gen_tlb_idx];
+assign dtlbreadable[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +2];
+assign dtlbnotreadable[gen_tlb_idx] = ~dtlbreadable[gen_tlb_idx];
+assign dtlbcached[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +3];
+assign dtlbuser[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +4];
+assign dtlbnotuser[gen_tlb_idx] = ~dtlbuser[gen_tlb_idx];
+assign dtlbasid[gen_tlb_idx] = dtlbentry[gen_tlb_idx][(PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +5) +12 -1 : PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +5];
+assign dtlbmiss_[gen_tlb_idx] = ((inuserspace && dtlbnotuser[gen_tlb_idx]) || (asid[12 -1 : 0] != dtlbasid[gen_tlb_idx]) || (dvpn != dtlbtag[gen_tlb_idx]));
+
+end endgenerate
+
+wire itlbgettlbhit = ((gprdata2[12 -1 : 0] == itlbasid[itlbwayhitidx]) && (gprdata2[(ARCHBITSZ-1) : 12 +CLOG2TLBSETCOUNT] == itlbtag[itlbwayhitidx]));
+wire dtlbgettlbhit = ((gprdata2[12 -1 : 0] == dtlbasid[dtlbwayhitidx]) && (gprdata2[(ARCHBITSZ-1) : 12 +CLOG2TLBSETCOUNT] == dtlbtag[dtlbwayhitidx]));
 wire[ARCHBITSZ -1 : 0] gettlbresult = (
 	(!(itlbgettlbhit | dtlbgettlbhit)) ? {ARCHBITSZ{1'b0}} :
 	(itlbgettlbhit ^ dtlbgettlbhit) ?
 		(itlbgettlbhit ?
-			{itlbppn, {7{1'b0}}, itlbuser, itlbcached, {2{1'b0}}, itlbexecutable} :
-			{dtlbppn, {7{1'b0}}, dtlbuser, dtlbcached, dtlbreadable, dtlbwritable, 1'b0}) :
-	(itlbppn == dtlbppn) ?
-		{dtlbppn, {7{1'b0}}, (itlbuser|dtlbuser), (itlbcached|dtlbcached), dtlbreadable, dtlbwritable, itlbexecutable} :
+			{itlbppn[itlbwayhitidx], {7{1'b0}}, itlbuser[itlbwayhitidx], itlbcached[itlbwayhitidx], {2{1'b0}}, itlbexecutable[itlbwayhitidx]} :
+			{dtlbppn[dtlbwayhitidx], {7{1'b0}}, dtlbuser[dtlbwayhitidx], dtlbcached[dtlbwayhitidx], dtlbreadable[dtlbwayhitidx], dtlbwritable[dtlbwayhitidx], 1'b0}) :
+	(itlbppn[itlbwayhitidx] == dtlbppn[dtlbwayhitidx]) ?
+		{dtlbppn[dtlbwayhitidx], {7{1'b0}}, (itlbuser[itlbwayhitidx]|dtlbuser[dtlbwayhitidx]), (itlbcached[itlbwayhitidx]|dtlbcached[dtlbwayhitidx]), dtlbreadable[dtlbwayhitidx], dtlbwritable[dtlbwayhitidx], itlbexecutable[itlbwayhitidx]} :
 		{ARCHBITSZ{1'b0}});
 
-wire[PAGENUMBITSZ -1 : 0] dppn = (dtlben ? dtlbppn : gprdata2[ARCHBITSZ-1:12]);
+wire[PAGENUMBITSZ -1 : 0] dppn = (dtlben ? dtlbppn[dtlbwayhitidx] : gprdata2[ARCHBITSZ-1:12]);
 
 `else
 
 wire dtlbreadenable = 0;
-wire dtlbreadenable = 0;
-wire dtlbnotwritable = 0;
-wire dtlbnotreadable = 0;
-wire dtlbcached = 0;
+wire [TLBWAYCOUNT -1 : 0] dtlbnotwritable = 0;
+wire [TLBWAYCOUNT -1 : 0] dtlbnotreadable = 0;
+wire [TLBWAYCOUNT -1 : 0] dtlbcached = 0;
 wire dtlbmiss = 0;
 wire dtlben = 0;
 wire itlbreadenable = 0;
-wire itlbnotexecutable = 0;
-wire itlbcached = 0;
+wire [TLBWAYCOUNT -1 : 0] itlbnotexecutable = 0;
+wire [TLBWAYCOUNT -1 : 0] itlbcached = 0;
 wire itlbmiss = 0;
-wire[PAGENUMBITSZ -1 : 0] itlbppn = 0;
+genvar gen_tlb_idx;
+wire[PAGENUMBITSZ -1 : 0] itlbppn [TLBWAYCOUNT -1 : 0];
+generate for (gen_tlb_idx = 0; gen_tlb_idx < TLBWAYCOUNT; gen_tlb_idx = gen_tlb_idx + 1) begin :gen_tlb
+assign itlbppn[gen_tlb_idx] = 0;
+end endgenerate
 wire itlben = 0;
 wire[PAGENUMBITSZ -1 : 0] dppn = gprdata2[ARCHBITSZ-1:12];
 
@@ -481,7 +563,7 @@ wire itlb_and_instrbuffer_rdy = (((!(inusermode && tlbbsy) && instrbuffernotfull
 	`endif
 	));
 
-wire itlbfault_ = (itlben && (itlbnotexecutable || itlbmiss));
+wire itlbfault_ = (itlben && (itlbnotexecutable[itlbwayhitidx] || itlbmiss));
 wire itlbfault = itlbfault_;
 
 `ifdef PUMMU
@@ -504,7 +586,7 @@ reg icachecheck;
 
 wire doicacherst = (rst_i || (miscrdy && sequencerready && isopicacherst));
 
-wire[PAGENUMBITSZ -1 : 0] instrfetchnextppn = itlben ? itlbppn : instrfetchnextaddr[ADDRBITSZ-1:ADDRWITHINPAGEBITSZ];
+wire[PAGENUMBITSZ -1 : 0] instrfetchnextppn = itlben ? itlbppn[itlbwayhitidx] : instrfetchnextaddr[ADDRBITSZ-1:ADDRWITHINPAGEBITSZ];
 
 wire[ADDRBITSZ -1 : 0] instrfetchnextppninstrfetchnextaddr = {instrfetchnextppn, instrfetchnextaddr[ADDRWITHINPAGEBITSZ-1:0]};
 wire[ADDRBITSZ -1 : 0] instrfetchppninstrfetchaddr = {instrfetchppn, instrfetchaddr[ADDRWITHINPAGEBITSZ-1:0]};
@@ -534,7 +616,7 @@ always @* begin
 	end
 end
 
-wire icachehit = ((itlben ? itlbcached : !ioutofrange) && icacheactive && icachehit_);
+wire icachehit = ((itlben ? itlbcached[itlbwayhitidx] : !ioutofrange) && icacheactive && icachehit_);
 
 wire icachewe = (!doicacherst && icacheactive && instrfetchmemrqstdone && !instrbufferrst);
 
@@ -829,7 +911,7 @@ reg[ARCHBITSZMAX -1 : 0] opldresult;
 
 reg[(ARCHBITSZMAX/8) -1 : 0] opldbyteselect;
 
-wire opldfault_ = (dtlben && (dtlbnotreadable || dtlbmiss));
+wire opldfault_ = (dtlben && (dtlbnotreadable[dtlbwayhitidx] || dtlbmiss));
 wire opldfault = ((inusermode && alignfault) || opldfault_);
 
 `ifdef PUMMU
@@ -845,7 +927,7 @@ reg opldmemrqst;
 wire opldrdy_ = (!(opldmemrqst || oplddone) && dtlb_rdy && (dcachemasterrdy || opldfault));
 wire opldrdy = (isopld && opldrdy_ && !opldfault);
 
-wire opstfault_ = (dtlben && (dtlbnotwritable || dtlbmiss));
+wire opstfault_ = (dtlben && (dtlbnotwritable[dtlbwayhitidx] || dtlbmiss));
 wire opstfault = ((inusermode && alignfault) || opstfault_);
 
 `ifdef PUMMU
@@ -863,7 +945,7 @@ reg[ARCHBITSZ -1 : 0] opldstresult;
 
 reg[(ARCHBITSZ/8) -1 : 0] opldstbyteselect;
 
-wire opldstfault_ = (dtlben && (dtlbnotreadable || dtlbnotwritable || dtlbmiss));
+wire opldstfault_ = (dtlben && (dtlbnotreadable[dtlbwayhitidx] || dtlbnotwritable[dtlbwayhitidx] || dtlbmiss));
 wire opldstfault = ((inusermode && alignfault) || opldstfault_);
 
 `ifdef PUMMU

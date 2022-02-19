@@ -101,8 +101,12 @@ initial begin
 
 	ksl = 0;
 
+	dtlbwaywriteidx = 0;
+
 	dtlbwritten = 1;
 	dtlbsetprev = 0;
+
+	itlbwaywriteidx = 0;
 
 	itlbwritten = 1;
 	itlbsetprev = 0;

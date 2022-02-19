@@ -254,10 +254,10 @@ end else if (!inhalt) begin
 							if (opldstfault) begin
 
 								faultreason <= (
-									alignfault      ? ALIGNFAULTINTR :
-									dtlbmiss        ? READFAULTINTR  :
-									dtlbnotreadable ? READFAULTINTR  :
-									                  WRITEFAULTINTR );
+									alignfault                     ? ALIGNFAULTINTR :
+									dtlbmiss                       ? READFAULTINTR  :
+									dtlbnotreadable[dtlbwayhitidx] ? READFAULTINTR  :
+									                                 WRITEFAULTINTR );
 
 								uip <= ip;
 								ip <= kip;
