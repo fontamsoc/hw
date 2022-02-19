@@ -90,8 +90,8 @@ always @ (posedge clk_i) begin
 		devtbl_rst0_r <= 1;
 end
 
-localparam CLKFREQ   = (50000000);
-localparam CLK2XFREQ = (100000000);
+localparam CLKFREQ   = (100000000);
+localparam CLK2XFREQ = (200000000);
 
 wire clk__w;
 wire clk_2x__w;
@@ -133,9 +133,9 @@ localparam PI1RSLAVECOUNT        = (S_PI1R_INVALIDDEV + 1);
 localparam PI1RDEFAULTSLAVEINDEX = S_PI1R_INVALIDDEV;
 localparam PI1RFIRSTSLAVEADDR    = 0;
 localparam PI1RARCHBITSZ         = ARCHBITSZ;
-localparam PI1RCLKFREQ           = CLK2XFREQ;
+localparam PI1RCLKFREQ           = CLKFREQ;
 wire            pi1r_rst_w = rst_w;
-wire [2 -1 : 0] pi1r_clk_w = clk_2x_w;
+wire [2 -1 : 0] pi1r_clk_w = clk_w;
 `include "lib/perint/inst.pi1r.v"
 
 wire [(ARCHBITSZ * PI1RSLAVECOUNT) -1 : 0] devtbl_id_flat_w;
@@ -176,7 +176,7 @@ multipu #(
 	,.rst_o (multipu_rst_ow)
 
 	,.clk_i        (clk_w)
-	,.clk_muldiv_i (clk_2x_w)
+	,.clk_muldiv_i (clk_w)
 	,.clk_mem_i    (pi1r_clk_w)
 
 	,.pi1_op_o   (m_pi1r_op_w[M_PI1R_MULTIPU])
