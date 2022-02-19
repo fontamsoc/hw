@@ -157,14 +157,19 @@ generate for (gen_pc_w_idx = 0; gen_pc_w_idx < PUCOUNT; gen_pc_w_idx = gen_pc_w_
 assign pc_w[gen_pc_w_idx] = pc_w_flat[((gen_pc_w_idx+1) * ARCHBITSZ) -1 : gen_pc_w_idx * ARCHBITSZ];
 end endgenerate
 
-localparam ICACHEWAYCOUNT = 2;
+localparam ICACHESZ = 16;
+localparam DCACHESZ = 16;
+
+localparam ICACHEWAYCOUNT = 4;
+localparam DCACHEWAYCOUNT = 4;
 
 multipu #(
 
 	 .ARCHBITSZ      (ARCHBITSZ)
 	,.CLKFREQ        (CLKFREQ)
 	,.PUCOUNT        (PUCOUNT)
-	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*(4/ICACHEWAYCOUNT))
+	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*(ICACHESZ/ICACHEWAYCOUNT))
+	,.DCACHESETCOUNT ((1024/(ARCHBITSZ/8))*(DCACHESZ/DCACHEWAYCOUNT))
 	,.TLBSETCOUNT    (16)
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.MULDIVCNT      (8)
