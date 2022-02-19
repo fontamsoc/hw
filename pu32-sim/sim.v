@@ -106,17 +106,16 @@ wire [2 -1 : 0] clk_2x_w = {clk_i, clk_2x__w};
 
 localparam PUCOUNT = 1;
 
-localparam INTCTRLSRCCOUNT = 3;
-localparam INTCTRLDSTCOUNT = PUCOUNT;
+localparam INTCTRLSRC_SDCARD = 0;
+localparam INTCTRLSRC_DMA    = (INTCTRLSRC_SDCARD + 1);
+localparam INTCTRLSRC_UART   = (INTCTRLSRC_DMA + 1);
+localparam INTCTRLSRCCOUNT   = (INTCTRLSRC_UART +1);
+localparam INTCTRLDSTCOUNT   = PUCOUNT;
 wire [INTCTRLSRCCOUNT -1 : 0] intrqstsrc_w;
 wire [INTCTRLSRCCOUNT -1 : 0] intrdysrc_w;
 wire [INTCTRLDSTCOUNT -1 : 0] intrqstdst_w;
 wire [INTCTRLDSTCOUNT -1 : 0] intrdydst_w;
 wire [INTCTRLDSTCOUNT -1 : 0] intbestdst_w;
-
-localparam INTCTRLSRC_SDCARD = 0;
-localparam INTCTRLSRC_DMA    = (INTCTRLSRC_SDCARD + 1);
-localparam INTCTRLSRC_UART   = (INTCTRLSRC_DMA + 1);
 
 localparam M_PI1R_MULTIPU    = 0;
 localparam M_PI1R_DMA        = (M_PI1R_MULTIPU + 1);
