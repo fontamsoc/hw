@@ -181,11 +181,11 @@ STARTUPE2 startupe (.CLK (clk100mhz_i), .GSR (swcoldrst));
 
 localparam ACTIVITY_CNTR_BITSZ = 7;
 reg [ACTIVITY_CNTR_BITSZ -1 : 0] activity_cntr = 0;
-always @ (posedge clk50mhz) begin
+always @ (posedge clk100mhz) begin
 	if (activity_cntr) begin
 		activity <= 0;
 		activity_cntr <= activity_cntr - 1'b1;
-	end else if ((~sd_cs || litedram_init_error)) begin
+	end else if ((~(sd_di & sd_do) || litedram_init_error)) begin
 		activity <= 1;
 		activity_cntr <= {ACTIVITY_CNTR_BITSZ{1'b1}};
 	end

@@ -171,7 +171,7 @@ spi_master #(
 
 reg keepsdcardcshigh = 0;
 
-assign cs_o = (cs_w | keepsdcardcshigh);
+assign cs_o = (/*cs_w |*/ keepsdcardcshigh);
 
 reg miscflag = 0;
 
