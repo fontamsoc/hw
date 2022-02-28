@@ -1,0 +1,5 @@
+
+create_clock -period 83.3333 -name clk12mhz [get_nets clk12mhz]
+create_clock -period 41.6666 -name clk24mhz [get_nets clk24mhz]
+create_clock -period 20.8333 -name clk48mhz [get_nets clk48mhz]
+create_clock -period 10.4166 -name clk96mhz [get_nets clk96mhz]
