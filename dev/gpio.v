@@ -148,8 +148,7 @@ dbncr  #(
 end endgenerate
 
 // Net set to the input value.
-// Signals of input "i" that are configured as output read low.
-wire [IOCOUNT -1 : 0] ival = (_i & ~t);
+wire [IOCOUNT -1 : 0] ival = (_i/* & ~t*/);
 
 // Register used to detect a change on "ival".
 reg [IOCOUNT -1 : 0] ivalsampled;
