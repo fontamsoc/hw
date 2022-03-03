@@ -314,9 +314,9 @@ spi_master #(
 
 	,.sclkdiv_i (sclkdiv_r)
 
-	,.write_i (spitxbufferwriteenable)
-	,.data_i  (spitxbufferdatain)
-	,.full_o  (spitxbufferfull)
+	,.push_i (spitxbufferwriteenable)
+	,.data_i (spitxbufferdatain)
+	,.full_o (spitxbufferfull)
 
 	,.read_i  (spirxbufferreadenable)
 	,.data_o  (rx_data_o)
