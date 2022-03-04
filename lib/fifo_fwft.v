@@ -48,7 +48,6 @@
 //
 // clk_pop_i
 // 	Clock used for poping data from the fifo.
-// 	Its frequency must be >= clk_push_i frequency if USE2CLK defined.
 //
 // pop_i
 // 	When high on "clk_pop_i" posedge, next data from the fifo gets set
@@ -80,7 +79,7 @@
 // their posedge too narrow for the combinational logic
 // computing "usage_o" to settle.
 
-`include "lib/ram/ram2clk1i2o.v"
+`include "lib/ram/ram1i2o.v"
 
 module fifo_fwft (
 
@@ -110,20 +109,12 @@ input wire rst_i;
 
 output wire [(CLOG2DEPTH +1) -1 : 0] usage_o;
 
-`ifdef USE2CLK
-input  wire [2 -1 : 0]     clk_pop_i;
-`else
-input  wire [1 -1 : 0]     clk_pop_i;
-`endif
+input  wire                clk_pop_i;
 input  wire                pop_i;
 output wire [WIDTH -1 : 0] data_o;
 output wire                empty_o;
 
-`ifdef USE2CLK
-input  wire [2 -1 : 0]     clk_push_i;
-`else
-input  wire [1 -1 : 0]     clk_push_i;
-`endif
+input  wire                clk_push_i;
 input  wire                push_i;
 input  wire [WIDTH -1 : 0] data_i;
 output wire                full_o;
@@ -131,12 +122,12 @@ output wire                full_o;
 wire en = (pop_i && !empty_o);
 wire we = (push_i && !full_o);
 
-// Read and write index within ram2clk1i2o.
+// Read and write index within ram1i2o.
 // Only the CLOG2DEPTH lsb are used for indexing.
 reg [(CLOG2DEPTH +1) -1 : 0] readidx = 0;
 reg [(CLOG2DEPTH +1) -1 : 0] writeidx = 0;
 
-ram2clk1i2o #(
+ram1i2o #(
 
 	 .SZ (DEPTH)
 	,.DW (WIDTH)
@@ -158,14 +149,14 @@ assign full_o = (usage_o >= DEPTH);
 
 assign empty_o = (usage_o == 0);
 
-always @ (posedge clk_pop_i[0]) begin
+always @ (posedge clk_pop_i) begin
 	if (rst_i)
 		readidx <= writeidx;
 	else if (en)
 		readidx <= readidx + 1'b1;
 end
 
-always @ (posedge clk_push_i[0]) begin
+always @ (posedge clk_push_i) begin
 	if (we)
 		writeidx <= writeidx + 1'b1;
 end

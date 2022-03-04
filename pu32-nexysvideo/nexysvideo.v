@@ -164,7 +164,8 @@ wire litedram_pll_locked;
 wire litedram_init_done;
 wire litedram_init_error;
 
-localparam CLKFREQ50MHZ = 50000000;
+localparam CLKFREQ   = ( 50000000) /*  50 MHz */; // Frequency of clk_w.
+localparam CLK2XFREQ = (100000000) /* 100 MHz */; // Frequency of clk_2x_w.
 
 wire pll_locked;
 
@@ -179,6 +180,9 @@ pll_100_to_50_100_200_mhz pll (
 	,.clk_out2 (clk100mhz)
 	,.clk_out3 (clk200mhz)
 );
+
+wire clk_w    = clk50mhz;
+wire clk_2x_w = clk100mhz;
 
 wire multipu_rst_ow;
 
@@ -196,7 +200,7 @@ localparam RST_CNTR_BITSZ = 16;
 
 reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
 wire rst_w = (!pll_locked || devtbl_rst0_r || (|rst_cntr));
-always @ (posedge clk100mhz) begin
+always @ (posedge clk_2x_w) begin
 	if (!multipu_rst_ow && !swwarmrst && rst_n) begin
 		if (rst_cntr)
 			rst_cntr <= rst_cntr - 1'b1;
@@ -204,7 +208,7 @@ always @ (posedge clk100mhz) begin
 		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
 end
 
-always @ (posedge clk100mhz) begin
+always @ (posedge clk_2x_w) begin
 	if (rst_p)
 		devtbl_rst0_r <= 0;
 	if (swpwroff)
@@ -219,20 +223,20 @@ STARTUPE2 startupe (.CLK (clk100mhz_i), .GSR (swcoldrst));
 
 `ifdef PUDBG
 // Implementation of reset button long-press for pu 0 to be initially stopped.
-localparam DBNCRTHRES      = ((CLKFREQ50MHZ*2)*4); // 4 seconds long-press.
+localparam DBNCRTHRES      = (CLK2XFREQ*4); // 4 seconds long-press.
 localparam CLOG2DBNCRTHRES = clog2(DBNCRTHRES);
 dbncr  #(
 	 .THRESBITSZ (CLOG2DBNCRTHRES)
 	,.INIT       (1'b0)
 ) dbncr (
 	 .rst_i    (rst_n)
-	,.clk_i    (clk100mhz)
+	,.clk_i    (clk_2x_w)
 	,.i        (rst_p)
 	,.o        (brkonrst_w)
 	,.thresh_i (DBNCRTHRES)
 );
 reg brkonrst_r = 1'b0;
-always @ (posedge clk100mhz) begin
+always @ (posedge clk_2x_w) begin
 	if (!rst_w)
 		brkonrst_r <= 1'b0;
 	else if (rst_p && brkonrst_w)
@@ -243,7 +247,7 @@ end
 // Used to dim activity intensity.
 localparam ACTIVITY_CNTR_BITSZ = 7;
 reg [ACTIVITY_CNTR_BITSZ -1 : 0] activity_cntr = 0;
-always @ (posedge clk100mhz) begin
+always @ (posedge clk_2x_w) begin
 	if (activity_cntr) begin
 		activity <= 0;
 		activity_cntr <= activity_cntr - 1'b1;
@@ -284,9 +288,9 @@ localparam PI1RSLAVECOUNT        = (S_PI1R_INVALIDDEV + 1);
 localparam PI1RDEFAULTSLAVEINDEX = S_PI1R_INVALIDDEV;
 localparam PI1RFIRSTSLAVEADDR    = 0;
 localparam PI1RARCHBITSZ         = ARCHBITSZ;
-localparam PI1RCLKFREQ           = (CLKFREQ50MHZ*2);
+localparam PI1RCLKFREQ           = CLK2XFREQ;
 wire pi1r_rst_w = rst_w;
-wire pi1r_clk_w = clk100mhz;
+wire pi1r_clk_w = clk_2x_w;
 // PerInt is instantiated in a separate file to keep this file clean.
 // Masters should use the following signals to plug onto PerInt:
 // 	input  [2 -1 : 0]             m_pi1r_op_w    [PI1RMASTERCOUNT -1 : 0];
@@ -337,7 +341,7 @@ wire            pudbg_tx_rdy_w;
 multipu #(
 
 	 .ARCHBITSZ      (ARCHBITSZ)
-	,.CLKFREQ        (CLKFREQ50MHZ*2)
+	,.CLKFREQ        (CLK2XFREQ)
 	,.PUCOUNT        (PUCOUNT)
 	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*((ICACHESZ/ICACHEWAYCOUNT)/PUCOUNT))
 	,.DCACHESETCOUNT ((1024/(ARCHBITSZ/8))*(((DCACHESZ/2)/DCACHEWAYCOUNT)/PUCOUNT))
@@ -353,8 +357,8 @@ multipu #(
 
 	,.rst_o (multipu_rst_ow)
 
-	,.clk_i        (clk100mhz)
-	,.clk_muldiv_i (clk100mhz)
+	,.clk_i        (clk_2x_w)
+	,.clk_muldiv_i (clk_2x_w)
 	,.clk_mem_i    (pi1r_clk_w)
 
 	,.pi1_op_o   (m_pi1r_op_w[M_PI1R_MULTIPU])
@@ -387,21 +391,21 @@ multipu #(
 `ifdef PUDBG
 localparam PUDBGPHYBITRATE = 115200;
 uart_rx_phy #(
-	 .CLOCKCYCLESPERBITLIMIT (((CLKFREQ50MHZ/PUDBGPHYBITRATE) + ((CLKFREQ50MHZ/PUDBGPHYBITRATE)/10/2)) +1)
+	 .CLOCKCYCLESPERBITLIMIT (((CLK2XFREQ/PUDBGPHYBITRATE) + ((CLK2XFREQ/PUDBGPHYBITRATE)/10/2)) +1)
 ) pudbg_uart_rx_phy (
 	 .rst_i               (rst_w || !litedram_pll_locked)
-	,.clk_i               (clk50mhz) // Must be same as multipu.clk_i .
-	,.clockcyclesperbit_i ((CLKFREQ50MHZ/PUDBGPHYBITRATE) + ((CLKFREQ50MHZ/PUDBGPHYBITRATE)/10/2))
+	,.clk_i               (clk_2x_w) // Must be same as multipu.clk_i .
+	,.clockcyclesperbit_i ((CLK2XFREQ/PUDBGPHYBITRATE) + ((CLK2XFREQ/PUDBGPHYBITRATE)/10/2))
 	,.rx_i                (pudbg_rx)
 	,.rcvd_o              (pudbg_rx_rcvd_w)
 	,.data_o              (pudbg_rx_data_w1)
 );
 uart_tx_phy #(
-	 .CLOCKCYCLESPERBITLIMIT ((CLKFREQ50MHZ/PUDBGPHYBITRATE) +1)
+	 .CLOCKCYCLESPERBITLIMIT ((CLK2XFREQ/PUDBGPHYBITRATE) +1)
 ) pudbg_uart_tx_phy (
 	 .rst_i               (rst_w || !litedram_pll_locked)
-	,.clk_i               (clk50mhz) // Must be same as multipu.clk_i .
-	,.clockcyclesperbit_i (CLKFREQ50MHZ/PUDBGPHYBITRATE)
+	,.clk_i               (clk_2x_w) // Must be same as multipu.clk_i .
+	,.clockcyclesperbit_i (CLK2XFREQ/PUDBGPHYBITRATE)
 	,.tx_o                (pudbg_tx)
 	,.stb_i               (pudbg_tx_stb_w)
 	,.data_i              (pudbg_tx_data_w0)
@@ -445,15 +449,15 @@ bootldr #(
 sdcard_spi #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
-	,.PHYCLKFREQ (CLKFREQ50MHZ)
+	,.PHYCLKFREQ (CLKFREQ)
 
 ) sdcard (
 
 	 .rst_i (rst_w || sd_cd)
 
 	,.clk_mem_i (pi1r_clk_w)
-	,.clk_i     (clk50mhz)
-	,.clk_phy_i (clk50mhz)
+	,.clk_i     (clk_w)
+	,.clk_phy_i (clk_w)
 
 	,.sclk_o (sd_sclk)
 	,.di_o   (sd_di)
@@ -618,7 +622,7 @@ assign devtbl_useintr_w[S_PI1R_INTCTRL] = 0;
 uart_hw #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
-	,.PHYCLKFREQ (CLKFREQ50MHZ*2)
+	,.PHYCLKFREQ (PI1RCLKFREQ)
 	,.BUFSZ      (4096)
 
 ) uart (
@@ -627,7 +631,7 @@ uart_hw #(
 		/* rst_w is not used such that on software reset,
 		   all buffered data get a chance to be transmitted */)
 	,.clk_i     (pi1r_clk_w)
-	,.clk_phy_i (clk100mhz)
+	,.clk_phy_i (pi1r_clk_w)
 
 	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_UART])
 	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_UART])
@@ -876,9 +880,5 @@ assign s_pi1r_rdy_w[S_PI1R_INVALIDDEV]   = 1'b1;
 assign s_pi1r_mapsz_w[S_PI1R_INVALIDDEV] = INVALIDDEVMAPSZ;
 assign devtbl_id_w     [S_PI1R_INVALIDDEV] = 0;
 assign devtbl_useintr_w[S_PI1R_INVALIDDEV] = 0;
-
-`ifdef USE2CLK
-`error USE2CLK cannot be used because it needs 200MHz clock which fails timing.
-`endif
 
 endmodule

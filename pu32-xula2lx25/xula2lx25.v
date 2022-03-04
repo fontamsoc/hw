@@ -7,8 +7,6 @@
 // an error when an undefined net is used.
 `default_nettype none
 
-`define USE2CLK
-
 `include "./pll_12_to_120_mhz.v"
 
 `include "lib/perint/pi1r.v"
@@ -116,7 +114,8 @@ output wire [(SDRAMDQBITSIZE / 8) -1 : 0] sdram_dm;
 // SPI FLASH CS pin kept high to keep it disabled.
 assign flash_cs2 = 1;
 
-localparam CLKFREQ = 30000000 /* 30 MHz */; // Frequency of clk_w.
+localparam CLKFREQ   = 30000000 /* 30 MHz */; // Frequency of clk_w.
+localparam CLK2XFREQ = 60000000 /* 60 MHz */; // Frequency of clk_2x_w.
 
 wire pll_locked;
 
@@ -137,7 +136,8 @@ end
 (* keep = "true" *) wire clk30mhz;
 BUFG bufg1 (.O (clk60mhz), .I (clkdiv[0]));
 BUFG bufg2 (.O (clk30mhz), .I (clkdiv[1]));
-wire [2 -1 : 0] clk_w = {clk60mhz, clk30mhz};
+wire clk_w    = clk30mhz;
+wire clk_2x_w = clk60mhz;
 
 wire multipu_rst_ow;
 
@@ -198,8 +198,8 @@ localparam PI1RDEFAULTSLAVEINDEX = S_PI1R_INVALIDDEV;
 localparam PI1RFIRSTSLAVEADDR    = 0;
 localparam PI1RARCHBITSZ         = ARCHBITSZ;
 localparam PI1RCLKFREQ           = CLKFREQ;
-wire            pi1r_rst_w = rst_w;
-wire [2 -1 : 0] pi1r_clk_w = clk_w;
+wire pi1r_rst_w = rst_w;
+wire pi1r_clk_w = clk_w;
 // PerInt is instantiated in a separate file to keep this file clean.
 // Masters should use the following signals to plug onto PerInt:
 // 	input  [2 -1 : 0]             m_pi1r_op_w    [PI1RMASTERCOUNT -1 : 0];

@@ -565,7 +565,7 @@ always @* begin
 	end
 end
 
-always @ (posedge clk_i[0]) begin
+always @ (posedge clk_i) begin
 	if (rst_i)
 		itlbwaywriteidx <= 0;
 	else if (itlbwriteenable && !isopclrtlb) begin
@@ -576,7 +576,7 @@ always @ (posedge clk_i[0]) begin
 	end
 end
 
-always @ (posedge clk_i[0]) begin
+always @ (posedge clk_i) begin
 	if (rst_i)
 		dtlbwaywriteidx <= 0;
 	else if (dtlbwriteenable && !isopclrtlb) begin
@@ -776,7 +776,7 @@ wire [ARCHBITSZ -1 : 0] icachedato = icachedato_[icachewayhitidx];
 reg [CLOG2ICACHESETCOUNT -1 : 0] icachewecnt;
 // Register used to hold icache-way index to write next.
 reg [CLOG2ICACHEWAYCOUNT -1 : 0] icachewaywriteidx;
-always @ (posedge clk_i[0]) begin
+always @ (posedge clk_i) begin
 	if (rst_i) begin
 		icachewaywriteidx <= 0;
 		icachewecnt <= 0;
@@ -1045,7 +1045,7 @@ wire opsetgprdone = (miscrdy && sequencerready && opsetgprrdy1 && opsetgprrdy2 &
 
 // ---------- General purpose registers ----------
 
-ram2clk1i5o #(
+ram1i5o #(
 
 	 .SZ (GPRCNTTOTAL)
 	,.DW (ARCHBITSZ)
@@ -1083,7 +1083,7 @@ ram2clk1i5o #(
 	,.o4 ()
 );
 
-ram2clk1i5o #(
+ram1i5o #(
 
 	 .SZ (GPRCNTTOTAL)
 	,.DW (1)

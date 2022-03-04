@@ -109,7 +109,7 @@
 // 	high when ready to transmit through "dbg_tx_data_o".
 
 `include "lib/ram/bram.v"
-`include "lib/ram/ram2clk1i5o.v"
+`include "lib/ram/ram1i5o.v"
 
 `include "./opmuldiv.pu.v"
 
@@ -185,13 +185,8 @@ input wire rst_i;
 
 output reg rst_o;
 
-`ifdef USE2CLK
-input wire [2 -1 : 0] clk_i;
-input wire [2 -1 : 0] clk_muldiv_i;
-`else
-input wire [1 -1 : 0] clk_i;
-input wire [1 -1 : 0] clk_muldiv_i;
-`endif
+input wire clk_i;
+input wire clk_muldiv_i;
 
 output reg[2 -1 : 0] pi1_op_o; // ### declared as reg so as to be usable by verilog within the always block.
 output reg[ADDRBITSZ -1 : 0] pi1_addr_o; // ### declared as reg so as to be usable by verilog within the always block.
@@ -278,7 +273,7 @@ always @* begin
 	`include "./gprctrl.comb.pu.v"
 end
 
-always @ (posedge clk_i[0]) begin
+always @ (posedge clk_i) begin
 	`ifdef PUMMU
 	`include "./mmu.pu.v"
 	`ifdef PUHPTW

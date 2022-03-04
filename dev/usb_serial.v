@@ -140,13 +140,8 @@ localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
 
 input wire rst_i;
 
-`ifdef USE2CLK
-input wire [2 -1 : 0] clk_i;
-input wire [2 -1 : 0] clk_phy_i;
-`else
-input wire [1 -1 : 0] clk_i;
-input wire [1 -1 : 0] clk_phy_i;
-`endif
+input wire clk_i;
+input wire clk_phy_i;
 
 input  wire [2 -1 : 0]             pi1_op_i;
 input  wire [ADDRBITSZ -1 : 0]     pi1_addr_i; /* not used */
@@ -195,7 +190,7 @@ localparam CMDGETBUFFERUSAGE = 0;
 localparam CMDSETINTERRUPT   = 1;
 localparam CMDSETSPEED       = 2;
 
-always @ (posedge clk_i[0]) begin
+always @ (posedge clk_i) begin
 	// Logic enabling/disabling interrupt.
 	if (rst_i) begin
 		// On reset, interrupt is disabled, and must be explicitely enabled.

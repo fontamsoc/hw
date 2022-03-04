@@ -23,11 +23,7 @@ parameter TXBITRATE = 115200;
 
 input wire rst_i;
 
-`ifdef USE2CLK
-input wire [2 -1 : 0] clk_i;
-`else
-input wire [1 -1 : 0] clk_i;
-`endif
+input wire clk_i;
 
 input wire trig_i;
 
@@ -167,7 +163,7 @@ always @* begin
 	else uartbufferdatain = "?";
 end
 
-always @ (posedge clk_i[0]) begin
+always @ (posedge clk_i) begin
 
 	if (rst_i)
 		trig_r <= 1'b0;

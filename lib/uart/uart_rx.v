@@ -82,13 +82,8 @@ localparam CLOG2CLOCKCYCLESPERBITLIMIT = clog2(CLOCKCYCLESPERBITLIMIT);
 
 input wire rst_i;
 
-`ifdef USE2CLK
-input wire [2 -1 : 0] clk_i;
-input wire [2 -1 : 0] clk_phy_i;
-`else
-input wire [1 -1 : 0] clk_i;
-input wire [1 -1 : 0] clk_phy_i;
-`endif
+input wire clk_i;
+input wire clk_phy_i;
 
 input wire [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] clockcyclesperbit_i;
 

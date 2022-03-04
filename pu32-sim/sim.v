@@ -8,7 +8,6 @@
 `default_nettype none
 
 `define SIMULATION
-`define USE2CLK
 
 `include "lib/perint/pi1r.v"
 
@@ -107,16 +106,12 @@ end
 localparam CLKFREQ   = (100000000) /* 100  Mhz */; // Frequency of clk_w.
 localparam CLK2XFREQ = (200000000) /* 200 Mhz */; // Frequency of clk_2x_w.
 
-wire clk__w;
-wire clk_2x__w;
+wire clk_w, clk_2x_w;
 clkdiv clkdiv (
 	 .clk_4x_i (clk_i)
-	,.clk_2x_o (clk_2x__w)
-	,.clk_o    (clk__w)
+	,.clk_2x_o (clk_2x_w)
+	,.clk_o    (clk_w)
 );
-
-wire [2 -1 : 0] clk_w    = {clk_2x__w, clk__w};
-wire [2 -1 : 0] clk_2x_w = {clk_i, clk_2x__w};
 
 localparam PUCOUNT = 1;
 
@@ -147,8 +142,8 @@ localparam PI1RDEFAULTSLAVEINDEX = S_PI1R_INVALIDDEV;
 localparam PI1RFIRSTSLAVEADDR    = 0;
 localparam PI1RARCHBITSZ         = ARCHBITSZ;
 localparam PI1RCLKFREQ           = CLKFREQ;
-wire            pi1r_rst_w = rst_w;
-wire [2 -1 : 0] pi1r_clk_w = clk_w;
+wire pi1r_rst_w = rst_w;
+wire pi1r_clk_w = clk_w;
 // PerInt is instantiated in a separate file to keep this file clean.
 // Masters should use the following signals to plug onto PerInt:
 // 	input  [2 -1 : 0]             m_pi1r_op_w    [PI1RMASTERCOUNT -1 : 0];
@@ -478,7 +473,7 @@ pi1_upconverter #(
 assign s_pi1r_mapsz_w[S_PI1R_RAM] = RAMSZ;
 
 reg [RST_CNTR_BITSZ -1 : 0] ram_rst_cntr = {RST_CNTR_BITSZ{1'b1}};
-always @ (posedge pi1r_clk_w[0]) begin
+always @ (posedge pi1r_clk_w) begin
 	if (ram_rst_cntr)
 		ram_rst_cntr <= ram_rst_cntr - 1'b1;
 end
@@ -624,7 +619,7 @@ assign s_pi1r_rdy_w[S_PI1R_INVALIDDEV]   = 1'b1;
 assign s_pi1r_mapsz_w[S_PI1R_INVALIDDEV] = INVALIDDEVMAPSZ;
 assign devtbl_id_w     [S_PI1R_INVALIDDEV] = 0;
 assign devtbl_useintr_w[S_PI1R_INVALIDDEV] = 0;
-always @ (posedge pi1r_clk_w[0]) begin
+always @ (posedge pi1r_clk_w) begin
 	if (!rst_i && s_pi1r_op_w[S_PI1R_INVALIDDEV]) begin
 		$write("!!! s_pi1r_op_w[S_PI1R_INVALIDDEV] == 0b%b; s_pi1r_addr_w[S_PI1R_INVALIDDEV] == 0x%x\n",
 			s_pi1r_op_w[S_PI1R_INVALIDDEV], {2'b00, s_pi1r_addr_w[S_PI1R_INVALIDDEV]}<<CLOG2ARCHBITSZBY8);

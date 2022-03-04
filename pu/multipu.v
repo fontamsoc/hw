@@ -82,15 +82,9 @@ input wire rst_i;
 
 output wire rst_o;
 
-`ifdef USE2CLK
-input wire [2 -1 : 0] clk_i;
-input wire [2 -1 : 0] clk_muldiv_i;
-input wire [2 -1 : 0] clk_mem_i;
-`else
-input wire [1 -1 : 0] clk_i;
-input wire [1 -1 : 0] clk_muldiv_i;
-input wire [1 -1 : 0] clk_mem_i;
-`endif
+input wire clk_i;
+input wire clk_muldiv_i;
+input wire clk_mem_i;
 
 output wire [2 -1 : 0]             pi1_op_o;
 output wire [ADDRBITSZ -1 : 0]     pi1_addr_o;
