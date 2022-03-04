@@ -63,7 +63,7 @@ module multipu (
 
 `include "lib/clog2.v"
 
-parameter PUCOUNT        = 2;
+parameter PUCOUNT        = 1;
 parameter CLKFREQ        = 1;
 parameter ICACHESETCOUNT = 2;
 parameter DCACHESETCOUNT = 2;
