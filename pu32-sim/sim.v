@@ -145,7 +145,8 @@ localparam PUCOUNT = 1;
 
 localparam INTCTRLSRC_SDCARD = 0;
 localparam INTCTRLSRC_UART   = (INTCTRLSRC_SDCARD + 1);
-localparam INTCTRLSRCCOUNT   = (INTCTRLSRC_UART +1); // Number of interrupt source.
+localparam INTCTRLSRC_UART1  = (INTCTRLSRC_UART + 1);
+localparam INTCTRLSRCCOUNT   = (INTCTRLSRC_UART1 +1); // Number of interrupt source.
 localparam INTCTRLDSTCOUNT   = PUCOUNT; // Number of interrupt destination.
 wire [INTCTRLSRCCOUNT -1 : 0] intrqstsrc_w;
 wire [INTCTRLSRCCOUNT -1 : 0] intrdysrc_w;
@@ -161,7 +162,8 @@ localparam S_PI1R_INTCTRL    = (S_PI1R_DEVTBL + 1);
 localparam S_PI1R_UART       = (S_PI1R_INTCTRL + 1);
 localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
 localparam S_PI1R_BOOTLDR    = (S_PI1R_RAM + 1);
-localparam S_PI1R_INVALIDDEV = (S_PI1R_BOOTLDR + 1);
+localparam S_PI1R_UART1      = (S_PI1R_BOOTLDR + 1);
+localparam S_PI1R_INVALIDDEV = (S_PI1R_UART1 + 1);
 
 localparam PI1RMASTERCOUNT       = (M_PI1R_LAST + 1);
 localparam PI1RSLAVECOUNT        = (S_PI1R_INVALIDDEV + 1);
@@ -464,6 +466,60 @@ uart_sim #(
 
 assign devtbl_id_w     [S_PI1R_UART] = 5;
 assign devtbl_useintr_w[S_PI1R_UART] = 1;
+
+wire [2 -1 : 0]             uart1_op_w;
+wire [ADDRBITSZ -1 : 0]     uart1_addr_w;
+wire [(ARCHBITSZ/8) -1 : 0] uart1_sel_w;
+wire [ARCHBITSZ -1 : 0]     uart1_data_w1;
+wire [ARCHBITSZ -1 : 0]     uart1_data_w0;
+wire                        uart1_rdy_w;
+wire [ADDRBITSZ -1 : 0]     uart1_mapsz_w;
+pi1_downconverter #(
+	 .MARCHBITSZ (PI1RARCHBITSZ)
+	,.SARCHBITSZ (ARCHBITSZ)
+) pi1_downconverter_uart1 (
+	 .clk_i (pi1r_clk_w)
+	,.m_pi1_op_i (s_pi1r_op_w[S_PI1R_UART1])
+	,.m_pi1_addr_i (s_pi1r_addr_w[S_PI1R_UART1])
+	,.m_pi1_data_i (s_pi1r_data_w0[S_PI1R_UART1])
+	,.m_pi1_data_o (s_pi1r_data_w1[S_PI1R_UART1])
+	,.m_pi1_sel_i (s_pi1r_sel_w[S_PI1R_UART1])
+	,.m_pi1_rdy_o (s_pi1r_rdy_w[S_PI1R_UART1])
+	,.m_pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_UART1])
+	,.s_pi1_op_o (uart1_op_w)
+	,.s_pi1_addr_o (uart1_addr_w)
+	,.s_pi1_data_o (uart1_data_w1)
+	,.s_pi1_data_i (uart1_data_w0)
+	,.s_pi1_sel_o (uart1_sel_w)
+	,.s_pi1_rdy_i (uart1_rdy_w)
+	,.s_pi1_mapsz_i (uart1_mapsz_w)
+);
+
+uart_sim #(
+
+	 .ARCHBITSZ (ARCHBITSZ)
+	,.BUFSZ     (2)
+
+) uart1 (
+
+	 .rst_i (rst_w)
+
+	,.clk_i (pi1r_clk_w)
+
+	,.pi1_op_i    (uart1_op_w)
+	,.pi1_addr_i  (uart1_addr_w)
+	,.pi1_data_i  (uart1_data_w1)
+	,.pi1_data_o  (uart1_data_w0)
+	,.pi1_sel_i   (uart1_sel_w)
+	,.pi1_rdy_o   (uart1_rdy_w)
+	,.pi1_mapsz_o (uart1_mapsz_w)
+
+	,.intrqst_o (intrqstsrc_w[INTCTRLSRC_UART1])
+	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_UART1])
+);
+
+assign devtbl_id_w     [S_PI1R_UART1] = 5;
+assign devtbl_useintr_w[S_PI1R_UART1] = 1;
 
 `ifdef WB4SMEM
 
