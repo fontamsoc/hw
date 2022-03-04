@@ -3,7 +3,7 @@
 
 .PHONY: clean
 
-VERILATOR_ROOT ?= $(shell pwd)/verilator/
+VERILATOR_ROOT ?= $(shell pwd)/../verilator/
 
 PATH := ${VERILATOR_ROOT}/bin/:${PATH}
 
@@ -28,8 +28,8 @@ obj_dir: sim.v
 verilator:
 	if [ ! -e ${VERILATOR_ROOT} ]; then \
 		${SUDO} apt install -y libfl2 libfl-dev zlib1g zlib1g-dev autoconf flex bison && \
-		git clone https://github.com/verilator/verilator.git && \
-		cd verilator && git reset --hard v4.214 && autoconf && VERILATOR_ROOT="${VERILATOR_ROOT}" ./configure && \
+		git clone https://github.com/verilator/verilator.git ${VERILATOR_ROOT} && \
+		cd ${VERILATOR_ROOT} && git reset --hard v4.214 && autoconf && VERILATOR_ROOT="${VERILATOR_ROOT}" ./configure && \
 		make -j $(shell nproc) && make test; fi
 
 clean:

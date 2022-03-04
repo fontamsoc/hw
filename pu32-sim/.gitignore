@@ -1,4 +1,3 @@
-verilator
 obj_dir
 sim
 sim_use_vcd
