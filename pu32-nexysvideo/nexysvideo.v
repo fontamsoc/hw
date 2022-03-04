@@ -120,7 +120,7 @@ assign sd_dat2 = 1;
 
 // GPIO signals.
 localparam GPIOCOUNT = 8;
-input  wire [GPIOCOUNT -1 : 0] gp_i;;
+input  wire [GPIOCOUNT -1 : 0] gp_i;
 output wire [GPIOCOUNT -1 : 1] gp_o;
 
 // UART signals.
