@@ -81,7 +81,7 @@ module spi_master (
 
 	 rst_i
 
-	,clk_i ,clk_phy_i,
+	,clk_i ,clk_phy_i
 
 	,sclk_o ,mosi_o ,miso_i ,cs_o
 
