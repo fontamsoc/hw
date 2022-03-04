@@ -1,0 +1,9 @@
+verilator
+obj_dir
+sim
+*.sav
+*.vcd
+*.bin
+*.elf
+*.hex
+*.o
