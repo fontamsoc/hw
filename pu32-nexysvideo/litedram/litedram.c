@@ -33,7 +33,7 @@ __asm__ (
 #include <hwdrvchar/hwdrvchar.h>
 hwdrvchar hwdrvchar_dev = {.addr = (void *)UARTADDR};
 int putchar (int c) {
-	while (!hwdrvchar_write_(&hwdrvchar_dev, &c, 1));
+	while (!hwdrvchar_write(&hwdrvchar_dev, &c, 1));
 	return c;
 }
 #include <print/print.h>

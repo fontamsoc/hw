@@ -89,10 +89,19 @@ static unsigned long hwdrvchar_read (hwdrvchar *dev, void *ptr, unsigned long sz
 	void* addr = dev->addr;
 	unsigned long cnt = 0;
 	while (sz) {
-		if (!hwdrvchar_readable(dev))
+		unsigned long n = hwdrvchar_readable(dev);
+		if (!n)
 			return cnt;
-		*(unsigned char *)ptr = *((volatile unsigned char *)addr);
-		++ptr; --sz; ++cnt;
+		if (sz >= n)
+			sz -= n;
+		else {
+			n = sz;
+			sz = 0;
+		}
+		cnt += n;
+		do {
+			*(unsigned char *)(ptr++) = *((volatile unsigned char *)addr);
+		} while (--n);
 	}
 	return cnt;
 }
@@ -119,31 +128,19 @@ static unsigned long hwdrvchar_write (hwdrvchar *dev, void *ptr, unsigned long s
 	void* addr = dev->addr;
 	unsigned long cnt = 0;
 	while (sz) {
-		if (!hwdrvchar_writable(dev))
+		unsigned long n = hwdrvchar_writable(dev);
+		if (!n)
 			return cnt;
-		*((volatile unsigned char *)addr) = *(unsigned char *)ptr;
-		++ptr; --sz; ++cnt;
-	}
-	return cnt;
-}
-
-// Same as hwdrvchar_write(), but also write '\r' for each '\n'.
-static unsigned long hwdrvchar_write_ (hwdrvchar *dev, void *ptr, unsigned long sz) {
-	void* addr = dev->addr;
-	unsigned long cnt = 0;
-	unsigned char prevc = 0;
-	while (sz) {
-		unsigned char c = *(unsigned char *)ptr;
-		if (c == '\n' && prevc != '\r') {
-			if (hwdrvchar_writable(dev) < 2)
-				return cnt;
-			*((volatile unsigned char *)addr) = '\r';
+		if (sz >= n)
+			sz -= n;
+		else {
+			n = sz;
+			sz = 0;
 		}
-		if (!hwdrvchar_writable(dev))
-			return cnt;
-		*((volatile unsigned char *)addr) = c;
-		prevc = c;
-		++ptr; --sz; ++cnt;
+		cnt += n;
+		do {
+			*((volatile unsigned char *)addr) = *(unsigned char *)(ptr++);
+		} while (--n);
 	}
 	return cnt;
 }
