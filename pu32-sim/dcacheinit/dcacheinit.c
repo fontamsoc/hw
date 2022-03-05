@@ -7,7 +7,7 @@
 #define __xstr__(s) __str__(s)
 #define __str__(s) #s
 
-#define STACKSZ 8 /* computed from -fstack-usage outputs and sizeof(savedkctx) */
+#define STACKSZ 16 /* computed from -fstack-usage outputs */
 
 static unsigned long stack[STACKSZ] __attribute__((used));
 
@@ -34,13 +34,13 @@ __asm__ (
 hwdrvchar hwdrvchar_dev = {.addr = (void *)UARTADDR};
 
 int putchar (int c) {
-	while (!hwdrvchar_write_(&hwdrvchar_dev, &c, 1));
+	while (!hwdrvchar_write(&hwdrvchar_dev, &c, 1));
 	return c;
 }
 
-#include <print/print.h>
+#include <stdio.h>
 
 void main (void) {
 	hwdrvchar_init (&hwdrvchar_dev, UARTBAUD);
-	printstr("ram initialized\n");
+	puts("ram initialized\n");
 }

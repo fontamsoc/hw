@@ -492,7 +492,7 @@ pi1_dcache #(
 	 .ARCHBITSZ     (WB4SMEM_ARCHBITSZ)
 	,.CACHESETCOUNT (RAMCACHESZ/(WB4SMEM_ARCHBITSZ/ARCHBITSZ))
 	,.CACHEWAYCOUNT (RAMCACHEWAYCOUNT)
-	,.INITFILE      ("raminit/raminit.hex")
+	,.INITFILE      ("dcacheinit/dcacheinit.hex")
 
 ) dcache (
 
