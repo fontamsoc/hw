@@ -11,8 +11,8 @@ if (rst_i) begin
 	`endif
 end else if (miscrdyandsequencerreadyandgprrdy1 && isopsetsysreg) begin
 	if (isoptype0) ksysopfaulthdlr <= gprdata1[ARCHBITSZ-1:1];
-	`ifdef PUMMU
 	else if (isoptype1) ksl <= gprdata1;
+	`ifdef PUMMU
 	else if (isoptype4 && (inkernelmode || isflagsetasid)) begin
 		asid <= gprdata1[13-1:0];
 		`ifdef PUHPTW
