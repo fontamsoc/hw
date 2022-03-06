@@ -128,6 +128,7 @@ wire [INTCTRLDSTCOUNT -1 : 0] intbestdst_w;
 
 localparam M_PI1R_MULTIPU    = 0;
 localparam M_PI1R_DMA        = (M_PI1R_MULTIPU + 1);
+localparam M_PI1R_LAST       = M_PI1R_DMA;
 localparam S_PI1R_SDCARD     = 0;
 localparam S_PI1R_DEVTBL     = (S_PI1R_SDCARD + 1);
 localparam S_PI1R_DMA        = (S_PI1R_DEVTBL + 1);
@@ -136,7 +137,7 @@ localparam S_PI1R_UART       = (S_PI1R_INTCTRL + 1);
 localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
 localparam S_PI1R_INVALIDDEV = (S_PI1R_RAM + 1);
 
-localparam PI1RMASTERCOUNT       = 2;
+localparam PI1RMASTERCOUNT       = (M_PI1R_LAST + 1);
 localparam PI1RSLAVECOUNT        = (S_PI1R_INVALIDDEV + 1);
 localparam PI1RDEFAULTSLAVEINDEX = S_PI1R_INVALIDDEV;
 localparam PI1RFIRSTSLAVEADDR    = 0;
