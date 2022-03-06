@@ -37,11 +37,12 @@ wire rst_w = rst_i;
 wire clk_w = clk_i;
 
 localparam M_PI1R_MULTIPU    = 0;
+localparam M_PI1R_LAST       = M_PI1R_MULTIPU;
 localparam S_PI1R_UART       = 0;
 localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
 localparam S_PI1R_INVALIDDEV = (S_PI1R_RAM + 1);
 
-localparam PI1RMASTERCOUNT       = 1;
+localparam PI1RMASTERCOUNT       = (M_PI1R_LAST + 1);
 localparam PI1RSLAVECOUNT        = (S_PI1R_INVALIDDEV + 1);
 localparam PI1RDEFAULTSLAVEINDEX = S_PI1R_INVALIDDEV;
 localparam PI1RFIRSTSLAVEADDR    = // Set such that memory starts at 0x1000.
