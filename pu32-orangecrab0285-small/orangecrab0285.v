@@ -22,19 +22,12 @@ module orangecrab0285 (
 
 	,clk48mhz_i
 
-	// SDCARD signals.
-	,sdcard_clk
-	,sdcard_di
-	,sdcard_do
-	,sdcard_dat1
-	,sdcard_dat2
-	,sdcard_cs_n
-
 	// USB signals.
 	,usb_d_p
 	,usb_d_n
 	,usb_pullup
 
+	// LED signals.
 	,led_red_n
 	,led_green_n
 	,led_blue_n
@@ -51,22 +44,13 @@ input wire usr_btn_n;
 
 input wire clk48mhz_i;
 
-// SDCARD signals.
-output wire sdcard_clk;
-output wire sdcard_di;
-input  wire sdcard_do;
-output wire sdcard_dat1;
-output wire sdcard_dat2;
-output wire sdcard_cs_n;
-assign sdcard_dat1 = 1;
-assign sdcard_dat2 = 1;
-
 // USB signals.
 inout  wire usb_d_p;
 inout  wire usb_d_n;
 output wire usb_pullup;
 assign usb_pullup = 1'b1;
 
+// LED signals.
 output wire led_red_n;
 output wire led_green_n;
 output wire led_blue_n;
