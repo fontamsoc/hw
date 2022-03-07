@@ -247,9 +247,11 @@ localparam CACHETAGBITSIZE = (ADDRBITSZ - CLOG2CACHESETCOUNT);
 
 reg cacheactive; // The data cache is active when the value of this register is 1.
 
-wire cacherdy = ((cacheactive && cenable_i && !crst_i) || conly_r);
+wire m_pi1_is_not_noop = (m_pi1_op_i != PINOOP && m_pi1_rdy_o);
 
-wire cacheen = (cacherdy && m_pi1_op_i != PINOOP && m_pi1_rdy_o);
+wire cacherdy = ((cacheactive && (!m_pi1_is_not_noop || cenable_i) && !crst_i) || conly_r);
+
+wire cacheen = (cacherdy && m_pi1_is_not_noop);
 
 reg cacherdy_hold;
 
