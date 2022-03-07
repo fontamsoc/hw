@@ -348,7 +348,7 @@ always @* begin
 	cachetagwayhit = 0;
 	cachetagwayhitidx = 0;
 	for (gencachetag_idx = 0; gencachetag_idx < CACHEWAYCOUNT; gencachetag_idx = gencachetag_idx + 1) begin
-		cachetaghit[gencachetag_idx] = (cachevalido[gencachetag_idx] && cacherdy_hold && (m_pi1_addr_i_hold[ADDRBITSZ -1 : CLOG2CACHESETCOUNT] == cachetago[gencachetag_idx]));
+		cachetaghit[gencachetag_idx] = ((conly_r || (cachevalido[gencachetag_idx] && cacherdy_hold)) && (m_pi1_addr_i_hold[ADDRBITSZ -1 : CLOG2CACHESETCOUNT] == cachetago[gencachetag_idx]));
 		if (!cachehit && !cmiss_i_hold &&
 			// There is a cachehit when there is a cache tag hit and the selected bits are in the cache.
 			(cachetaghit[gencachetag_idx] && ((cachedatibitsel & cachedatabitselo[gencachetag_idx]) == cachedatibitsel))) begin
