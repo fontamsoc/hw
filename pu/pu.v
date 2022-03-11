@@ -295,4 +295,20 @@ always @ (posedge clk_i) begin
 	`endif
 end
 
+`ifdef SIMULATION_pc_o
+integer fd;
+initial begin
+	fd = $fopen("pc_o.txt","w");
+	if (!fd)
+		$display("could not create \"pc_o.txt\"");
+end
+always @ (posedge clk_i) begin
+	if (sequencerready && pc_o != pc_o_saved) begin
+		pc_o_saved <= pc_o;
+		$fwrite(fd, "0x%x: %d(0x%x) %d(0x%x)\n", pc_o, gprindex1[3:0], gprdata1, gprindex2[3:0], gprdata2);
+		$fflush(fd);
+	end
+end
+`endif
+
 endmodule
