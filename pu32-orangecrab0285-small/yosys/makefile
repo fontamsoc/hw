@@ -3,6 +3,8 @@
 
 PROJ=orangecrab0285
 
+.PHONY: all prog clean
+
 all: ${PROJ}.dfu
 
 prog: ${PROJ}.dfu
@@ -11,8 +13,8 @@ prog: ${PROJ}.dfu
 	dfu-util --alt 0 -D $<
 
 %.json: ../%.v
-	make -C ../smem/
-	cp ../smem/smem.hex smem.hex
+	if [ ! -e ../smem.rtk ]; then cp -a ../../plain.rtk ../smem.rtk; make -C ../smem.rtk/; fi
+	hexdump -v -e '/4 "%08x "' ../smem.rtk/rtk.bin > smem.hex
 	yosys -p "read_verilog ../../lib/ecp5pll.sv; read_verilog -I../../ $<; synth_ecp5 -json $@" &>0.$@.log
 %_out.config: %.json ../%.lpf
 	nextpnr-ecp5 --json $< --textcfg $@ --85k --package CSFBGA285 --lpf ../${PROJ}.lpf &>1.$@.log
@@ -24,7 +26,5 @@ prog: ${PROJ}.dfu
 	dfu-suffix -v 1209 -p 5af0 -a $@ &>3.$@.log
 
 clean:
-	make -C ../smem/ clean
 	rm -rf *.log *.dfu *.bit *_out.config *.json *.hex
-
-.PHONY: all prog clean
+	#if [ -e ../smem.rtk ]; then make -C ../smem.rtk/ clean; fi

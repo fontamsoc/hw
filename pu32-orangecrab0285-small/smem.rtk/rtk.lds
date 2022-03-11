@@ -34,6 +34,13 @@ SECTIONS {
 	PROVIDE (__etext = .);
 	PROVIDE (_etext = .);
 	PROVIDE (etext = .);
+	. = ALIGN(8);
+	.initcalls : {
+		__initcalls_start = .;
+		KEEP (*(.initcalls))
+		__initcalls_end = .;
+	}
+	. = ALIGN(8);
 	.rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
 	.rodata1        : { *(.rodata1) }
 	.sdata2         : {

@@ -4,8 +4,6 @@
 #ifndef STDIO_H
 #define STDIO_H
 
-//int putchar (int);
-
 static int puts (char *s) {
 	char *_s = s;
 	unsigned char c;
