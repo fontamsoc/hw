@@ -1,16 +1,17 @@
 # SPDX-License-Identifier: GPL-2.0-only
 # (c) William Fonkou Tambe
 
-.PHONY: clean
-
 VERILATOR_ROOT ?= $(shell pwd)/../verilator/
 
 PATH := ${VERILATOR_ROOT}/bin/:${PATH}
 
 SUDO := $(shell test $$(id -u) -eq 0 || echo -n sudo)
 
+.PHONY: clean
+
 sim: verilator sim.cpp obj_dir
-	make -C smem/
+	if [ ! -e smem.rtk ]; then cp -a ../plain.rtk smem.rtk;	make -C smem.rtk/; fi
+	hexdump -v -e '/4 "%08x "' smem.rtk/rtk.bin > smem.hex
 	make -C obj_dir -f Vsim.mk
 	g++ -o sim \
 		-Iobj_dir \
@@ -33,5 +34,5 @@ verilator:
 		make -j $(shell nproc) && make test; fi
 
 clean:
-	make -C smem/ clean
-	rm -rf obj_dir sim sim_use_vcd sim.vcd
+	rm -rf obj_dir sim sim_use_vcd sim.vcd *.hex
+	#if [ -e smem.rtk ]; then make -C smem.rtk/ clean; fi

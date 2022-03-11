@@ -114,7 +114,7 @@ smem #(
 	 .ARCHBITSZ (ARCHBITSZ)
 	,.SIZE      ((4/*KB*/)*(1024/(ARCHBITSZ/8)))
 	,.DELAY     (0)
-	,.SRCFILE   ("smem/smem.hex")
+	,.SRCFILE   ("smem.hex")
 
 ) smem (
 
