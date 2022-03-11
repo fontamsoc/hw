@@ -17,8 +17,8 @@ CFLAGS += -fstack-usage
 
 .PHONY: clean
 
-litedram.hex: litedram.h litedram.lds litedram.c
-	${CC} -nostdlib -I. ${CFLAGS} -o litedram.elf -include litedram.h litedram.c -Wl,-Tlitedram.lds
+litedram.hex: litedram.lds litedram.c
+	${CC} -nostdlib -I. ${CFLAGS} -o litedram.elf litedram.c -Wl,-Tlitedram.lds
 	@echo ==== Stack Usage ====
 	@cat *.su
 	@echo =====================
