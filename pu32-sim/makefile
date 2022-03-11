@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: GPL-2.0-only
 # (c) William Fonkou Tambe
 
-.PHONY: clean
-
 VERILATOR_ROOT ?= $(shell pwd)/../verilator/
 
 PATH := ${VERILATOR_ROOT}/bin/:${PATH}
 
 SUDO := $(shell test $$(id -u) -eq 0 || echo -n sudo)
+
+.PHONY: clean
 
 sim: verilator sim.cpp obj_dir
 	make -C obj_dir -f Vsim.mk
