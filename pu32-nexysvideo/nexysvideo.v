@@ -480,7 +480,7 @@ sdcard_spi #(
 assign devtbl_id_w     [S_PI1R_SDCARD] = 4;
 assign devtbl_useintr_w[S_PI1R_SDCARD] = 1;
 
-localparam RAMCACHEWAYCOUNT = 8;
+localparam RAMCACHEWAYCOUNT = 4;
 
 localparam RAMCACHESZ = /* In (ARCHBITSZ/8) units */
 	`ifdef PUDCACHE
