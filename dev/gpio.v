@@ -89,7 +89,7 @@ module gpio (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 0;
+parameter ARCHBITSZ = 16;
 parameter CLKFREQ   = 0;
 parameter IOCOUNT   = 0;
 

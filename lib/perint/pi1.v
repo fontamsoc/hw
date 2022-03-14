@@ -80,7 +80,7 @@ parameter SLAVECOUNT        = 1;
 parameter DEFAULTSLAVEINDEX = 0;
 parameter FIRSTSLAVEADDR    = 0;
 
-parameter ARCHBITSZ = 0;
+parameter ARCHBITSZ = 16;
 
 localparam CLOG2MASTERCOUNT = clog2(MASTERCOUNT);
 localparam CLOG2SLAVECOUNT  = clog2(SLAVECOUNT);

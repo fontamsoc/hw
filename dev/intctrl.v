@@ -106,7 +106,7 @@ module intctrl (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 0;
+parameter ARCHBITSZ = 16;
 
 parameter INTSRCCOUNT = 0;
 parameter INTDSTCOUNT = 0;

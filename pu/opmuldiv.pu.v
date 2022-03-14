@@ -21,7 +21,7 @@ module muldiv (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 32;
+parameter ARCHBITSZ = 16;
 parameter GPRCNT    = 32;
 
 localparam CLOG2ARCHBITSZ = clog2(ARCHBITSZ);
@@ -301,7 +301,7 @@ module opmuldiv (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 32;
+parameter ARCHBITSZ = 16;
 parameter GPRCNT    = 32;
 parameter DEPTH     = 32; // pipeline depth.
 

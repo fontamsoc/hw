@@ -54,7 +54,7 @@ module pi1_dcache (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 0;
+parameter ARCHBITSZ = 16;
 
 parameter CACHESETCOUNT = 2;
 parameter CACHEWAYCOUNT = 1;

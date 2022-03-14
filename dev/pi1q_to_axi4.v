@@ -65,7 +65,7 @@ module pi1q_to_axi4 (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 0;
+parameter ARCHBITSZ = 16;
 
 parameter AXI4_ID_WIDTH = 4;
 

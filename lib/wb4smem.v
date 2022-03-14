@@ -62,7 +62,7 @@ parameter SIZE = 0;
 parameter DELAY = 0;
 parameter SRCFILE = "";
 
-parameter ARCHBITSZ = 0;
+parameter ARCHBITSZ = 16;
 
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
 

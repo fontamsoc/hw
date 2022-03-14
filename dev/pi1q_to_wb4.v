@@ -32,7 +32,7 @@ module pi1q_to_wb4 (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 0;
+parameter ARCHBITSZ = 16;
 
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
 

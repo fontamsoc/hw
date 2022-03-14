@@ -53,7 +53,7 @@ module smem (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 0;
+parameter ARCHBITSZ = 16;
 
 parameter SIZE    = 2;
 parameter DELAY   = 0;

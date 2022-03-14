@@ -136,7 +136,7 @@ module dma (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 0;
+parameter ARCHBITSZ = 16;
 
 parameter CHANNELCNT = 1;
 

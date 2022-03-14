@@ -54,7 +54,7 @@ module pi1q (
 
 parameter MASTERCOUNT = 2;
 
-parameter ARCHBITSZ = 0;
+parameter ARCHBITSZ = 16;
 
 localparam CLOG2MASTERCOUNT = clog2(MASTERCOUNT);
 

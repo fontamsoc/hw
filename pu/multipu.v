@@ -73,7 +73,7 @@ parameter DCACHEWAYCOUNT = 1;
 parameter TLBWAYCOUNT    = 1;
 parameter MULDIVCNT      = 4;
 
-parameter ARCHBITSZ = 0;
+parameter ARCHBITSZ = 16;
 
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
 localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);

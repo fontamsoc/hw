@@ -29,7 +29,7 @@ module devtbl (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ   = 0;
+parameter ARCHBITSZ   = 16;
 parameter RAMCACHESZ  = 0; // Size of the RAM cache in (ARCHBITSZ/8) bytes.
 parameter PRELDRADDR  = 0; // Address of pre-loader.
 parameter DEVMAPCNT   = 2; // Number of device mappings; must be <= (((4096-512)/(ARCHBITSZ/8))-1).
