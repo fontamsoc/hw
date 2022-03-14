@@ -72,14 +72,19 @@ wire [DEVMAPCNT -1 : 0] devtbl_useintr_w;
 
 localparam BLOCKDEVMAPSZ = (512/(ARCHBITSZ/8));
 
+reg [ADDRBITSZ -1 : 0] gen_pi1_mapsz_o_idx_max; // ### declared as reg so as to be usable by verilog within the always block.
 integer gen_pi1_mapsz_o_idx;
 always @* begin
 	pi1_mapsz_o = (4096/(ARCHBITSZ/8) - BLOCKDEVMAPSZ); /* first 2 devices must be 512B-Block and DevTbl devices */
+	gen_pi1_mapsz_o_idx_max = DEVMAPCNT;
 	for (
 		gen_pi1_mapsz_o_idx = 2;
-		(gen_pi1_mapsz_o_idx < DEVMAPCNT && devtbl_id_w[gen_pi1_mapsz_o_idx] != 1 /* stops at the first RAM device */);
+		(gen_pi1_mapsz_o_idx < DEVMAPCNT);
 		gen_pi1_mapsz_o_idx = gen_pi1_mapsz_o_idx + 1) begin :gen_pi1_mapsz_o
-		pi1_mapsz_o = pi1_mapsz_o - devtbl_mapsz_w[gen_pi1_mapsz_o_idx];
+		if (devtbl_id_w[gen_pi1_mapsz_o_idx] == 1 /* stops at the first RAM device */)
+			gen_pi1_mapsz_o_idx_max = gen_pi1_mapsz_o_idx;
+		if (gen_pi1_mapsz_o_idx < gen_pi1_mapsz_o_idx_max)
+			pi1_mapsz_o = (pi1_mapsz_o - devtbl_mapsz_w[gen_pi1_mapsz_o_idx]);
 	end
 end
 
