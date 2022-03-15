@@ -30,6 +30,7 @@ sim_use_vcd: verilator sim_use_vcd.cpp obj_dir
 		${VERILATOR_ROOT}/include/verilated_vcd_c.cpp
 
 obj_dir: sim.v
+	cp ../dev/bootldr/bootldr32.hex .
 	VERILATOR_ROOT="${VERILATOR_ROOT}" verilator --version
 	VERILATOR_ROOT="${VERILATOR_ROOT}" verilator --trace -cc --relative-includes -I.. -Wno-lint sim.v
 	touch obj_dir

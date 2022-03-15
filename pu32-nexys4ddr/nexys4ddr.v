@@ -26,8 +26,6 @@
 `include "lib/uart/uart_tx_phy.v"
 `endif
 
-`include "dev/bootldr.v"
-
 `include "dev/sdcard/sdcard_spi.v"
 
 `include "dev/devtbl.v"
@@ -44,6 +42,8 @@
 `include "dev/pi1_dcache.v"
 `include "dev/pi1q_to_wb4.v"
 `include "./litedram/litedram.v"
+
+`include "dev/bootldr/bootldr.v"
 
 module nexys4ddr (
 
@@ -291,7 +291,8 @@ localparam S_PI1R_INTCTRL    = (S_PI1R_DMA + 1);
 localparam S_PI1R_UART       = (S_PI1R_INTCTRL + 1);
 localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
 localparam S_PI1R_RAMCTRL    = (S_PI1R_RAM + 1);
-localparam S_PI1R_INVALIDDEV = (S_PI1R_RAMCTRL + 1);
+localparam S_PI1R_BOOTLDR    = (S_PI1R_RAMCTRL + 1);
+localparam S_PI1R_INVALIDDEV = (S_PI1R_BOOTLDR + 1);
 
 localparam PI1RMASTERCOUNT       = (M_PI1R_LAST + 1);
 localparam PI1RSLAVECOUNT        = (S_PI1R_INVALIDDEV + 1);
@@ -385,7 +386,9 @@ multipu #(
 	,.intrdy_o  (intrdydst_w)
 	,.halted_o  (intbestdst_w)
 
-	,.rstaddr_i  (0)
+	,.rstaddr_i  ((('h1000)>>1) +
+		(s_pi1r_mapsz_w[S_PI1R_RAM]<<1) +
+		(s_pi1r_mapsz_w[S_PI1R_RAMCTRL]<<1))
 	,.rstaddr2_i (('h8000-(14/*within parkpu()*/))>>1)
 
 	,.id_i (0)
@@ -426,39 +429,6 @@ uart_tx_phy #(
 );
 `endif
 
-wire [2 -1 : 0]             bootldr_op_w;
-wire [ADDRBITSZ -1 : 0]     bootldr_addr_w;
-wire [ARCHBITSZ -1 : 0]     bootldr_data_w1;
-wire [ARCHBITSZ -1 : 0]     bootldr_data_w0;
-wire [(ARCHBITSZ/8) -1 : 0] bootldr_sel_w;
-wire                        bootldr_rdy_w;
-
-bootldr #(
-
-	 .ARCHBITSZ (ARCHBITSZ)
-	,.BOOTBLOCK (0)
-
-) bootldr (
-
-	 .rst_i (rst_w)
-
-	,.clk_i (pi1r_clk_w)
-
-	,.m_pi1_op_i   (s_pi1r_op_w[S_PI1R_SDCARD])
-	,.m_pi1_addr_i (s_pi1r_addr_w[S_PI1R_SDCARD])
-	,.m_pi1_data_i (s_pi1r_data_w0[S_PI1R_SDCARD])
-	,.m_pi1_data_o (s_pi1r_data_w1[S_PI1R_SDCARD])
-	,.m_pi1_sel_i  (s_pi1r_sel_w[S_PI1R_SDCARD])
-	,.m_pi1_rdy_o  (s_pi1r_rdy_w[S_PI1R_SDCARD])
-
-	,.s_pi1_op_o   (bootldr_op_w)
-	,.s_pi1_addr_o (bootldr_addr_w)
-	,.s_pi1_data_i (bootldr_data_w1)
-	,.s_pi1_data_o (bootldr_data_w0)
-	,.s_pi1_sel_o  (bootldr_sel_w)
-	,.s_pi1_rdy_i  (bootldr_rdy_w)
-);
-
 sdcard_spi #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
@@ -477,12 +447,12 @@ sdcard_spi #(
 	,.do_i   (sd_do)
 	,.cs_o   (sd_cs)
 
-	,.pi1_op_i    (bootldr_op_w)
-	,.pi1_addr_i  (bootldr_addr_w)
-	,.pi1_data_i  (bootldr_data_w0)
-	,.pi1_data_o  (bootldr_data_w1)
-	,.pi1_sel_i   (bootldr_sel_w)
-	,.pi1_rdy_o   (bootldr_rdy_w)
+	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_SDCARD])
+	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_SDCARD])
+	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_SDCARD])
+	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_SDCARD])
+	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_SDCARD])
+	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_SDCARD])
 	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_SDCARD])
 
 	,.intrqst_o (intrqstsrc_w[INTCTRLSRC_SDCARD])
@@ -880,6 +850,26 @@ litedram litedram (
 
 assign devtbl_id_w     [S_PI1R_RAMCTRL] = 0;
 assign devtbl_useintr_w[S_PI1R_RAMCTRL] = 0;
+
+bootldr #(
+
+	 .ARCHBITSZ (ARCHBITSZ)
+
+) bootldr (
+
+	.clk_i (pi1r_clk_w)
+
+	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_BOOTLDR])
+	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_BOOTLDR])
+	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_BOOTLDR])
+	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_BOOTLDR])
+	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_BOOTLDR])
+	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_BOOTLDR])
+	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_BOOTLDR])
+);
+
+assign devtbl_id_w     [S_PI1R_BOOTLDR] = 0;
+assign devtbl_useintr_w[S_PI1R_BOOTLDR] = 0;
 
 // PI1RDEFAULTSLAVEINDEX to catch invalid physical address space access.
 localparam INVALIDDEVMAPSZ = ('h1000/(ARCHBITSZ/8)) /* 4KB */;
