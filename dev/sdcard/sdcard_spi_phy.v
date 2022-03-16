@@ -259,7 +259,7 @@ localparam STATEBITSZ = clog2(64);
 // Register used to hold the state of the controller.
 // There are less than 64 different values that can
 // be set in this register.
-reg [STATEBITSZ -1 : 0] state = 0;
+reg [STATEBITSZ -1 : 0] state = RESET;
 
 assign err_o = (state == ERROR);
 
