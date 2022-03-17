@@ -299,7 +299,7 @@ spi_master #(
 ) spi (
 	// The spimaster is kept in a reset state
 	// for as long as the controller is resetting.
-	 .rst_i (state == RESETTING)
+	 .rst_i (state == RESET || state == RESETTING)
 
 	,.clk_i     (clk_i)
 	,.clk_phy_i (clk_phy_i)
