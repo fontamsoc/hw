@@ -287,9 +287,6 @@ localparam CLOG2SPIBUFFERSIZE = clog2(SPIBUFFERSIZE);
 
 wire spitxbufferfull;
 
-// Register that hold the value of the input "spi.rxbufferreadenable".
-reg spirxbufferreadenable = 0;
-
 wire spirxbufferempty;
 
 // SPI master which will be used to communicate with the card.
@@ -318,7 +315,7 @@ spi_master #(
 	,.data_i (spitxbufferdatain)
 	,.full_o (spitxbufferfull)
 
-	,.read_i  (spirxbufferreadenable)
+	,.read_i  (1'b1)
 	,.data_o  (rx_data_o)
 	,.empty_o (spirxbufferempty)
 );
@@ -697,11 +694,6 @@ always @ (posedge clk_i) begin
 		// I set spi.txbufferwriteenable to 0 to stop the spi clock.
 		spitxbufferwriteenable <= 0;
 
-		// There is no need to set spi.rxbufferreadenable
-		// because regardless of its value, the receive buffer
-		// will be emptied and there will be no data received
-		// since the spi clock would be stopped.
-
 	end else if (state == RESETTING) begin
 		// I come to this state after a falling edge of the
 		// input "rst_i"; I wait 250ms and then issue at least 74
@@ -764,17 +756,12 @@ always @ (posedge clk_i) begin
 
 				spitxbufferwriteenable <= 1;
 
-				// I set spi.rxbufferreadenable to 1 so as to discard
-				// any data received while bytes are being transmitted.
-				spirxbufferreadenable <= 1;
-
 				miscflag <= 1;
 			end
 		end
 
 	end else if (state == READY) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 0;
 		// cntr == (6 + SPIBUFFERSIZE + 2);
 
@@ -782,9 +769,6 @@ always @ (posedge clk_i) begin
 		// spitxbufferwriteenable == 0,
 		// which is power efficient because
 		// the spi clock will remain stopped.
-
-		// spirxbufferreadenable can remain 1 in order
-		// to discard any data in the receive buffer.
 
 		if (!cmd_empty_i) begin
 			cmdaddr <= cmd_addr_i;
@@ -801,7 +785,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == SENDCMD0) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 0;
 		// cntr == (6 + SPIBUFFERSIZE + 2);
 
@@ -843,7 +826,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == SENDCMD59) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 0;
 		// cntr == (6 + SPIBUFFERSIZE + 2);
 
@@ -881,7 +863,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == SENDCMD8) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 0;
 		// cntr == (6 + SPIBUFFERSIZE + 2);
 
@@ -919,7 +900,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == SENDINIT) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 0;
 		// cntr == (6 + SPIBUFFERSIZE + 2);
 		// miscflag == 1;
@@ -992,7 +972,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == SENDCMD41) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 0;
 		// cntr == (6 + SPIBUFFERSIZE + 2);
 
@@ -1045,7 +1024,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == SENDCMD6) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 0;
 		// cntr == (6 + SPIBUFFERSIZE + 2);
 
@@ -1083,7 +1061,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == SENDCMD9) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 0;
 		// cntr == (6 + SPIBUFFERSIZE + 2);
 
@@ -1121,7 +1098,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == SENDCMD58) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 0;
 		// cntr == (6 + SPIBUFFERSIZE + 2);
 
@@ -1164,7 +1140,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == SENDCMD16) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 0;
 		// cntr == (6 + SPIBUFFERSIZE + 2);
 
@@ -1202,7 +1177,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == SENDCMD17) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 0;
 		// cntr == (6 + SPIBUFFERSIZE + 2);
 
@@ -1240,7 +1214,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == SENDCMD24) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 0;
 		// cntr == (6 + SPIBUFFERSIZE + 2);
 
@@ -1278,7 +1251,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == SENDCMD13) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 0;
 		// cntr == (6 + SPIBUFFERSIZE + 2);
 
@@ -1316,7 +1288,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == CMD0RESP) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 1;
 
 		if (rx_data_o != 'hff) begin
@@ -1332,7 +1303,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == CMD59RESP) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 1;
 
 		if (rx_data_o != 'hff) begin
@@ -1348,7 +1318,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == CMD8RESP) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 1;
 		// cntr == 0;
 
@@ -1398,7 +1367,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == INITRESP) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 1;
 		// and if ACMD41 need to be sent,
 		// cntr[0] == 1, otherwise
@@ -1435,7 +1403,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == CMD6RESP) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 1;
 		// cntr == 0;
 		// miscflag == 0;
@@ -1463,9 +1430,6 @@ always @ (posedge clk_i) begin
 
 				if (!spirxbufferempty) begin
 					// I get here for each byte received.
-					// Since spirxbufferreadenable is being held high,
-					// spi.rxbufferusage will become null on the next
-					// active clock edge.
 					// The byte received is evaluated next time
 					// that spi.rxbufferusage become non-null;
 					// hence when cntr == 0, the byte following
@@ -1500,7 +1464,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == CMD9RESP) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 1;
 		// cntr == 0;
 		// miscflag == 1;
@@ -1589,7 +1552,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == CMD58RESP) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 1;
 		// cntr == 0;
 		// miscflag == 0;
@@ -1637,7 +1599,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == CMD16RESP) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 1;
 
 		if (rx_data_o != 'hff) begin
@@ -1653,7 +1614,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == CMD17RESP) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 1;
 		// cntr == 0;
 		// miscflag == 1;
@@ -1679,9 +1639,6 @@ always @ (posedge clk_i) begin
 
 				if (!spirxbufferempty) begin
 					// I get here for each byte received.
-					// Since spirxbufferreadenable is being held high,
-					// spi.rxbufferusage will become null on the next
-					// active clock edge.
 					// The byte received is evaluated next time
 					// that spi.rxbufferusage become non-null;
 					// hence when cntr == 0, the byte following
@@ -1737,7 +1694,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == CMD24RESP) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 1;
 		// cntr == 0;
 		// miscflag == 1;
@@ -1817,7 +1773,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == CMD13RESP) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 1;
 		// cntr == 0;
 		// miscflag == 0;
@@ -1864,7 +1819,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == PREPCMD59) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 1;
 
 		// I wait that the spimaster transmit all buffered data
@@ -1894,7 +1848,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == PREPCMD8) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 1;
 
 		// I wait that the spimaster transmit all buffered data
@@ -1924,7 +1877,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == PREPINIT) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 1;
 
 		// I wait that the spimaster transmit all buffered data
@@ -1969,7 +1921,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == PREPCMD41) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 1;
 
 		// I wait that the spimaster transmit all buffered data
@@ -1999,7 +1950,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == PREPCMD9) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 1;
 
 		// I wait that the spimaster transmit all buffered data
@@ -2029,7 +1979,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == PREPCMD58) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 1;
 
 		// I wait that the spimaster transmit all buffered data
@@ -2059,7 +2008,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == PREPCMD16) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 1;
 
 		// I wait that the spimaster transmit all buffered data
@@ -2089,7 +2037,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == PREPCMD13) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 1;
 
 		// I wait that the spimaster transmit all buffered data
@@ -2122,7 +2069,6 @@ always @ (posedge clk_i) begin
 
 	end else if (state == PREPREADY) begin
 		// When I come to this state I expect:
-		// spirxbufferreadenable == 1;
 		// spitxbufferwriteenable == 1;
 
 		// I set miscflag to 1, which is expected by the state CMD17RESP.
@@ -2163,9 +2109,6 @@ always @ (posedge clk_i) begin
 
 		if (resetting) // Retry reset.
 			state <= RESET;
-
-		// While in this state, spirxbufferreadenable can remain 1
-		// in order to discard any data in the receive buffer.
 
 	end else
 		state <= ERROR;
