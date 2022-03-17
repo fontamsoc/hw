@@ -242,7 +242,7 @@ end
 
 reg activity;
 // Used to dim activity intensity.
-localparam ACTIVITY_CNTR_BITSZ = 3;
+localparam ACTIVITY_CNTR_BITSZ = 1;
 reg [ACTIVITY_CNTR_BITSZ -1 : 0] activity_cntr = 0;
 always @ (posedge clk_2x_w) begin
 	if (activity_cntr) begin
