@@ -13,7 +13,7 @@ create_clock -name clk100mhz_i -period 10 -waveform {0 5} [get_ports clk100mhz_i
 #create_clock -add -name mgtclk1_pin -period 6.400 -waveform {0 3.200} [get_ports {FMC_MGT_CLK_P}];
 
 ## LEDs
-set_property -dict { PACKAGE_PIN T14   IOSTANDARD LVCMOS25 } [get_ports { activity }]; #IO_L15P_T2_DQS_13 Sch=led[0]
+set_property -dict { PACKAGE_PIN T14   IOSTANDARD LVCMOS25 } [get_ports { gp_o[0] }]; #IO_L15P_T2_DQS_13 Sch=led[0]
 set_property -dict { PACKAGE_PIN T15   IOSTANDARD LVCMOS25 } [get_ports { gp_o[1] }]; #IO_L15N_T2_DQS_13 Sch=led[1]
 set_property -dict { PACKAGE_PIN T16   IOSTANDARD LVCMOS25 } [get_ports { gp_o[2] }]; #IO_L17P_T2_13 Sch=led[2]
 set_property -dict { PACKAGE_PIN U16   IOSTANDARD LVCMOS25 } [get_ports { gp_o[3] }]; #IO_L17N_T2_13 Sch=led[3]

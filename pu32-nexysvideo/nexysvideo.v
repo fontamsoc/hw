@@ -86,8 +86,6 @@ module nexysvideo (
 	,ddr3_dqs_n
 	,ddr3_reset_n
 
-	,activity
-
 	// PUDBG signals.
 	,pudbg_rx
 	,pudbg_tx
@@ -121,7 +119,7 @@ assign sd_dat2 = 1;
 // GPIO signals.
 localparam GPIOCOUNT = 8;
 input  wire [GPIOCOUNT -1 : 0] gp_i;
-output wire [GPIOCOUNT -1 : 1] gp_o;
+output wire [GPIOCOUNT -1 : 0] gp_o;
 
 // UART signals.
 input  wire uart_rx;
@@ -147,8 +145,6 @@ output wire [(DDR3DQBITSIZE / 8) -1 : 0]  ddr3_dm;
 inout  wire [(DDR3DQBITSIZE / 8) -1 : 0]  ddr3_dqs_p;
 inout  wire [(DDR3DQBITSIZE / 8) -1 : 0]  ddr3_dqs_n;
 output wire                               ddr3_reset_n;
-
-output reg activity;
 
 // PUDBG signals.
 input  wire pudbg_rx;
@@ -244,8 +240,9 @@ always @ (posedge clk_2x_w) begin
 end
 `endif
 
+reg activity;
 // Used to dim activity intensity.
-localparam ACTIVITY_CNTR_BITSZ = 7;
+localparam ACTIVITY_CNTR_BITSZ = 3;
 reg [ACTIVITY_CNTR_BITSZ -1 : 0] activity_cntr = 0;
 always @ (posedge clk_2x_w) begin
 	if (activity_cntr) begin
@@ -524,6 +521,8 @@ devtbl #(
 assign devtbl_id_w     [S_PI1R_DEVTBL] = 7;
 assign devtbl_useintr_w[S_PI1R_DEVTBL] = 0;
 
+wire [GPIOCOUNT -1 : 0] gpio_o;
+
 gpio #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
@@ -548,11 +547,13 @@ gpio #(
 	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_GPIO])
 
 	,.i (gp_i)
-	,.o ({gp_o, 1'b0})
+	,.o (gpio_o)
 );
 
 assign devtbl_id_w     [S_PI1R_GPIO] = 6;
 assign devtbl_useintr_w[S_PI1R_GPIO] = 1;
+
+assign gp_o = ({{(GPIOCOUNT-1){1'b0}}, activity} | gpio_o);
 
 dma #(
 
