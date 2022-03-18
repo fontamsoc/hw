@@ -321,7 +321,7 @@ spi_master #(
 );
 
 // Register which when 1, keeps the sdcard input "cs_o" high.
-reg keepsdcardcshigh = 0;
+reg keepsdcardcshigh = 1;
 
 assign cs_o = (/*cs_w |*/ keepsdcardcshigh);
 
