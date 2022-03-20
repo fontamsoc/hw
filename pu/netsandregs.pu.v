@@ -682,7 +682,7 @@ wire[PAGENUMBITSZ -1 : 0] itlbppn [TLBWAYCOUNT -1 : 0];
 generate for (gen_tlb_idx = 0; gen_tlb_idx < TLBWAYCOUNT; gen_tlb_idx = gen_tlb_idx + 1) begin :gen_tlb
 assign itlbppn[gen_tlb_idx] = 0;
 end endgenerate
-wire itlben = 0;
+assign itlben = 0;
 wire[PAGENUMBITSZ -1 : 0] dppn = gprdata2[ARCHBITSZ-1:12];
 
 `endif
