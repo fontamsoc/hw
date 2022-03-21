@@ -96,7 +96,7 @@ uart_sim #(
 
 ) uart (
 
-	 .rst_i (rst_w)
+	 .rst_i (pi1r_rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
@@ -118,7 +118,7 @@ smem #(
 
 ) smem (
 
-	 .rst_i (rst_w)
+	 .rst_i (pi1r_rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
