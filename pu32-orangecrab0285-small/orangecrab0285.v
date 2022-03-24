@@ -58,22 +58,30 @@ assign led_red_n = 1'b1;
 assign led_green_n = 1'b1;
 assign led_blue_n = 1'b1;
 
-wire rst_p = !usr_btn_n;
+wire rst_w = !usr_btn_n;
 
 localparam CLKFREQ12MHZ = 12000000;
 localparam CLKFREQ24MHZ = 24000000;
 localparam CLKFREQ48MHZ = 48000000;
+localparam CLKFREQ96MHZ = 96000000;
 
-localparam CLKFREQ = CLKFREQ12MHZ;
+localparam CLKFREQ   = CLKFREQ12MHZ; // Frequency of clk_w.
+localparam CLK2XFREQ = CLKFREQ24MHZ; // Frequency of clk_2x_w.
+localparam CLK4XFREQ = CLKFREQ48MHZ; // Frequency of clk_4x_w.
+localparam CLK8XFREQ = CLKFREQ96MHZ; // Frequency of clk_8x_w.
 
 wire [3:0] pll_clk_w;
 wire       pll_locked;
 ecp5pll #(
-	 .in_hz   (CLKFREQ48MHZ)
-	,.out0_hz (CLKFREQ12MHZ)
-	,.out1_hz (CLKFREQ24MHZ)
-	,.out2_hz (CLKFREQ48MHZ)
+
+	 .in_hz    (CLKFREQ48MHZ)
+	,.out0_hz  (CLKFREQ)
+	,.out1_hz  (CLK2XFREQ)
+	,.out2_hz  (CLK4XFREQ)
+	,.out3_hz  (CLK8XFREQ)
+
 ) pll (
+
 	 .clk_i        (clk48mhz_i)
 	,.clk_o        (pll_clk_w)
 	,.reset        (1'b0)
@@ -87,8 +95,12 @@ ecp5pll #(
 wire clk12mhz = pll_clk_w[0];
 wire clk24mhz = pll_clk_w[1];
 wire clk48mhz = pll_clk_w[2];
+wire clk96mhz = pll_clk_w[3];
 
-wire clk_w = clk12mhz;
+wire clk_w    = clk12mhz;
+wire clk_2x_w = clk24mhz;
+wire clk_4x_w = clk48mhz;
+wire clk_8x_w = clk96mhz;
 
 localparam M_PI1R_MULTIPU    = 0;
 localparam M_PI1R_LAST       = M_PI1R_MULTIPU;
@@ -102,8 +114,9 @@ localparam PI1RDEFAULTSLAVEINDEX = S_PI1R_INVALIDDEV;
 localparam PI1RFIRSTSLAVEADDR    = // Set such that memory starts at 0x1000.
 	((('h1000/(ARCHBITSZ/8))/*4KB*/) - (2/*UART_MAPSZ*/));
 localparam PI1RARCHBITSZ         = ARCHBITSZ;
-wire pi1r_rst_w = rst_p;
-wire pi1r_clk_w = clk_w;
+localparam PI1RCLKFREQ           = CLK4XFREQ;
+wire pi1r_rst_w = rst_w;
+wire pi1r_clk_w = clk_4x_w;
 // PerInt is instantiated in a separate file to keep this file clean.
 // Masters should use the following signals to plug onto PerInt:
 // 	input  [2 -1 : 0]             m_pi1r_op_w    [PI1RMASTERCOUNT -1 : 0];
@@ -125,11 +138,11 @@ wire pi1r_clk_w = clk_w;
 multipu #(
 
 	 .ARCHBITSZ (ARCHBITSZ)
-	,.CLKFREQ   (CLKFREQ)
+	,.CLKFREQ   (PI1RCLKFREQ)
 
 ) multipu (
 
-	 .rst_i (rst_p)
+	 .rst_i (rst_w)
 
 	,.clk_i        (clk_w)
 	,.clk_mem_i    (pi1r_clk_w)
@@ -153,7 +166,7 @@ usb_serial #(
 ) serial (
 
 	 .rst_i (!pll_locked
-		/* rst_w is not used such that on software reset,
+		/* pi1r_rst_w is not used such that on software reset,
 		   all buffered data get a chance to be transmitted */)
 
 	,.clk_i     (pi1r_clk_w)
@@ -180,7 +193,7 @@ smem #(
 
 ) smem (
 
-	 .rst_i (rst_p)
+	 .rst_i (pi1r_rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
