@@ -114,6 +114,35 @@ output wire [(SDRAMDQBITSIZE / 8) -1 : 0] sdram_dm;
 // SPI FLASH CS pin kept high to keep it disabled.
 assign flash_cs2 = 1;
 
+wire multipu_rst_ow;
+
+wire devtbl_rst0_w;
+reg  devtbl_rst0_r = 0;
+wire devtbl_rst1_w;
+
+wire swcoldrst = (devtbl_rst0_w && devtbl_rst1_w);
+wire swwarmrst = (!devtbl_rst0_w && devtbl_rst1_w);
+wire swpwroff  = (devtbl_rst0_w && !devtbl_rst1_w);
+
+localparam RST_CNTR_BITSZ = 4;
+
+reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
+always @ (posedge clk120mhz) begin
+	if (multipu_rst_ow || swwarmrst || rst_p)
+		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
+	else if (rst_cntr)
+		rst_cntr <= rst_cntr - 1'b1;
+end
+
+always @ (posedge clk120mhz) begin
+	if (rst_p)
+		devtbl_rst0_r <= 0;
+	if (swpwroff)
+		devtbl_rst0_r <= 1;
+end
+
+STARTUP_SPARTAN6 (.CLK (clk12mhz_i), .GSR (swcoldrst));
+
 localparam CLKFREQ   = 30000000 /* 30 MHz */; // Frequency of clk_w.
 localparam CLK2XFREQ = 60000000 /* 60 MHz */; // Frequency of clk_2x_w.
 
@@ -136,38 +165,11 @@ end
 (* keep = "true" *) wire clk30mhz;
 BUFG bufg1 (.O (clk60mhz), .I (clkdiv[0]));
 BUFG bufg2 (.O (clk30mhz), .I (clkdiv[1]));
-wire clk_w    = clk30mhz;
-wire clk_2x_w = clk60mhz;
 
-wire multipu_rst_ow;
+wire [2 -1 : 0] clk_w    = {clk60mhz,  clk30mhz};
+wire [2 -1 : 0] clk_2x_w = {clk120mhz, clk60mhz};
 
-wire devtbl_rst0_w;
-reg  devtbl_rst0_r = 0;
-wire devtbl_rst1_w;
-
-wire swcoldrst = (devtbl_rst0_w && devtbl_rst1_w);
-wire swwarmrst = (!devtbl_rst0_w && devtbl_rst1_w);
-wire swpwroff  = (devtbl_rst0_w && !devtbl_rst1_w);
-
-localparam RST_CNTR_BITSZ = 4;
-
-reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
 wire rst_w = (!pll_locked || devtbl_rst0_r || (|rst_cntr));
-always @ (posedge clk120mhz) begin
-	if (multipu_rst_ow || swwarmrst || rst_p)
-		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
-	else if (rst_cntr)
-		rst_cntr <= rst_cntr - 1'b1;
-end
-
-always @ (posedge clk120mhz) begin
-	if (rst_p)
-		devtbl_rst0_r <= 0;
-	if (swpwroff)
-		devtbl_rst0_r <= 1;
-end
-
-STARTUP_SPARTAN6 (.CLK (clk12mhz_i), .GSR (swcoldrst));
 
 localparam PUCOUNT = 1;
 
@@ -319,7 +321,7 @@ sdcard_spi #(
 
 ) sdcard (
 
-	 .rst_i (rst_w)
+	 .rst_i (pi1r_rst_w)
 
 	,.clk_mem_i (pi1r_clk_w)
 	,.clk_i     (clk_w)
@@ -359,7 +361,7 @@ devtbl #(
 
 ) devtbl (
 
-	 .rst_i (rst_w)
+	 .rst_i (pi1r_rst_w)
 
 	,.rst0_o (devtbl_rst0_w)
 	,.rst1_o (devtbl_rst1_w)
@@ -389,7 +391,7 @@ dma #(
 
 ) dma (
 
-	 .rst_i (rst_w)
+	 .rst_i (pi1r_rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
@@ -425,7 +427,7 @@ intctrl #(
 
 ) intctrl (
 
-	 .rst_i (rst_w)
+	 .rst_i (pi1r_rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
@@ -457,7 +459,7 @@ uart_hw #(
 ) uart (
 
 	 .rst_i (!pll_locked || rst_p
-		/* rst_w is not used such that on software reset,
+		/* pi1r_rst_w is not used such that on software reset,
 		   all buffered data get a chance to be transmitted */)
 
 	,.clk_i     (pi1r_clk_w)

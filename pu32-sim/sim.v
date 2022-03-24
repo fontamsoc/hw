@@ -88,7 +88,6 @@ wire swpwroff  = (devtbl_rst0_w && !devtbl_rst1_w);
 localparam RST_CNTR_BITSZ = 4;
 
 reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
-wire rst_w = (devtbl_rst0_r || (|rst_cntr));
 always @ (posedge clk_i) begin
 	if (multipu_rst_ow || swwarmrst || rst_i)
 		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
@@ -106,12 +105,15 @@ end
 localparam CLKFREQ   = (100000000) /* 100  Mhz */; // Frequency of clk_w.
 localparam CLK2XFREQ = (200000000) /* 200 Mhz */; // Frequency of clk_2x_w.
 
-wire clk_w, clk_2x_w;
+wire clk_w;
+wire clk_2x_w;
 clkdiv clkdiv (
 	 .clk_4x_i (clk_i)
 	,.clk_2x_o (clk_2x_w)
 	,.clk_o    (clk_w)
 );
+
+wire rst_w = (devtbl_rst0_r || (|rst_cntr));
 
 localparam PUCOUNT = 1;
 
@@ -274,7 +276,7 @@ sdcard_spi #(
 
 ) sdcard (
 
-	.rst_i (rst_w)
+	.rst_i (pi1r_rst_w)
 
 	,.clk_mem_i (pi1r_clk_w)
 	,.clk_i     (clk_w)
@@ -313,7 +315,7 @@ devtbl #(
 
 ) devtbl (
 
-	 .rst_i (rst_w)
+	 .rst_i (pi1r_rst_w)
 
 	,.rst0_o (devtbl_rst0_w)
 	,.rst1_o (devtbl_rst1_w)
@@ -349,7 +351,7 @@ dma #(
 
 ) dma (
 
-	 .rst_i (rst_w)
+	 .rst_i (pi1r_rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
@@ -385,7 +387,7 @@ intctrl #(
 
 ) intctrl (
 
-	 .rst_i (rst_w)
+	 .rst_i (pi1r_rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
@@ -415,7 +417,7 @@ uart_sim #(
 
 ) uart (
 
-	 .rst_i (rst_w)
+	 .rst_i (pi1r_rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
@@ -591,7 +593,7 @@ smem #(
 
 ) smem (
 
-	 .rst_i (rst_w)
+	 .rst_i (pi1r_rst_w)
 
 	,.clk_i (pi1r_clk_w)
 

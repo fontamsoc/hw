@@ -170,26 +170,6 @@ output wire [8 -1 : 0] an;
 
 assign an = {8{1'b1}};
 
-localparam CLKFREQ   = ( 50000000) /*  50 MHz */; // Frequency of clk_w.
-localparam CLK2XFREQ = (100000000) /* 100 MHz */; // Frequency of clk_2x_w.
-
-wire pll_locked;
-
-wire clk50mhz;
-wire clk100mhz;
-wire clk200mhz;
-pll_100_to_50_100_200_mhz pll (
-	 .reset    (1'b0)
-	,.locked   (pll_locked)
-	,.clk_in1  (clk100mhz_i)
-	,.clk_out1 (clk50mhz)
-	,.clk_out2 (clk100mhz)
-	,.clk_out3 (clk200mhz)
-);
-
-wire clk_w    = clk50mhz;
-wire clk_2x_w = clk100mhz;
-
 wire multipu_rst_ow;
 
 wire devtbl_rst0_w;
@@ -202,11 +182,12 @@ wire swpwroff  = (devtbl_rst0_w && !devtbl_rst1_w);
 
 wire rst_p = !rst_n;
 
+wire rst_w;
+
 localparam RST_CNTR_BITSZ = 16;
 
 reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
-wire rst_w = (!pll_locked || devtbl_rst0_r || (|rst_cntr));
-always @ (posedge clk_2x_w) begin
+always @ (posedge clk100mhz_i) begin
 	if (!multipu_rst_ow && !swwarmrst && rst_n) begin
 		if (rst_cntr)
 			rst_cntr <= rst_cntr - 1'b1;
@@ -214,7 +195,7 @@ always @ (posedge clk_2x_w) begin
 		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
 end
 
-always @ (posedge clk_2x_w) begin
+always @ (posedge clk100mhz_i) begin
 	if (rst_p)
 		devtbl_rst0_r <= 0;
 	if (swpwroff)
@@ -236,13 +217,13 @@ dbncr  #(
 	,.INIT       (1'b0)
 ) dbncr (
 	 .rst_i    (rst_n)
-	,.clk_i    (clk_2x_w)
+	,.clk_i    (clk100mhz_i)
 	,.i        (rst_p)
 	,.o        (brkonrst_w)
 	,.thresh_i (DBNCRTHRES)
 );
 reg brkonrst_r = 1'b0;
-always @ (posedge clk_2x_w) begin
+always @ (posedge clk100mhz_i) begin
 	if (!rst_w)
 		brkonrst_r <= 1'b0;
 	else if (rst_p && brkonrst_w)
@@ -253,7 +234,7 @@ end
 // Used to dim activity intensity.
 localparam ACTIVITY_CNTR_BITSZ = 7;
 reg [ACTIVITY_CNTR_BITSZ -1 : 0] activity_cntr = 0;
-always @ (posedge clk_2x_w) begin
+always @ (posedge clk100mhz_i) begin
 	if (activity_cntr) begin
 		activity <= 0;
 		activity_cntr <= activity_cntr - 1'b1;
@@ -262,6 +243,28 @@ always @ (posedge clk_2x_w) begin
 		activity_cntr <= {ACTIVITY_CNTR_BITSZ{1'b1}};
 	end
 end
+
+localparam CLKFREQ   = ( 50000000) /*  50 MHz */; // Frequency of clk_w.
+localparam CLK2XFREQ = (100000000) /* 100 MHz */; // Frequency of clk_2x_w.
+
+wire pll_locked;
+
+wire clk50mhz;
+wire clk100mhz;
+wire clk200mhz;
+pll_100_to_50_100_200_mhz pll (
+	 .reset    (1'b0)
+	,.locked   (pll_locked)
+	,.clk_in1  (clk100mhz_i)
+	,.clk_out1 (clk50mhz)
+	,.clk_out2 (clk100mhz)
+	,.clk_out3 (clk200mhz)
+);
+
+wire clk_w    = clk50mhz;
+wire clk_2x_w = clk100mhz;
+
+assign rst_w = (!pll_locked || devtbl_rst0_r || (|rst_cntr));
 
 localparam PUCOUNT = 1;
 
@@ -336,6 +339,9 @@ localparam ICACHEWAYCOUNT = ((PUCOUNT > 1) ? 2 : 4);
 localparam DCACHEWAYCOUNT = 1;
 localparam TLBWAYCOUNT    = 4;
 
+localparam MULTIPUCLKFREQ = CLK2XFREQ;
+wire multipu_clk_w = clk_2x_w;
+
 `ifdef PUDBG
 wire            pudbg_rx_rcvd_w;
 wire [8 -1 : 0] pudbg_rx_data_w1;
@@ -348,7 +354,7 @@ wire            pudbg_tx_rdy_w;
 multipu #(
 
 	 .ARCHBITSZ      (ARCHBITSZ)
-	,.CLKFREQ        (CLK2XFREQ)
+	,.CLKFREQ        (MULTIPUCLKFREQ)
 	,.PUCOUNT        (PUCOUNT)
 	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*((ICACHESZ/ICACHEWAYCOUNT)/PUCOUNT))
 	,.DCACHESETCOUNT ((1024/(ARCHBITSZ/8))*(((DCACHESZ/2)/DCACHEWAYCOUNT)/PUCOUNT))
@@ -364,7 +370,7 @@ multipu #(
 
 	,.rst_o (multipu_rst_ow)
 
-	,.clk_i        (clk_2x_w)
+	,.clk_i        (multipu_clk_w)
 	,.clk_muldiv_i (clk_2x_w)
 	,.clk_mem_i    (pi1r_clk_w)
 
@@ -401,7 +407,7 @@ uart_rx_phy #(
 	 .CLOCKCYCLESPERBITLIMIT (((CLK2XFREQ/PUDBGPHYBITRATE) + ((CLK2XFREQ/PUDBGPHYBITRATE)/10/2)) +1)
 ) pudbg_uart_rx_phy (
 	 .rst_i               (rst_w || !litedram_pll_locked)
-	,.clk_i               (clk_2x_w) // Must be same as multipu.clk_i .
+	,.clk_i               (multipu_clk_w) // Must be same as multipu.clk_i .
 	,.clockcyclesperbit_i ((CLK2XFREQ/PUDBGPHYBITRATE) + ((CLK2XFREQ/PUDBGPHYBITRATE)/10/2))
 	,.rx_i                (pudbg_rx)
 	,.rcvd_o              (pudbg_rx_rcvd_w)
@@ -411,7 +417,7 @@ uart_tx_phy #(
 	 .CLOCKCYCLESPERBITLIMIT ((CLK2XFREQ/PUDBGPHYBITRATE) +1)
 ) pudbg_uart_tx_phy (
 	 .rst_i               (rst_w || !litedram_pll_locked)
-	,.clk_i               (clk_2x_w) // Must be same as multipu.clk_i .
+	,.clk_i               (multipu_clk_w) // Must be same as multipu.clk_i .
 	,.clockcyclesperbit_i (CLK2XFREQ/PUDBGPHYBITRATE)
 	,.tx_o                (pudbg_tx)
 	,.stb_i               (pudbg_tx_stb_w)
@@ -460,7 +466,7 @@ sdcard_spi #(
 
 ) sdcard (
 
-	 .rst_i (rst_w || sd_cd)
+	 .rst_i (pi1r_rst_w || sd_cd)
 
 	,.clk_mem_i (pi1r_clk_w)
 	,.clk_i     (clk_w)
@@ -506,7 +512,7 @@ devtbl #(
 
 ) devtbl (
 
-	 .rst_i (rst_w)
+	 .rst_i (pi1r_rst_w)
 
 	,.rst0_o (devtbl_rst0_w)
 	,.rst1_o (devtbl_rst1_w)
@@ -538,7 +544,7 @@ gpio #(
 
 ) gpio (
 
-	 .rst_i (rst_w)
+	 .rst_i (pi1r_rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
@@ -567,7 +573,7 @@ dma #(
 
 ) dma (
 
-	 .rst_i (rst_w)
+	 .rst_i (pi1r_rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
@@ -603,7 +609,7 @@ intctrl #(
 
 ) intctrl (
 
-	 .rst_i (rst_w)
+	 .rst_i (pi1r_rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
@@ -635,7 +641,7 @@ uart_hw #(
 ) uart (
 
 	 .rst_i (!pll_locked || rst_p
-		/* rst_w is not used such that on software reset,
+		/* pi1r_rst_w is not used such that on software reset,
 		   all buffered data get a chance to be transmitted */)
 	,.clk_i     (pi1r_clk_w)
 	,.clk_phy_i (pi1r_clk_w)
@@ -697,7 +703,7 @@ assign devtbl_id_w     [S_PI1R_RAM] = 1;
 assign devtbl_useintr_w[S_PI1R_RAM] = 0;
 
 reg [RST_CNTR_BITSZ -1 : 0] ram_rst_cntr = {RST_CNTR_BITSZ{1'b1}};
-always @ (posedge pi1r_clk_w) begin
+always @ (posedge clk100mhz_i) begin
 	if (pll_locked && ram_rst_cntr)
 		ram_rst_cntr <= ram_rst_cntr - 1'b1;
 end
