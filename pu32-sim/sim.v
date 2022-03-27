@@ -42,8 +42,13 @@
 
 `include "dev/uart_sim.v"
 
+//`define WB4LITEDRAM
 //`define WB4SMEM
-`ifdef WB4SMEM
+`ifdef WB4LITEDRAM
+`include "dev/pi1_dcache.v"
+`include "dev/pi1q_to_wb4.v"
+`include "./litedram/litedram.v"
+`elsif WB4SMEM
 `include "dev/pi1_upconverter.v"
 `include "dev/pi1_dcache.v"
 `include "dev/pi1_to_wb4.v"
@@ -160,8 +165,14 @@ localparam S_PI1R_SDCARD     = 0;
 localparam S_PI1R_DEVTBL     = (S_PI1R_SDCARD + 1);
 localparam S_PI1R_INTCTRL    = (S_PI1R_DEVTBL + 1);
 localparam S_PI1R_UART       = (S_PI1R_INTCTRL + 1);
+`ifdef WB4LITEDRAM
+localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
+localparam S_PI1R_RAMCTRL    = (S_PI1R_RAM + 1);
+localparam S_PI1R_BOOTLDR    = (S_PI1R_RAMCTRL + 1);
+`else
 localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
 localparam S_PI1R_BOOTLDR    = (S_PI1R_RAM + 1);
+`endif
 localparam S_PI1R_UART1      = (S_PI1R_BOOTLDR + 1);
 localparam S_PI1R_INVALIDDEV = (S_PI1R_UART1 + 1);
 
@@ -266,8 +277,12 @@ cpu #(
 	,.intrdy_o  (intrdydst_w)
 	,.halted_o  (intbestdst_w)
 
-	,.rstaddr_i  ((('h1000)>>1) +
-		(s_pi1r_mapsz_w[S_PI1R_RAM]>>1))
+	,.rstaddr_i  ((('h1000)>>1)
+		+ (s_pi1r_mapsz_w[S_PI1R_RAM]>>1)
+		`ifdef WB4LITEDRAM
+		+ (s_pi1r_mapsz_w[S_PI1R_RAMCTRL]>>1)
+		`endif
+		)
 	,.rstaddr2_i (('h8000-(14/*within parkpu()*/))>>1)
 
 	,.id_i (0)
@@ -305,10 +320,8 @@ sdcard_spi #(
 assign devtbl_id_w     [S_PI1R_SDCARD] = 4;
 assign devtbl_useintr_w[S_PI1R_SDCARD] = 1;
 
-`ifdef WB4SMEM
 localparam RAMCACHEWAYCOUNT = 2;
 localparam RAMCACHESZ       = ((1024/(ARCHBITSZ/8))*(32/RAMCACHEWAYCOUNT)); /* In (ARCHBITSZ/8) units */
-`endif
 
 wire devtbl_rst2_w;
 
@@ -316,7 +329,10 @@ devtbl #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.XARCHBITSZ (PI1RARCHBITSZ)
-	`ifdef WB4SMEM
+	 `ifdef WB4LITEDRAM
+	,.RAMCACHESZ (RAMCACHESZ)
+	,.PRELDRADDR ('h1000)
+	`elsif WB4SMEM
 	,.RAMCACHESZ (RAMCACHESZ)
 	,.PRELDRADDR ('h1000)
 	`endif
@@ -521,7 +537,181 @@ uart_sim #(
 assign devtbl_id_w     [S_PI1R_UART1] = 5;
 assign devtbl_useintr_w[S_PI1R_UART1] = 1;
 
-`ifdef WB4SMEM
+// The RAM ARCHBITSZ must be >= PI1RARCHBITSZ.
+`ifdef WB4LITEDRAM
+generate if (ARCHBITSZ == 32 && ARCHBITSZ == PI1RARCHBITSZ) begin :gen_litedram0
+
+assign s_pi1r_mapsz_w[S_PI1R_RAM] = ('h2000000/* 32MB */);
+
+reg [RST_CNTR_BITSZ -1 : 0] ram_rst_cntr = {RST_CNTR_BITSZ{1'b1}};
+always @ (posedge pi1r_clk_w) begin
+	if (ram_rst_cntr)
+		ram_rst_cntr <= ram_rst_cntr - 1'b1;
+end
+// Because dcache.INITFILE is used only after a global reset, resetting RAM must happen only then.
+wire ram_rst_w = (|ram_rst_cntr);
+
+wire [2 -1 : 0]                                dcache_s_op_w;
+wire [(ARCHBITSZ - clog2(ARCHBITSZ/8)) -1 : 0] dcache_s_addr_w;
+wire [ARCHBITSZ -1 : 0]                        dcache_s_data_w1;
+wire [ARCHBITSZ -1 : 0]                        dcache_s_data_w0;
+wire [(ARCHBITSZ/8) -1 : 0]                    dcache_s_sel_w;
+wire                                           dcache_s_rdy_w;
+
+pi1_dcache #(
+
+	 .ARCHBITSZ     (ARCHBITSZ)
+	,.CACHESETCOUNT (RAMCACHESZ)
+	,.CACHEWAYCOUNT (RAMCACHEWAYCOUNT)
+	,.BUFFERDEPTH   (64)
+	,.INITFILE      ("litedram/litedram.hex")
+
+) dcache (
+
+	 .rst_i (ram_rst_w)
+
+	,.clk_i (pi1r_clk_w)
+
+	,.crst_i    (ram_rst_w || devtbl_rst2_w)
+	,.cenable_i (1'b1)
+	,.cmiss_i   (1'b0)
+	,.conly_i   (ram_rst_w)
+
+	,.m_pi1_op_i   (s_pi1r_op_w[S_PI1R_RAM])
+	,.m_pi1_addr_i (s_pi1r_addr_w[S_PI1R_RAM])
+	,.m_pi1_data_i (s_pi1r_data_w0[S_PI1R_RAM])
+	,.m_pi1_data_o (s_pi1r_data_w1[S_PI1R_RAM])
+	,.m_pi1_sel_i  (s_pi1r_sel_w[S_PI1R_RAM])
+	,.m_pi1_rdy_o  (s_pi1r_rdy_w[S_PI1R_RAM])
+
+	,.s_pi1_op_o   (dcache_s_op_w)
+	,.s_pi1_addr_o (dcache_s_addr_w)
+	,.s_pi1_data_i (dcache_s_data_w1)
+	,.s_pi1_data_o (dcache_s_data_w0)
+	,.s_pi1_sel_o  (dcache_s_sel_w)
+	,.s_pi1_rdy_i  (dcache_s_rdy_w)
+);
+
+wire                        wb4_clk_user_port_w;
+wire                        wb4_rst_user_port_w;
+wire                        wb4_cyc_user_port_w;
+wire                        wb4_stb_user_port_w;
+wire                        wb4_we_user_port_w;
+wire [ARCHBITSZ -1 : 0]     wb4_addr_user_port_w;
+wire [ARCHBITSZ -1 : 0]     wb4_data_user_port_w0;
+wire [(ARCHBITSZ/8) -1 : 0] wb4_sel_user_port_w;
+wire                        wb4_stall_user_port_w;
+wire                        wb4_ack_user_port_w;
+wire [ARCHBITSZ -1 : 0]     wb4_data_user_port_w1;
+
+pi1q_to_wb4 #(
+
+	.ARCHBITSZ (ARCHBITSZ)
+
+) pi1q_to_wb4_user_port (
+
+	 .wb4_rst_i (wb4_rst_user_port_w)
+
+	,.pi1_clk_i   (pi1r_clk_w)
+	,.pi1_op_i    (dcache_s_op_w)
+	,.pi1_addr_i  (dcache_s_addr_w)
+	,.pi1_data_i  (dcache_s_data_w0)
+	,.pi1_data_o  (dcache_s_data_w1)
+	,.pi1_sel_i   (dcache_s_sel_w)
+	,.pi1_rdy_o   (dcache_s_rdy_w)
+
+	,.wb4_clk_i   (wb4_clk_user_port_w)
+	,.wb4_cyc_o   (wb4_cyc_user_port_w)
+	,.wb4_stb_o   (wb4_stb_user_port_w)
+	,.wb4_we_o    (wb4_we_user_port_w)
+	,.wb4_addr_o  (wb4_addr_user_port_w)
+	,.wb4_data_o  (wb4_data_user_port_w0)
+	,.wb4_sel_o   (wb4_sel_user_port_w)
+	,.wb4_stall_i (wb4_stall_user_port_w)
+	,.wb4_ack_i   (wb4_ack_user_port_w)
+	,.wb4_data_i  (wb4_data_user_port_w1)
+);
+
+wire                        wb4_cyc_wb_ctrl_w;
+wire                        wb4_stb_wb_ctrl_w;
+wire                        wb4_we_wb_ctrl_w;
+wire [ARCHBITSZ -1 : 0]     wb4_addr_wb_ctrl_w;
+wire [ARCHBITSZ -1 : 0]     wb4_data_wb_ctrl_w0;
+wire [(ARCHBITSZ/8) -1 : 0] wb4_sel_wb_ctrl_w;
+wire                        wb4_stall_wb_ctrl_w;
+wire                        wb4_ack_wb_ctrl_w;
+wire [ARCHBITSZ -1 : 0]     wb4_data_wb_ctrl_w1;
+
+pi1q_to_wb4 #(
+
+	.ARCHBITSZ (ARCHBITSZ)
+
+) pi1q_to_wb4_wb_ctrl (
+
+	 .wb4_rst_i (wb4_rst_user_port_w)
+
+	,.pi1_clk_i   (pi1r_clk_w)
+	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_RAMCTRL])
+	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_RAMCTRL])
+	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_RAMCTRL])
+	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_RAMCTRL])
+	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_RAMCTRL])
+	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_RAMCTRL])
+
+	,.wb4_clk_i   (wb4_clk_user_port_w)
+	,.wb4_cyc_o   (wb4_cyc_wb_ctrl_w)
+	,.wb4_stb_o   (wb4_stb_wb_ctrl_w)
+	,.wb4_we_o    (wb4_we_wb_ctrl_w)
+	,.wb4_addr_o  (wb4_addr_wb_ctrl_w)
+	,.wb4_data_o  (wb4_data_wb_ctrl_w0)
+	,.wb4_sel_o   (wb4_sel_wb_ctrl_w)
+	,.wb4_stall_i (wb4_stall_wb_ctrl_w)
+	,.wb4_ack_i   (wb4_ack_wb_ctrl_w)
+	,.wb4_data_i  (wb4_data_wb_ctrl_w1)
+);
+
+assign s_pi1r_mapsz_w[S_PI1R_RAMCTRL] = ('h10000/* 64KB */);
+
+litedram litedram (
+
+	 .clk (pi1r_clk_w)
+
+	,.init_done  ()
+	,.init_error ()
+
+	,.user_clk                   (wb4_clk_user_port_w)
+	,.user_rst                   (wb4_rst_user_port_w)
+	,.user_port_wishbone_0_adr   (wb4_addr_user_port_w[ARCHBITSZ -1 : clog2(ARCHBITSZ/8)])
+	,.user_port_wishbone_0_dat_w (wb4_data_user_port_w0)
+	,.user_port_wishbone_0_dat_r (wb4_data_user_port_w1)
+	,.user_port_wishbone_0_sel   (wb4_sel_user_port_w)
+	,.user_port_wishbone_0_cyc   (wb4_cyc_user_port_w)
+	,.user_port_wishbone_0_stb   (wb4_stb_user_port_w)
+	,.user_port_wishbone_0_ack   (wb4_ack_user_port_w)
+	,.user_port_wishbone_0_we    (wb4_we_user_port_w)
+
+	,.wb_ctrl_adr   (wb4_addr_wb_ctrl_w[ARCHBITSZ -1 : clog2(ARCHBITSZ/8)])
+	,.wb_ctrl_dat_w (wb4_data_wb_ctrl_w0)
+	,.wb_ctrl_dat_r (wb4_data_wb_ctrl_w1)
+	,.wb_ctrl_sel   (wb4_sel_wb_ctrl_w)
+	,.wb_ctrl_cyc   (wb4_cyc_wb_ctrl_w)
+	,.wb_ctrl_stb   (wb4_stb_wb_ctrl_w)
+	,.wb_ctrl_ack   (wb4_ack_wb_ctrl_w)
+	,.wb_ctrl_we    (wb4_we_wb_ctrl_w)
+	,.wb_ctrl_cti   (3'b000)
+	,.wb_ctrl_bte   (2'b00)
+);
+
+assign devtbl_id_w     [S_PI1R_RAMCTRL] = 0;
+assign devtbl_useintr_w[S_PI1R_RAMCTRL] = 0;
+
+end else begin  :gen_litedram1
+always @* begin
+$display("litedram ARCHBITSZ must be 32 and equal to PI1RARCHBITSZ\n");
+$finish;
+end
+end endgenerate
+`elsif WB4SMEM
 
 localparam RAMSZ = ('h2000000/* 32MB */);
 
