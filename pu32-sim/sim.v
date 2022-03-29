@@ -42,12 +42,12 @@
 
 `include "dev/uart_sim.v"
 
-//`define PI1LITEDRAM
+//`define PI1QLITEDRAM
 //`define WB4SMEM
-`ifdef PI1LITEDRAM
+`ifdef PI1QLITEDRAM
 `include "dev/pi1_dcache.v"
 `include "dev/pi1q_to_wb4.v"
-`include "dev/pi1_to_litedram.v"
+`include "dev/pi1q_to_litedram.v"
 `include "./litedram/litedram.v"
 `elsif WB4SMEM
 `include "dev/pi1_upconverter.v"
@@ -166,7 +166,7 @@ localparam S_PI1R_SDCARD     = 0;
 localparam S_PI1R_DEVTBL     = (S_PI1R_SDCARD + 1);
 localparam S_PI1R_INTCTRL    = (S_PI1R_DEVTBL + 1);
 localparam S_PI1R_UART       = (S_PI1R_INTCTRL + 1);
-`ifdef PI1LITEDRAM
+`ifdef PI1QLITEDRAM
 localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
 localparam S_PI1R_RAMCTRL    = (S_PI1R_RAM + 1);
 localparam S_PI1R_BOOTLDR    = (S_PI1R_RAMCTRL + 1);
@@ -280,7 +280,7 @@ cpu #(
 
 	,.rstaddr_i  ((('h1000)>>1)
 		+ (s_pi1r_mapsz_w[S_PI1R_RAM]>>1)
-		`ifdef PI1LITEDRAM
+		`ifdef PI1QLITEDRAM
 		+ (s_pi1r_mapsz_w[S_PI1R_RAMCTRL]>>1)
 		`endif
 		)
@@ -330,7 +330,7 @@ devtbl #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.XARCHBITSZ (PI1RARCHBITSZ)
-	 `ifdef PI1LITEDRAM
+	 `ifdef PI1QLITEDRAM
 	,.RAMCACHESZ (RAMCACHESZ)
 	,.PRELDRADDR ('h1000)
 	`elsif WB4SMEM
@@ -539,7 +539,7 @@ assign devtbl_id_w     [S_PI1R_UART1] = 5;
 assign devtbl_useintr_w[S_PI1R_UART1] = 1;
 
 // The RAM ARCHBITSZ must be >= PI1RARCHBITSZ.
-`ifdef PI1LITEDRAM
+`ifdef PI1QLITEDRAM
 generate if (ARCHBITSZ == 32 && ARCHBITSZ == PI1RARCHBITSZ) begin :gen_litedram0
 
 assign s_pi1r_mapsz_w[S_PI1R_RAM] = ('h2000000/* 32MB */);
@@ -608,16 +608,15 @@ wire                                         litedram_rdata_valid_user_port_w;
 wire [ARCHBITSZ -1 : 0]                      litedram_rdata_data_user_port_w;
 wire                                         litedram_rdata_ready_user_port_w;
 
-pi1_to_litedram #(
+pi1q_to_litedram #(
 
 	.ARCHBITSZ (ARCHBITSZ)
 
-) pi1_to_litedram (
+) pi1q_to_litedram (
 
-	 .rst_i (litedram_user_rst_w)
+	 .litedram_rst_i (litedram_user_rst_w)
 
-	,.clk_i (litedram_user_clk_w)
-
+	,.pi1_clk_i  (pi1r_clk_w)
 	,.pi1_op_i   (dcache_s_op_w)
 	,.pi1_addr_i (dcache_s_addr_w)
 	,.pi1_data_i (dcache_s_data_w0)
@@ -625,6 +624,7 @@ pi1_to_litedram #(
 	,.pi1_sel_i  (dcache_s_sel_w)
 	,.pi1_rdy_o  (dcache_s_rdy_w)
 
+	,.litedram_clk_i         (litedram_user_clk_w)
 	,.litedram_cmd_ready_i   (litedram_cmd_ready_user_port_w)
 	,.litedram_cmd_valid_o   (litedram_cmd_valid_user_port_w)
 	,.litedram_cmd_we_o      (litedram_cmd_we_user_port_w)
