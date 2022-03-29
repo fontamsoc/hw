@@ -42,12 +42,12 @@
 
 `include "dev/uart_sim.v"
 
-//`define WB4LITEDRAM
+//`define PI1LITEDRAM
 //`define WB4SMEM
-`ifdef WB4LITEDRAM
+`ifdef PI1LITEDRAM
 `include "dev/pi1_dcache.v"
 `include "dev/pi1q_to_wb4.v"
-`include "lib/wb4_to_litedram.v"
+`include "dev/pi1_to_litedram.v"
 `include "./litedram/litedram.v"
 `elsif WB4SMEM
 `include "dev/pi1_upconverter.v"
@@ -166,7 +166,7 @@ localparam S_PI1R_SDCARD     = 0;
 localparam S_PI1R_DEVTBL     = (S_PI1R_SDCARD + 1);
 localparam S_PI1R_INTCTRL    = (S_PI1R_DEVTBL + 1);
 localparam S_PI1R_UART       = (S_PI1R_INTCTRL + 1);
-`ifdef WB4LITEDRAM
+`ifdef PI1LITEDRAM
 localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
 localparam S_PI1R_RAMCTRL    = (S_PI1R_RAM + 1);
 localparam S_PI1R_BOOTLDR    = (S_PI1R_RAMCTRL + 1);
@@ -280,7 +280,7 @@ cpu #(
 
 	,.rstaddr_i  ((('h1000)>>1)
 		+ (s_pi1r_mapsz_w[S_PI1R_RAM]>>1)
-		`ifdef WB4LITEDRAM
+		`ifdef PI1LITEDRAM
 		+ (s_pi1r_mapsz_w[S_PI1R_RAMCTRL]>>1)
 		`endif
 		)
@@ -330,7 +330,7 @@ devtbl #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.XARCHBITSZ (PI1RARCHBITSZ)
-	 `ifdef WB4LITEDRAM
+	 `ifdef PI1LITEDRAM
 	,.RAMCACHESZ (RAMCACHESZ)
 	,.PRELDRADDR ('h1000)
 	`elsif WB4SMEM
@@ -539,7 +539,7 @@ assign devtbl_id_w     [S_PI1R_UART1] = 5;
 assign devtbl_useintr_w[S_PI1R_UART1] = 1;
 
 // The RAM ARCHBITSZ must be >= PI1RARCHBITSZ.
-`ifdef WB4LITEDRAM
+`ifdef PI1LITEDRAM
 generate if (ARCHBITSZ == 32 && ARCHBITSZ == PI1RARCHBITSZ) begin :gen_litedram0
 
 assign s_pi1r_mapsz_w[S_PI1R_RAM] = ('h2000000/* 32MB */);
@@ -596,44 +596,6 @@ pi1_dcache #(
 wire                        litedram_user_clk_w;
 wire                        litedram_user_rst_w;
 
-wire                        wb4_cyc_user_port_w;
-wire                        wb4_stb_user_port_w;
-wire                        wb4_we_user_port_w;
-wire [ARCHBITSZ -1 : 0]     wb4_addr_user_port_w;
-wire [ARCHBITSZ -1 : 0]     wb4_data_user_port_w0;
-wire [(ARCHBITSZ/8) -1 : 0] wb4_sel_user_port_w;
-wire                        wb4_stall_user_port_w;
-wire                        wb4_ack_user_port_w;
-wire [ARCHBITSZ -1 : 0]     wb4_data_user_port_w1;
-
-pi1q_to_wb4 #(
-
-	.ARCHBITSZ (ARCHBITSZ)
-
-) pi1q_to_wb4_user_port (
-
-	 .wb4_rst_i (litedram_user_rst_w)
-
-	,.pi1_clk_i   (pi1r_clk_w)
-	,.pi1_op_i    (dcache_s_op_w)
-	,.pi1_addr_i  (dcache_s_addr_w)
-	,.pi1_data_i  (dcache_s_data_w0)
-	,.pi1_data_o  (dcache_s_data_w1)
-	,.pi1_sel_i   (dcache_s_sel_w)
-	,.pi1_rdy_o   (dcache_s_rdy_w)
-
-	,.wb4_clk_i   (litedram_user_clk_w)
-	,.wb4_cyc_o   (wb4_cyc_user_port_w)
-	,.wb4_stb_o   (wb4_stb_user_port_w)
-	,.wb4_we_o    (wb4_we_user_port_w)
-	,.wb4_addr_o  (wb4_addr_user_port_w)
-	,.wb4_data_o  (wb4_data_user_port_w0)
-	,.wb4_sel_o   (wb4_sel_user_port_w)
-	,.wb4_stall_i (wb4_stall_user_port_w)
-	,.wb4_ack_i   (wb4_ack_user_port_w)
-	,.wb4_data_i  (wb4_data_user_port_w1)
-);
-
 wire                                         litedram_cmd_ready_user_port_w;
 wire                                         litedram_cmd_valid_user_port_w;
 wire                                         litedram_cmd_we_user_port_w;
@@ -646,25 +608,22 @@ wire                                         litedram_rdata_valid_user_port_w;
 wire [ARCHBITSZ -1 : 0]                      litedram_rdata_data_user_port_w;
 wire                                         litedram_rdata_ready_user_port_w;
 
-wb4_to_litedram #(
+pi1_to_litedram #(
 
 	.ARCHBITSZ (ARCHBITSZ)
 
-) wb4_to_litedram (
+) pi1_to_litedram (
 
 	 .rst_i (litedram_user_rst_w)
 
 	,.clk_i (litedram_user_clk_w)
 
-	,.wb4_addr_i  (wb4_addr_user_port_w)
-	,.wb4_data_i  (wb4_data_user_port_w0)
-	,.wb4_data_o  (wb4_data_user_port_w1)
-	,.wb4_sel_i   (wb4_sel_user_port_w)
-	,.wb4_cyc_i   (wb4_cyc_user_port_w)
-	,.wb4_stb_i   (wb4_stb_user_port_w)
-	,.wb4_stall_o (wb4_stall_user_port_w)
-	,.wb4_ack_o   (wb4_ack_user_port_w)
-	,.wb4_we_i    (wb4_we_user_port_w)
+	,.pi1_op_i   (dcache_s_op_w)
+	,.pi1_addr_i (dcache_s_addr_w)
+	,.pi1_data_i (dcache_s_data_w0)
+	,.pi1_data_o (dcache_s_data_w1)
+	,.pi1_sel_i  (dcache_s_sel_w)
+	,.pi1_rdy_o  (dcache_s_rdy_w)
 
 	,.litedram_cmd_ready_i   (litedram_cmd_ready_user_port_w)
 	,.litedram_cmd_valid_o   (litedram_cmd_valid_user_port_w)
