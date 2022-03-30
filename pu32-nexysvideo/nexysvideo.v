@@ -771,7 +771,7 @@ pi1q_to_wb4 #(
 
 ) pi1q_to_wb4_wb_ctrl (
 
-	 .wb4_rst_i (ram_rst_w)
+	 .wb4_rst_i (wb4_rst_user_port_w)
 
 	,.pi1_clk_i   (pi1r_clk_w)
 	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_RAMCTRL])
@@ -781,7 +781,7 @@ pi1q_to_wb4 #(
 	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_RAMCTRL])
 	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_RAMCTRL])
 
-	,.wb4_clk_i   (clk100mhz_i)
+	,.wb4_clk_i   (wb4_clk_user_port_w)
 	,.wb4_cyc_o   (wb4_cyc_wb_ctrl_w)
 	,.wb4_stb_o   (wb4_stb_wb_ctrl_w)
 	,.wb4_we_o    (wb4_we_wb_ctrl_w)
