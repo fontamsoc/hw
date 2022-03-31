@@ -24,14 +24,14 @@
 // 	It must be held low for normal operation.
 //
 // rx_clk_i
-// rx_pop_i
+// rx_read_i
 // rx_data_o
 // rx_empty_o
 // rx_usage_o
 // 	FIFO interface to receive data.
 //
 // tx_clk_i
-// tx_push_i
+// tx_write_i
 // tx_data_i
 // tx_full_o
 // tx_usage_o
@@ -47,7 +47,7 @@
 // usb_dn_io
 // 	USB signals.
 
-`include "lib/fifo_fwft.v"
+`include "lib/fifo.v"
 `include "lib/usb_serial_phy.v"
 
 module usb_serial_fifo_phy (
@@ -55,13 +55,13 @@ module usb_serial_fifo_phy (
 	 rst_i
 
 	,rx_clk_i
-	,rx_pop_i
+	,rx_read_i
 	,rx_data_o
 	,rx_empty_o
 	,rx_usage_o
 
 	,tx_clk_i
-	,tx_push_i
+	,tx_write_i
 	,tx_data_i
 	,tx_full_o
 	,tx_usage_o
@@ -88,13 +88,13 @@ end
 input wire rst_i;
 
 input  wire                          rx_clk_i;
-input  wire                          rx_pop_i;
+input  wire                          rx_read_i;
 output wire [8 -1 : 0]               rx_data_o;
 output wire                          rx_empty_o;
 output wire [(CLOG2DEPTH +1) -1 : 0] rx_usage_o;
 
 input  wire                          tx_clk_i;
-input  wire                          tx_push_i;
+input  wire                          tx_write_i;
 input  wire [8 -1 : 0]               tx_data_i;
 output wire                          tx_full_o;
 output wire [(CLOG2DEPTH +1) -1 : 0] tx_usage_o;
@@ -105,9 +105,9 @@ inout wire usb_dn_io;
 
 wire            rx_full_w;
 wire [8 -1 : 0] rx_data_w;
-wire            rx_push_w;
+wire            rx_write_w;
 
-fifo_fwft #(
+fifo #(
 
 	 .WIDTH (8)
 	,.DEPTH (DEPTH)
@@ -116,23 +116,27 @@ fifo_fwft #(
 
 	 .rst_i (rst_i)
 
-	,.clk_pop_i (rx_clk_i)
-	,.pop_i     (rx_pop_i)
-	,.data_o    (rx_data_o)
-	,.empty_o   (rx_empty_o)
-	,.usage_o   (rx_usage_o)
+	,.clk_read_i (rx_clk_i)
+	,.read_i     (rx_read_i)
+	,.data_o     (rx_data_o)
+	,.empty_o    (rx_empty_o)
+	,.usage_o    (rx_usage_o)
 
-	,.clk_push_i (clk_phy_i)
-	,.push_i     (rx_push_w)
-	,.data_i     (rx_data_w)
-	,.full_o     (rx_full_w)
+	,.clk_write_i (clk_phy_i)
+	,.write_i     (rx_write_w)
+	,.data_i      (rx_data_w)
+	,.full_o      (rx_full_w)
 );
+
+// This register is set to 1, when data was read from fifo.
+reg tx_read_done = 0;
+
+wire tx_read_stb = (tx_usage_o && !tx_read_done);
 
 wire            tx_empty_w;
 wire [8 -1 : 0] tx_data_w;
-wire            tx_pop_w;
 
-fifo_fwft #(
+fifo #(
 
 	 .WIDTH (8)
 	,.DEPTH (DEPTH)
@@ -141,17 +145,19 @@ fifo_fwft #(
 
 	 .rst_i (rst_i)
 
-	,.clk_pop_i (clk_phy_i)
-	,.pop_i     (tx_pop_w)
-	,.data_o    (tx_data_w)
-	,.empty_o   (tx_empty_w)
+	,.clk_read_i (clk_phy_i)
+	,.read_i     (tx_read_stb)
+	,.data_o     (tx_data_w)
+	,.empty_o    (tx_empty_w)
 
-	,.clk_push_i (tx_clk_i)
-	,.push_i     (tx_push_i)
-	,.data_i     (tx_data_i)
-	,.full_o     (tx_full_o)
-	,.usage_o    (tx_usage_o)
+	,.clk_write_i (tx_clk_i)
+	,.write_i     (tx_write_i)
+	,.data_i      (tx_data_i)
+	,.full_o      (tx_full_o)
+	,.usage_o     (tx_usage_o)
 );
+
+wire tx_phy_rdy_w;
 
 usb_serial_phy #(
 
@@ -163,17 +169,36 @@ usb_serial_phy #(
 
 	,.clk_i (clk_phy_i)
 
-	,.rcvd_o (rx_push_w)
+	,.rcvd_o (rx_write_w)
 	,.data_o (rx_data_w)
 	,.rdy_i  (~rx_full_w)
 
-	,.stb_i  (~tx_empty_w)
+	,.stb_i  (tx_phy_rdy_w && tx_read_done)
 	,.data_i (tx_data_w)
-	,.rdy_o  (tx_pop_w)
+	,.rdy_o  (tx_phy_rdy_w)
 
 	,.usb_dp_io (usb_dp_io)
 	,.usb_dn_io (usb_dn_io)
 );
+
+// Register used to save the state of tx_phy_rdy_w
+// in order to detect its falling edge.
+reg tx_phy_rdy_w_sampled;
+
+// Logic that set the net tx_phy_rdy_w_negedge
+// when a falling edge of tx_phy_rdy_w occurs.
+wire tx_phy_rdy_w_negedge = (tx_phy_rdy_w < tx_phy_rdy_w_sampled);
+
+always @(posedge clk_phy_i) begin
+	// Logic that update tx_read_done.
+	if (rst_i || (tx_read_done && tx_phy_rdy_w_negedge))
+		tx_read_done <= 0;
+	else if (tx_read_stb)
+		tx_read_done <= 1;
+
+	// Save the current state of tx_phy_rdy_w;
+	tx_phy_rdy_w_sampled <= tx_phy_rdy_w;
+end
 
 endmodule
 

@@ -43,7 +43,7 @@
 // 	ie: For a clkfreq of 100 Mhz and a bitrate of 115200 bps, the above
 // 	formula yield 909.458; the value of this input is then picked as: 909.
 //
-// pop_i
+// read_i
 // data_o
 // empty_o
 // usage_o
@@ -52,7 +52,7 @@
 // input rx_i
 // 	Incoming serial line.
 
-`include "lib/fifo_fwft.v"
+`include "lib/fifo.v"
 `include "lib/uart/uart_rx_phy.v"
 
 module uart_rx (
@@ -64,7 +64,7 @@ module uart_rx (
 
 	,clockcyclesperbit_i
 
-	,pop_i
+	,read_i
 	,data_o
 	,empty_o
 	,usage_o
@@ -87,7 +87,7 @@ input wire clk_phy_i;
 
 input wire [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] clockcyclesperbit_i;
 
-input  wire                          pop_i;
+input  wire                          read_i;
 output wire [8 -1 : 0]               data_o;
 output wire                          empty_o;
 output wire [(CLOG2BUFSZ +1) -1 : 0] usage_o;
@@ -95,9 +95,9 @@ output wire [(CLOG2BUFSZ +1) -1 : 0] usage_o;
 input wire rx_i;
 
 wire [8 -1 : 0] rx_data_w;
-wire            rx_push_w;
+wire            rx_write_w;
 
-fifo_fwft #(
+fifo #(
 
 	 .WIDTH (8)
 	,.DEPTH (BUFSZ)
@@ -108,14 +108,14 @@ fifo_fwft #(
 
 	,.usage_o (usage_o)
 
-	,.clk_pop_i (clk_i)
-	,.pop_i     (pop_i)
-	,.data_o    (data_o)
-	,.empty_o   (empty_o)
+	,.clk_read_i (clk_i)
+	,.read_i     (read_i)
+	,.data_o     (data_o)
+	,.empty_o    (empty_o)
 
-	,.clk_push_i (clk_phy_i)
-	,.push_i     (rx_push_w)
-	,.data_i     (rx_data_w)
+	,.clk_write_i (clk_phy_i)
+	,.write_i     (rx_write_w)
+	,.data_i      (rx_data_w)
 );
 
 uart_rx_phy #(
@@ -131,7 +131,7 @@ uart_rx_phy #(
 	,.clockcyclesperbit_i (clockcyclesperbit_i)
 
 	,.rx_i   (rx_i)
-	,.rcvd_o (rx_push_w)
+	,.rcvd_o (rx_write_w)
 	,.data_o (rx_data_w)
 );
 

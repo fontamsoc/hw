@@ -144,7 +144,7 @@ input wire clk_phy_i;
 input  wire [2 -1 : 0]             pi1_op_i;
 input  wire [ADDRBITSZ -1 : 0]     pi1_addr_i; /* not used */
 input  wire [ARCHBITSZ -1 : 0]     pi1_data_i;
-output reg  [ARCHBITSZ -1 : 0]     pi1_data_o = 0;
+output wire [ARCHBITSZ -1 : 0]     pi1_data_o;
 input  wire [(ARCHBITSZ/8) -1 : 0] pi1_sel_i;  /* not used */
 output wire                        pi1_rdy_o;
 output wire [ADDRBITSZ -1 : 0]     pi1_mapsz_o;
@@ -173,11 +173,11 @@ reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] rxclockcyclesperbit = 0;
 reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] txclockcyclesperbit = 0;
 
 wire            rx_empty_w;
-wire            rx_pop_w = (pi1_op_i == PIRDOP && pi1_rdy_o && !rx_empty_w);
+wire            rx_read_w = (pi1_op_i == PIRDOP && pi1_rdy_o && !rx_empty_w);
 wire [8 -1 : 0] rx_data_w0;
 
 wire            tx_full_w;
-wire            tx_push_w = (pi1_op_i == PIWROP && pi1_rdy_o && !tx_full_w);
+wire            tx_write_w = (pi1_op_i == PIWROP && pi1_rdy_o && !tx_full_w);
 wire [8 -1 : 0] tx_data_w1 = pi1_data_i[8 -1 : 0];
 
 wire [(CLOG2BUFSZ +1) -1 : 0] rx_usage_w;
@@ -195,6 +195,12 @@ localparam CMDGETBUFFERUSAGE = 0;
 localparam CMDSETINTERRUPT   = 1;
 localparam CMDSETSPEED       = 2;
 
+reg rx_read_w_sampled = 0;
+
+reg [ARCHBITSZ -1 : 0] pi1_data_o_;
+
+assign pi1_data_o = (rx_read_w_sampled ? rx_data_w0 : pi1_data_o_);
+
 always @ (posedge clk_i) begin
 	// Logic enabling/disabling interrupt.
 	if (rst_i) begin
@@ -206,21 +212,20 @@ always @ (posedge clk_i) begin
 	else if (intrdynegedge)
 		intrqstthresh <= 0;
 
-	if (rx_pop_w)
-		pi1_data_o <= rx_data_w0;
+	rx_read_w_sampled <= rx_read_w;
 
 	if (pi1_op_i == PIRWOP && pi1_rdy_o) begin
 		if (pi1_data_i[(ARCHBITSZ-1):(ARCHBITSZ-2)] == CMDSETINTERRUPT)
-			pi1_data_o <= BUFSZ;
+			pi1_data_o_ <= BUFSZ;
 		else if (pi1_data_i[(ARCHBITSZ-1):(ARCHBITSZ-2)] == CMDGETBUFFERUSAGE)
-			pi1_data_o <= pi1_data_i[0] ? tx_usage_w : rx_usage_w;
+			pi1_data_o_ <= pi1_data_i[0] ? tx_usage_w : rx_usage_w;
 		else if (pi1_data_i[(ARCHBITSZ-1):(ARCHBITSZ-2)] == CMDSETSPEED) begin
 			// Normally the formula to use is:
 			// ((PHYCLKFREQ/bitrate) + ((PHYCLKFREQ/bitrate)/10/2));
 			// so this is an approximation.
 			rxclockcyclesperbit <= (pi1_data_i[(ARCHBITSZ-2)-1:0] + (pi1_data_i[(ARCHBITSZ-2)-1:0] >> 5));
 			txclockcyclesperbit <=  pi1_data_i[(ARCHBITSZ-2)-1:0];
-			pi1_data_o <= PHYCLKFREQ;
+			pi1_data_o_ <= PHYCLKFREQ;
 		end
 	end
 
@@ -241,7 +246,7 @@ uart_rx #(
 
 	,.clockcyclesperbit_i (rxclockcyclesperbit)
 
-	,.pop_i   (rx_pop_w)
+	,.read_i  (rx_read_w)
 	,.data_o  (rx_data_w0)
 	,.empty_o (rx_empty_w)
 	,.usage_o (rx_usage_w)
@@ -263,7 +268,7 @@ uart_tx #(
 
 	,.clockcyclesperbit_i (txclockcyclesperbit)
 
-	,.push_i  (tx_push_w)
+	,.write_i (tx_write_w)
 	,.data_i  (tx_data_w1)
 	,.full_o  (tx_full_w)
 	,.usage_o (tx_usage_w)

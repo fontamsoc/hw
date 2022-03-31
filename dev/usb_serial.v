@@ -146,7 +146,7 @@ input wire clk_phy_i;
 input  wire [2 -1 : 0]             pi1_op_i;
 input  wire [ADDRBITSZ -1 : 0]     pi1_addr_i; /* not used */
 input  wire [ARCHBITSZ -1 : 0]     pi1_data_i;
-output reg  [ARCHBITSZ -1 : 0]     pi1_data_o = 0;
+output wire [ARCHBITSZ -1 : 0]     pi1_data_o;
 input  wire [(ARCHBITSZ/8) -1 : 0] pi1_sel_i;  /* not used */
 output wire                        pi1_rdy_o;
 output wire [ADDRBITSZ -1 : 0]     pi1_mapsz_o;
@@ -168,11 +168,11 @@ localparam PIRDOP = 2'b10;
 localparam PIRWOP = 2'b11;
 
 wire            rx_empty_w;
-wire            rx_pop_w = (pi1_op_i == PIRDOP && pi1_rdy_o);
+wire            rx_read_w = (pi1_op_i == PIRDOP && pi1_rdy_o);
 wire [8 -1 : 0] rx_data_w0;
 
 wire            tx_full_w;
-wire            tx_push_w = (pi1_op_i == PIWROP && pi1_rdy_o);
+wire            tx_write_w = (pi1_op_i == PIWROP && pi1_rdy_o);
 wire [8 -1 : 0] tx_data_w1 = pi1_data_i[8 -1 : 0];
 
 wire [(CLOG2BUFSZ +1) -1 : 0] rx_usage_w;
@@ -190,6 +190,12 @@ localparam CMDGETBUFFERUSAGE = 0;
 localparam CMDSETINTERRUPT   = 1;
 localparam CMDSETSPEED       = 2;
 
+reg rx_read_w_sampled = 0;
+
+reg [ARCHBITSZ -1 : 0] pi1_data_o_;
+
+assign pi1_data_o = (rx_read_w_sampled ? rx_data_w0 : pi1_data_o_);
+
 always @ (posedge clk_i) begin
 	// Logic enabling/disabling interrupt.
 	if (rst_i) begin
@@ -201,16 +207,15 @@ always @ (posedge clk_i) begin
 	else if (intrdynegedge)
 		intrqstthresh <= 0;
 
-	if (rx_pop_w)
-		pi1_data_o <= rx_data_w0;
+	rx_read_w_sampled <= rx_read_w;
 
 	if (pi1_op_i == PIRWOP && pi1_rdy_o) begin
 		if (pi1_data_i[(ARCHBITSZ-1):(ARCHBITSZ-2)] == CMDSETINTERRUPT)
-			pi1_data_o <= BUFSZ;
+			pi1_data_o_ <= BUFSZ;
 		else if (pi1_data_i[(ARCHBITSZ-1):(ARCHBITSZ-2)] == CMDGETBUFFERUSAGE)
-			pi1_data_o <= pi1_data_i[0] ? tx_usage_w : rx_usage_w;
+			pi1_data_o_ <= pi1_data_i[0] ? tx_usage_w : rx_usage_w;
 		else if (pi1_data_i[(ARCHBITSZ-1):(ARCHBITSZ-2)] == CMDSETSPEED)
-			pi1_data_o <= PHYCLKFREQ;
+			pi1_data_o_ <= PHYCLKFREQ;
 	end
 
 	intrdysampled <= intrdy_i; // Sampling used for edge detection.
@@ -226,13 +231,13 @@ usb_serial_fifo_phy #(
 	 .rst_i (rst_i)
 
 	,.rx_clk_i   (clk_i)
-	,.rx_pop_i   (rx_pop_w)
+	,.rx_read_i  (rx_read_w)
 	,.rx_data_o  (rx_data_w0)
 	,.rx_empty_o (rx_empty_w)
 	,.rx_usage_o (rx_usage_w)
 
 	,.tx_clk_i   (clk_i)
-	,.tx_push_i  (tx_push_w)
+	,.tx_write_i (tx_write_w)
 	,.tx_data_i  (tx_data_w1)
 	,.tx_full_o  (tx_full_w)
 	,.tx_usage_o (tx_usage_w)

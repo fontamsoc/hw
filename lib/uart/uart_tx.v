@@ -42,7 +42,7 @@
 // 	of 115200 bps, the above formula yield 866.056;
 // 	the value of this input is then picked as: 866.
 //
-// push_i
+// write_i
 // data_i
 // full_o
 // usage_o
@@ -51,7 +51,7 @@
 // tx_o
 // 	Outgoing serial line.
 
-`include "lib/fifo_fwft.v"
+`include "lib/fifo.v"
 `include "lib/uart/uart_tx_phy.v"
 
 module uart_tx (
@@ -63,7 +63,7 @@ module uart_tx (
 
 	,clockcyclesperbit_i
 
-	,push_i
+	,write_i
 	,data_i
 	,full_o
 	,usage_o
@@ -86,19 +86,22 @@ input wire clk_phy_i;
 
 input wire [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] clockcyclesperbit_i;
 
-input  wire                          push_i;
+input  wire                          write_i;
 input  wire [8 -1 : 0]               data_i;
 output wire                          full_o;
 output wire [(CLOG2BUFSZ +1) -1 : 0] usage_o;
 
 output wire tx_o;
 
-wire tx_phy_rdy_w;
+// This register is set to 1, when data was read from fifo.
+reg tx_read_done = 0;
+
+wire tx_read_stb = (usage_o && !tx_read_done);
 
 wire            tx_empty_w;
 wire [8 -1 : 0] tx_data_w;
 
-fifo_fwft #(
+fifo #(
 
 	 .WIDTH (8)
 	,.DEPTH (BUFSZ)
@@ -109,16 +112,18 @@ fifo_fwft #(
 
 	,.usage_o (usage_o)
 
-	,.clk_pop_i (clk_phy_i)
-	,.pop_i     (tx_phy_rdy_w)
-	,.data_o    (tx_data_w)
-	,.empty_o   (tx_empty_w)
+	,.clk_read_i (clk_phy_i)
+	,.read_i     (tx_read_stb)
+	,.data_o     (tx_data_w)
+	,.empty_o    (tx_empty_w)
 
-	,.clk_push_i (clk_i)
-	,.push_i     (push_i)
-	,.data_i     (data_i)
-	,.full_o     (full_o)
+	,.clk_write_i (clk_i)
+	,.write_i     (write_i)
+	,.data_i      (data_i)
+	,.full_o      (full_o)
 );
+
+wire tx_phy_rdy_w;
 
 uart_tx_phy #(
 
@@ -132,11 +137,30 @@ uart_tx_phy #(
 
 	,.clockcyclesperbit_i (clockcyclesperbit_i)
 
-	,.stb_i  (!tx_empty_w)
+	,.stb_i  (tx_phy_rdy_w && tx_read_done)
 	,.data_i (tx_data_w)
 	,.rdy_o  (tx_phy_rdy_w)
 	,.tx_o   (tx_o)
 );
+
+// Register used to save the state of tx_phy_rdy_w
+// in order to detect its falling edge.
+reg tx_phy_rdy_w_sampled;
+
+// Logic that set the net tx_phy_rdy_w_negedge
+// when a falling edge of tx_phy_rdy_w occurs.
+wire tx_phy_rdy_w_negedge = (tx_phy_rdy_w < tx_phy_rdy_w_sampled);
+
+always @(posedge clk_phy_i) begin
+	// Logic that update tx_read_done.
+	if (rst_i || (tx_read_done && tx_phy_rdy_w_negedge))
+		tx_read_done <= 0;
+	else if (tx_read_stb)
+		tx_read_done <= 1;
+
+	// Save the current state of tx_phy_rdy_w;
+	tx_phy_rdy_w_sampled <= tx_phy_rdy_w;
+end
 
 endmodule
 
