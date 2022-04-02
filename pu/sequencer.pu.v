@@ -24,7 +24,7 @@ if (rst_i
 		dohalt <= 0;
 	end
 
-	instrbufferrst_a <= ~instrbufferrst_b;
+	instrbufrst_a <= ~instrbufrst_b;
 
 	instrfetchfaulted_b <= instrfetchfaulted_a;
 
@@ -38,7 +38,7 @@ end else if (gprrdyoff) begin
 	sequencerstate <= 1;
 	`endif
 
-end else if (instrbufferrst) begin
+end else if (instrbufrst) begin
 	// Interrupts must not be processed until
 	// resetting the instruction buffer has completed.
 
@@ -63,8 +63,8 @@ end else if (timertriggered && !isflagdistimerintr && inusermode && !oplicounter
 
 	faultreason <= TIMERINTR;
 
-	if (instrbuffernotempty)
-		sysopcode <= {instrbufferdataout1, instrbufferdataout0};
+	if (instrbufnotempty)
+		sysopcode <= {instrbufdato1, instrbufdato0};
 	else
 		sysopcode <= {8'h00, OPNOTAVAIL[4:0], 3'b000};
 
@@ -75,7 +75,7 @@ end else if (timertriggered && !isflagdistimerintr && inusermode && !oplicounter
 
 	inusermode <= 0;
 
-	instrbufferrst_a <= ~instrbufferrst_b;
+	instrbufrst_a <= ~instrbufrst_b;
 
 	`ifdef SIMULATION
 	sequencerstate <= 6;
@@ -93,8 +93,8 @@ end else if (intrqst_i && !isflagdisextintr && inusermode && !oplicounter
 
 	faultreason <= EXTINTR;
 
-	if (instrbuffernotempty)
-		sysopcode <= {instrbufferdataout1, instrbufferdataout0};
+	if (instrbufnotempty)
+		sysopcode <= {instrbufdato1, instrbufdato0};
 	else
 		sysopcode <= {8'h00, OPNOTAVAIL[4:0], 3'b000};
 
@@ -105,7 +105,7 @@ end else if (intrqst_i && !isflagdisextintr && inusermode && !oplicounter
 
 	inusermode <= 0;
 
-	instrbufferrst_a <= ~instrbufferrst_b;
+	instrbufrst_a <= ~instrbufrst_b;
 
 	`ifdef SIMULATION
 	sequencerstate <= 7;
@@ -113,12 +113,12 @@ end else if (intrqst_i && !isflagdisextintr && inusermode && !oplicounter
 
 end else if (!inhalt) begin
 
-	if (instrbuffernotempty) begin
+	if (instrbufnotempty) begin
 		// Opcode numbers are compared according to
 		// the arrangement described in opcodes.pu.v.
 
 		if (oplicounter) begin
-			ip <= ipplusone;
+			ip <= ipnxt;
 			`ifdef SIMULATION
 			sequencerstate <= 8;
 			`endif
@@ -129,13 +129,13 @@ end else if (!inhalt) begin
 			sequencerstate <= 9;
 			`endif
 		`endif
-		end else if (instrbufferdataout0[7] || isopvloadorstore) begin
+		end else if (instrbufdato0[7] || isopvloadorstore) begin
 
 			if (gprrdy1) begin
 
 				if (isopimm || isopinc || isopli8 || isopinc8 || isoprli8) begin
 					// NOP instruction "inc8 %0, 0" preempt current context.
-					if (isopinc8 && !{instrbufferdataout0[3:0], instrbufferdataout1} && !isflagdispreemptintr && inusermode
+					if (isopinc8 && !{instrbufdato0[3:0], instrbufdato1} && !isflagdispreemptintr && inusermode
 						// Disable PREEMPTINTR if debug-stepping.
 						&& !dbgen) begin
 
@@ -143,19 +143,19 @@ end else if (!inhalt) begin
 
 						sysopcode <= {8'h00, OPNOTAVAIL[4:0], 3'b000};
 
-						uip <= ipplusone;
+						uip <= ipnxt;
 						ip <= kip;
 
 						inusermode <= 0;
 
-						instrbufferrst_a <= ~instrbufferrst_b;
+						instrbufrst_a <= ~instrbufrst_b;
 
 						`ifdef SIMULATION
 						sequencerstate <= 10;
 						`endif
 
 					end else begin
-						ip <= ipplusone;
+						ip <= ipnxt;
 						`ifdef SIMULATION
 						sequencerstate <= 11;
 						`endif
@@ -165,18 +165,18 @@ end else if (!inhalt) begin
 
 					if (isopj) begin
 
-						if (isoptype2 || (|gprdata1 == instrbufferdataout0[0])) begin
+						if (isoptype2 || (|gprdata1 == instrbufdato0[0])) begin
 
 							ip <= gprdata2[ARCHBITSZ-1:1];
 
-							instrbufferrst_a <= ~instrbufferrst_b;
+							instrbufrst_a <= ~instrbufrst_b;
 
 							`ifdef SIMULATION
 							sequencerstate <= 12;
 							`endif
 
 						end else begin
-							ip <= ipplusone;
+							ip <= ipnxt;
 							`ifdef SIMULATION
 							sequencerstate <= 13;
 							`endif
@@ -203,9 +203,9 @@ end else if (!inhalt) begin
 
 								inusermode <= 0;
 
-								instrbufferrst_a <= ~instrbufferrst_b;
+								instrbufrst_a <= ~instrbufrst_b;
 
-								sysopcode <= {instrbufferdataout1, instrbufferdataout0};
+								sysopcode <= {instrbufdato1, instrbufdato0};
 
 								faultaddr <= gprdata2;
 
@@ -214,7 +214,7 @@ end else if (!inhalt) begin
 								`endif
 
 							end else begin
-								ip <= ipplusone;
+								ip <= ipnxt;
 								`ifdef SIMULATION
 								sequencerstate <= 15;
 								`endif
@@ -248,9 +248,9 @@ end else if (!inhalt) begin
 
 								inusermode <= 0;
 
-								instrbufferrst_a <= ~instrbufferrst_b;
+								instrbufrst_a <= ~instrbufrst_b;
 
-								sysopcode <= {instrbufferdataout1, instrbufferdataout0};
+								sysopcode <= {instrbufdato1, instrbufdato0};
 
 								faultaddr <= gprdata2;
 
@@ -259,7 +259,7 @@ end else if (!inhalt) begin
 								`endif
 
 							end else begin
-								ip <= ipplusone;
+								ip <= ipnxt;
 								`ifdef SIMULATION
 								sequencerstate <= 18;
 								`endif
@@ -297,9 +297,9 @@ end else if (!inhalt) begin
 
 								inusermode <= 0;
 
-								instrbufferrst_a <= ~instrbufferrst_b;
+								instrbufrst_a <= ~instrbufrst_b;
 
-								sysopcode <= {instrbufferdataout1, instrbufferdataout0};
+								sysopcode <= {instrbufdato1, instrbufdato0};
 
 								faultaddr <= gprdata2;
 
@@ -309,12 +309,12 @@ end else if (!inhalt) begin
 
 							end else begin
 
-								if (instrbufferdataout0[2]) begin
+								if (instrbufdato0[2]) begin
 
 									saved_sysopcode <= sysopcode;
 									saved_faultaddr <= faultaddr;
 
-									sysopcode <= {instrbufferdataout1, instrbufferdataout0};
+									sysopcode <= {instrbufdato1, instrbufdato0};
 
 									faultaddr <= {dppn, gprdata2[12 -1 : 0]};
 
@@ -327,18 +327,18 @@ end else if (!inhalt) begin
 									else
 										ip <= ksysopfaulthdlrplustwo;
 
-									ksysopfaultaddr <= ipplusone;
+									ksysopfaultaddr <= ipnxt;
 
 									inusermode <= 0;
 
-									instrbufferrst_a <= ~instrbufferrst_b;
+									instrbufrst_a <= ~instrbufrst_b;
 
 									`ifdef SIMULATION
 									sequencerstate <= 21;
 									`endif
 
 								end else begin
-									ip <= ipplusone;
+									ip <= ipnxt;
 									`ifdef SIMULATION
 									sequencerstate <= 22;
 									`endif
@@ -356,10 +356,10 @@ end else if (!inhalt) begin
 
 						if ((!isopmuldiv
 							`ifdef PUDSPMUL
-							|| !instrbufferdataout0[2]
+							|| !instrbufdato0[2]
 							`endif
 							) || opmuldiv_rdy_w) begin
-							ip <= ipplusone;
+							ip <= ipnxt;
 							`ifdef SIMULATION
 							sequencerstate <= 24;
 							`endif
@@ -375,7 +375,7 @@ end else if (!inhalt) begin
 						saved_sysopcode <= sysopcode;
 						saved_faultaddr <= faultaddr;
 
-						sysopcode <= {instrbufferdataout1, instrbufferdataout0};
+						sysopcode <= {instrbufdato1, instrbufdato0};
 
 						ksysopfaultmode <= inusermode;
 
@@ -386,11 +386,11 @@ end else if (!inhalt) begin
 						else
 							ip <= ksysopfaulthdlrplustwo;
 
-						ksysopfaultaddr <= ipplusone;
+						ksysopfaultaddr <= ipnxt;
 
 						inusermode <= 0;
 
-						instrbufferrst_a <= ~instrbufferrst_b;
+						instrbufrst_a <= ~instrbufrst_b;
 
 						`ifdef SIMULATION
 						sequencerstate <= 26;
@@ -400,7 +400,7 @@ end else if (!inhalt) begin
 
 						faultreason <= SYSOPINTR;
 
-						sysopcode <= {instrbufferdataout1, instrbufferdataout0};
+						sysopcode <= {instrbufdato1, instrbufdato0};
 
 						faultaddr <= {ip, 1'b0};
 
@@ -409,7 +409,7 @@ end else if (!inhalt) begin
 
 						inusermode <= 0;
 
-						instrbufferrst_a <= ~instrbufferrst_b;
+						instrbufrst_a <= ~instrbufrst_b;
 
 						`ifdef SIMULATION
 						sequencerstate <= 28;
@@ -451,7 +451,7 @@ end else if (!inhalt) begin
 
 				faultreason <= SYSOPINTR;
 
-				sysopcode <= {instrbufferdataout1, instrbufferdataout0};
+				sysopcode <= {instrbufdato1, instrbufdato0};
 
 				faultaddr <= {ip, 1'b0};
 
@@ -460,7 +460,7 @@ end else if (!inhalt) begin
 
 				inusermode <= 0;
 
-				instrbufferrst_a <= ~instrbufferrst_b;
+				instrbufrst_a <= ~instrbufrst_b;
 
 				`ifdef SIMULATION
 				sequencerstate <= 31;
@@ -473,7 +473,7 @@ end else if (!inhalt) begin
 
 					dohalt <= 1;
 
-					ip <= ipplusone;
+					ip <= ipnxt;
 
 					`ifdef SIMULATION
 					sequencerstate <= 32;
@@ -481,12 +481,12 @@ end else if (!inhalt) begin
 
 				end else if (isopsysret) begin
 
-					kip <= ipplusone;
+					kip <= ipnxt;
 					ip <= uip;
 
 					inusermode <= 1;
 
-					instrbufferrst_a <= ~instrbufferrst_b;
+					instrbufrst_a <= ~instrbufrst_b;
 
 					`ifdef SIMULATION
 					sequencerstate <= 33;
@@ -501,7 +501,7 @@ end else if (!inhalt) begin
 
 					inusermode <= ksysopfaultmode;
 
-					instrbufferrst_a <= ~instrbufferrst_b;
+					instrbufrst_a <= ~instrbufrst_b;
 
 					`ifdef SIMULATION
 					sequencerstate <= 34;
@@ -509,7 +509,7 @@ end else if (!inhalt) begin
 
 				end else if (isopcacherst) begin
 
-					ip <= ipplusone;
+					ip <= ipnxt;
 
 					`ifdef SIMULATION
 					sequencerstate <= 35;
@@ -518,7 +518,7 @@ end else if (!inhalt) begin
 				end else if (isopsetgpr) begin
 
 					if (opsetgprrdy1 && opsetgprrdy2) begin
-						ip <= ipplusone;
+						ip <= ipnxt;
 						`ifdef SIMULATION
 						sequencerstate <= 36;
 						`endif
@@ -550,7 +550,7 @@ end else if (!inhalt) begin
 							isopgetfaultreason || (isopgetclkcyclecnt || isopgetclkcyclecnth) ||
 							isopgettlbsize || isopgetcachesize || isopgetcoreid ||
 							isopgetclkfreq))) begin
-						ip <= ipplusone;
+						ip <= ipnxt;
 						if (isopsetuip)
 							uip <= gprdata1[ARCHBITSZ-1:1];
 						`ifdef SIMULATION
@@ -568,7 +568,7 @@ end else if (!inhalt) begin
 					saved_sysopcode <= sysopcode;
 					saved_faultaddr <= faultaddr;
 
-					sysopcode <= {instrbufferdataout1, instrbufferdataout0};
+					sysopcode <= {instrbufdato1, instrbufdato0};
 
 					ksysopfaultmode <= inusermode;
 
@@ -579,11 +579,11 @@ end else if (!inhalt) begin
 					else
 						ip <= ksysopfaulthdlrplustwo;
 
-					ksysopfaultaddr <= ipplusone;
+					ksysopfaultaddr <= ipnxt;
 
 					inusermode <= 0;
 
-					instrbufferrst_a <= ~instrbufferrst_b;
+					instrbufrst_a <= ~instrbufrst_b;
 
 					`ifdef SIMULATION
 					sequencerstate <= 40;
@@ -611,7 +611,7 @@ end else if (!inhalt) begin
 
 		inusermode <= 0;
 
-		instrbufferrst_a <= ~instrbufferrst_b;
+		instrbufrst_a <= ~instrbufrst_b;
 
 		instrfetchfaulted_b <= instrfetchfaulted_a;
 
@@ -630,9 +630,9 @@ end
 `ifdef SIMULATION
 //if (sequencerready && pc_o >= 'h4000 && pc_o != pc_o_saved) begin
 //	pc_o_saved <= pc_o;
-//	$write("0x%x: %d(0x%x) %d(0x%x)\n", pc_o, gprindex1[3:0], gprdata1, gprindex2[3:0], gprdata2); $fflush(1);
+//	$write("0x%x: %d(0x%x) %d(0x%x)\n", pc_o, gpridx1[3:0], gprdata1, gpridx2[3:0], gprdata2); $fflush(1);
 //end
-//if (pc_o == 'h2477c && gprindex1[3:0] == 'd2 && gprdata1 == 'h00003b25 && gprindex2[3:0] == 'd0 && gprdata2 == 'h00659f44) begin
+//if (pc_o == 'h2477c && gpridx1[3:0] == 'd2 && gprdata1 == 'h00003b25 && gpridx2[3:0] == 'd0 && gprdata2 == 'h00659f44) begin
 //	pc_o_saved <= pc_o;
 //	$write("clkcyclecnt == 0x%x\n", clkcyclecnt); $fflush(1);
 //end

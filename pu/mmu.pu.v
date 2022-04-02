@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-itlbwritten <= (rst_i || itlbwriteenable);
+itlbwritten <= (rst_i || itlbwe);
 
 if (itlbreadenable)
 	itlbsetprev <= itlbset;
 
-dtlbwritten <= (rst_i || dtlbwriteenable);
+dtlbwritten <= (rst_i || dtlbwe);
 
 if (dtlbreadenable)
 	dtlbsetprev <= dtlbset;

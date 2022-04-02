@@ -64,10 +64,10 @@ end else begin
 			`endif
 			) begin
 
-			if (!opldstfault && !instrbufferdataout0[2])
+			if (!opldstfault && !instrbufdato0[2])
 				opldstmemrqst <= 1;
 
-			opldstgpr <= gprindex1;
+			opldstgpr <= gpridx1;
 
 			opldstbyteselect <= dcachemastersel;
 		end

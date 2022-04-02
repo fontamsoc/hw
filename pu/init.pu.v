@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-integer init_instrbuffer_idx;
+integer init_instrbuf_idx;
 
 initial begin
 
@@ -38,18 +38,18 @@ initial begin
 
 	// ---------- Registers and nets used for instruction buffering ----------
 
-	for (init_instrbuffer_idx = 0; init_instrbuffer_idx < INSTRBUFFERSIZE; init_instrbuffer_idx = init_instrbuffer_idx + 1)
-		instrbuffer[init_instrbuffer_idx] = 0;
+	for (init_instrbuf_idx = 0; init_instrbuf_idx < INSTRBUFFERSIZE; init_instrbuf_idx = init_instrbuf_idx + 1)
+		instrbuf[init_instrbuf_idx] = 0;
 
 	// Write index within the instruction buffer.
 	// Only the CLOG2INSTRBUFFERSIZE lsb are used for indexing.
-	instrbufferwriteindex = 0;
+	instrbufwriteidx = 0;
 
-	instrbuffernotempty_sampled = 0;
+	instrbufnotempty_sampled = 0;
 
-	instrbufferrst_a = 0;
-	instrbufferrst_b = 0;
-	instrbufferrst_sampled = 0;
+	instrbufrst_a = 0;
+	instrbufrst_b = 0;
+	instrbufrst_sampled = 0;
 
 	// ---------- Registers used by instrfetch ----------
 

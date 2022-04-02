@@ -67,7 +67,7 @@ end else begin
 			if (!opldfault)
 				opldmemrqst <= 1;
 
-			opldgpr <= gprindex1;
+			opldgpr <= gpridx1;
 
 			opldbyteselect <= dcachemastersel;
 		end

@@ -102,7 +102,7 @@ end else if (dbg_rx_rcvd_i && dbgselected) begin
 		(sequencerready && !oplicounter)) begin
 		dbgcmd <= dbg_rx_data_i[7:5];
 		dbgarg <= dbg_rx_data_i[4:0];
-		dbgiarg <= {{(ARCHBITSZ-16){1'b0}}, instrbufferdataout0, instrbufferdataout1};
+		dbgiarg <= {{(ARCHBITSZ-16){1'b0}}, instrbufdato0, instrbufdato1};
 		dbgcounter <= (ARCHBITSZ/8);
 		dbgcntren <= 1;
 	end else if (dbg_rx_data_i[7:5] == DBGCMDGETIP &&

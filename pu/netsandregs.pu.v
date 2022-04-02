@@ -21,7 +21,7 @@ reg[(ARCHBITSZ-1) -1 : 0] ksysopfaulthdlr;
 reg[(ARCHBITSZ-1) -1 : 0] ksysopfaultaddr;
 wire[(ARCHBITSZ-1) -1 : 0] ksysopfaulthdlrplustwo = (ksysopfaulthdlr + 'h2);
 
-wire[(ARCHBITSZ-1) -1 : 0] ipplusone = (ip + 1'b1);
+wire[(ARCHBITSZ-1) -1 : 0] ipnxt = (ip + 1'b1);
 
 reg[16 -1 : 0] sysopcode;
 reg[16 -1 : 0] saved_sysopcode;
@@ -50,48 +50,48 @@ reg[(ARCHBITSZ*2) -1 : 0] clkcyclecnt;
 
 // ---------- Registers and nets used for instruction buffering ----------
 
-reg[ARCHBITSZ -1 : 0] instrbuffer[INSTRBUFFERSIZE -1 : 0];
+reg[ARCHBITSZ -1 : 0] instrbuf[INSTRBUFFERSIZE -1 : 0];
 
 // Write index within the instruction buffer.
 // Only the CLOG2INSTRBUFFERSIZE lsb are used for indexing.
-reg[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufferwriteindex;
+reg[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufwriteidx;
 
-// Net set to the space used in the instrbuffer.
-wire[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufferusage =
-	(instrbufferwriteindex - ip[CLOG2INSTRBUFFERSIZE +1 : 1]);
+// Net set to the space used in the instrbuf.
+wire[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufusage =
+	(instrbufwriteidx - ip[CLOG2INSTRBUFFERSIZE +1 : 1]);
 
-wire[ARCHBITSZMAX -1 : 0] instrbufferip = instrbuffer[ip[CLOG2INSTRBUFFERSIZE : 1]];
-// Net set to 16bits data indexed from instrbuffer; note that instructions are 16bits.
-wire[16 -1 : 0] instrbufferdataout =
-	(ARCHBITSZ == 16) ? instrbufferip :
-	(ARCHBITSZ == 32) ? (ip[CLOG2ARCHBITSZBY16 -1 : 0] ? instrbufferip[31:16] : instrbufferip[15:0]) : (
-			ip[CLOG2ARCHBITSZBY16 -1 : 0] == 0 ? instrbufferip[15:0] :
-			ip[CLOG2ARCHBITSZBY16 -1 : 0] == 1 ? instrbufferip[31:16] :
-			ip[CLOG2ARCHBITSZBY16 -1 : 0] == 2 ? instrbufferip[47:32] :
-							instrbufferip[63:48]);
+wire[ARCHBITSZMAX -1 : 0] instrbufip = instrbuf[ip[CLOG2INSTRBUFFERSIZE : 1]];
+// Net set to 16bits data indexed from instrbuf; note that instructions are 16bits.
+wire[16 -1 : 0] instrbufdato =
+	(ARCHBITSZ == 16) ? instrbufip :
+	(ARCHBITSZ == 32) ? (ip[CLOG2ARCHBITSZBY16 -1 : 0] ? instrbufip[31:16] : instrbufip[15:0]) : (
+			ip[CLOG2ARCHBITSZBY16 -1 : 0] == 0 ? instrbufip[15:0] :
+			ip[CLOG2ARCHBITSZBY16 -1 : 0] == 1 ? instrbufip[31:16] :
+			ip[CLOG2ARCHBITSZBY16 -1 : 0] == 2 ? instrbufip[47:32] :
+							instrbufip[63:48]);
 
-// Nets set with the bytes from instrbufferdataout.
-wire[8 -1 : 0] instrbufferdataout0 = instrbufferdataout[7:0];
-wire[8 -1 : 0] instrbufferdataout1 = instrbufferdataout[15:8];
+// Nets set with the bytes from instrbufdato.
+wire[8 -1 : 0] instrbufdato0 = instrbufdato[7:0];
+wire[8 -1 : 0] instrbufdato1 = instrbufdato[15:8];
 
 // Net set to 1 when there is data available in the instruction buffer.
-wire instrbuffernotempty = |instrbufferusage;
-reg instrbuffernotempty_sampled;
-wire instrbuffernotempty_posedge = (!instrbuffernotempty_sampled && instrbuffernotempty);
+wire instrbufnotempty = |instrbufusage;
+reg instrbufnotempty_sampled;
+wire instrbufnotempty_posedge = (!instrbufnotempty_sampled && instrbufnotempty);
 
 // This net indicates whether the instruction buffer is full.
-wire instrbuffernotfull = (instrbufferusage < INSTRBUFFERSIZE);
+wire instrbufnotfull = (instrbufusage < INSTRBUFFERSIZE);
 
-reg instrbufferrst_a;
-reg instrbufferrst_b;
+reg instrbufrst_a;
+reg instrbufrst_b;
 // This wire becomes 1 whenever a branching occur.
-wire instrbufferrst = (instrbufferrst_a ^ instrbufferrst_b);
-reg instrbufferrst_sampled;
-wire instrbufferrst_posedge = (!instrbufferrst_sampled && instrbufferrst);
+wire instrbufrst = (instrbufrst_a ^ instrbufrst_b);
+reg instrbufrst_sampled;
+wire instrbufrst_posedge = (!instrbufrst_sampled && instrbufrst);
 
 wire itlben;
-wire not_itlben_or_not_instrbufferrst_posedge = (
-	!itlben || !instrbufferrst_posedge/* Insures instrbufferrst get reset after reading itlbentry has completed */);
+wire not_itlben_or_not_instrbufrst_posedge = (
+	!itlben || !instrbufrst_posedge/* Insures instrbufrst get reset after reading itlbentry has completed */);
 
 // ---------- Registers used by instrfetch ----------
 
@@ -99,7 +99,7 @@ wire not_itlben_or_not_instrbufferrst_posedge = (
 reg[ADDRBITSZ -1 : 0] instrfetchaddr;
 
 // Net set to the next value of instrfetchaddr.
-wire[ADDRBITSZ -1 : 0] instrfetchnextaddr = instrbufferrst ? ip[ADDRBITSZ:1] : (instrfetchaddr+1);
+wire[ADDRBITSZ -1 : 0] instrfetchnextaddr = instrbufrst ? ip[ADDRBITSZ:1] : (instrfetchaddr+1);
 
 // Register holding the physical page number of the instruction to fetch.
 reg[PAGENUMBITSZ -1 : 0] instrfetchppn;
@@ -121,11 +121,11 @@ reg instrfetchmemrqstinprogress;
 // Net set to 1 when the mem request has completed.
 // This signal is 1 only for 1 clock cycle, and pi1_data_i
 // should be read as soon as this signal 1.
-wire instrfetchmemrqstdone = (instrfetchmemrqstinprogress && pi1_rdy_i && !instrbufferrst);
+wire instrfetchmemrqstdone = (instrfetchmemrqstinprogress && pi1_rdy_i && !instrbufrst);
 
 // This net is 1 when a memory request was made,
 // but the actual memory access is pending execution.
-wire instrfetchmemaccesspending = (instrfetchmemrqst && !instrfetchmemrqstinprogress && !instrbufferrst);
+wire instrfetchmemaccesspending = (instrfetchmemrqst && !instrfetchmemrqstinprogress && !instrbufrst);
 
 // ---------- Registers and nets used by opli ----------
 
@@ -164,7 +164,7 @@ reg[5 -1 : 0] dbgarg;
 reg[ARCHBITSZ -1 : 0] dbgiarg;
 wire dbgiargeqip = (dbgiarg == {ip, 1'b0});
 wire dbgcmdsteptilldone = (dbgcmd == DBGCMDSTEP && (
-	(dbgarg == DBGARGSTEPONCE && ((!dbgiargeqip && !oplicounter) || instrbufferrst)) ||
+	(dbgarg == DBGARGSTEPONCE && ((!dbgiargeqip && !oplicounter) || instrbufrst)) ||
 	(dbgarg == DBGARGSTEPTILL && dbgiargeqip)));
 wire dbgbrk = (dbgen && (dbgcmd != DBGCMDSTEP || dbgcmdsteptilldone || dbgarg == DBGARGSTEPSTOP));
 wire[ARCHBITSZ -1 : 0] dbggprdata;
@@ -287,8 +287,8 @@ reg[2 -1 : 0] hptwmemstate; // ### declared as reg so as to be usable by verilog
 
 // ---------- Registers and nets used for sequencing and decoding ----------
 
-wire[CLOG2GPRCNTTOTAL -1 : 0] gprindex1 = {inusermode, instrbufferdataout1[7:4]};
-wire[CLOG2GPRCNTTOTAL -1 : 0] gprindex2 = {inusermode, instrbufferdataout1[3:0]};
+wire[CLOG2GPRCNTTOTAL -1 : 0] gpridx1 = {inusermode, instrbufdato1[7:4]};
+wire[CLOG2GPRCNTTOTAL -1 : 0] gpridx2 = {inusermode, instrbufdato1[3:0]};
 
 // These nets will respectively hold the busy state
 // of the first and second gpr operand of an instruction
@@ -307,12 +307,12 @@ localparam GPRCTRLSTATEOPLD     = 1;
 localparam GPRCTRLSTATEOPLDST   = 2;
 localparam GPRCTRLSTATEOPMULDIV = 3;
 reg[2 -1 : 0] gprctrlstate;
-reg[CLOG2GPRCNTTOTAL -1 : 0] gprindex;
+reg[CLOG2GPRCNTTOTAL -1 : 0] gpridx;
 reg[ARCHBITSZ -1 : 0] gprdata;
-reg gprwriteenable;
-reg[CLOG2GPRCNTTOTAL -1 : 0] gprrdyindex;
+reg gprwe;
+reg[CLOG2GPRCNTTOTAL -1 : 0] gprrdyidx;
 reg gprrdyval;
-reg gprrdywriteenable;
+reg gprrdywe;
 
 reg[ARCHBITSZ -1 : 0] gpr13val;
 
@@ -324,7 +324,7 @@ wire isflagdisextintr;
 wire isflagdistimerintr;
 
 wire sequencerready_ = !(
-	rst_i || gprrdyoff || instrbufferrst ||
+	rst_i || gprrdyoff || instrbufrst ||
 	(timertriggered && !isflagdistimerintr && inusermode && !oplicounter && !dbgen
 	`ifdef PUMMU
 	`ifdef PUHPTW
@@ -341,7 +341,7 @@ wire sequencerready_ = !(
 	) ||
 	inhalt);
 // When this net is 1, the sequencer is ready.
-wire sequencerready = sequencerready_ && instrbuffernotempty;
+wire sequencerready = sequencerready_ && instrbufnotempty;
 
 // Nets set to 1 when sequencerready is 1 and the appropriate gpr is not busy.
 wire sequencerreadyandgprrdy1 = sequencerready && gprrdy1;
@@ -350,37 +350,37 @@ wire sequencerreadyandgprrdy12 = sequencerreadyandgprrdy1 && gprrdy2;
 wire miscrdyandsequencerreadyandgprrdy1 = (miscrdy && sequencerreadyandgprrdy1);
 wire miscrdyandsequencerreadyandgprrdy12 = (miscrdy && sequencerreadyandgprrdy12);
 
-// Nets used during decoding to determine the type of the opcode set in instrbufferdataout0[7:3].
-wire isoptype0 = (instrbufferdataout0[2:0] == 0);
-wire isoptype1 = (instrbufferdataout0[2:0] == 1);
-wire isoptype2 = (instrbufferdataout0[2:0] == 2);
-wire isoptype3 = (instrbufferdataout0[2:0] == 3);
-wire isoptype4 = (instrbufferdataout0[2:0] == 4);
-wire isoptype5 = (instrbufferdataout0[2:0] == 5);
-wire isoptype6 = (instrbufferdataout0[2:0] == 6);
-wire isoptype7 = (instrbufferdataout0[2:0] == 7);
+// Nets used during decoding to determine the type of the opcode set in instrbufdato0[7:3].
+wire isoptype0 = (instrbufdato0[2:0] == 0);
+wire isoptype1 = (instrbufdato0[2:0] == 1);
+wire isoptype2 = (instrbufdato0[2:0] == 2);
+wire isoptype3 = (instrbufdato0[2:0] == 3);
+wire isoptype4 = (instrbufdato0[2:0] == 4);
+wire isoptype5 = (instrbufdato0[2:0] == 5);
+wire isoptype6 = (instrbufdato0[2:0] == 6);
+wire isoptype7 = (instrbufdato0[2:0] == 7);
 
 // Nets used during decoding to determine the opcode.
-wire isopli8 = (instrbufferdataout0[7:4] == OPLI8A[4:1]);
-wire isopinc8 = (instrbufferdataout0[7:4] == OPINC8A[4:1]);
-wire isoprli8 = (instrbufferdataout0[7:4] == OPRLI8A[4:1]);
-wire isopinc = (instrbufferdataout0[7:3] == OPINC);
-wire isopimm = (instrbufferdataout0[7:3] == OPIMM);
-//wire isopli = (isopimm && !instrbufferdataout0[2]);
-wire isoprli = (isopimm && instrbufferdataout0[2]);
-wire isopalu0 = (instrbufferdataout0[7:3] == OPALU0);
-wire isopfloat = (instrbufferdataout0[7:3] == OPFLOAT);
-wire isopalu1 = (instrbufferdataout0[7:3] == OPALU1);
-wire isopalu2 = (instrbufferdataout0[7:3] == OPALU2);
-wire isopj = (instrbufferdataout0[7:3] == OPJ);
-wire isopswitchctx = (instrbufferdataout0[7:3] == OPSWITCHCTX);
+wire isopli8 = (instrbufdato0[7:4] == OPLI8A[4:1]);
+wire isopinc8 = (instrbufdato0[7:4] == OPINC8A[4:1]);
+wire isoprli8 = (instrbufdato0[7:4] == OPRLI8A[4:1]);
+wire isopinc = (instrbufdato0[7:3] == OPINC);
+wire isopimm = (instrbufdato0[7:3] == OPIMM);
+//wire isopli = (isopimm && !instrbufdato0[2]);
+wire isoprli = (isopimm && instrbufdato0[2]);
+wire isopalu0 = (instrbufdato0[7:3] == OPALU0);
+wire isopfloat = (instrbufdato0[7:3] == OPFLOAT);
+wire isopalu1 = (instrbufdato0[7:3] == OPALU1);
+wire isopalu2 = (instrbufdato0[7:3] == OPALU2);
+wire isopj = (instrbufdato0[7:3] == OPJ);
+wire isopswitchctx = (instrbufdato0[7:3] == OPSWITCHCTX);
 wire isopsysret = (isopswitchctx && isoptype0);
 wire isophalt = (isopswitchctx && isoptype3);
 wire isopicacherst = (isopswitchctx && isoptype4);
 wire isopdcacherst = (isopswitchctx && isoptype5);
 wire isopcacherst = (isopicacherst || isopdcacherst);
 wire isopksysret = (isopswitchctx && isoptype7);
-wire isopgetsysreg = (instrbufferdataout0[7:3] == OPGETSYSREG);
+wire isopgetsysreg = (instrbufdato0[7:3] == OPGETSYSREG);
 wire isopgetsysopcode = (isopgetsysreg && isoptype0);
 wire isopgetuip = (isopgetsysreg && isoptype1);
 wire isopgetfaultaddr = (isopgetsysreg && isoptype2);
@@ -389,7 +389,7 @@ wire isopgetclkcyclecnt = (isopgetsysreg && isoptype4);
 wire isopgetclkcyclecnth = (isopgetsysreg && isoptype5);
 wire isopgettlbsize = (isopgetsysreg && isoptype6);
 wire isopgeticachesize = (isopgetsysreg && isoptype7);
-wire isopgetsysreg1 = (instrbufferdataout0[7:3] == OPGETSYSREG1);
+wire isopgetsysreg1 = (instrbufdato0[7:3] == OPGETSYSREG1);
 wire isopgetcoreid = (isopgetsysreg1 && isoptype0);
 wire isopgetclkfreq = (isopgetsysreg1 && isoptype1);
 wire isopgetdcachesize = (isopgetsysreg1 && isoptype2);
@@ -397,7 +397,7 @@ wire isopgetcachesize = (isopgeticachesize || isopgetdcachesize);
 assign isopgettlb = (isopgetsysreg1 && isoptype3);
 wire isopgetcap = (isopgetsysreg1 && isoptype4);
 wire isopgetver = (isopgetsysreg1 && isoptype5);
-wire isopsetsysreg = (instrbufferdataout0[7:3] == OPSETSYSREG);
+wire isopsetsysreg = (instrbufdato0[7:3] == OPSETSYSREG);
 wire isopsetksysopfaulthdlr = (isopsetsysreg && isoptype0);
 wire isopsetksl = (isopsetsysreg && isoptype1);
 wire isopsettlb = (isopsetsysreg && isoptype2);
@@ -406,13 +406,13 @@ wire isopsetasid = (isopsetsysreg && isoptype4);
 wire isopsetuip = (isopsetsysreg && isoptype5);
 wire isopsetflags = (isopsetsysreg && isoptype6);
 wire isopsettimer = (isopsetsysreg && isoptype7);
-wire isopsetgpr = (instrbufferdataout0[7:3] == OPSETGPR);
-wire isoploadorstore = (instrbufferdataout0[7:3] == OPLOADORSTORE);
-wire isopvloadorstore = (instrbufferdataout0[7:3] == OPVLOADORSTORE);
-assign isopld = ((isoploadorstore || isopvloadorstore) && instrbufferdataout0[2]);
-assign isopst = ((isoploadorstore || isopvloadorstore) && !instrbufferdataout0[2]);
-assign isopldst = (instrbufferdataout0[7:3] == OPLDST);
-wire isopmuldiv = (instrbufferdataout0[7:3] == OPMULDIV);
+wire isopsetgpr = (instrbufdato0[7:3] == OPSETGPR);
+wire isoploadorstore = (instrbufdato0[7:3] == OPLOADORSTORE);
+wire isopvloadorstore = (instrbufdato0[7:3] == OPVLOADORSTORE);
+assign isopld = ((isoploadorstore || isopvloadorstore) && instrbufdato0[2]);
+assign isopst = ((isoploadorstore || isopvloadorstore) && !instrbufdato0[2]);
+assign isopldst = (instrbufdato0[7:3] == OPLDST);
+wire isopmuldiv = (instrbufdato0[7:3] == OPMULDIV);
 
 reg[16 -1 : 0] flags;
 wire isflagsetasid = flags[0];
@@ -486,10 +486,10 @@ wire dtlben = (!dohalt && inusermode && (inuserspace || doutofrange));
 reg dtlbwritten;
 reg[CLOG2TLBSETCOUNT -1 : 0] dtlbsetprev;
 wire dtlbreadenable_ = (isopgettlb_or_isopclrtlb_found_posedge || dtlbwritten || (dtlben && dtlbset != dtlbsetprev));
-wire dtlbreadenable = (dtlbreadenable_ || instrbufferrst);
+wire dtlbreadenable = (dtlbreadenable_ || instrbufrst);
 wire itlbreadenable;
 wire itlbreadenable_;
-wire dtlbwriteenable = (
+wire dtlbwe = (
 	`ifdef PUHPTW
 	hptwdtlbwe ||
 	`endif
@@ -519,8 +519,8 @@ assign itlben = (!dohalt && inusermode && (inuserspace || ioutofrange));
 reg itlbwritten;
 reg[CLOG2TLBSETCOUNT -1 : 0] itlbsetprev;
 assign itlbreadenable_ = (isopgettlb_or_isopclrtlb_found_posedge || itlbwritten || (itlben && itlbset != itlbsetprev));
-assign itlbreadenable = (itlbreadenable_ || instrbufferrst);
-wire itlbwriteenable = (
+assign itlbreadenable = (itlbreadenable_ || instrbufrst);
+wire itlbwe = (
 	`ifdef PUHPTW
 	hptwitlbwe ||
 	`endif
@@ -567,7 +567,7 @@ end
 always @ (posedge clk_i) begin
 	if (rst_i)
 		itlbwaywriteidx <= 0;
-	else if (itlbwriteenable && !isopclrtlb) begin
+	else if (itlbwe && !isopclrtlb) begin
 		if (itlbwaywriteidx >= (TLBWAYCOUNT-1))
 			itlbwaywriteidx <= 0;
 		else
@@ -578,7 +578,7 @@ end
 always @ (posedge clk_i) begin
 	if (rst_i)
 		dtlbwaywriteidx <= 0;
-	else if (dtlbwriteenable && !isopclrtlb) begin
+	else if (dtlbwe && !isopclrtlb) begin
 		if (dtlbwaywriteidx >= (TLBWAYCOUNT-1))
 			dtlbwaywriteidx <= 0;
 		else
@@ -598,7 +598,7 @@ bram #(
 
 	 .clk0_i  (clk_i)                  ,.clk1_i  (clk_i)
 	,.en0_i   (itlbreadenable)         ,.en1_i   (1'b1)
-	                                   ,.we1_i   (itlbwriteenable && ((itlbwaywriteidx == gen_tlb_idx) || isopclrtlb))
+	                                   ,.we1_i   (itlbwe && ((itlbwaywriteidx == gen_tlb_idx) || isopclrtlb))
 	,.addr0_i (itlbset)                ,.addr1_i (itlbset)
 	                                   ,.i1      (tlbwritedata)
 	,.o0      (itlbentry[gen_tlb_idx]) ,.o1      ()
@@ -613,7 +613,7 @@ bram #(
 
 	 .clk0_i  (clk_i)                  ,.clk1_i  (clk_i)
 	,.en0_i   (dtlbreadenable)         ,.en1_i   (1'b1)
-	                                   ,.we1_i   (dtlbwriteenable && ((dtlbwaywriteidx == gen_tlb_idx) || isopclrtlb))
+	                                   ,.we1_i   (dtlbwe && ((dtlbwaywriteidx == gen_tlb_idx) || isopclrtlb))
 	,.addr0_i (dtlbset)                ,.addr1_i (dtlbset)
 	                                   ,.i1      (tlbwritedata)
 	,.o0      (dtlbentry[gen_tlb_idx]) ,.o1      ()
@@ -691,7 +691,7 @@ localparam KERNELSPACESTART = 'h1000;
 assign ioutofrange = (instrfetchnextaddr < (KERNELSPACESTART >> CLOG2ARCHBITSZBY8) || (instrfetchnextaddr >= ksl[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8]));
 assign doutofrange = (gprdata2 < KERNELSPACESTART || gprdata2 >= ksl);
 
-wire itlb_and_instrbuffer_rdy = (((!(inusermode && tlbbsy) && instrbuffernotfull) || instrbufferrst) && (!itlbreadenable_
+wire itlb_and_instrbuf_rdy = (((!(inusermode && tlbbsy) && instrbufnotfull) || instrbufrst) && (!itlbreadenable_
 	`ifdef PUMMU
 	`ifdef PUHPTW
 	|| (hptwidone && !itlbwritten)
@@ -713,14 +713,14 @@ wire dtlb_rdy = (!dtlbreadenable &&
 	// Check below used to insure that gprdata* are clocked-out and ready
 	// when gpr indexes become available from the instruction buffer.
 	// gprdata2 is used to compute dtlb entries and other logics.
-	!instrbuffernotempty_posedge);
+	!instrbufnotempty_posedge);
 
 // ---------- Net used to detect unaligned data memory access ----------
 
 wire alignfault =
-	(ARCHBITSZ == 16) ? (instrbufferdataout0[0] && gprdata2[0]) :
-	(ARCHBITSZ == 32) ? ((instrbufferdataout0[1] && gprdata2[1:0]) || (instrbufferdataout0[0] && gprdata2[0])) :
-		((&instrbufferdataout0[1:0] && gprdata2[2:0]) || (instrbufferdataout0[1] && gprdata2[1:0]) || (instrbufferdataout0[0] && gprdata2[0]));
+	(ARCHBITSZ == 16) ? (instrbufdato0[0] && gprdata2[0]) :
+	(ARCHBITSZ == 32) ? ((instrbufdato0[1] && gprdata2[1:0]) || (instrbufdato0[0] && gprdata2[0])) :
+		((&instrbufdato0[1:0] && gprdata2[2:0]) || (instrbufdato0[1] && gprdata2[1:0]) || (instrbufdato0[0] && gprdata2[0]));
 
 // ---------- Registers and nets used for instruction caching ----------
 
@@ -776,7 +776,7 @@ wire icachehit = ((
 	`endif
 		!ioutofrange) && icacheactive && icachehit_);
 
-wire icachewe = (!doicacherst && icacheactive && instrfetchmemrqstdone && !instrbufferrst);
+wire icachewe = (!doicacherst && icacheactive && instrfetchmemrqstdone && !instrbufrst);
 
 wire icacheoff = !icacheactive;
 
@@ -795,7 +795,7 @@ always @ (posedge clk_i) begin
 		icachewecnt <= 0;
 	end else if (icachewe) begin
 		icachewecnt <= icachewecnt + 1'b1;
-	end else if ((icachewecnt >= (ICACHESETCOUNT-1)) || (instrbufferrst && icachewecnt)) begin
+	end else if ((icachewecnt >= (ICACHESETCOUNT-1)) || (instrbufrst && icachewecnt)) begin
 		if (icachewaywriteidx >= (ICACHEWAYCOUNT-1))
 			icachewaywriteidx <= 0;
 		else
@@ -815,7 +815,7 @@ bram #(
 ) icachetags (
 
 	 .clk0_i  (clk_i)                          ,.clk1_i  (clk_i)
-	,.en0_i   (!icachecheck || instrbufferrst) ,.en1_i   (1'b1)
+	,.en0_i   (!icachecheck || instrbufrst) ,.en1_i   (1'b1)
 	                                           ,.we1_i   (icachewe && (icachewaywriteidx == gen_icache_idx))
 	,.addr0_i (icachenextset)                  ,.addr1_i (icacheset)
 	                                           ,.i1      (icachetag)
@@ -830,7 +830,7 @@ bram #(
 ) icachedatas (
 
 	 .clk0_i  (clk_i)                          ,.clk1_i  (clk_i)
-	,.en0_i   (!icachecheck || instrbufferrst) ,.en1_i   (1'b1)
+	,.en0_i   (!icachecheck || instrbufrst) ,.en1_i   (1'b1)
 	                                           ,.we1_i   (icachewe && (icachewaywriteidx == gen_icache_idx))
 	,.addr0_i (icachenextset)                  ,.addr1_i (icacheset)
 	                                           ,.i1      (pi1_data_i)
@@ -845,7 +845,7 @@ bram #(
 ) icachevalids (
 
 	 .clk0_i  (clk_i)                          ,.clk1_i  (clk_i)
-	,.en0_i   (!icachecheck || instrbufferrst) ,.en1_i   (1'b1)
+	,.en0_i   (!icachecheck || instrbufrst) ,.en1_i   (1'b1)
 	                                           ,.we1_i   ((icachewe && (icachewaywriteidx == gen_icache_idx)) || icacheoff)
 	,.addr0_i (icachenextset)                  ,.addr1_i (icacheoff ? icacherstidx : icacheset)
 	                                           ,.i1      (icacheactive)
@@ -856,8 +856,8 @@ end endgenerate
 
 // ---------- Nets used by opali8 ----------
 
-wire[ARCHBITSZ -1 : 0] opli8result = {{(ARCHBITSZ-8){instrbufferdataout0[3]}}, instrbufferdataout0[3:0], instrbufferdataout1[3:0]} +
-	(isopinc8 ? gprdata1 : (isoprli8 ? {ipplusone, 1'b0} : {ARCHBITSZ{1'b0}}));
+wire[ARCHBITSZ -1 : 0] opli8result = {{(ARCHBITSZ-8){instrbufdato0[3]}}, instrbufdato0[3:0], instrbufdato1[3:0]} +
+	(isopinc8 ? gprdata1 : (isoprli8 ? {ipnxt, 1'b0} : {ARCHBITSZ{1'b0}}));
 
 wire opli8done = (miscrdyandsequencerreadyandgprrdy1 && (isopli8 || isopinc8 || isoprli8));
 
@@ -880,16 +880,16 @@ reg[(ARCHBITSZMAX -16) -1 : 0] oplilsb;
 
 // Net that get set to the immediate loaded.
 wire[ARCHBITSZMAX -1 : 0] opliresult = (
-	(ARCHBITSZ == 16) ? ({instrbufferdataout1, instrbufferdataout0}) :
-	(ARCHBITSZ == 32) ? ((oplitype == 1) ? {{(ARCHBITSZ-16){instrbufferdataout1[7]}}, instrbufferdataout1, instrbufferdataout0} :
-			{instrbufferdataout1, instrbufferdataout0, oplilsb[((16*(0+1))-1):(16*(0))]}) :
-		((oplitype == 1) ? {{(ARCHBITSZ-16){instrbufferdataout1[7]}}, instrbufferdataout1, instrbufferdataout0} :
-		 (oplitype == 2) ? {{(ARCHBITSZ-32){instrbufferdataout1[7]}}, instrbufferdataout1, instrbufferdataout0,
+	(ARCHBITSZ == 16) ? ({instrbufdato1, instrbufdato0}) :
+	(ARCHBITSZ == 32) ? ((oplitype == 1) ? {{(ARCHBITSZ-16){instrbufdato1[7]}}, instrbufdato1, instrbufdato0} :
+			{instrbufdato1, instrbufdato0, oplilsb[((16*(0+1))-1):(16*(0))]}) :
+		((oplitype == 1) ? {{(ARCHBITSZ-16){instrbufdato1[7]}}, instrbufdato1, instrbufdato0} :
+		 (oplitype == 2) ? {{(ARCHBITSZ-32){instrbufdato1[7]}}, instrbufdato1, instrbufdato0,
 					oplilsb[((16*(0+1))-1):(16*(0))]} :
-				{instrbufferdataout1, instrbufferdataout0,
+				{instrbufdato1, instrbufdato0,
 					oplilsb[((16*(0+1))-1):(16*(0))], oplilsb[((16*(1+1))-1):(16*(1))],
 						oplilsb[((16*(2+1))-1):(16*(2))]})) +
-	(wasopinc ? opligprdata1 : (wasoprli ? {ipplusone, 1'b0} : {ARCHBITSZ{1'b0}}));
+	(wasopinc ? opligprdata1 : (wasoprli ? {ipnxt, 1'b0} : {ARCHBITSZ{1'b0}}));
 
 // Register that will hold the id of the GPR to which
 // the result will be stored.
@@ -938,14 +938,14 @@ wire opmuldiv_rdy_w;
 
 wire opmuldiv_stb_w = (miscrdyandsequencerreadyandgprrdy12 && ((isopmuldiv
 	`ifdef PUDSPMUL
-	&& instrbufferdataout0[2]
+	&& instrbufdato0[2]
 	`endif
 	) /*|| isopfloat*/) && opmuldiv_rdy_w);
 
 wire [(((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+MULDIVTYPEBITSZ) -1 : 0] opmuldiv_data_w =
 	//isopfloat ? // TODO: Fix value to add when isopfloat is true ...
-	//	{1'b1, instrbufferdataout0[0], {2{1'b0}}, gprindex1, gprdata1, gprdata2} :
-		{1'b0, instrbufferdataout0[2:0], gprindex1, gprdata1, gprdata2};
+	//	{1'b1, instrbufdato0[0], {2{1'b0}}, gpridx1, gprdata1, gprdata2} :
+		{1'b0, instrbufdato0[2:0], gpridx1, gprdata1, gprdata2};
 
 wire [ARCHBITSZ -1 : 0]        opmuldivresult;
 wire [CLOG2GPRCNTTOTAL -1 : 0] opmuldivgpr;
@@ -984,7 +984,7 @@ wire [(ARCHBITSZ*2) -1 : 0] opdspmulresult_signed   = ($signed(gprdata1) * $sign
 // ### by verilog within the always block.
 reg [ARCHBITSZ -1 : 0] opdspmulresult;
 
-wire opdspmuldone = (miscrdyandsequencerreadyandgprrdy12 && isopmuldiv && !instrbufferdataout0[2]);
+wire opdspmuldone = (miscrdyandsequencerreadyandgprrdy12 && isopmuldiv && !instrbufdato0[2]);
 `endif
 
 // ---------- Nets used by opjl ----------
@@ -1044,8 +1044,8 @@ assign isopgettlb_or_isopclrtlb_found_posedge = (!isopgettlb_or_isopclrtlb_found
 
 // ---------- Nets used by opsetgpr ----------
 
-wire[CLOG2GPRCNTTOTAL -1 : 0] opsetgprdstidx = {instrbufferdataout0[1], instrbufferdataout1[7:4]};
-wire[CLOG2GPRCNTTOTAL -1 : 0] opsetgprsrcidx = {instrbufferdataout0[0], instrbufferdataout1[3:0]};
+wire[CLOG2GPRCNTTOTAL -1 : 0] opsetgprdstidx = {instrbufdato0[1], instrbufdato1[7:4]};
+wire[CLOG2GPRCNTTOTAL -1 : 0] opsetgprsrcidx = {instrbufdato0[0], instrbufdato1[3:0]};
 
 wire[ARCHBITSZ -1 : 0] opsetgprresult;
 
@@ -1073,7 +1073,7 @@ ram1i5o #(
 	,.clk3_i (clk_i)
 	,.clk4_i (clk_i)
 
-	,.we4_i (gprwriteenable)
+	,.we4_i (gprwe)
 
 	,.addr0_i (
 		`ifdef PUDBG
@@ -1082,10 +1082,10 @@ ram1i5o #(
 		0
 		`endif
 		)
-	,.addr1_i (gprindex1)
-	,.addr2_i (gprindex2)
+	,.addr1_i (gpridx1)
+	,.addr2_i (gpridx2)
 	,.addr3_i (opsetgprsrcidx)
-	,.addr4_i (gprindex)
+	,.addr4_i (gpridx)
 
 	,.i4 (gprdata)
 
@@ -1111,13 +1111,13 @@ ram1i5o #(
 	,.clk3_i (clk_i)
 	,.clk4_i (clk_i)
 
-	,.we4_i (gprrdywriteenable)
+	,.we4_i (gprrdywe)
 
 	,.addr0_i (opsetgprdstidx)
-	,.addr1_i (gprindex1)
-	,.addr2_i (gprindex2)
+	,.addr1_i (gpridx1)
+	,.addr2_i (gpridx2)
 	,.addr3_i (opsetgprsrcidx)
-	,.addr4_i (gprrdyindex)
+	,.addr4_i (gprrdyidx)
 
 	,.i4 (gprrdyval)
 
@@ -1195,7 +1195,7 @@ reg opldstdone;
 reg opldstmemrqst;
 
 wire opldstrdy_ = (!(opldstmemrqst || opldstdone) && dtlb_rdy && (dcachemasterrdy || opldstfault));
-wire opldstrdy = (isopldst && opldstrdy_ && !opldstfault && !instrbufferdataout0[2]);
+wire opldstrdy = (isopldst && opldstrdy_ && !opldstfault && !instrbufdato0[2]);
 
 // ---------- Registers and nets used for data caching ----------
 
@@ -1260,6 +1260,6 @@ assign dcacheslavesel = dcachemastersel;
 wire multicycleoprdy = (miscrdyandsequencerreadyandgprrdy12 &&
 	(opldrdy || opldstrdy || (((isopmuldiv
 		`ifdef PUDSPMUL
-		&& instrbufferdataout0[2]
+		&& instrbufdato0[2]
 		`endif
 		) /*|| isopfloat*/) && opmuldiv_rdy_w)));
