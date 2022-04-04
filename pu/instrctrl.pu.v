@@ -22,9 +22,8 @@ end else if (icacheoff) begin
 end
 
 // Logic that set the instruction buffer.
-if ((instrfetchmemrqstdone || (icachecheck && icachehit)) && !instrbufrst) begin
-	instrbuf[instrbufwriteidx[CLOG2INSTRBUFFERSIZE-1 : 0]] <=
-		(instrfetchmemrqstdone ? pi1_data_i : icachedato);
+if (instrbufwe) begin
+	instrbuf[instrbufwriteidx[CLOG2INSTRBUFFERSIZE-1 : 0]] <= instrbufi;
 end
 
 // Logic that control the instruction fetching.

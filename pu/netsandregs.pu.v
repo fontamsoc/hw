@@ -52,6 +52,10 @@ reg[(ARCHBITSZ*2) -1 : 0] clkcyclecnt;
 
 reg[ARCHBITSZ -1 : 0] instrbuf[INSTRBUFFERSIZE -1 : 0];
 
+wire instrbufwe;
+
+wire[ARCHBITSZ -1 : 0] instrbufi;
+
 // Write index within the instruction buffer.
 // Only the CLOG2INSTRBUFFERSIZE lsb are used for indexing.
 reg[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufwriteidx;
@@ -853,6 +857,10 @@ bram #(
 );
 
 end endgenerate
+
+assign instrbufwe = ((instrfetchmemrqstdone || (icachecheck && icachehit)) && !instrbufrst);
+
+assign instrbufi = (instrfetchmemrqstdone ? pi1_data_i : icachedato);
 
 // ---------- Nets used by opali8 ----------
 
