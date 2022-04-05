@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-`ifndef RAM1I4O_V
-`define RAM1I4O_V
+`ifndef RAM1I5O_V
+`define RAM1I5O_V
 
 module ram1i5o (
 	 rst_i
@@ -74,4 +74,4 @@ end
 
 endmodule
 
-`endif /* RAM1I4O_V */
+`endif /* RAM1I5O_V */
