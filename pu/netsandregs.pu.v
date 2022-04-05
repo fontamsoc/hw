@@ -50,7 +50,7 @@ reg[(ARCHBITSZ*2) -1 : 0] clkcyclecnt;
 
 // ---------- Registers and nets used for instruction buffering ----------
 
-reg[ARCHBITSZ -1 : 0] instrbuf[INSTRBUFFERSIZE -1 : 0];
+reg[ARCHBITSZ -1 : 0] instrbuf_[INSTRBUFFERSIZE -1 : 0];
 
 wire instrbufwe;
 
@@ -63,10 +63,12 @@ reg[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufwriteidx;
 // Net set to the space used in the instrbuf.
 wire[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufusage =
 	(instrbufwriteidx - ip[CLOG2INSTRBUFFERSIZE +1 : 1]);
+wire[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufusagenxt =
+	(instrbufwriteidx - ipnxt[CLOG2INSTRBUFFERSIZE +1 : 1]);
 
-wire[ARCHBITSZMAX -1 : 0] instrbufip = instrbuf[ip[CLOG2INSTRBUFFERSIZE : 1]];
-// Net set to 16bits data indexed from instrbuf; note that instructions are 16bits.
-wire[16 -1 : 0] instrbufdato =
+reg[16 -1 : 0] instrbufdato;
+wire[ARCHBITSZMAX -1 : 0] instrbufip = instrbuf_[ip[CLOG2INSTRBUFFERSIZE : 1]];
+wire[16 -1 : 0] instrbufdato_ =
 	(ARCHBITSZ == 16) ? instrbufip :
 	(ARCHBITSZ == 32) ? (ip[CLOG2ARCHBITSZBY16 -1 : 0] ? instrbufip[31:16] : instrbufip[15:0]) : (
 			ip[CLOG2ARCHBITSZBY16 -1 : 0] == 0 ? instrbufip[15:0] :
@@ -74,17 +76,35 @@ wire[16 -1 : 0] instrbufdato =
 			ip[CLOG2ARCHBITSZBY16 -1 : 0] == 2 ? instrbufip[47:32] :
 							instrbufip[63:48]);
 
-// Nets set with the bytes from instrbufdato.
 wire[8 -1 : 0] instrbufdato0 = instrbufdato[7:0];
 wire[8 -1 : 0] instrbufdato1 = instrbufdato[15:8];
 
-// Net set to 1 when there is data available in the instruction buffer.
 wire instrbufnotempty = |instrbufusage;
 reg instrbufnotempty_sampled;
 wire instrbufnotempty_posedge = (!instrbufnotempty_sampled && instrbufnotempty);
 
+wire instrbufnotemptynxt = |instrbufusagenxt;
+
 // This net indicates whether the instruction buffer is full.
 wire instrbufnotfull = (instrbufusage < INSTRBUFFERSIZE);
+
+wire[ARCHBITSZMAX -1 : 0] instrbufipnxt = (instrbufnotemptynxt ? instrbuf_[ipnxt[CLOG2INSTRBUFFERSIZE : 1]] : instrbufi);
+wire[16 -1 : 0] instrbufipnxtdato =
+	(ARCHBITSZ == 16) ? instrbufipnxt :
+	(ARCHBITSZ == 32) ? (ipnxt[CLOG2ARCHBITSZBY16 -1 : 0] ? instrbufipnxt[31:16] : instrbufipnxt[15:0]) : (
+			ipnxt[CLOG2ARCHBITSZBY16 -1 : 0] == 0 ? instrbufipnxt[15:0] :
+			ipnxt[CLOG2ARCHBITSZBY16 -1 : 0] == 1 ? instrbufipnxt[31:16] :
+			ipnxt[CLOG2ARCHBITSZBY16 -1 : 0] == 2 ? instrbufipnxt[47:32] :
+							instrbufipnxt[63:48]);
+
+wire[ARCHBITSZMAX -1 : 0] _instrbufi = instrbufi;
+wire[16 -1 : 0] instrbufidato =
+	(ARCHBITSZ == 16) ? _instrbufi :
+	(ARCHBITSZ == 32) ? (ip[CLOG2ARCHBITSZBY16 -1 : 0] ? _instrbufi[31:16] : _instrbufi[15:0]) : (
+			ip[CLOG2ARCHBITSZBY16 -1 : 0] == 0 ? _instrbufi[15:0] :
+			ip[CLOG2ARCHBITSZBY16 -1 : 0] == 1 ? _instrbufi[31:16] :
+			ip[CLOG2ARCHBITSZBY16 -1 : 0] == 2 ? _instrbufi[47:32] :
+							_instrbufi[63:48]);
 
 reg instrbufrst_a;
 reg instrbufrst_b;
@@ -205,8 +225,6 @@ wire dbg_tx_rdy_i_negedge = (!dbg_tx_rdy_i && dbg_tx_rdy_i_sampled);
 
 // ---------- Registers and nets used by Hardware-Page-Table-Walker ----------
 
-// These nets will respectively hold the value of the first
-// and second gpr operand of an instruction being sequenced.
 wire[ARCHBITSZ -1 : 0] gprdata1;
 wire[ARCHBITSZ -1 : 0] gprdata2;
 

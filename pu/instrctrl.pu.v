@@ -23,7 +23,7 @@ end
 
 // Logic that set the instruction buffer.
 if (instrbufwe) begin
-	instrbuf[instrbufwriteidx[CLOG2INSTRBUFFERSIZE-1 : 0]] <= instrbufi;
+	instrbuf_[instrbufwriteidx[CLOG2INSTRBUFFERSIZE-1 : 0]] <= instrbufi;
 end
 
 // Logic that control the instruction fetching.
