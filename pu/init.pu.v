@@ -47,8 +47,6 @@ initial begin
 
 	instrbufdato = 0;
 
-	instrbufnotempty_sampled = 0;
-
 	instrbufrst_a = 0;
 	instrbufrst_b = 0;
 	instrbufrst_sampled = 0;

@@ -153,5 +153,3 @@ end else begin
 end
 
 instrbufrst_sampled <= instrbufrst;
-
-instrbufnotempty_sampled <= instrbufnotempty;

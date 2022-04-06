@@ -80,8 +80,6 @@ wire[8 -1 : 0] instrbufdato0 = instrbufdato[7:0];
 wire[8 -1 : 0] instrbufdato1 = instrbufdato[15:8];
 
 wire instrbufnotempty = |instrbufusage;
-reg instrbufnotempty_sampled;
-wire instrbufnotempty_posedge = (!instrbufnotempty_sampled && instrbufnotempty);
 
 wire instrbufnotemptynxt = |instrbufusagenxt;
 
@@ -508,7 +506,7 @@ wire dtlben = (!dohalt && inusermode && (inuserspace || doutofrange));
 reg dtlbwritten;
 reg[CLOG2TLBSETCOUNT -1 : 0] dtlbsetprev;
 wire dtlbreadenable_ = (isopgettlb_or_isopclrtlb_found_posedge || dtlbwritten || (dtlben && dtlbset != dtlbsetprev));
-wire dtlbreadenable = (dtlbreadenable_ || instrbufrst);
+wire dtlbreadenable = (dtlbreadenable_);
 wire itlbreadenable;
 wire itlbreadenable_;
 wire dtlbwe = (
@@ -541,7 +539,7 @@ assign itlben = (!dohalt && inusermode && (inuserspace || ioutofrange));
 reg itlbwritten;
 reg[CLOG2TLBSETCOUNT -1 : 0] itlbsetprev;
 assign itlbreadenable_ = (isopgettlb_or_isopclrtlb_found_posedge || itlbwritten || (itlben && itlbset != itlbsetprev));
-assign itlbreadenable = (itlbreadenable_ || instrbufrst);
+assign itlbreadenable = (itlbreadenable_);
 wire itlbwe = (
 	`ifdef PUHPTW
 	hptwitlbwe ||
@@ -731,11 +729,7 @@ wire itlbfault__hptwidone = (!itlbfault_ || !hptwpgd || (hptwidone && !itlbwritt
 wire itlbfault = 0;
 `endif
 
-wire dtlb_rdy = (!dtlbreadenable &&
-	// Check below used to insure that gprdata* are clocked-out and ready
-	// when gpr indexes become available from the instruction buffer.
-	// gprdata2 is used to compute dtlb entries and other logics.
-	!instrbufnotempty_posedge);
+wire dtlb_rdy = (!dtlbreadenable);
 
 // ---------- Net used to detect unaligned data memory access ----------
 
