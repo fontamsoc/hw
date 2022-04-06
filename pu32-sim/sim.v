@@ -12,7 +12,7 @@
 `include "lib/perint/pi1r.v"
 
 `define PUMMU
-//`define PUHPTW
+`define PUHPTW
 `define PUMULDIVCLK
 `define PUDSPMUL
 //`define PUDCACHE

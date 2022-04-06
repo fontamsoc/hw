@@ -1173,7 +1173,14 @@ reg oplddone;
 reg opldmemrqst;
 
 wire opldrdy_ = (!(opldmemrqst || oplddone) && dtlb_rdy && (dcachemasterrdy || opldfault));
-wire opldrdy = (isopld && opldrdy_ && !opldfault);
+wire opldrdy = (isopld && (
+	opldrdy_
+		`ifdef PUMMU
+		`ifdef PUHPTW
+		&& opldfault__hptwddone
+		`endif
+		`endif
+	) && !opldfault);
 
 // ---------- Registers and nets used by opst ----------
 
@@ -1188,7 +1195,14 @@ wire opstfault = 0;
 `endif
 
 wire opstrdy_ = (dtlb_rdy && (dcachemasterrdy || opstfault));
-wire opstrdy = (isopst && opstrdy_ && !opstfault);
+wire opstrdy = (isopst && (
+	opstrdy_
+		`ifdef PUMMU
+		`ifdef PUHPTW
+		&& opstfault__hptwddone
+		`endif
+		`endif
+	) && !opstfault);
 
 // ---------- Registers and nets used by opldst ----------
 
@@ -1215,7 +1229,14 @@ reg opldstdone;
 reg opldstmemrqst;
 
 wire opldstrdy_ = (!(opldstmemrqst || opldstdone) && dtlb_rdy && (dcachemasterrdy || opldstfault));
-wire opldstrdy = (isopldst && opldstrdy_ && !opldstfault && !instrbufdato0[2]);
+wire opldstrdy = (isopldst && (
+	opldstrdy_
+		`ifdef PUMMU
+		`ifdef PUHPTW
+		&& opldstfault__hptwddone
+		`endif
+		`endif
+	) && !opldstfault && !instrbufdato0[2]);
 
 // ---------- Registers and nets used for data caching ----------
 
