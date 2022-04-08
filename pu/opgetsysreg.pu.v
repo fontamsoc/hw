@@ -19,7 +19,7 @@ else if (isoptype1) opgetsysreg1result = CLKFREQ;
 else if (isoptype2) opgetsysreg1result = DCACHESETCOUNT;
 `endif
 `ifdef PUMMU
-else if (isoptype3) opgetsysreg1result = gettlbresult;
+else if (isoptype3) opgetsysreg1result = opgettlbresult;
 `endif
 else if (isoptype4) opgetsysreg1result = // 16bits value returned to take PU16 into account.
 	{{14{1'b0}}

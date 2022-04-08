@@ -668,7 +668,8 @@ end endgenerate
 // Nets used by gettlb.
 wire itlbgettlbhit = ((gprdata2[12 -1 : 0] == itlbasid[itlbwayhitidx]) && (gprdata2[(ARCHBITSZ-1) : 12 +CLOG2TLBSETCOUNT] == itlbtag[itlbwayhitidx]));
 wire dtlbgettlbhit = ((gprdata2[12 -1 : 0] == dtlbasid[dtlbwayhitidx]) && (gprdata2[(ARCHBITSZ-1) : 12 +CLOG2TLBSETCOUNT] == dtlbtag[dtlbwayhitidx]));
-wire[ARCHBITSZ -1 : 0] gettlbresult = (
+reg[ARCHBITSZ -1 : 0] opgettlbresult;
+wire[ARCHBITSZ -1 : 0] opgettlbresult_ = (
 	(!(itlbgettlbhit | dtlbgettlbhit)) ? {ARCHBITSZ{1'b0}} :
 	(itlbgettlbhit ^ dtlbgettlbhit) ?
 		(itlbgettlbhit ?
@@ -677,6 +678,9 @@ wire[ARCHBITSZ -1 : 0] gettlbresult = (
 	(itlbppn[itlbwayhitidx] == dtlbppn[dtlbwayhitidx]) ?
 		{dtlbppn[dtlbwayhitidx], {7{1'b0}}, (itlbuser[itlbwayhitidx]|dtlbuser[dtlbwayhitidx]), (itlbcached[itlbwayhitidx]|dtlbcached[dtlbwayhitidx]), dtlbreadable[dtlbwayhitidx], dtlbwritable[dtlbwayhitidx], itlbexecutable[itlbwayhitidx]} :
 		{ARCHBITSZ{1'b0}});
+always @ (posedge clk_i) begin
+	opgettlbresult <= opgettlbresult_;
+end
 
 // Net used by opld opst opldst and the sequencer.
 wire[PAGENUMBITSZ -1 : 0] dppn = (dtlben ? dtlbppn[dtlbwayhitidx] : gprdata2[ARCHBITSZ-1:12]);
@@ -1034,7 +1038,10 @@ wire opgettlbfault__hptwddone = (!dtlben || !hptwpgd || (hptwddone && !dtlbwritt
 `endif
 `endif
 
-wire opgettlbrdy_ = dtlb_rdy;
+reg opgettlbrdy_;
+always @ (posedge clk_i) begin
+	opgettlbrdy_ <= dtlb_rdy;
+end
 //wire opgettlbrdy = (isopgettlb && opgettlbrdy_);
 
 wire opgetsysreg1done = (miscrdyandsequencerreadyandgprrdy1 && isopgetsysreg1 &&

@@ -163,6 +163,9 @@ initial begin
 	itlbwritten = 1;
 	itlbsetprev = 0;
 
+	opgettlbresult = 0;
+	opgettlbrdy_ = 0;
+
 	`endif
 
 	// ---------- Registers and nets used by opli ----------
