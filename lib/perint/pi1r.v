@@ -73,7 +73,7 @@ module pi1r (
 	,s_data_i_flat
 	,s_sel_o_flat
 	,s_rdy_i_flat
-	,s_mapsz_o_flat
+	,s_mapsz_i_flat
 );
 
 `include "lib/clog2.v"
@@ -108,7 +108,7 @@ input  wire [(ARCHBITSZ * SLAVECOUNT) -1 : 0]     s_data_i_flat;
 output wire [(ARCHBITSZ * SLAVECOUNT) -1 : 0]     s_data_o_flat;
 output wire [((ARCHBITSZ/8) * SLAVECOUNT) -1 : 0] s_sel_o_flat;
 input  wire [SLAVECOUNT -1 : 0]                   s_rdy_i_flat;
-input  wire [(ADDRBITSZ * SLAVECOUNT) -1 : 0]     s_mapsz_o_flat;
+input  wire [(ADDRBITSZ * SLAVECOUNT) -1 : 0]     s_mapsz_i_flat;
 
 wire [2 -1 : 0] masterop [MASTERCOUNT -1 : 0];
 genvar gen_masterop_idx;
@@ -185,7 +185,7 @@ end endgenerate
 wire [ADDRBITSZ -1 : 0] slavemapsz [SLAVECOUNT -1 : 0];
 genvar gen_slavemapsz_idx;
 generate for (gen_slavemapsz_idx = 0; gen_slavemapsz_idx < SLAVECOUNT; gen_slavemapsz_idx = gen_slavemapsz_idx + 1) begin :gen_slavemapsz
-assign slavemapsz[gen_slavemapsz_idx] = s_mapsz_o_flat[((gen_slavemapsz_idx+1) * ADDRBITSZ) -1 : gen_slavemapsz_idx * ADDRBITSZ];
+assign slavemapsz[gen_slavemapsz_idx] = s_mapsz_i_flat[((gen_slavemapsz_idx+1) * ADDRBITSZ) -1 : gen_slavemapsz_idx * ADDRBITSZ];
 end endgenerate
 
 localparam PINOOP = 2'b00;
