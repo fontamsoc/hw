@@ -16,6 +16,9 @@
 // CACHEWAYCOUNT
 // 	Number of cache ways.
 // 	It must be non-null and a power of 2.
+// FETCHALLONMISS
+// 	When non-null, force reading all ARCHBITSZ bits when PIRDOP cachemiss occurs.
+// 	Note that cachemiss occurs only for PIRDOP.
 
 `ifndef PI1_DCACHE_V
 `define PI1_DCACHE_V
@@ -58,6 +61,8 @@ parameter ARCHBITSZ = 16;
 
 parameter CACHESETCOUNT = 2;
 parameter CACHEWAYCOUNT = 1;
+
+parameter FETCHALLONMISS = 1;
 
 parameter INITFILE = "";
 
@@ -245,10 +250,25 @@ reg [ARCHBITSZ -1 : 0] m_pi1_data_i_hold;
 // Register used to hold the value of the input "m_pi1_sel_i".
 reg [(256/*ARCHBITSZ*//8) -1 : 0] m_pi1_sel_i_hold;
 
+reg cenable_i_hold;
+
+// Set high to force reading all ARCHBITSZ bits when PIRDOP cachemiss occurs.
+// Note that cachemiss occurs only for PIRDOP.
+wire cenable_i_and_cachemiss = (FETCHALLONMISS && cenable_i_hold && cachemiss);
+
+wire [(256/*ARCHBITSZ*//8) -1 : 0] _m_pi1_sel_i_hold =
+	(cenable_i_and_cachemiss ? {ARCHBITSZ/8{1'b1}} : m_pi1_sel_i_hold[(ARCHBITSZ/8) -1 : 0]);
+
 assign s_pi1_op_o   = {slvreadrdy, slvwriterdy};
 assign s_pi1_addr_o = ((slvreadrdy || (bufread_rst && !bufread_done && bufusage == 1)) ? m_pi1_addr_i_hold : addrbufdato);
 assign s_pi1_data_o = (((slvwriterdy && slvreadrdy) || (bufread_rst && !bufread_done && bufusage == 1)) ? m_pi1_data_i_hold : databufdato);
-assign s_pi1_sel_o  = ((slvreadrdy || (bufread_rst && !bufread_done && bufusage == 1)) ? m_pi1_sel_i_hold[(ARCHBITSZ/8) -1 : 0] : bytselbufdato);
+assign s_pi1_sel_o  = ((slvreadrdy || (bufread_rst && !bufread_done && bufusage == 1)) ? _m_pi1_sel_i_hold : bytselbufdato);
+
+reg was_cenable_i_and_cachemiss;
+always @ (posedge clk_i) begin
+	if (s_pi1_rdy_i)
+		was_cenable_i_and_cachemiss <= cenable_i_and_cachemiss;
+end
 
 // Bitsize of a cache tag.
 localparam CACHETAGBITSIZE = (ADDRBITSZ - CLOG2CACHESETCOUNT);
@@ -314,9 +334,12 @@ reg [CLOG2CACHEWAYCOUNT -1 : 0] cachetagwayhitidx;
 
 wire [ARCHBITSZ -1 : 0] cachedato [CACHEWAYCOUNT -1 : 0];
 
+wire [ARCHBITSZ -1 : 0] _cachedatibitsel = (was_cenable_i_and_cachemiss ? {ARCHBITSZ{1'b1}} : cachedatibitsel);
+
 // Net set to the value to write in the cache.
-wire [ARCHBITSZ -1 : 0] cachedati =
-	(cachedata & cachedatibitsel) | (cachedato[cachetagwayhit ? cachetagwayhitidx : cachewaywriteidx] & ~cachedatibitsel);
+wire [ARCHBITSZ -1 : 0] cachedati = (
+	(cachedata & _cachedatibitsel) |
+	(cachedato[cachetagwayhit ? cachetagwayhitidx : cachewaywriteidx] & ~_cachedatibitsel));
 
 reg cachewe__sampled;
 
@@ -446,7 +469,7 @@ bram #(
 	,.en0_i   (cacheen)             ,.en1_i   (1'b1)
 	                                ,.we1_i   (cachewe && (cachetagwayhit ? (cachetagwayhitidx == gencache_idx) : (cachewaywriteidx == gencache_idx)))
 	,.addr0_i (m_pi1_addr_i)        ,.addr1_i (m_pi1_addr_i_hold)
-	                                ,.i1      ((cachetaghit[gencache_idx] ? cachedatabitselo[gencache_idx] : {ARCHBITSZ{1'b0}}) | cachedatibitsel)
+	                                ,.i1      ((cachetaghit[gencache_idx] ? cachedatabitselo[gencache_idx] : {ARCHBITSZ{1'b0}}) | _cachedatibitsel)
 	,.o0      (cachedatabitselo[gencache_idx]) ,.o1      ()
 );
 
@@ -459,6 +482,7 @@ always @ (posedge clk_i) begin
 	if (rst_i)
 		m_pi1_op_i_hold <= PINOOP;
 	else if (m_pi1_rdy_o) begin
+		cenable_i_hold <= cenable_i;
 		m_pi1_op_i_hold <= m_pi1_op_i;
 		m_pi1_addr_i_hold <= m_pi1_addr_i;
 		m_pi1_data_i_hold <= m_pi1_data_i;
@@ -561,6 +585,8 @@ initial begin
 	m_pi1_addr_i_hold = 0;
 	m_pi1_data_i_hold = 0;
 	m_pi1_sel_i_hold = 0;
+	cenable_i_hold = 0;
+	was_cenable_i_and_cachemiss = 0;
 	cacheactive = 0;
 	cacherdy_hold = 0;
 	cachewe_ = 0;
