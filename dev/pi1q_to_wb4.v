@@ -104,7 +104,7 @@ assign s_pi1q_data_w1 = not_wrpending_and_wb4_ack_i ?
 	((s_pi1q_op_w_hold == PIRWOP) ? wb4_data_i_hold : wb4_data_i) :
 	{ARCHBITSZ{1'b0}};
 
-assign s_pi1q_rdy_w = (!wb4_rst_i && (!wb4_cyc_o || not_wrpending_and_wb4_ack_i));
+assign s_pi1q_rdy_w = (/*!wb4_rst_i &&*/(!wb4_cyc_o || not_wrpending_and_wb4_ack_i));
 
 wire [(256/*ARCHBITSZ*//8) -1 : 0] _s_pi1q_sel_w = s_pi1q_sel_w;
 // ### Net declared as reg so as to be useable by verilog within the always block.

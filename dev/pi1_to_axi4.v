@@ -164,7 +164,7 @@ assign pi1_data_o = not_wrpending_and_ack ?
 
 reg cyc;
 
-assign pi1_rdy_o = (!rst_i && (!cyc || not_wrpending_and_ack));
+assign pi1_rdy_o = (/*!rst_i &&*/(!cyc || not_wrpending_and_ack));
 
 wire [(256/*ARCHBITSZ*//8) -1 : 0] _pi1_sel_i = pi1_sel_i;
 // ### Net declared as reg so as to be useable by verilog within the always block.
