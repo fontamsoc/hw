@@ -7,8 +7,6 @@
 // an error when an undefined net is used.
 `default_nettype none
 
-//`define PUDBG
-
 `include "./pll_100_to_50_100_200_mhz.v"
 
 `include "lib/perint/pi1r.v"
@@ -18,6 +16,7 @@
 `define PUMULDIVCLK
 `define PUDSPMUL
 //`define PUDCACHE /* issues in linux when enabled; ie: `nano /etc/inittab` or `htop` shows garbaged screen */
+//`define PUDBG
 `include "pu/multipu.v"
 
 `ifdef PUDBG
@@ -237,6 +236,7 @@ end
 
 localparam CLKFREQ   = ( 50000000) /*  50 MHz */; // Frequency of clk_w.
 localparam CLK2XFREQ = (100000000) /* 100 MHz */; // Frequency of clk_2x_w.
+localparam CLK4XFREQ = (200000000) /* 200 MHz */; // Frequency of clk_4x_w.
 
 wire pll_locked;
 
@@ -254,10 +254,11 @@ pll_100_to_50_100_200_mhz pll (
 
 wire clk_w    = clk50mhz;
 wire clk_2x_w = clk100mhz;
+wire clk_4x_w = clk200mhz;
 
 assign rst_w = (!pll_locked || devtbl_rst0_r || (|rst_cntr));
 
-localparam PUCOUNT = 1;
+localparam PUCOUNT = 1; // 16 max.
 
 localparam INTCTRLSRC_SDCARD = 0;
 localparam INTCTRLSRC_GPIO   = (INTCTRLSRC_SDCARD + 1);
@@ -323,13 +324,12 @@ end endgenerate
 assign devtbl_mapsz_flat_w = s_pi1r_mapsz_w_flat /* defined in "lib/perint/inst.pi1r.v" */;
 assign devtbl_useintr_flat_w = devtbl_useintr_w;
 
-localparam ICACHESZ = 512;
-localparam DCACHESZ = ((PUCOUNT > 8) ? 128 : 256);
-localparam TLBSZ    = 128;
+localparam ICACHESZ = ((PUCOUNT > 8) ? 256 : 512);
+localparam TLBSZ    = ((PUCOUNT > 8) ? 16 : 32);
 
-localparam ICACHEWAYCOUNT = ((PUCOUNT > 4) ? 4 : 8);
-localparam DCACHEWAYCOUNT = 1;
-localparam TLBWAYCOUNT    = 4;
+localparam ICACHEWAYCOUNT = ((PUCOUNT > 8) ? 2 : 4);
+localparam DCACHEWAYCOUNT = ((PUCOUNT > 8) ? 1 : 2);
+localparam TLBWAYCOUNT    = ((PUCOUNT > 8) ? 1 : 2);
 
 localparam MULTIPUCLKFREQ = CLK2XFREQ;
 wire multipu_clk_w = clk_2x_w;
@@ -349,12 +349,12 @@ multipu #(
 	,.CLKFREQ        (MULTIPUCLKFREQ)
 	,.PUCOUNT        (PUCOUNT)
 	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*((ICACHESZ/ICACHEWAYCOUNT)/PUCOUNT))
-	,.DCACHESETCOUNT ((1024/(ARCHBITSZ/8))*(((DCACHESZ/2)/DCACHEWAYCOUNT)/PUCOUNT))
+	,.DCACHESETCOUNT ((1024/(ARCHBITSZ/8))*1)
 	,.TLBSETCOUNT    (TLBSZ/TLBWAYCOUNT)
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
 	,.TLBWAYCOUNT    (TLBWAYCOUNT)
-	,.MULDIVCNT      (8)
+	,.MULDIVCNT      ((PUCOUNT > 8) ? 4 : 8)
 
 ) multipu (
 
@@ -423,15 +423,15 @@ uart_tx_phy #(
 sdcard_spi #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
-	,.PHYCLKFREQ (CLKFREQ)
+	,.PHYCLKFREQ (PI1RCLKFREQ)
 
 ) sdcard (
 
 	 .rst_i (pi1r_rst_w || sd_cd)
 
 	,.clk_mem_i (pi1r_clk_w)
-	,.clk_i     (clk_w)
-	,.clk_phy_i (clk_w)
+	,.clk_i     (pi1r_clk_w)
+	,.clk_phy_i (pi1r_clk_w)
 
 	,.sclk_o (sd_sclk)
 	,.di_o   (sd_di)
@@ -456,11 +456,7 @@ assign devtbl_useintr_w[S_PI1R_SDCARD] = 1;
 localparam RAMCACHEWAYCOUNT = 4;
 
 localparam RAMCACHESZ = /* In (ARCHBITSZ/8) units */
-	`ifdef PUDCACHE
-	((1024/(ARCHBITSZ/8))*((DCACHESZ/2)/RAMCACHEWAYCOUNT));
-	`else
-	((1024/(ARCHBITSZ/8))*(DCACHESZ/RAMCACHEWAYCOUNT));
-	`endif
+	((1024/(ARCHBITSZ/8))*(256/RAMCACHEWAYCOUNT));
 
 wire devtbl_rst2_w;
 
