@@ -15,7 +15,7 @@
 `define PUHPTW
 `define PUMULDIVCLK
 `define PUDSPMUL
-//`define PUDCACHE
+//`define PUDCACHE /* issues in linux when enabled; ie: `nano /etc/inittab` or `htop` shows garbaged screen */
 `include "pu/multipu.v"
 
 `include "dev/sdcard/sdcard_spi.v"
@@ -186,7 +186,6 @@ assign pc_w[gen_pc_w_idx] = pc_w_flat[((gen_pc_w_idx+1) * ARCHBITSZ) -1 : gen_pc
 end endgenerate
 
 localparam ICACHESZ = 16;
-localparam DCACHESZ = 16;
 localparam TLBSZ    = 128;
 
 localparam ICACHEWAYCOUNT = 4;
@@ -199,7 +198,7 @@ multipu #(
 	,.CLKFREQ        (CLKFREQ)
 	,.PUCOUNT        (PUCOUNT)
 	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*(ICACHESZ/ICACHEWAYCOUNT))
-	,.DCACHESETCOUNT ((1024/(ARCHBITSZ/8))*(DCACHESZ/DCACHEWAYCOUNT))
+	,.DCACHESETCOUNT ((1024/(ARCHBITSZ/8))*(16/DCACHEWAYCOUNT))
 	,.TLBSETCOUNT    (TLBSZ/TLBWAYCOUNT)
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
