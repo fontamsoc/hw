@@ -235,7 +235,6 @@ assign devtbl_mapsz_flat_w = s_pi1r_mapsz_w_flat /* defined in "lib/perint/inst.
 assign devtbl_useintr_flat_w = devtbl_useintr_w;
 
 localparam ICACHESZ = 32;
-localparam DCACHESZ = 4;
 localparam TLBSZ    = 128;
 
 localparam ICACHEWAYCOUNT = 1;
@@ -248,7 +247,7 @@ multipu #(
 	,.CLKFREQ        (CLKFREQ)
 	,.PUCOUNT        (PUCOUNT)
 	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*((ICACHESZ/ICACHEWAYCOUNT)/PUCOUNT))
-	,.DCACHESETCOUNT ((1024/(ARCHBITSZ/8))*(((DCACHESZ/2)/DCACHEWAYCOUNT)/PUCOUNT))
+	,.DCACHESETCOUNT ((1024/(ARCHBITSZ/8))*1)
 	,.TLBSETCOUNT    (TLBSZ/TLBWAYCOUNT)
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
@@ -286,15 +285,15 @@ multipu #(
 sdcard_spi #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
-	,.PHYCLKFREQ (CLKFREQ)
+	,.PHYCLKFREQ (PI1RCLKFREQ)
 
 ) sdcard (
 
 	 .rst_i (pi1r_rst_w)
 
 	,.clk_mem_i (pi1r_clk_w)
-	,.clk_i     (clk_w)
-	,.clk_phy_i (clk_w)
+	,.clk_i     (pi1r_clk_w)
+	,.clk_phy_i (pi1r_clk_w)
 
 	,.sclk_o (flash_sclk)
 	,.di_o   (flash_di)
@@ -316,11 +315,7 @@ sdcard_spi #(
 localparam RAMCACHEWAYCOUNT = 1;
 
 localparam RAMCACHESZ = /* In (ARCHBITSZ/8) units */
-	`ifdef PUDCACHE
-	((1024/(ARCHBITSZ/8))*((DCACHESZ/2)/RAMCACHEWAYCOUNT));
-	`else
-	((1024/(ARCHBITSZ/8))*(DCACHESZ/RAMCACHEWAYCOUNT));
-	`endif
+	((1024/(ARCHBITSZ/8))*(4/RAMCACHEWAYCOUNT));
 
 devtbl #(
 
