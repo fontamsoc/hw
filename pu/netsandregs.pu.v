@@ -975,6 +975,8 @@ wire [ARCHBITSZ -1 : 0]        opmuldivresult;
 wire [CLOG2GPRCNTTOTAL -1 : 0] opmuldivgpr;
 wire                           opmuldivdone;
 
+// MULDIVCNT must be a power of 2 greater than or equal to 2,
+// and should be less than 8; however it is constrained here to 4 or 8.
 localparam OPMULDIVCNT = ((MULDIVCNT != 4 && MULDIVCNT != 8) ? 4 : MULDIVCNT); // ((GPRCNTPERCTX/4) || (GPRCNTPERCTX/2)).
 
 opmuldiv #(
