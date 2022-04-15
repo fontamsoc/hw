@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-// Parameters:
+// Macros:
 //
 // PUCOUNT
 // 	Number of PU making up the multipu.
-// 	It must be non-null.
+// 	When defined, it must be non-null.
+// 	When not defined, clk_mem_i is not available.
 
 // Ports:
 //
@@ -18,7 +19,11 @@
 
 `include "./pu.v"
 
+`ifdef PUCOUNT
 `include "lib/perint/pi1q.v"
+`else
+`include "lib/perint/pi1b.v"
+`endif
 
 module multipu (
 
@@ -28,7 +33,9 @@ module multipu (
 
 	,clk_i
 	,clk_muldiv_i
+	`ifdef PUCOUNT
 	,clk_mem_i
+	`endif
 
 	,pi1_op_o
 	,pi1_addr_o
@@ -63,7 +70,6 @@ module multipu (
 
 `include "lib/clog2.v"
 
-parameter PUCOUNT        = 1;
 parameter CLKFREQ        = 1;
 parameter ICACHESETCOUNT = 2;
 parameter DCACHESETCOUNT = 2;
@@ -78,13 +84,21 @@ parameter ARCHBITSZ = 16;
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
 localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
 
+`ifdef PUCOUNT
+localparam PUCOUNT = `PUCOUNT;
+`else
+localparam PUCOUNT = 1;
+`endif
+
 input wire rst_i;
 
 output wire rst_o;
 
 input wire clk_i;
 input wire clk_muldiv_i;
+`ifdef PUCOUNT
 input wire clk_mem_i;
+`endif
 
 output wire [2 -1 : 0]             pi1_op_o;
 output wire [ADDRBITSZ -1 : 0]     pi1_addr_o;
@@ -116,6 +130,7 @@ input  wire            dbg_tx_rdy_i;
 output wire [(ARCHBITSZ * PUCOUNT) -1 : 0] pc_o;
 `endif
 
+`ifdef PUCOUNT
 localparam PI1QMASTERCOUNT = PUCOUNT;
 localparam PI1QARCHBITSZ   = ARCHBITSZ;
 wire pi1q_rst_w = rst_i;
@@ -137,13 +152,44 @@ wire s_pi1q_clk_w = clk_mem_i;
 // 	output [(ARCHBITSZ/8) -1 : 0] s_pi1q_sel_w;
 // 	input                         s_pi1q_rdy_w;
 `include "lib/perint/inst.pi1q.v"
-
 assign pi1_op_o       = s_pi1q_op_w;
 assign pi1_addr_o     = s_pi1q_addr_w;
 assign s_pi1q_data_w1 = pi1_data_i;
 assign pi1_data_o     = s_pi1q_data_w0;
 assign pi1_sel_o      = s_pi1q_sel_w;
 assign s_pi1q_rdy_w   = pi1_rdy_i;
+`else
+wire [2 -1 : 0]             m_pi1b_op_w;
+wire [ADDRBITSZ -1 : 0]     m_pi1b_addr_w;
+wire [ARCHBITSZ -1 : 0]     m_pi1b_data_w1;
+wire [ARCHBITSZ -1 : 0]     m_pi1b_data_w0;
+wire [(ARCHBITSZ/8) -1 : 0] m_pi1b_sel_w;
+wire                        m_pi1b_rdy_w;
+pi1b #(
+
+	.ARCHBITSZ (ARCHBITSZ)
+
+) pi1b (
+
+	 .rst_i (rst_i)
+
+	,.clk_i (clk_i)
+
+	,.m_op_i (m_pi1b_op_w)
+	,.m_addr_i (m_pi1b_addr_w)
+	,.m_data_i (m_pi1b_data_w1)
+	,.m_data_o (m_pi1b_data_w0)
+	,.m_sel_i (m_pi1b_sel_w)
+	,.m_rdy_o (m_pi1b_rdy_w)
+
+	,.s_op_o (pi1_op_o)
+	,.s_addr_o (pi1_addr_o)
+	,.s_data_o (pi1_data_o)
+	,.s_data_i (pi1_data_i)
+	,.s_sel_o (pi1_sel_o)
+	,.s_rdy_i (pi1_rdy_i)
+);
+`endif
 
 wire [PUCOUNT -1 : 0] rst_ow;
 assign rst_o = |rst_ow;
@@ -195,12 +241,21 @@ pu #(
 	,.clk_i        (clk_i)
 	,.clk_muldiv_i (clk_muldiv_i)
 
+	`ifdef PUCOUNT
 	,.pi1_op_o   (m_pi1q_op_w[genpu_idx])
 	,.pi1_addr_o (m_pi1q_addr_w[genpu_idx])
 	,.pi1_data_o (m_pi1q_data_w1[genpu_idx])
 	,.pi1_data_i (m_pi1q_data_w0[genpu_idx])
 	,.pi1_sel_o  (m_pi1q_sel_w[genpu_idx])
 	,.pi1_rdy_i  (m_pi1q_rdy_w[genpu_idx])
+	`else
+	,.pi1_op_o   (m_pi1b_op_w)
+	,.pi1_addr_o (m_pi1b_addr_w)
+	,.pi1_data_o (m_pi1b_data_w1)
+	,.pi1_data_i (m_pi1b_data_w0)
+	,.pi1_sel_o  (m_pi1b_sel_w)
+	,.pi1_rdy_i  (m_pi1b_rdy_w)
+	`endif
 
 	,.intrqst_i (intrqst_i[genpu_idx])
 	,.intrdy_o  (intrdy_o[genpu_idx])

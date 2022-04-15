@@ -16,6 +16,7 @@
 `define PUMULDIVCLK
 `define PUDSPMUL
 //`define PUDCACHE /* issues in linux when enabled; ie: `nano /etc/inittab` or `htop` shows garbaged screen */
+`define PUCOUNT 1
 `include "pu/multipu.v"
 
 `include "dev/sdcard/sdcard_spi.v"
@@ -115,7 +116,11 @@ clkdiv clkdiv (
 
 wire rst_w = (devtbl_rst0_r || (|rst_cntr));
 
+`ifdef PUCOUNT
+localparam PUCOUNT = `PUCOUNT;
+`else
 localparam PUCOUNT = 1;
+`endif
 
 localparam INTCTRLSRC_SDCARD = 0;
 localparam INTCTRLSRC_DMA    = (INTCTRLSRC_SDCARD + 1);
@@ -196,7 +201,6 @@ multipu #(
 
 	 .ARCHBITSZ      (ARCHBITSZ)
 	,.CLKFREQ        (CLKFREQ)
-	,.PUCOUNT        (PUCOUNT)
 	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*(ICACHESZ/ICACHEWAYCOUNT))
 	,.DCACHESETCOUNT ((1024/(ARCHBITSZ/8))*(16/DCACHEWAYCOUNT))
 	,.TLBSETCOUNT    (TLBSZ/TLBWAYCOUNT)
@@ -213,7 +217,9 @@ multipu #(
 
 	,.clk_i        (clk_w)
 	,.clk_muldiv_i (clk_w)
+	`ifdef PUCOUNT
 	,.clk_mem_i    (pi1r_clk_w)
+	`endif
 
 	,.pi1_op_o   (m_pi1r_op_w[M_PI1R_MULTIPU])
 	,.pi1_addr_o (m_pi1r_addr_w[M_PI1R_MULTIPU])

@@ -144,8 +144,7 @@ multipu #(
 
 	 .rst_i (rst_w)
 
-	,.clk_i        (clk_w)
-	,.clk_mem_i    (pi1r_clk_w)
+	,.clk_i (pi1r_clk_w)
 
 	,.pi1_op_o   (m_pi1r_op_w[M_PI1R_MULTIPU])
 	,.pi1_addr_o (m_pi1r_addr_w[M_PI1R_MULTIPU])
