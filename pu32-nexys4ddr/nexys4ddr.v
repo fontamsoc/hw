@@ -444,7 +444,6 @@ sdcard_spi #(
 
 	 .rst_i (pi1r_rst_w || sd_cd)
 
-	,.clk_mem_i (pi1r_clk_w)
 	,.clk_i     (pi1r_clk_w)
 	,.clk_phy_i (pi1r_clk_w)
 

@@ -252,8 +252,7 @@ sdcard_spi #(
 
 	.rst_i (pi1r_rst_w)
 
-	,.clk_mem_i (pi1r_clk_w)
-	,.clk_i     (clk_w)
+	,.clk_i     (pi1r_clk_w)
 	,.clk_phy_i (clk_w)
 
 	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_SDCARD])
