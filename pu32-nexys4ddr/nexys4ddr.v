@@ -40,7 +40,7 @@
 
 `include "dev/pi1_upconverter.v"
 `include "dev/pi1_dcache.v"
-`include "dev/pi1q_to_wb4.v"
+`include "dev/pi1b_to_wb4.v"
 `include "./litedram/litedram.v"
 
 `include "dev/bootldr/bootldr.v"
@@ -733,15 +733,16 @@ wire                                 wb4_stall_user_port_w;
 wire                                 wb4_ack_user_port_w;
 wire [LITEDRAM_ARCHBITSZ -1 : 0]     wb4_data_user_port_w1;
 
-pi1q_to_wb4 #(
+pi1b_to_wb4 #(
 
 	.ARCHBITSZ (LITEDRAM_ARCHBITSZ)
 
-) pi1q_to_wb4_user_port (
+) pi1b_to_wb4_user_port (
 
-	 .wb4_rst_i (wb4_rst_user_port_w)
+	 .rst_i (wb4_rst_user_port_w)
 
-	,.pi1_clk_i   (pi1r_clk_w)
+	,.clk_i (wb4_clk_user_port_w /* must match pi1r_clk_w freq */)
+
 	,.pi1_op_i    (dcache_s_op_w)
 	,.pi1_addr_i  (dcache_s_addr_w)
 	,.pi1_data_i  (dcache_s_data_w0)
@@ -749,7 +750,6 @@ pi1q_to_wb4 #(
 	,.pi1_sel_i   (dcache_s_sel_w)
 	,.pi1_rdy_o   (dcache_s_rdy_w)
 
-	,.wb4_clk_i   (wb4_clk_user_port_w)
 	,.wb4_cyc_o   (wb4_cyc_user_port_w)
 	,.wb4_stb_o   (wb4_stb_user_port_w)
 	,.wb4_we_o    (wb4_we_user_port_w)
@@ -771,15 +771,16 @@ wire                        wb4_stall_wb_ctrl_w;
 wire                        wb4_ack_wb_ctrl_w;
 wire [ARCHBITSZ -1 : 0]     wb4_data_wb_ctrl_w1;
 
-pi1q_to_wb4 #(
+pi1b_to_wb4 #(
 
 	.ARCHBITSZ (ARCHBITSZ)
 
-) pi1q_to_wb4_wb_ctrl (
+) pi1b_to_wb4_wb_ctrl (
 
-	 .wb4_rst_i (wb4_rst_user_port_w)
+	 .rst_i (wb4_rst_user_port_w)
 
-	,.pi1_clk_i   (pi1r_clk_w)
+	,.clk_i (wb4_clk_user_port_w /* must match pi1r_clk_w freq */)
+
 	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_RAMCTRL])
 	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_RAMCTRL])
 	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_RAMCTRL])
@@ -787,7 +788,6 @@ pi1q_to_wb4 #(
 	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_RAMCTRL])
 	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_RAMCTRL])
 
-	,.wb4_clk_i   (wb4_clk_user_port_w)
 	,.wb4_cyc_o   (wb4_cyc_wb_ctrl_w)
 	,.wb4_stb_o   (wb4_stb_wb_ctrl_w)
 	,.wb4_we_o    (wb4_we_wb_ctrl_w)
