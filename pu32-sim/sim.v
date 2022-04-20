@@ -285,6 +285,7 @@ devtbl #(
 	,.PRELDRADDR ('h1000)
 	`endif
 	,.DEVMAPCNT  (PI1RSLAVECOUNT)
+	,.SOCID      (0)
 
 ) devtbl (
 

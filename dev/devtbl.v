@@ -33,6 +33,7 @@ parameter ARCHBITSZ   = 16;
 parameter RAMCACHESZ  = 2; // Size of the RAM cache in (ARCHBITSZ/8) bytes.
 parameter PRELDRADDR  = 0; // Address of pre-loader.
 parameter DEVMAPCNT   = 2; // Number of device mappings; must be <= (((4096-512)/(ARCHBITSZ/8))-1).
+parameter SOCID       = 0;
 
 initial begin
 	if (!(DEVMAPCNT <= (((4096-512)/(ARCHBITSZ/8))-1)))
@@ -135,6 +136,8 @@ always @ (posedge clk_i) begin
 				pi1_data_o <= {rst1_o, rst0_o};
 			else if (pi1_data_i == 3)
 				pi1_data_o <= (rst2_r ? 0 : PRELDRADDR); // After RRESET return 0 instead PRELDRADDR.
+			else if (pi1_data_i == 4)
+				pi1_data_o <= SOCID;
 			else
 				pi1_data_o <= 0;
 		end else if (pi1_addr_i == 1) begin // ACTION.

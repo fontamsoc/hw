@@ -317,6 +317,7 @@ devtbl #(
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.RAMCACHESZ (RAMCACHESZ)
 	,.DEVMAPCNT  (PI1RSLAVECOUNT)
+	,.SOCID      (1)
 
 ) devtbl (
 

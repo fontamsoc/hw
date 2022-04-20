@@ -363,6 +363,7 @@ devtbl #(
 	,.RAMCACHESZ (RAMCACHESZ)
 	,.PRELDRADDR ('h1000)
 	,.DEVMAPCNT  (PI1RSLAVECOUNT)
+	,.SOCID      (5)
 
 ) devtbl (
 
