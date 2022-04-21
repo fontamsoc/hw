@@ -63,9 +63,9 @@ module nexys4ddr (
 	,sd_cd
 	,sd_reset
 
-	// GPIO signals.
-	,gp_i
-	,gp_o
+	// GP0IO signals.
+	,gp0_i
+	,gp0_o
 
 	// UART signals.
 	,uart_rx
@@ -122,10 +122,10 @@ output wire sd_reset; // Must be set low to power the SDCard.
 assign sd_dat1 = 1;
 assign sd_dat2 = 1;
 
-// GPIO signals.
-localparam GPIOCOUNT = 16;
-input  wire [GPIOCOUNT -1 : 0] gp_i;
-output wire [GPIOCOUNT -1 : 0] gp_o;
+// GP0IO signals.
+localparam GP0IOCOUNT = 16;
+input  wire [GP0IOCOUNT -1 : 0] gp0_i;
+output wire [GP0IOCOUNT -1 : 0] gp0_o;
 
 // UART signals.
 input  wire uart_rx;
@@ -277,8 +277,8 @@ localparam PUCOUNT = 1;
 `endif
 
 localparam INTCTRLSRC_SDCARD = 0;
-localparam INTCTRLSRC_GPIO   = (INTCTRLSRC_SDCARD + 1);
-localparam INTCTRLSRC_DMA    = (INTCTRLSRC_GPIO + 1);
+localparam INTCTRLSRC_GP0IO  = (INTCTRLSRC_SDCARD + 1);
+localparam INTCTRLSRC_DMA    = (INTCTRLSRC_GP0IO + 1);
 localparam INTCTRLSRC_UART   = (INTCTRLSRC_DMA + 1);
 localparam INTCTRLSRCCOUNT   = (INTCTRLSRC_UART +1); // Number of interrupt source.
 localparam INTCTRLDSTCOUNT   = PUCOUNT; // Number of interrupt destination.
@@ -294,8 +294,8 @@ localparam M_PI1R_LAST       = M_PI1R_DMA;
 localparam S_PI1R_SDCARD     = 0;
 localparam S_PI1R_DEVTBL     = (S_PI1R_SDCARD + 1);
 localparam S_PI1R_PWM0       = (S_PI1R_DEVTBL + 1);
-localparam S_PI1R_GPIO       = (S_PI1R_PWM0 + 1);
-localparam S_PI1R_DMA        = (S_PI1R_GPIO + 1);
+localparam S_PI1R_GP0IO      = (S_PI1R_PWM0 + 1);
+localparam S_PI1R_DMA        = (S_PI1R_GP0IO + 1);
 localparam S_PI1R_INTCTRL    = (S_PI1R_DMA + 1);
 localparam S_PI1R_UART       = (S_PI1R_INTCTRL + 1);
 localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
@@ -511,13 +511,13 @@ devtbl #(
 assign devtbl_id_w     [S_PI1R_DEVTBL] = 7;
 assign devtbl_useintr_w[S_PI1R_DEVTBL] = 0;
 
-wire [GPIOCOUNT -1 : 0] pwm0_o;
+wire [GP0IOCOUNT -1 : 0] pwm0_o;
 
 pwm #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.CLKFREQ    (PI1RCLKFREQ)
-	,.IOCOUNT    (GPIOCOUNT)
+	,.IOCOUNT    (GP0IOCOUNT)
 	,.BUFFERSIZE (256)
 
 ) pwm_leds (
@@ -541,39 +541,39 @@ pwm #(
 assign devtbl_id_w     [S_PI1R_PWM0] = 9;
 assign devtbl_useintr_w[S_PI1R_PWM0] = 0;
 
-wire [GPIOCOUNT -1 : 0] gpio_o;
+wire [GP0IOCOUNT -1 : 0] gp0io_o;
 
 gpio #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.CLKFREQ    (PI1RCLKFREQ)
-	,.IOCOUNT    (GPIOCOUNT)
+	,.IOCOUNT    (GP0IOCOUNT)
 
-) gpio (
+) gpio_switches_leds (
 
 	 .rst_i (pi1r_rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
-	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_GPIO])
-	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_GPIO])
-	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_GPIO])
-	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_GPIO])
-	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_GPIO])
-	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_GPIO])
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_GPIO])
+	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_GP0IO])
+	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_GP0IO])
+	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_GP0IO])
+	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_GP0IO])
+	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_GP0IO])
+	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_GP0IO])
+	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_GP0IO])
 
-	,.intrqst_o (intrqstsrc_w[INTCTRLSRC_GPIO])
-	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_GPIO])
+	,.intrqst_o (intrqstsrc_w[INTCTRLSRC_GP0IO])
+	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_GP0IO])
 
-	,.i (gp_i)
-	,.o (gpio_o)
+	,.i (gp0_i)
+	,.o (gp0io_o)
 );
 
-assign devtbl_id_w     [S_PI1R_GPIO] = 6;
-assign devtbl_useintr_w[S_PI1R_GPIO] = 1;
+assign devtbl_id_w     [S_PI1R_GP0IO] = 6;
+assign devtbl_useintr_w[S_PI1R_GP0IO] = 1;
 
-assign gp_o = (pwm0_o | gpio_o);
+assign gp0_o = (pwm0_o | gp0io_o);
 
 dma #(
 
