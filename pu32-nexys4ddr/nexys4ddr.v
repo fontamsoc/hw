@@ -66,6 +66,7 @@ module nexys4ddr (
 	// GP0IO signals.
 	,gp0_i
 	,gp0_o
+	,gp1_i
 
 	// UART signals.
 	,uart_rx
@@ -126,6 +127,8 @@ assign sd_dat2 = 1;
 localparam GP0IOCOUNT = 16;
 input  wire [GP0IOCOUNT -1 : 0] gp0_i;
 output wire [GP0IOCOUNT -1 : 0] gp0_o;
+localparam GP1IOCOUNT = 5;
+input  wire [GP1IOCOUNT -1 : 0] gp1_i;
 
 // UART signals.
 input  wire uart_rx;
@@ -278,7 +281,8 @@ localparam PUCOUNT = 1;
 
 localparam INTCTRLSRC_SDCARD = 0;
 localparam INTCTRLSRC_GP0IO  = (INTCTRLSRC_SDCARD + 1);
-localparam INTCTRLSRC_DMA    = (INTCTRLSRC_GP0IO + 1);
+localparam INTCTRLSRC_GP1IO  = (INTCTRLSRC_GP0IO + 1);
+localparam INTCTRLSRC_DMA    = (INTCTRLSRC_GP1IO + 1);
 localparam INTCTRLSRC_UART   = (INTCTRLSRC_DMA + 1);
 localparam INTCTRLSRCCOUNT   = (INTCTRLSRC_UART +1); // Number of interrupt source.
 localparam INTCTRLDSTCOUNT   = PUCOUNT; // Number of interrupt destination.
@@ -295,7 +299,8 @@ localparam S_PI1R_SDCARD     = 0;
 localparam S_PI1R_DEVTBL     = (S_PI1R_SDCARD + 1);
 localparam S_PI1R_PWM0       = (S_PI1R_DEVTBL + 1);
 localparam S_PI1R_GP0IO      = (S_PI1R_PWM0 + 1);
-localparam S_PI1R_DMA        = (S_PI1R_GP0IO + 1);
+localparam S_PI1R_GP1IO      = (S_PI1R_GP0IO + 1);
+localparam S_PI1R_DMA        = (S_PI1R_GP1IO + 1);
 localparam S_PI1R_INTCTRL    = (S_PI1R_DMA + 1);
 localparam S_PI1R_UART       = (S_PI1R_INTCTRL + 1);
 localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
@@ -574,6 +579,36 @@ assign devtbl_id_w     [S_PI1R_GP0IO] = 6;
 assign devtbl_useintr_w[S_PI1R_GP0IO] = 1;
 
 assign gp0_o = (pwm0_o | gp0io_o);
+
+gpio #(
+
+	 .ARCHBITSZ  (ARCHBITSZ)
+	,.CLKFREQ    (PI1RCLKFREQ)
+	,.IOCOUNT    (GP1IOCOUNT)
+
+) gpio_buttons (
+
+	 .rst_i (pi1r_rst_w)
+
+	,.clk_i (pi1r_clk_w)
+
+	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_GP1IO])
+	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_GP1IO])
+	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_GP1IO])
+	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_GP1IO])
+	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_GP1IO])
+	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_GP1IO])
+	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_GP1IO])
+
+	,.intrqst_o (intrqstsrc_w[INTCTRLSRC_GP1IO])
+	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_GP1IO])
+
+	,.i (gp1_i)
+	,.o ()
+);
+
+assign devtbl_id_w     [S_PI1R_GP1IO] = 6;
+assign devtbl_useintr_w[S_PI1R_GP1IO] = 1;
 
 dma #(
 
