@@ -367,8 +367,6 @@ wire cacheoff = ~cacheactive;
 // Register used as counter during cache reset.
 reg [CLOG2CACHESETCOUNT -1 : 0] cacherstidx;
 
-wire [CACHEWAYCOUNT -1 : 0] cachevalido;
-
 wire [ARCHBITSZ -1 : 0] cachedatabitselo [CACHEWAYCOUNT -1 : 0];
 
 reg cmiss_i_hold;
@@ -383,7 +381,7 @@ always @* begin
 	cachetagwayhit = 0;
 	cachetagwayhitidx = 0;
 	for (gencachetag_idx = 0; gencachetag_idx < CACHEWAYCOUNT; gencachetag_idx = gencachetag_idx + 1) begin
-		cachetaghit[gencachetag_idx] = ((conly_r || (cachevalido[gencachetag_idx] && cacherdy_hold)) && (m_pi1_addr_i_hold[ADDRBITSZ -1 : CLOG2CACHESETCOUNT] == cachetago[gencachetag_idx]));
+		cachetaghit[gencachetag_idx] = ((conly_r || ((|(cachedatabitselo[gencachetag_idx])) && cacherdy_hold)) && (m_pi1_addr_i_hold[ADDRBITSZ -1 : CLOG2CACHESETCOUNT] == cachetago[gencachetag_idx]));
 		if (!cachehit && !cmiss_i_hold &&
 			// There is a cachehit when there is a cache tag hit and the selected bits are in the cache.
 			(cachetaghit[gencachetag_idx] && ((cachedatibitsel & cachedatabitselo[gencachetag_idx]) == cachedatibitsel))) begin
@@ -446,30 +444,15 @@ bram #(
 bram #(
 
 	 .SZ (CACHESETCOUNT)
-	,.DW (1)
-
-) cachevalids (
-
-	 .clk0_i  (clk_i)          ,.clk1_i  (clk_i)
-	,.en0_i   (cacheen)        ,.en1_i   (1'b1)
-	                           ,.we1_i   ((cachewe && (cachetagwayhit ? (cachetagwayhitidx == gencache_idx) : (cachewaywriteidx == gencache_idx))) || cacheoff)
-	,.addr0_i (m_pi1_addr_i)   ,.addr1_i (cacheoff ? cacherstidx : m_pi1_addr_i_hold)
-	                           ,.i1      (~cacheoff)
-	,.o0      (cachevalido[gencache_idx]) ,.o1      ()
-);
-
-bram #(
-
-	 .SZ (CACHESETCOUNT)
 	,.DW (ARCHBITSZ)
 
 ) cachedatabitsels (
 
 	 .clk0_i  (clk_i)               ,.clk1_i  (clk_i)
 	,.en0_i   (cacheen)             ,.en1_i   (1'b1)
-	                                ,.we1_i   (cachewe && (cachetagwayhit ? (cachetagwayhitidx == gencache_idx) : (cachewaywriteidx == gencache_idx)))
-	,.addr0_i (m_pi1_addr_i)        ,.addr1_i (m_pi1_addr_i_hold)
-	                                ,.i1      ((cachetagwayhit ? cachedatabitselo[gencache_idx] : {ARCHBITSZ{1'b0}}) | _cachedatibitsel)
+	                                ,.we1_i   ((cachewe && (cachetagwayhit ? (cachetagwayhitidx == gencache_idx) : (cachewaywriteidx == gencache_idx))) || cacheoff)
+	,.addr0_i (m_pi1_addr_i)        ,.addr1_i (cacheoff ? cacherstidx : m_pi1_addr_i_hold)
+	                                ,.i1      (cacheoff ? {ARCHBITSZ{1'b0}} : ((cachetagwayhit ? cachedatabitselo[gencache_idx] : {ARCHBITSZ{1'b0}}) | _cachedatibitsel))
 	,.o0      (cachedatabitselo[gencache_idx]) ,.o1      ()
 );
 
