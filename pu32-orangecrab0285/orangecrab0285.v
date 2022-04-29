@@ -288,7 +288,7 @@ localparam TLBWAYCOUNT    = 1;
 multipu #(
 
 	 .ARCHBITSZ      (ARCHBITSZ)
-	,.CLKFREQ        (CLK2XFREQ)
+	,.CLKFREQ        (PI1RCLKFREQ)
 	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*((ICACHESZ/ICACHEWAYCOUNT)/PUCOUNT))
 	,.DCACHESETCOUNT ((1024/(ARCHBITSZ/8))*1)
 	,.TLBSETCOUNT    (TLBSZ/TLBWAYCOUNT)
@@ -303,7 +303,7 @@ multipu #(
 
 	,.rst_o (multipu_rst_ow)
 
-	,.clk_i        (clk_2x_w)
+	,.clk_i        (pi1r_clk_w)
 	,.clk_muldiv_i (clk_8x_w)
 	`ifdef PUCOUNT
 	,.clk_mem_i    (pi1r_clk_w)
