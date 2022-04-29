@@ -469,7 +469,7 @@ bram #(
 	,.en0_i   (cacheen)             ,.en1_i   (1'b1)
 	                                ,.we1_i   (cachewe && (cachetagwayhit ? (cachetagwayhitidx == gencache_idx) : (cachewaywriteidx == gencache_idx)))
 	,.addr0_i (m_pi1_addr_i)        ,.addr1_i (m_pi1_addr_i_hold)
-	                                ,.i1      ((cachetaghit[gencache_idx] ? cachedatabitselo[gencache_idx] : {ARCHBITSZ{1'b0}}) | _cachedatibitsel)
+	                                ,.i1      ((cachetagwayhit ? cachedatabitselo[gencache_idx] : {ARCHBITSZ{1'b0}}) | _cachedatibitsel)
 	,.o0      (cachedatabitselo[gencache_idx]) ,.o1      ()
 );
 
