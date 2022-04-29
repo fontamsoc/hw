@@ -362,7 +362,7 @@ reg [CLOG2CACHEWAYCOUNT -1 : 0] cachewayhitidx;
 assign m_pi1_data_o = (m_pi1_op_i_hold == PIRDOP) ?
 	(usesampled ? cachedati_sampled : cachedato[cachewayhitidx]) : s_pi1_data_i_hold;
 
-wire cacheoff = !cacheactive;
+wire cacheoff = ~cacheactive;
 
 // Register used as counter during cache reset.
 reg [CLOG2CACHESETCOUNT -1 : 0] cacherstidx;
@@ -454,7 +454,7 @@ bram #(
 	,.en0_i   (cacheen)        ,.en1_i   (1'b1)
 	                           ,.we1_i   ((cachewe && (cachetagwayhit ? (cachetagwayhitidx == gencache_idx) : (cachewaywriteidx == gencache_idx))) || cacheoff)
 	,.addr0_i (m_pi1_addr_i)   ,.addr1_i (cacheoff ? cacherstidx : m_pi1_addr_i_hold)
-	                           ,.i1      (cacheoff ? 1'b0 : cacherdy_hold)
+	                           ,.i1      (~cacheoff)
 	,.o0      (cachevalido[gencache_idx]) ,.o1      ()
 );
 
