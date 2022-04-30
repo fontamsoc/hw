@@ -31,7 +31,7 @@ module devtbl (
 
 parameter ARCHBITSZ   = 16;
 parameter RAMCACHESZ  = 2; // Size of the RAM cache in (ARCHBITSZ/8) bytes.
-parameter PRELDRADDR  = 0; // Address of pre-loader.
+parameter PRELDRADDR  = 0; // Address of pre-loader in bytes.
 parameter DEVMAPCNT   = 2; // Number of device mappings; must be <= (((4096-512)/(ARCHBITSZ/8))-1).
 parameter SOCID       = 0;
 
@@ -109,8 +109,8 @@ localparam PIRWOP = 2'b11;
 
 `include "version.v"
 
-wire [ADDRBITSZ -1 : 0] addrby2;
-assign addrby2 = (pi1_addr_i>>1);
+wire [ADDRBITSZ -2 : 0] addrby2;
+assign addrby2 = pi1_addr_i[ADDRBITSZ-1:1];
 
 always @ (posedge clk_i) begin
 	pi1_mapsz_o <= pi1_mapsz_o_;
