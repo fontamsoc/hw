@@ -82,6 +82,8 @@
 // An interrupt must be acknowledged as soon as possible so
 // that the intctrl can dispatch another interrupt request.
 
+`include "lib/perint/pi1b.v"
+
 module intctrl (
 
 	 rst_i
@@ -124,7 +126,7 @@ input wire clk_i;
 input  wire [2 -1 : 0]             pi1_op_i;
 input  wire [ADDRBITSZ -1 : 0]     pi1_addr_i; /* Not used */
 input  wire [ARCHBITSZ -1 : 0]     pi1_data_i;
-output reg  [ARCHBITSZ -1 : 0]     pi1_data_o = {ARCHBITSZ{1'b0}};
+output wire [ARCHBITSZ -1 : 0]     pi1_data_o;
 input  wire [(ARCHBITSZ/8) -1 : 0] pi1_sel_i;  /* Not used */
 output wire                        pi1_rdy_o;
 output wire [ARCHBITSZ -1 : 0]     pi1_mapsz_o;
@@ -136,10 +138,42 @@ input  wire [INTDSTCOUNT -1 : 0] intbestdst_i;
 input  wire [INTSRCCOUNT -1 : 0] intrqstsrc_i;
 output wire [INTSRCCOUNT -1 : 0] intrdysrc_o;
 
-assign pi1_rdy_o   = 1; // The output pi1_rdy_o is always 1 because all memory operations complete immediately.
-
 // Actual mapsz is (1*(ARCHBITSZ/8)), but aligning to 64bits.
 assign pi1_mapsz_o = (((ARCHBITSZ<64)?(64/ARCHBITSZ):1)*(ARCHBITSZ/8));
+
+wire [2 -1 : 0]             pi1b_op_i;
+wire [ADDRBITSZ -1 : 0]     pi1b_addr_i;
+reg  [ARCHBITSZ -1 : 0]     pi1b_data_o = {ARCHBITSZ{1'b0}};
+wire [ARCHBITSZ -1 : 0]     pi1b_data_i;
+wire [(ARCHBITSZ/8) -1 : 0] pi1b_sel_i;
+wire                        pi1b_rdy_o;
+
+pi1b #(
+
+	.ARCHBITSZ (ARCHBITSZ)
+
+) pi1b (
+
+	 .rst_i (rst_i)
+
+	,.clk_i (clk_i)
+
+	,.m_op_i (pi1_op_i)
+	,.m_addr_i (pi1_addr_i)
+	,.m_data_i (pi1_data_i)
+	,.m_data_o (pi1_data_o)
+	,.m_sel_i (pi1_sel_i)
+	,.m_rdy_o (pi1_rdy_o)
+
+	,.s_op_o (pi1b_op_i)
+	,.s_addr_o (pi1b_addr_i)
+	,.s_data_o (pi1b_data_i)
+	,.s_data_i (pi1b_data_o)
+	,.s_sel_o (pi1b_sel_i)
+	,.s_rdy_i (pi1b_rdy_o)
+);
+
+assign pi1b_rdy_o = 1;
 
 // Registers used to index respectively the source and destination of an interrupt.
 reg [CLOG2INTSRCCOUNT -1 : 0] srcindex = {CLOG2INTSRCCOUNT{1'b0}};
@@ -154,15 +188,15 @@ localparam CMDACKINT = 2'b00;
 localparam CMDINTDST = 2'b01;
 localparam CMDENAINT = 2'b10;
 
-wire ismemreadwriteop = (pi1_op_i == PIRWOP);
+wire ismemreadwriteop = (pi1b_op_i == PIRWOP);
 
-wire cmdackint = (ismemreadwriteop && pi1_data_i[1:0] == CMDACKINT);
+wire cmdackint = (ismemreadwriteop && pi1b_data_i[1:0] == CMDACKINT);
 
-wire cmdintdst = (ismemreadwriteop && pi1_data_i[1:0] == CMDINTDST);
+wire cmdintdst = (ismemreadwriteop && pi1b_data_i[1:0] == CMDINTDST);
 reg [ARCHBITSZ -1 : 0] cmdintdstdata = {ARCHBITSZ{1'b0}};
 wire cmdintdstseeking = (cmdintdstdata[1:0] == CMDINTDST && (dstindex != cmdintdstdata[(CLOG2INTDSTCOUNT +2) -1 : 2]));
 
-wire cmdenaint = (ismemreadwriteop && pi1_data_i[1:0] == CMDENAINT);
+wire cmdenaint = (ismemreadwriteop && pi1b_data_i[1:0] == CMDENAINT);
 
 // Register set to 1 when an interrupt request from a source is waiting to be acknowledged.
 reg intrqstpending = 0;
@@ -194,40 +228,40 @@ always @ (posedge clk_i) begin
 		intsrcen <= {INTSRCCOUNT{1'b0}};
 		intdsten <= {INTDSTCOUNT{1'b0}};
 	end else if (cmdenaint) begin
-		if (pi1_data_i[ARCHBITSZ -1 : 3] < INTSRCCOUNT) begin
-			intsrcen[pi1_data_i[(CLOG2INTSRCCOUNT +3) -1 : 3]] <= pi1_data_i[2];
-			pi1_data_o <= {{(ARCHBITSZ-CLOG2INTSRCCOUNT){1'b0}}, pi1_data_i[(CLOG2INTSRCCOUNT +3) -1 : 3]};
+		if (pi1b_data_i[ARCHBITSZ -1 : 3] < INTSRCCOUNT) begin
+			intsrcen[pi1b_data_i[(CLOG2INTSRCCOUNT +3) -1 : 3]] <= pi1b_data_i[2];
+			pi1b_data_o <= {{(ARCHBITSZ-CLOG2INTSRCCOUNT){1'b0}}, pi1b_data_i[(CLOG2INTSRCCOUNT +3) -1 : 3]};
 		end else
-			pi1_data_o <= {ARCHBITSZ{1'b1}};
+			pi1b_data_o <= {ARCHBITSZ{1'b1}};
 	end else if (cmdintdst) begin
-		if (pi1_data_i[ARCHBITSZ -1 : 2] < INTDSTCOUNT) begin
+		if (pi1b_data_i[ARCHBITSZ -1 : 2] < INTDSTCOUNT) begin
 			if (intrqstpending) begin
-				pi1_data_o <= {{(ARCHBITSZ-1){1'b1}}, 1'b0};
+				pi1b_data_o <= {{(ARCHBITSZ-1){1'b1}}, 1'b0};
 			end else begin
-				pi1_data_o <= {{(ARCHBITSZ-CLOG2INTDSTCOUNT){1'b0}}, pi1_data_i[(CLOG2INTDSTCOUNT +2) -1 : 2]};
+				pi1b_data_o <= {{(ARCHBITSZ-CLOG2INTDSTCOUNT){1'b0}}, pi1b_data_i[(CLOG2INTDSTCOUNT +2) -1 : 2]};
 				intrqstpending <= 1'b1;
-				cmdintdstdata <= pi1_data_i;
+				cmdintdstdata <= pi1b_data_i;
 			end
 		end else
-			pi1_data_o <= {ARCHBITSZ{1'b1}};
+			pi1b_data_o <= {ARCHBITSZ{1'b1}};
 	end else if (cmdintdstseeking) begin
 		// Keep incrementing dstindex until the targeted interrupt destination is indexed.
 		dstindex <= nextdstindex;
 	end else if (intrqstpending || cmdackint) begin
 		// Logic that acknowledges a triggered interrupt.
 		if (cmdackint) begin
-			if (pi1_data_i[ARCHBITSZ -1 : 3] == dstindex) begin
-				pi1_data_o <= ((cmdintdstdata[1:0] == CMDINTDST) ? {ARCHBITSZ{1'b1}} :
+			if (pi1b_data_i[ARCHBITSZ -1 : 3] == dstindex) begin
+				pi1b_data_o <= ((cmdintdstdata[1:0] == CMDINTDST) ? {ARCHBITSZ{1'b1}} :
 					{{(ARCHBITSZ-CLOG2INTSRCCOUNT){1'b0}}, srcindex});
 				intrqstpending <= 1'b0;
 				cmdintdstdata <= {ARCHBITSZ{1'b0}};
 				dstindex <= {CLOG2INTDSTCOUNT{1'b0}}; /* The destination with the lowest index is always preferred */
 				srcindex <= nextsrcindex;
 			end else begin
-				pi1_data_o <= {{(ARCHBITSZ-1){1'b1}}, 1'b0};
+				pi1b_data_o <= {{(ARCHBITSZ-1){1'b1}}, 1'b0};
 			end
-			if (pi1_data_i[ARCHBITSZ -1 : 3] < INTDSTCOUNT)
-				intdsten[pi1_data_i[(CLOG2INTDSTCOUNT +3) -1 : 3]] <= pi1_data_i[2];
+			if (pi1b_data_i[ARCHBITSZ -1 : 3] < INTDSTCOUNT)
+				intdsten[pi1b_data_i[(CLOG2INTDSTCOUNT +3) -1 : 3]] <= pi1b_data_i[2];
 		end
 	end else if (intsrcen[srcindex] && intrqstsrc_i[srcindex]) begin
 		// If there is no preferred interrupt destination available
