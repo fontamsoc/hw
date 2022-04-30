@@ -213,18 +213,12 @@ assign pi1_mapsz_o = (PHYBLKSZ/(ARCHBITSZ/8));
 
 localparam CLOG2PHYBLKSZ = clog2(PHYBLKSZ);
 
-wire [2 -1 : 0]             m_pi1b_op_w;
-wire [ADDRBITSZ -1 : 0]     m_pi1b_addr_w;
-wire [ARCHBITSZ -1 : 0]     m_pi1b_data_w1;
-wire [ARCHBITSZ -1 : 0]     m_pi1b_data_w0;
-wire [(ARCHBITSZ/8) -1 : 0] m_pi1b_sel_w;
-wire                        m_pi1b_rdy_w;
-wire [2 -1 : 0]             s_pi1b_op_w;
-wire [ADDRBITSZ -1 : 0]     s_pi1b_addr_w;
-wire [ARCHBITSZ -1 : 0]     s_pi1b_data_w1;
-wire [ARCHBITSZ -1 : 0]     s_pi1b_data_w0;
-wire [(ARCHBITSZ/8) -1 : 0] s_pi1b_sel_w;
-wire                        s_pi1b_rdy_w;
+wire [2 -1 : 0]             pi1b_op_i;
+wire [ADDRBITSZ -1 : 0]     pi1b_addr_i;
+reg  [ARCHBITSZ -1 : 0]     pi1b_data_o = {ARCHBITSZ{1'b0}};
+wire [ARCHBITSZ -1 : 0]     pi1b_data_i;
+wire [(ARCHBITSZ/8) -1 : 0] pi1b_sel_i;
+wire                        pi1b_rdy_o;
 
 pi1b #(
 
@@ -236,32 +230,22 @@ pi1b #(
 
 	,.clk_i (clk_i)
 
-	,.m_op_i (m_pi1b_op_w)
-	,.m_addr_i (m_pi1b_addr_w)
-	,.m_data_i (m_pi1b_data_w1)
-	,.m_data_o (m_pi1b_data_w0)
-	,.m_sel_i (m_pi1b_sel_w)
-	,.m_rdy_o (m_pi1b_rdy_w)
+	,.m_op_i (pi1_op_i)
+	,.m_addr_i (pi1_addr_i)
+	,.m_data_i (pi1_data_i)
+	,.m_data_o (pi1_data_o)
+	,.m_sel_i (pi1_sel_i)
+	,.m_rdy_o (pi1_rdy_o)
 
-	,.s_op_o (s_pi1b_op_w)
-	,.s_addr_o (s_pi1b_addr_w)
-	,.s_data_o (s_pi1b_data_w0)
-	,.s_data_i (s_pi1b_data_w1)
-	,.s_sel_o (s_pi1b_sel_w)
-	,.s_rdy_i (s_pi1b_rdy_w)
+	,.s_op_o (pi1b_op_i)
+	,.s_addr_o (pi1b_addr_i)
+	,.s_data_o (pi1b_data_i)
+	,.s_data_i (pi1b_data_o)
+	,.s_sel_o (pi1b_sel_i)
+	,.s_rdy_i (pi1b_rdy_o)
 );
 
-assign m_pi1b_op_w = pi1_op_i;
-assign m_pi1b_addr_w = pi1_addr_i;
-assign m_pi1b_data_w1 = pi1_data_i;
-assign pi1_data_o = m_pi1b_data_w0;
-assign m_pi1b_sel_w = pi1_sel_i;
-assign pi1_rdy_o = m_pi1b_rdy_w;
-
-reg [ARCHBITSZ -1 : 0] s_pi1b_data_w1_ = 0;
-assign s_pi1b_data_w1 = s_pi1b_data_w1_;
-
-assign s_pi1b_rdy_w = 1; // Set s_pi1b_rdy_w always 1 because all memory operations complete immediately.
+assign pi1b_rdy_o = 1;
 
 localparam PINOOP = 2'b00;
 localparam PIWROP = 2'b01;
@@ -299,7 +283,7 @@ wire phy_err_w;
 // Since "rst_i" is also used to report whether
 // the device is under power, a controller reset
 // will be done as soon as the device is powered-on.
-wire phy_rst_w = (rst_i | (s_pi1b_op_w == PIRWOP && s_pi1b_addr_w == CMDRESET && s_pi1b_data_w0));
+wire phy_rst_w = (rst_i | (pi1b_op_i == PIRWOP && pi1b_addr_i == CMDRESET && pi1b_data_i));
 
 reg phy_cmd_pending = 0;
 
@@ -352,8 +336,8 @@ sdcard_spi_phy
 	,.err_o (phy_err_w)
 );
 
-wire pi1_op_is_rdop = (s_pi1b_op_w == PIRDOP || (s_pi1b_op_w == PIRWOP && s_pi1b_addr_w >= CMD_CNT));
-wire pi1_op_is_wrop = (s_pi1b_op_w == PIWROP || (s_pi1b_op_w == PIRWOP && s_pi1b_addr_w >= CMD_CNT));
+wire pi1_op_is_rdop = (pi1b_op_i == PIRDOP || (pi1b_op_i == PIRWOP && pi1b_addr_i >= CMD_CNT));
+wire pi1_op_is_wrop = (pi1b_op_i == PIWROP || (pi1b_op_i == PIRWOP && pi1b_addr_i >= CMD_CNT));
 
 // When the value of this register is 1, "phy" has
 // access to cache1 otherwise it has access to cache0.
@@ -366,9 +350,9 @@ reg [CLOG2PHYBLKSZ -1 : 0] cachephyaddr = 0;
 
 // Nets set to the index within the respective cache. Each cache element is ARCHBITSZ bits.
 wire [(CLOG2PHYBLKSZ-CLOG2ARCHBITSZBY8) -1 : 0] cache0addr =
-	cacheselect ? s_pi1b_addr_w : cachephyaddr[CLOG2PHYBLKSZ -1 : CLOG2ARCHBITSZBY8];
+	cacheselect ? pi1b_addr_i : cachephyaddr[CLOG2PHYBLKSZ -1 : CLOG2ARCHBITSZBY8];
 wire [(CLOG2PHYBLKSZ-CLOG2ARCHBITSZBY8) -1 : 0] cache1addr =
-	cacheselect ? cachephyaddr[CLOG2PHYBLKSZ -1 : CLOG2ARCHBITSZBY8] : s_pi1b_addr_w;
+	cacheselect ? cachephyaddr[CLOG2PHYBLKSZ -1 : CLOG2ARCHBITSZBY8] : pi1b_addr_i;
 
 localparam ARCHBITSZMAX = 64;
 
@@ -397,8 +381,8 @@ wire [ARCHBITSZMAX -1 : 0] phy_rx_data_w_byteselected =
 					   {phy_rx_data_w, cachephydata[55:0]});
 
 // Nets set to the value to write in the respective cache.
-wire [ARCHBITSZ -1 : 0] cache0dati = cacheselect ? s_pi1b_data_w0 : phy_rx_data_w_byteselected[ARCHBITSZ -1 : 0];
-wire [ARCHBITSZ -1 : 0] cache1dati = cacheselect ? phy_rx_data_w_byteselected[ARCHBITSZ -1 : 0] : s_pi1b_data_w0;
+wire [ARCHBITSZ -1 : 0] cache0dati = cacheselect ? pi1b_data_i : phy_rx_data_w_byteselected[ARCHBITSZ -1 : 0];
+wire [ARCHBITSZ -1 : 0] cache1dati = cacheselect ? phy_rx_data_w_byteselected[ARCHBITSZ -1 : 0] : pi1b_data_i;
 
 // phy_tx_data_w is set to the value read from the respective cache.
 always @* begin
@@ -509,19 +493,19 @@ always @ (posedge clk_i) begin
 	intrqst_o <= intrqst_o ? ~intrdy_i_negedge : (phy_err_w_posedge || phy_bsy_negedge);
 
 	// Logic that flips the value of cacheselect when CMDSWAP is issued.
-	if (s_pi1b_op_w == PIRWOP && s_pi1b_addr_w == CMDSWAP)
+	if (pi1b_op_i == PIRWOP && pi1b_addr_i == CMDSWAP)
 		cacheselect <= ~cacheselect;
 
-	// Logic that sets s_pi1b_data_w1_.
+	// Logic that sets pi1b_data_o.
 	if (pi1_op_is_rdop)
-		s_pi1b_data_w1_ <= cacheselect ? cache0dato : cache1dato;
-	else if (s_pi1b_op_w == PIRWOP) begin
-		if (s_pi1b_addr_w == CMDRESET)
-			s_pi1b_data_w1_ <= {{30{1'b0}}, status};
-		else if (s_pi1b_addr_w == CMDSWAP)
-			s_pi1b_data_w1_ <= PHYBLKSZ;
-		else if (s_pi1b_addr_w == CMDREAD || s_pi1b_addr_w == CMDWRITE)
-			s_pi1b_data_w1_ <= phy_blkcnt_w;
+		pi1b_data_o <= cacheselect ? cache0dato : cache1dato;
+	else if (pi1b_op_i == PIRWOP) begin
+		if (pi1b_addr_i == CMDRESET)
+			pi1b_data_o <= {{30{1'b0}}, status};
+		else if (pi1b_addr_i == CMDSWAP)
+			pi1b_data_o <= PHYBLKSZ;
+		else if (pi1b_addr_i == CMDREAD || pi1b_addr_i == CMDWRITE)
+			pi1b_data_o <= phy_blkcnt_w;
 	end
 
 	// Logic that sets cachephyaddr.
@@ -534,12 +518,12 @@ always @ (posedge clk_i) begin
 
 	if (rst_i || (phy_cmd_pop_w && phy_cmd_pending))
 		phy_cmd_pending <= 0;
-	else if (s_pi1b_op_w == PIRWOP && (s_pi1b_addr_w == CMDREAD || s_pi1b_addr_w == CMDWRITE))
+	else if (pi1b_op_i == PIRWOP && (pi1b_addr_i == CMDREAD || pi1b_addr_i == CMDWRITE))
 		phy_cmd_pending <= 1;
 
-	if (s_pi1b_op_w == PIRWOP && (s_pi1b_addr_w == CMDREAD || s_pi1b_addr_w == CMDWRITE)) begin
-		phy_cmd <= (s_pi1b_addr_w == CMDWRITE);
-		phy_cmdaddr <= s_pi1b_data_w0;
+	if (pi1b_op_i == PIRWOP && (pi1b_addr_i == CMDREAD || pi1b_addr_i == CMDWRITE)) begin
+		phy_cmd <= (pi1b_addr_i == CMDWRITE);
+		phy_cmdaddr <= pi1b_data_i;
 	end
 	// Sampling used for edge detection.
 	intrdy_i_sampled  <= intrdy_i;
