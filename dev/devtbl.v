@@ -47,9 +47,9 @@ input wire clk_i;
 
 input wire rst_i;
 
-output reg  rst0_o;
-output reg  rst1_o;
-output wire rst2_o;
+output reg rst0_o;
+output reg rst1_o;
+output reg rst2_o;
 
 reg rst2_r = 0; // Reset globally only to match behavior with RAM.
 
@@ -159,8 +159,7 @@ always @ (posedge clk_i) begin
 		end else
 			pi1_data_o <= 0;
 	end
+	rst2_o <= (pi1_rdy_o && pi1_op_i == PIRWOP && pi1_addr_i == 1 && pi1_data_i == 3/* RRESET */);
 end
-
-assign rst2_o = (pi1_rdy_o && pi1_op_i == PIRWOP && pi1_addr_i == 1 && pi1_data_i == 3/* RRESET */);
 
 endmodule
