@@ -159,12 +159,12 @@ assign pi1_data_o     = s_pi1q_data_w0;
 assign pi1_sel_o      = s_pi1q_sel_w;
 assign s_pi1q_rdy_w   = pi1_rdy_i;
 `else
-wire [2 -1 : 0]             m_pi1b_op_w;
-wire [ADDRBITSZ -1 : 0]     m_pi1b_addr_w;
-wire [ARCHBITSZ -1 : 0]     m_pi1b_data_w1;
-wire [ARCHBITSZ -1 : 0]     m_pi1b_data_w0;
-wire [(ARCHBITSZ/8) -1 : 0] m_pi1b_sel_w;
-wire                        m_pi1b_rdy_w;
+wire [2 -1 : 0]             pi1b_op_o;
+wire [ADDRBITSZ -1 : 0]     pi1b_addr_o;
+wire [ARCHBITSZ -1 : 0]     pi1b_data_o;
+wire [ARCHBITSZ -1 : 0]     pi1b_data_i;
+wire [(ARCHBITSZ/8) -1 : 0] pi1b_sel_o;
+wire                        pi1b_rdy_i;
 pi1b #(
 
 	.ARCHBITSZ (ARCHBITSZ)
@@ -175,12 +175,12 @@ pi1b #(
 
 	,.clk_i (clk_i)
 
-	,.m_op_i (m_pi1b_op_w)
-	,.m_addr_i (m_pi1b_addr_w)
-	,.m_data_i (m_pi1b_data_w1)
-	,.m_data_o (m_pi1b_data_w0)
-	,.m_sel_i (m_pi1b_sel_w)
-	,.m_rdy_o (m_pi1b_rdy_w)
+	,.m_op_i (pi1b_op_o)
+	,.m_addr_i (pi1b_addr_o)
+	,.m_data_i (pi1b_data_o)
+	,.m_data_o (pi1b_data_i)
+	,.m_sel_i (pi1b_sel_o)
+	,.m_rdy_o (pi1b_rdy_i)
 
 	,.s_op_o (pi1_op_o)
 	,.s_addr_o (pi1_addr_o)
@@ -249,12 +249,12 @@ pu #(
 	,.pi1_sel_o  (m_pi1q_sel_w[genpu_idx])
 	,.pi1_rdy_i  (m_pi1q_rdy_w[genpu_idx])
 	`else
-	,.pi1_op_o   (m_pi1b_op_w)
-	,.pi1_addr_o (m_pi1b_addr_w)
-	,.pi1_data_o (m_pi1b_data_w1)
-	,.pi1_data_i (m_pi1b_data_w0)
-	,.pi1_sel_o  (m_pi1b_sel_w)
-	,.pi1_rdy_i  (m_pi1b_rdy_w)
+	,.pi1_op_o   (pi1b_op_o)
+	,.pi1_addr_o (pi1b_addr_o)
+	,.pi1_data_o (pi1b_data_o)
+	,.pi1_data_i (pi1b_data_i)
+	,.pi1_sel_o  (pi1b_sel_o)
+	,.pi1_rdy_i  (pi1b_rdy_i)
 	`endif
 
 	,.intrqst_i (intrqst_i[genpu_idx])
