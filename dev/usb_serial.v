@@ -97,6 +97,8 @@
 
 `include "lib/usb_serial_fifo_phy.v"
 
+`include "lib/perint/pi1b.v"
+
 module usb_serial (
 
 	 rst_i
@@ -157,10 +159,42 @@ input  wire intrdy_i;
 inout wire usb_dp_io;
 inout wire usb_dn_io;
 
-assign pi1_rdy_o = 1;
-
 // Actual mapsz is (1*(ARCHBITSZ/8)), but aligning to 64bits.
 assign pi1_mapsz_o = (((ARCHBITSZ<64)?(64/ARCHBITSZ):1)*(ARCHBITSZ/8));
+
+wire [2 -1 : 0]             pi1b_op_i;
+wire [ADDRBITSZ -1 : 0]     pi1b_addr_i;
+wire [ARCHBITSZ -1 : 0]     pi1b_data_o;
+wire [ARCHBITSZ -1 : 0]     pi1b_data_i;
+wire [(ARCHBITSZ/8) -1 : 0] pi1b_sel_i;
+wire                        pi1b_rdy_o;
+
+pi1b #(
+
+	.ARCHBITSZ (ARCHBITSZ)
+
+) pi1b (
+
+	 .rst_i (rst_i)
+
+	,.clk_i (clk_i)
+
+	,.m_op_i (pi1_op_i)
+	,.m_addr_i (pi1_addr_i)
+	,.m_data_i (pi1_data_i)
+	,.m_data_o (pi1_data_o)
+	,.m_sel_i (pi1_sel_i)
+	,.m_rdy_o (pi1_rdy_o)
+
+	,.s_op_o (pi1b_op_i)
+	,.s_addr_o (pi1b_addr_i)
+	,.s_data_o (pi1b_data_i)
+	,.s_data_i (pi1b_data_o)
+	,.s_sel_o (pi1b_sel_i)
+	,.s_rdy_i (pi1b_rdy_o)
+);
+
+assign pi1b_rdy_o = 1;
 
 localparam PINOOP = 2'b00;
 localparam PIWROP = 2'b01;
@@ -168,12 +202,12 @@ localparam PIRDOP = 2'b10;
 localparam PIRWOP = 2'b11;
 
 wire            rx_empty_w;
-wire            rx_read_w = (pi1_op_i == PIRDOP && pi1_rdy_o);
+wire            rx_read_w = (pi1b_op_i == PIRDOP && pi1b_rdy_o);
 wire [8 -1 : 0] rx_data_w0;
 
 wire            tx_full_w;
-wire            tx_write_w = (pi1_op_i == PIWROP && pi1_rdy_o);
-wire [8 -1 : 0] tx_data_w1 = pi1_data_i[8 -1 : 0];
+wire            tx_write_w = (pi1b_op_i == PIWROP && pi1b_rdy_o);
+wire [8 -1 : 0] tx_data_w1 = pi1b_data_i[8 -1 : 0];
 
 wire [(CLOG2BUFSZ +1) -1 : 0] rx_usage_w;
 wire [(CLOG2BUFSZ +1) -1 : 0] tx_usage_w;
@@ -192,9 +226,9 @@ localparam CMDSETSPEED       = 2;
 
 reg rx_read_w_sampled = 0;
 
-reg [ARCHBITSZ -1 : 0] pi1_data_o_;
+reg [ARCHBITSZ -1 : 0] pi1b_data_o_;
 
-assign pi1_data_o = (rx_read_w_sampled ? rx_data_w0 : pi1_data_o_);
+assign pi1b_data_o = (rx_read_w_sampled ? rx_data_w0 : pi1b_data_o_);
 
 always @ (posedge clk_i) begin
 	// Logic enabling/disabling interrupt.
@@ -202,20 +236,20 @@ always @ (posedge clk_i) begin
 		// On reset, interrupt is disabled, and must be explicitely enabled.
 		// It prevents unwanted interrupt after reset.
 		intrqstthresh <= 0;
-	end else if (pi1_op_i == PIRWOP && pi1_data_i[(ARCHBITSZ-1):(ARCHBITSZ-2)] == CMDSETINTERRUPT)
-		intrqstthresh <= pi1_data_i[(ARCHBITSZ-2)-1:0];
+	end else if (pi1b_op_i == PIRWOP && pi1b_data_i[(ARCHBITSZ-1):(ARCHBITSZ-2)] == CMDSETINTERRUPT)
+		intrqstthresh <= pi1b_data_i[(ARCHBITSZ-2)-1:0];
 	else if (intrdynegedge)
 		intrqstthresh <= 0;
 
 	rx_read_w_sampled <= rx_read_w;
 
-	if (pi1_op_i == PIRWOP && pi1_rdy_o) begin
-		if (pi1_data_i[(ARCHBITSZ-1):(ARCHBITSZ-2)] == CMDSETINTERRUPT)
-			pi1_data_o_ <= BUFSZ;
-		else if (pi1_data_i[(ARCHBITSZ-1):(ARCHBITSZ-2)] == CMDGETBUFFERUSAGE)
-			pi1_data_o_ <= pi1_data_i[0] ? tx_usage_w : rx_usage_w;
-		else if (pi1_data_i[(ARCHBITSZ-1):(ARCHBITSZ-2)] == CMDSETSPEED)
-			pi1_data_o_ <= PHYCLKFREQ;
+	if (pi1b_op_i == PIRWOP && pi1b_rdy_o) begin
+		if (pi1b_data_i[(ARCHBITSZ-1):(ARCHBITSZ-2)] == CMDSETINTERRUPT)
+			pi1b_data_o_ <= BUFSZ;
+		else if (pi1b_data_i[(ARCHBITSZ-1):(ARCHBITSZ-2)] == CMDGETBUFFERUSAGE)
+			pi1b_data_o_ <= pi1b_data_i[0] ? tx_usage_w : rx_usage_w;
+		else if (pi1b_data_i[(ARCHBITSZ-1):(ARCHBITSZ-2)] == CMDSETSPEED)
+			pi1b_data_o_ <= PHYCLKFREQ;
 	end
 
 	intrdysampled <= intrdy_i; // Sampling used for edge detection.
