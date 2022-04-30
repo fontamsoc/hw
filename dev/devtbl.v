@@ -59,7 +59,7 @@ input  wire [ARCHBITSZ -1 : 0]     pi1_data_i;
 output reg  [ARCHBITSZ -1 : 0]     pi1_data_o = 0;
 input  wire [(ARCHBITSZ/8) -1 : 0] pi1_sel_i;  /* not used */
 output wire                        pi1_rdy_o;
-output reg  [ADDRBITSZ -1 : 0]     pi1_mapsz_o; // ### declared as reg so as to be usable by verilog within the always block.
+output reg  [ADDRBITSZ -1 : 0]     pi1_mapsz_o;
 
 input wire [(ARCHBITSZ * DEVMAPCNT) -1 : 0] devtbl_id_flat_i;
 input wire [(ADDRBITSZ * DEVMAPCNT) -1 : 0] devtbl_mapsz_flat_i /* verilator lint_off UNOPTFLAT */;
@@ -73,10 +73,11 @@ wire [DEVMAPCNT -1 : 0] devtbl_useintr_w;
 
 localparam BLOCKDEVMAPSZ = (512/(ARCHBITSZ/8));
 
+reg [ADDRBITSZ -1 : 0] pi1_mapsz_o_; // ### declared as reg so as to be usable by verilog within the always block.
 reg [ADDRBITSZ -1 : 0] gen_pi1_mapsz_o_idx_max; // ### declared as reg so as to be usable by verilog within the always block.
 integer gen_pi1_mapsz_o_idx;
 always @* begin
-	pi1_mapsz_o = (4096/(ARCHBITSZ/8) - BLOCKDEVMAPSZ); /* first 2 devices must be 512B-Block and DevTbl devices */
+	pi1_mapsz_o_ = (4096/(ARCHBITSZ/8) - BLOCKDEVMAPSZ); /* first 2 devices must be 512B-Block and DevTbl devices */
 	gen_pi1_mapsz_o_idx_max = DEVMAPCNT;
 	for (
 		gen_pi1_mapsz_o_idx = 2;
@@ -85,7 +86,7 @@ always @* begin
 		if (devtbl_id_w[gen_pi1_mapsz_o_idx] == 1 /* stops at the first RAM device */)
 			gen_pi1_mapsz_o_idx_max = gen_pi1_mapsz_o_idx;
 		if (gen_pi1_mapsz_o_idx < gen_pi1_mapsz_o_idx_max)
-			pi1_mapsz_o = (pi1_mapsz_o - devtbl_mapsz_w[gen_pi1_mapsz_o_idx]);
+			pi1_mapsz_o_ = (pi1_mapsz_o_ - devtbl_mapsz_w[gen_pi1_mapsz_o_idx]);
 	end
 end
 
@@ -112,6 +113,7 @@ wire [ADDRBITSZ -1 : 0] addrby2;
 assign addrby2 = (pi1_addr_i>>1);
 
 always @ (posedge clk_i) begin
+	pi1_mapsz_o <= pi1_mapsz_o_;
 	if (rst_i) begin
 		rst0_o <= 0;
 		rst1_o <= 0;
