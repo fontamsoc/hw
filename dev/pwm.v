@@ -98,6 +98,8 @@
 
 `include "lib/fifo.v"
 
+`include "lib/perint/pi1b.v"
+
 module pwm (
 
 	rst_i,
@@ -136,7 +138,7 @@ input wire clk_i;
 input  wire [2 -1 : 0]             pi1_op_i;
 input  wire [ADDRBITSZ -1 : 0]     pi1_addr_i;
 input  wire [ARCHBITSZ -1 : 0]     pi1_data_i;
-output reg  [ARCHBITSZ -1 : 0]     pi1_data_o;
+output wire [ARCHBITSZ -1 : 0]     pi1_data_o;
 input  wire [(ARCHBITSZ/8) -1 : 0] pi1_sel_i; /* not used */
 output wire                        pi1_rdy_o;
 output wire [ARCHBITSZ -1 : 0]     pi1_mapsz_o;
@@ -149,6 +151,38 @@ output wire [IOCOUNT -1 : 0] o;
 output reg  [IOCOUNT -1 : 0] t;
 
 assign pi1_mapsz_o = ((IOCOUNT+(((IOCOUNT*ARCHBITSZ)%64)/ARCHBITSZ)/* align to 64bits */)*(ARCHBITSZ/8));
+
+wire [2 -1 : 0]             pi1b_op_i;
+wire [ADDRBITSZ -1 : 0]     pi1b_addr_i;
+reg  [ARCHBITSZ -1 : 0]     pi1b_data_o;
+wire [ARCHBITSZ -1 : 0]     pi1b_data_i;
+wire [(ARCHBITSZ/8) -1 : 0] pi1b_sel_i;
+wire                        pi1b_rdy_o;
+
+pi1b #(
+
+	.ARCHBITSZ (ARCHBITSZ)
+
+) pi1b (
+
+	 .rst_i (rst_i)
+
+	,.clk_i (clk_i)
+
+	,.m_op_i (pi1_op_i)
+	,.m_addr_i (pi1_addr_i)
+	,.m_data_i (pi1_data_i)
+	,.m_data_o (pi1_data_o)
+	,.m_sel_i (pi1_sel_i)
+	,.m_rdy_o (pi1_rdy_o)
+
+	,.s_op_o (pi1b_op_i)
+	,.s_addr_o (pi1b_addr_i)
+	,.s_data_o (pi1b_data_i)
+	,.s_data_i (pi1b_data_o)
+	,.s_sel_o (pi1b_sel_i)
+	,.s_rdy_i (pi1b_rdy_o)
+);
 
 // Registers which hold whether a corresponding IO is
 // to be pulse-width-modulated or pulse-density-modulated
@@ -227,10 +261,10 @@ fifo #(
 ) pdfifo (
 
 	 .rst_i (rst_i || (
-		pi1_op_i == PIRWOP &&
-		pi1_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDCONFIGUREIO &&
-		pi1_addr_i == gen_pdfifo_idx &&
-		t[gen_pdfifo_idx] != pi1_data_i[0]))
+		pi1b_op_i == PIRWOP &&
+		pi1b_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDCONFIGUREIO &&
+		pi1b_addr_i == gen_pdfifo_idx &&
+		t[gen_pdfifo_idx] != pi1b_data_i[0]))
 
 	,.usage_o (pdfifousage[gen_pdfifo_idx])
 
@@ -239,12 +273,12 @@ fifo #(
 	,.data_o     (pdfifodato[gen_pdfifo_idx])
 
 	,.clk_write_i (clk_i)
-	,.write_i     (t[gen_pdfifo_idx] ? (pi1_op_i == PIWROP && pi1_addr_i == gen_pdfifo_idx) : operiodreached[gen_pdfifo_idx])
-	,.data_i      (t[gen_pdfifo_idx] ? pi1_data_i[ARCHBITSZ-3:0] : (accumulator[gen_pdfifo_idx] + i[gen_pdfifo_idx]))
+	,.write_i     (t[gen_pdfifo_idx] ? (pi1b_op_i == PIWROP && pi1b_addr_i == gen_pdfifo_idx) : operiodreached[gen_pdfifo_idx])
+	,.data_i      (t[gen_pdfifo_idx] ? pi1b_data_i[ARCHBITSZ-3:0] : (accumulator[gen_pdfifo_idx] + i[gen_pdfifo_idx]))
 );
 end endgenerate
 
-assign pi1_rdy_o = (!pdfiforeaden[pi1_addr_i] || t[pi1_addr_i]);
+assign pi1b_rdy_o = (!pdfiforeaden[pi1b_addr_i] || t[pi1b_addr_i]);
 
 integer gen_ocounter_idx;
 integer gen_pdfifowasread_idx;
@@ -257,31 +291,31 @@ always @(posedge clk_i) begin
 		ioflag <= {IOCOUNT{1'b0}};
 		`endif
 		t <= {IOCOUNT{1'b0}};
-	end else if (pi1_op_i == PIRWOP && pi1_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDCONFIGUREIO) begin
-		t[pi1_addr_i] <= pi1_data_i[0];
+	end else if (pi1b_op_i == PIRWOP && pi1b_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDCONFIGUREIO) begin
+		t[pi1b_addr_i] <= pi1b_data_i[0];
 		`ifdef PWM_PDM_SUPPORT
-		ioflag[pi1_addr_i] <= pi1_data_i[1];
+		ioflag[pi1b_addr_i] <= pi1b_data_i[1];
 		`endif
 	end
 
 	// Logic that set operiod.
-	if (pi1_op_i == PIRWOP && pi1_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDSETPERIOD)
-		operiod[pi1_addr_i] <= pi1_data_i[ARCHBITSZ-3:0];
+	if (pi1b_op_i == PIRWOP && pi1b_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDSETPERIOD)
+		operiod[pi1b_addr_i] <= pi1b_data_i[ARCHBITSZ-3:0];
 
-	// Logic that set pi1_data_o.
-	if (pi1_op_i == PIRDOP) begin
-		pi1_data_o <= pdfifodato[pi1_addr_i];
-	end else if (pi1_op_i == PIRWOP) begin
-		if (pi1_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDCONFIGUREIO)
-			pi1_data_o <= IOCOUNT;
-		else if (pi1_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDGETBUFFERSIZE)
-			pi1_data_o <= BUFFERSIZE;
-		else if (pi1_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDGETBUFFERUSAGE)
-			pi1_data_o <= pdfifousage[pi1_addr_i];
-		else if (pi1_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDSETPERIOD)
-			pi1_data_o <= CLKFREQ;
+	// Logic that set pi1b_data_o.
+	if (pi1b_op_i == PIRDOP) begin
+		pi1b_data_o <= pdfifodato[pi1b_addr_i];
+	end else if (pi1b_op_i == PIRWOP) begin
+		if (pi1b_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDCONFIGUREIO)
+			pi1b_data_o <= IOCOUNT;
+		else if (pi1b_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDGETBUFFERSIZE)
+			pi1b_data_o <= BUFFERSIZE;
+		else if (pi1b_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDGETBUFFERUSAGE)
+			pi1b_data_o <= pdfifousage[pi1b_addr_i];
+		else if (pi1b_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDSETPERIOD)
+			pi1b_data_o <= CLKFREQ;
 		else
-			pi1_data_o <= 0;
+			pi1b_data_o <= 0;
 	end
 
 	// Logic that update ocounter.
@@ -296,7 +330,7 @@ always @(posedge clk_i) begin
 	for (gen_pdfifowasread_idx = 0; gen_pdfifowasread_idx < IOCOUNT; gen_pdfifowasread_idx = gen_pdfifowasread_idx + 1) begin: gen_pdfifowasread // gen_pdfifowasread is just a label that verilog want to see; and it is not used anywhere.
 		if (pdfiforeaden[gen_pdfifowasread_idx])
 			pdfifowasread[gen_pdfifowasread_idx] <= 1;
-		else if (pi1_op_i == PIRDOP && pi1_addr_i == gen_pdfifowasread_idx)
+		else if (pi1b_op_i == PIRDOP && pi1b_addr_i == gen_pdfifowasread_idx)
 			pdfifowasread[gen_pdfifowasread_idx] <= 0;
 	end
 
