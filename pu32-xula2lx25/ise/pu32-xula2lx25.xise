@@ -359,57 +359,6 @@
     <!-- Do not hand-edit this section, as it will be overwritten when the    -->
     <!-- project is analyzed based on files automatically identified as       -->
     <!-- include files.                                                       -->
-    <file xil_pn:name="../pll_12_to_120_mhz.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../lib/perint/pi1r.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../lib/clog2.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/multipu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../lib/ram/bram.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../lib/ram/ram1i5o.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/opmuldiv.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/opcodes.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/netsandregs.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/init.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/dcache.comb.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/memctrl.comb.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/opalu.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/opgetsysreg.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/gprctrl.comb.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/mmu.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/memctrl.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/instrctrl.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/opld.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/opst.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/opldst.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/sequencer.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/timers.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/opli.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/opsetsysreg.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../pu/gprctrl.pu.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../lib/perint/pi1q.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../lib/ram/dram.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../lib/perint/inst.pi1q.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../dev/sdcard/sdcard_spi.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../dev/sdcard/sdcard_spi_phy.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../lib/spi/spi_master.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../lib/fifo.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../lib/fifo_fwft.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../lib/ram/ram1i2o.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../lib/spi/spi_master_phy.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../dev/devtbl.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../version.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../dev/dma.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../dev/intctrl.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../dev/uart_hw.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../lib/uart/uart_rx.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../lib/uart/uart_rx_phy.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../lib/uart/uart_tx.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../lib/uart/uart_tx_phy.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../dev/pi1_dcache.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../dev/pi1_to_wb4.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../lib/wb4sdram.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../dev/bootldr/bootldr.v" xil_pn:type="FILE_VERILOG"/>
-    <file xil_pn:name="../../lib/perint/inst.pi1r.v" xil_pn:type="FILE_VERILOG"/>
   </autoManagedFiles>
 
 </project>

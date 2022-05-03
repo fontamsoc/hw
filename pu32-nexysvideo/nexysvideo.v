@@ -262,7 +262,7 @@ localparam PI1RMASTERCOUNT       = (M_PI1R_LAST + 1);
 localparam PI1RSLAVECOUNT        = (S_PI1R_INVALIDDEV + 1);
 localparam PI1RDEFAULTSLAVEINDEX = S_PI1R_INVALIDDEV;
 localparam PI1RFIRSTSLAVEADDR    = 0;
-localparam PI1RARCHBITSZ         = ARCHBITSZ/*LITEDRAM_ARCHBITSZ*/;
+localparam PI1RARCHBITSZ         = ((PUCOUNT > 4) ? ARCHBITSZ : LITEDRAM_ARCHBITSZ);
 localparam CLOG2PI1RARCHBITSZBY8 = clog2(PI1RARCHBITSZ/8);
 localparam PI1RADDRBITSZ         = (PI1RARCHBITSZ-CLOG2PI1RARCHBITSZBY8);
 localparam PI1RCLKFREQ           = CLK2XFREQ;
@@ -298,12 +298,12 @@ end endgenerate
 assign devtbl_mapsz_flat_w = s_pi1r_mapsz_w_flat /* defined in "lib/perint/inst.pi1r.v" */;
 assign devtbl_useintr_flat_w = devtbl_useintr_w;
 
-localparam ICACHESZ = ((PUCOUNT > 8) ? 256 : 512);
-localparam TLBSZ    = ((PUCOUNT > 8) ? 16 : 32);
+localparam ICACHESZ = 512;
+localparam TLBSZ    = ((PUCOUNT > 4) ? 64 : 128);
 
-localparam ICACHEWAYCOUNT = ((PUCOUNT > 8) ? 2 : 4);
-localparam DCACHEWAYCOUNT = ((PUCOUNT > 8) ? 1 : 2);
-localparam TLBWAYCOUNT    = ((PUCOUNT > 8) ? 1 : 2);
+localparam ICACHEWAYCOUNT = ((PUCOUNT > 4) ? 2 : 4);
+localparam DCACHEWAYCOUNT = ((PUCOUNT > 4) ? 1 : 2);
+localparam TLBWAYCOUNT    = ((PUCOUNT > 4) ? 1 : 2);
 
 localparam MULTIPUCLKFREQ = CLK2XFREQ;
 wire multipu_clk_w = clk_2x_w;
@@ -314,12 +314,12 @@ multipu #(
 	,.XARCHBITSZ     (PI1RARCHBITSZ)
 	,.CLKFREQ        (MULTIPUCLKFREQ)
 	,.ICACHESETCOUNT ((1024/(PI1RARCHBITSZ/8))*((ICACHESZ/ICACHEWAYCOUNT)/PUCOUNT))
-	,.DCACHESETCOUNT ((1024/(PI1RARCHBITSZ/8))*1)
+	,.DCACHESETCOUNT ((1024/(PI1RARCHBITSZ/8))*((64/DCACHEWAYCOUNT)/PUCOUNT))
 	,.TLBSETCOUNT    (TLBSZ/TLBWAYCOUNT)
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
 	,.TLBWAYCOUNT    (TLBWAYCOUNT)
-	,.MULDIVCNT      ((PUCOUNT > 8) ? 4 : 8)
+	,.MULDIVCNT      (4)
 
 ) multipu (
 
@@ -357,7 +357,7 @@ sdcard_spi #(
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.XARCHBITSZ (PI1RARCHBITSZ)
 	,.CLKFREQ    (PI1RCLKFREQ)
-	,.PHYCLKFREQ (CLK4XFREQ)
+	,.PHYCLKFREQ (CLK4XFREQ*2/* incorrect but helps as controller will run slower */)
 
 ) sdcard (
 
@@ -386,10 +386,10 @@ sdcard_spi #(
 assign devtbl_id_w     [S_PI1R_SDCARD] = 4;
 assign devtbl_useintr_w[S_PI1R_SDCARD] = 1;
 
-localparam RAMCACHEWAYCOUNT = 4;
+localparam RAMCACHEWAYCOUNT = 2;
 
 localparam RAMCACHESZ = /* In (ARCHBITSZ/8) units */
-	((1024/(ARCHBITSZ/8))*(256/RAMCACHEWAYCOUNT));
+	((1024/(ARCHBITSZ/8))*(128/RAMCACHEWAYCOUNT));
 
 wire devtbl_rst2_w;
 

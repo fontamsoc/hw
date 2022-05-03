@@ -149,11 +149,12 @@
       <Strategy Version="1" Minor="2">
         <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2020"/>
         <Step Id="synth_design">
+          <Option Id="NoSrlExtract">1</Option>
           <Option Id="FlattenHierarchy">1</Option>
+          <Option Id="ControlSetOptThreshold">0</Option>
           <Option Id="KeepEquivalentRegisters">1</Option>
           <Option Id="FsmExtraction">0</Option>
           <Option Id="NoCombineLuts">1</Option>
-          <Option Id="ReTiming">1</Option>
           <Option Id="ResourceSharing">2</Option>
         </Step>
       </Strategy>

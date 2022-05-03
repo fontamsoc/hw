@@ -12,7 +12,7 @@
 `include "lib/perint/pi1r.v"
 
 `define PUMMU
-//`define PUHPTW
+`define PUHPTW
 `define PUMULDIVCLK
 `define PUDSPMUL
 `define PUDCACHE
@@ -162,8 +162,8 @@ end
 BUFG bufg1 (.O (clk60mhz), .I (clkdiv[0]));
 BUFG bufg2 (.O (clk30mhz), .I (clkdiv[1]));
 
-wire [2 -1 : 0] clk_w    = {clk60mhz,  clk30mhz};
-wire [2 -1 : 0] clk_2x_w = {clk120mhz, clk60mhz};
+wire clk_w    = clk30mhz;
+wire clk_2x_w = clk60mhz;
 
 wire rst_w = (!pll_locked || devtbl_rst0_r || (|rst_cntr));
 
@@ -230,9 +230,9 @@ assign devtbl_useintr_flat_w = devtbl_useintr_w;
 localparam ICACHESZ = 32;
 localparam TLBSZ    = 128;
 
-localparam ICACHEWAYCOUNT = 1;
-localparam DCACHEWAYCOUNT = 1;
-localparam TLBWAYCOUNT    = 1;
+localparam ICACHEWAYCOUNT = 2;
+localparam DCACHEWAYCOUNT = 2;
+localparam TLBWAYCOUNT    = 2;
 
 multipu #(
 
@@ -240,7 +240,7 @@ multipu #(
 	,.XARCHBITSZ     (PI1RARCHBITSZ)
 	,.CLKFREQ        (CLKFREQ)
 	,.ICACHESETCOUNT ((1024/(PI1RARCHBITSZ/8))*(ICACHESZ/ICACHEWAYCOUNT))
-	,.DCACHESETCOUNT ((1024/(PI1RARCHBITSZ/8))*1)
+	,.DCACHESETCOUNT ((1024/(PI1RARCHBITSZ/8))*2)
 	,.TLBSETCOUNT    (TLBSZ/TLBWAYCOUNT)
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
@@ -305,10 +305,10 @@ sdcard_spi #(
 	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_SDCARD])
 );
 
-localparam RAMCACHEWAYCOUNT = 1;
+localparam RAMCACHEWAYCOUNT = 2;
 
 localparam RAMCACHESZ = /* In (ARCHBITSZ/8) units */
-	((1024/(ARCHBITSZ/8))*(4/RAMCACHEWAYCOUNT));
+	((1024/(ARCHBITSZ/8))*(8/RAMCACHEWAYCOUNT));
 
 devtbl #(
 
