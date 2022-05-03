@@ -330,11 +330,11 @@ assign devtbl_mapsz_flat_w = s_pi1r_mapsz_w_flat /* defined in "lib/perint/inst.
 assign devtbl_useintr_flat_w = devtbl_useintr_w;
 
 localparam ICACHESZ = ((PUCOUNT > 8) ? 256 : 512);
-localparam TLBSZ    = ((PUCOUNT > 8) ? 16 : 32);
+localparam TLBSZ    = 8;
 
 localparam ICACHEWAYCOUNT = ((PUCOUNT > 8) ? 2 : 4);
-localparam DCACHEWAYCOUNT = ((PUCOUNT > 8) ? 1 : 2);
-localparam TLBWAYCOUNT    = ((PUCOUNT > 8) ? 1 : 2);
+localparam DCACHEWAYCOUNT = 2;
+localparam TLBWAYCOUNT    = 2;
 
 localparam MULTIPUCLKFREQ = CLK2XFREQ;
 wire multipu_clk_w = clk_2x_w;
@@ -353,7 +353,7 @@ multipu #(
 	 .ARCHBITSZ      (ARCHBITSZ)
 	,.CLKFREQ        (MULTIPUCLKFREQ)
 	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*((ICACHESZ/ICACHEWAYCOUNT)/PUCOUNT))
-	,.DCACHESETCOUNT ((1024/(ARCHBITSZ/8))*1)
+	,.DCACHESETCOUNT ((1024/(ARCHBITSZ/8))*((64/DCACHEWAYCOUNT)/PUCOUNT))
 	,.TLBSETCOUNT    (TLBSZ/TLBWAYCOUNT)
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)

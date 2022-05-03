@@ -191,11 +191,11 @@ assign pc_w[gen_pc_w_idx] = pc_w_flat[((gen_pc_w_idx+1) * ARCHBITSZ) -1 : gen_pc
 end endgenerate
 
 localparam ICACHESZ = 16;
-localparam TLBSZ    = 128;
+localparam TLBSZ    = 8;
 
 localparam ICACHEWAYCOUNT = 4;
 localparam DCACHEWAYCOUNT = 4;
-localparam TLBWAYCOUNT    = 4;
+localparam TLBWAYCOUNT    = 2;
 
 multipu #(
 

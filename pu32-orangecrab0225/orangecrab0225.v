@@ -10,10 +10,10 @@
 `include "lib/perint/pi1r.v"
 
 `define PUMMU
-//`define PUHPTW
+`define PUHPTW
 `define PUMULDIVCLK
 `define PUDSPMUL
-//`define PUDCACHE
+`define PUDCACHE
 `include "pu/multipu.v"
 
 `include "dev/sdcard/sdcard_spi.v"
@@ -272,7 +272,7 @@ assign devtbl_mapsz_flat_w = s_pi1r_mapsz_w_flat /* defined in "lib/perint/inst.
 assign devtbl_useintr_flat_w = devtbl_useintr_w;
 
 localparam ICACHESZ = 16;
-localparam TLBSZ    = 16;
+localparam TLBSZ    = 8;
 
 localparam ICACHEWAYCOUNT = 2;
 localparam DCACHEWAYCOUNT = 1;
@@ -283,7 +283,7 @@ multipu #(
 	 .ARCHBITSZ      (ARCHBITSZ)
 	,.CLKFREQ        (PI1RCLKFREQ)
 	,.ICACHESETCOUNT ((1024/(ARCHBITSZ/8))*(ICACHESZ/ICACHEWAYCOUNT))
-	,.DCACHESETCOUNT ((1024/(ARCHBITSZ/8))*1)
+	,.DCACHESETCOUNT ((1024/(ARCHBITSZ/8))*8)
 	,.TLBSETCOUNT    (TLBSZ/TLBWAYCOUNT)
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
