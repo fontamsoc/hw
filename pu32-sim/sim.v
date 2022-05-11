@@ -477,7 +477,7 @@ assign devtbl_useintr_w[S_PI1R_UART] = 1;
 
 localparam RAMSZ = ('h2000000/* 32MB */);
 
-localparam WB4SMEM_ARCHBITSZ = 128;
+localparam WB4SMEM_ARCHBITSZ = 256; // Must be >= PI1RARCHBITSZ.
 
 wire [2 -1 : 0]                                                dcache_m_op_w;
 wire [(WB4SMEM_ARCHBITSZ - clog2(WB4SMEM_ARCHBITSZ/8)) -1 : 0] dcache_m_addr_w;

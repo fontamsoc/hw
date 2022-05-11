@@ -26,8 +26,10 @@ dcacheinit.hex: dcacheinit.lds dcacheinit.c
 	#hexdump -v -e '/4 "%08x "' dcacheinit.bin > dcacheinit.hex # 32bits.
 	#hexdump -v -e '/4 "%08x "' dcacheinit.bin | \
 	#	{ while IFS=' ' read -n 18 V0 V1; do echo -n "$$V1$$V0 "; done; } > dcacheinit.hex # 64bits.
+	#hexdump -v -e '/4 "%08x "' dcacheinit.bin | \
+	#	{ while IFS=' ' read -n 36 V0 V1 V2 V3; do echo -n "$$V3$$V2$$V1$$V0 "; done; } > dcacheinit.hex # 128bits.
 	hexdump -v -e '/4 "%08x "' dcacheinit.bin | \
-		{ while IFS=' ' read -n 36 V0 V1 V2 V3; do echo -n "$$V3$$V2$$V1$$V0 "; done; } > dcacheinit.hex # 128bits.
+		{ while IFS=' ' read -n 72 V0 V1 V2 V3 V4 V5 V6 V7; do echo -n "$$V7$$V6$$V5$$V4$$V3$$V2$$V1$$V0 "; done; } > dcacheinit.hex # 256bits.
 
 clean:
 	rm -rf *.su dcacheinit.elf dcacheinit.bin dcacheinit.hex
