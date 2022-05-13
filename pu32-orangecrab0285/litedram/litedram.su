@@ -13,6 +13,6 @@ litedram.c:129:5:sdram_get_cwl	0	static
 litedram.c:264:6:sdram_software_control_on	4	static
 litedram.c:280:6:sdram_software_control_off	4	static
 litedram.c:299:6:sdram_mode_register_write	0	static
-litedram.c:1042:6:sdram_read_leveling	48	static
+litedram.c:1042:6:sdram_read_leveling	44	static
 litedram.c:1256:5:sdram_leveling	12	static
 litedram.c:1299:5:main	24	static
