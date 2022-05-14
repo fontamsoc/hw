@@ -3,28 +3,28 @@
 
 // Instantiation of PerIntQ and all its signals.
 
-wire [2 -1 : 0]             m_pi1q_op_w    [PI1QMASTERCOUNT -1 : 0];
-wire [ADDRBITSZ -1 : 0]     m_pi1q_addr_w  [PI1QMASTERCOUNT -1 : 0];
-wire [ARCHBITSZ -1 : 0]     m_pi1q_data_w1 [PI1QMASTERCOUNT -1 : 0];
-wire [ARCHBITSZ -1 : 0]     m_pi1q_data_w0 [PI1QMASTERCOUNT -1 : 0];
-wire [(ARCHBITSZ/8) -1 : 0] m_pi1q_sel_w   [PI1QMASTERCOUNT -1 : 0];
-wire                        m_pi1q_rdy_w   [PI1QMASTERCOUNT -1 : 0];
+wire [2 -1 : 0]                 m_pi1q_op_w    [PI1QMASTERCOUNT -1 : 0];
+wire [PI1QADDRBITSZ -1 : 0]     m_pi1q_addr_w  [PI1QMASTERCOUNT -1 : 0];
+wire [PI1QARCHBITSZ -1 : 0]     m_pi1q_data_w1 [PI1QMASTERCOUNT -1 : 0];
+wire [PI1QARCHBITSZ -1 : 0]     m_pi1q_data_w0 [PI1QMASTERCOUNT -1 : 0];
+wire [(PI1QARCHBITSZ/8) -1 : 0] m_pi1q_sel_w   [PI1QMASTERCOUNT -1 : 0];
+wire                            m_pi1q_rdy_w   [PI1QMASTERCOUNT -1 : 0];
 
-wire [2 -1 : 0]             s_pi1q_op_w;
-wire [ADDRBITSZ -1 : 0]     s_pi1q_addr_w;
-wire [ARCHBITSZ -1 : 0]     s_pi1q_data_w0;
-wire [ARCHBITSZ -1 : 0]     s_pi1q_data_w1;
-wire [(ARCHBITSZ/8) -1 : 0] s_pi1q_sel_w;
-wire                        s_pi1q_rdy_w;
+wire [2 -1 : 0]                 s_pi1q_op_w;
+wire [PI1QADDRBITSZ -1 : 0]     s_pi1q_addr_w;
+wire [PI1QARCHBITSZ -1 : 0]     s_pi1q_data_w0;
+wire [PI1QARCHBITSZ -1 : 0]     s_pi1q_data_w1;
+wire [(PI1QARCHBITSZ/8) -1 : 0] s_pi1q_sel_w;
+wire                            s_pi1q_rdy_w;
 
 localparam PI1QMASTERCOUNT_ = (1 << clog2(PI1QMASTERCOUNT));
 
-wire [(2 * PI1QMASTERCOUNT_) -1 : 0]            m_pi1q_op_w_flat;
-wire [(ADDRBITSZ * PI1QMASTERCOUNT) -1 : 0]     m_pi1q_addr_w_flat;
-wire [(ARCHBITSZ * PI1QMASTERCOUNT) -1 : 0]     m_pi1q_data_w1_flat;
-wire [(ARCHBITSZ * PI1QMASTERCOUNT) -1 : 0]     m_pi1q_data_w0_flat;
-wire [((ARCHBITSZ/8) * PI1QMASTERCOUNT) -1 : 0] m_pi1q_sel_w_flat;
-wire [PI1QMASTERCOUNT -1 : 0]                   m_pi1q_rdy_w_flat;
+wire [(2 * PI1QMASTERCOUNT_) -1 : 0]                m_pi1q_op_w_flat;
+wire [(PI1QADDRBITSZ * PI1QMASTERCOUNT) -1 : 0]     m_pi1q_addr_w_flat;
+wire [(PI1QARCHBITSZ * PI1QMASTERCOUNT) -1 : 0]     m_pi1q_data_w1_flat;
+wire [(PI1QARCHBITSZ * PI1QMASTERCOUNT) -1 : 0]     m_pi1q_data_w0_flat;
+wire [((PI1QARCHBITSZ/8) * PI1QMASTERCOUNT) -1 : 0] m_pi1q_sel_w_flat;
+wire [PI1QMASTERCOUNT -1 : 0]                       m_pi1q_rdy_w_flat;
 
 genvar gen_m_pi1q_op_w_flat_0_idx;
 generate for (gen_m_pi1q_op_w_flat_0_idx = 0; gen_m_pi1q_op_w_flat_0_idx < PI1QMASTERCOUNT; gen_m_pi1q_op_w_flat_0_idx = gen_m_pi1q_op_w_flat_0_idx + 1) begin :gen_m_pi1q_op_w_flat_0
@@ -37,22 +37,22 @@ end endgenerate
 
 genvar gen_m_pi1q_addr_w_flat_idx;
 generate for (gen_m_pi1q_addr_w_flat_idx = 0; gen_m_pi1q_addr_w_flat_idx < PI1QMASTERCOUNT; gen_m_pi1q_addr_w_flat_idx = gen_m_pi1q_addr_w_flat_idx + 1) begin :gen_m_pi1q_addr_w_flat
-assign m_pi1q_addr_w_flat[((gen_m_pi1q_addr_w_flat_idx+1) * ADDRBITSZ) -1 : gen_m_pi1q_addr_w_flat_idx * ADDRBITSZ] = m_pi1q_addr_w[gen_m_pi1q_addr_w_flat_idx];
+assign m_pi1q_addr_w_flat[((gen_m_pi1q_addr_w_flat_idx+1) * PI1QADDRBITSZ) -1 : gen_m_pi1q_addr_w_flat_idx * PI1QADDRBITSZ] = m_pi1q_addr_w[gen_m_pi1q_addr_w_flat_idx];
 end endgenerate
 
 genvar gen_m_pi1q_data_w1_flat_idx;
 generate for (gen_m_pi1q_data_w1_flat_idx = 0; gen_m_pi1q_data_w1_flat_idx < PI1QMASTERCOUNT; gen_m_pi1q_data_w1_flat_idx = gen_m_pi1q_data_w1_flat_idx + 1) begin :gen_m_pi1q_data_w1_flat
-assign m_pi1q_data_w1_flat[((gen_m_pi1q_data_w1_flat_idx+1) * ARCHBITSZ) -1 : gen_m_pi1q_data_w1_flat_idx * ARCHBITSZ] = m_pi1q_data_w1[gen_m_pi1q_data_w1_flat_idx];
+assign m_pi1q_data_w1_flat[((gen_m_pi1q_data_w1_flat_idx+1) * PI1QARCHBITSZ) -1 : gen_m_pi1q_data_w1_flat_idx * PI1QARCHBITSZ] = m_pi1q_data_w1[gen_m_pi1q_data_w1_flat_idx];
 end endgenerate
 
 genvar gen_m_pi1q_data_w0_idx;
 generate for (gen_m_pi1q_data_w0_idx = 0; gen_m_pi1q_data_w0_idx < PI1QMASTERCOUNT; gen_m_pi1q_data_w0_idx = gen_m_pi1q_data_w0_idx + 1) begin :gen_m_pi1q_data_w0
-assign m_pi1q_data_w0[gen_m_pi1q_data_w0_idx] = m_pi1q_data_w0_flat[((gen_m_pi1q_data_w0_idx+1) * ARCHBITSZ) -1 : gen_m_pi1q_data_w0_idx * ARCHBITSZ];
+assign m_pi1q_data_w0[gen_m_pi1q_data_w0_idx] = m_pi1q_data_w0_flat[((gen_m_pi1q_data_w0_idx+1) * PI1QARCHBITSZ) -1 : gen_m_pi1q_data_w0_idx * PI1QARCHBITSZ];
 end endgenerate
 
 genvar gen_m_pi1q_sel_w_flat_idx;
 generate for (gen_m_pi1q_sel_w_flat_idx = 0; gen_m_pi1q_sel_w_flat_idx < PI1QMASTERCOUNT; gen_m_pi1q_sel_w_flat_idx = gen_m_pi1q_sel_w_flat_idx + 1) begin :gen_m_pi1q_sel_w_flat
-assign m_pi1q_sel_w_flat[((gen_m_pi1q_sel_w_flat_idx+1) * (ARCHBITSZ/8)) -1 : gen_m_pi1q_sel_w_flat_idx * (ARCHBITSZ/8)] = m_pi1q_sel_w[gen_m_pi1q_sel_w_flat_idx];
+assign m_pi1q_sel_w_flat[((gen_m_pi1q_sel_w_flat_idx+1) * (PI1QARCHBITSZ/8)) -1 : gen_m_pi1q_sel_w_flat_idx * (PI1QARCHBITSZ/8)] = m_pi1q_sel_w[gen_m_pi1q_sel_w_flat_idx];
 end endgenerate
 
 genvar gen_m_pi1q_rdy_w_idx;
