@@ -131,26 +131,28 @@ output wire [(ARCHBITSZ * PUCOUNT) -1 : 0] pc_o;
 `endif
 
 `ifdef PUCOUNT
-localparam PI1QMASTERCOUNT = PUCOUNT;
-localparam PI1QARCHBITSZ   = ARCHBITSZ;
+localparam PI1QMASTERCOUNT       = PUCOUNT;
+localparam PI1QARCHBITSZ         = ARCHBITSZ;
+localparam CLOG2PI1QARCHBITSZBY8 = clog2(PI1QARCHBITSZ/8);
+localparam PI1QADDRBITSZ         = (PI1QARCHBITSZ-CLOG2PI1QARCHBITSZBY8);
 wire pi1q_rst_w = rst_i;
 wire m_pi1q_clk_w = clk_i;
 wire s_pi1q_clk_w = clk_mem_i;
 // PerIntQ is instantiated in a separate file to keep this file clean.
 // Masters should use the following signals to plug onto PerIntQ:
-// 	input  [2 -1 : 0]             m_pi1q_op_w    [PI1QMASTERCOUNT -1 : 0];
-// 	input  [ADDRBITSZ -1 : 0]     m_pi1q_addr_w  [PI1QMASTERCOUNT -1 : 0];
-// 	input  [ARCHBITSZ -1 : 0]     m_pi1q_data_w1 [PI1QMASTERCOUNT -1 : 0];
-// 	output [ARCHBITSZ -1 : 0]     m_pi1q_data_w0 [PI1QMASTERCOUNT -1 : 0];
-// 	input  [(ARCHBITSZ/8) -1 : 0] m_pi1q_sel_w   [PI1QMASTERCOUNT -1 : 0];
-// 	output                        m_pi1q_rdy_w   [PI1QMASTERCOUNT -1 : 0];
+// 	input  [2 -1 : 0]                 m_pi1q_op_w    [PI1QMASTERCOUNT -1 : 0];
+// 	input  [PI1QADDRBITSZ -1 : 0]     m_pi1q_addr_w  [PI1QMASTERCOUNT -1 : 0];
+// 	input  [PI1QARCHBITSZ -1 : 0]     m_pi1q_data_w1 [PI1QMASTERCOUNT -1 : 0];
+// 	output [PI1QARCHBITSZ -1 : 0]     m_pi1q_data_w0 [PI1QMASTERCOUNT -1 : 0];
+// 	input  [(PI1QARCHBITSZ/8) -1 : 0] m_pi1q_sel_w   [PI1QMASTERCOUNT -1 : 0];
+// 	output                            m_pi1q_rdy_w   [PI1QMASTERCOUNT -1 : 0];
 // Slave should use the following signals to plug onto PerIntQ:
-// 	output [2 -1 : 0]             s_pi1q_op_w;
-// 	output [ADDRBITSZ -1 : 0]     s_pi1q_addr_w;
-// 	output [ARCHBITSZ -1 : 0]     s_pi1q_data_w0;
-// 	input  [ARCHBITSZ -1 : 0]     s_pi1q_data_w1;
-// 	output [(ARCHBITSZ/8) -1 : 0] s_pi1q_sel_w;
-// 	input                         s_pi1q_rdy_w;
+// 	output [2 -1 : 0]                 s_pi1q_op_w;
+// 	output [PI1QADDRBITSZ -1 : 0]     s_pi1q_addr_w;
+// 	output [PI1QARCHBITSZ -1 : 0]     s_pi1q_data_w0;
+// 	input  [PI1QARCHBITSZ -1 : 0]     s_pi1q_data_w1;
+// 	output [(PI1QARCHBITSZ/8) -1 : 0] s_pi1q_sel_w;
+// 	input                             s_pi1q_rdy_w;
 `include "lib/perint/inst.pi1q.v"
 assign pi1_op_o       = s_pi1q_op_w;
 assign pi1_addr_o     = s_pi1q_addr_w;
