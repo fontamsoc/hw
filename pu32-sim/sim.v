@@ -150,25 +150,27 @@ localparam PI1RSLAVECOUNT        = (S_PI1R_INVALIDDEV + 1);
 localparam PI1RDEFAULTSLAVEINDEX = S_PI1R_INVALIDDEV;
 localparam PI1RFIRSTSLAVEADDR    = 0;
 localparam PI1RARCHBITSZ         = ARCHBITSZ;
+localparam CLOG2PI1RARCHBITSZBY8 = clog2(PI1RARCHBITSZ/8);
+localparam PI1RADDRBITSZ         = (PI1RARCHBITSZ-CLOG2PI1RARCHBITSZBY8);
 localparam PI1RCLKFREQ           = CLKFREQ;
 wire pi1r_rst_w = rst_w;
 wire pi1r_clk_w = clk_w;
 // PerInt is instantiated in a separate file to keep this file clean.
 // Masters should use the following signals to plug onto PerInt:
-// 	input  [2 -1 : 0]             m_pi1r_op_w    [PI1RMASTERCOUNT -1 : 0];
-// 	input  [ADDRBITSZ -1 : 0]     m_pi1r_addr_w  [PI1RMASTERCOUNT -1 : 0];
-// 	input  [ARCHBITSZ -1 : 0]     m_pi1r_data_w1 [PI1RMASTERCOUNT -1 : 0];
-// 	output [ARCHBITSZ -1 : 0]     m_pi1r_data_w0 [PI1RMASTERCOUNT -1 : 0];
-// 	input  [(ARCHBITSZ/8) -1 : 0] m_pi1r_sel_w   [PI1RMASTERCOUNT -1 : 0];
-// 	output                        m_pi1r_rdy_w   [PI1RMASTERCOUNT -1 : 0];
+// 	input  [2 -1 : 0]                 m_pi1r_op_w    [PI1RMASTERCOUNT -1 : 0];
+// 	input  [PI1RADDRBITSZ -1 : 0]     m_pi1r_addr_w  [PI1RMASTERCOUNT -1 : 0];
+// 	input  [PI1RARCHBITSZ -1 : 0]     m_pi1r_data_w1 [PI1RMASTERCOUNT -1 : 0];
+// 	output [PI1RARCHBITSZ -1 : 0]     m_pi1r_data_w0 [PI1RMASTERCOUNT -1 : 0];
+// 	input  [(PI1RARCHBITSZ/8) -1 : 0] m_pi1r_sel_w   [PI1RMASTERCOUNT -1 : 0];
+// 	output                            m_pi1r_rdy_w   [PI1RMASTERCOUNT -1 : 0];
 // Slaves should use the following signals to plug onto PerInt:
-// 	output [2 -1 : 0]             s_pi1r_op_w    [PI1RSLAVECOUNT -1 : 0];
-// 	output [ADDRBITSZ -1 : 0]     s_pi1r_addr_w  [PI1RSLAVECOUNT -1 : 0];
-// 	output [ARCHBITSZ -1 : 0]     s_pi1r_data_w0 [PI1RSLAVECOUNT -1 : 0];
-// 	input  [ARCHBITSZ -1 : 0]     s_pi1r_data_w1 [PI1RSLAVECOUNT -1 : 0];
-// 	output [(ARCHBITSZ/8) -1 : 0] s_pi1r_sel_w   [PI1RSLAVECOUNT -1 : 0];
-// 	input                         s_pi1r_rdy_w   [PI1RSLAVECOUNT -1 : 0];
-// 	input  [ADDRBITSZ -1 : 0]     s_pi1r_mapsz_w [PI1RSLAVECOUNT -1 : 0];
+// 	output [2 -1 : 0]                 s_pi1r_op_w    [PI1RSLAVECOUNT -1 : 0];
+// 	output [PI1RADDRBITSZ -1 : 0]     s_pi1r_addr_w  [PI1RSLAVECOUNT -1 : 0];
+// 	output [PI1RARCHBITSZ -1 : 0]     s_pi1r_data_w0 [PI1RSLAVECOUNT -1 : 0];
+// 	input  [PI1RARCHBITSZ -1 : 0]     s_pi1r_data_w1 [PI1RSLAVECOUNT -1 : 0];
+// 	output [(PI1RARCHBITSZ/8) -1 : 0] s_pi1r_sel_w   [PI1RSLAVECOUNT -1 : 0];
+// 	input                             s_pi1r_rdy_w   [PI1RSLAVECOUNT -1 : 0];
+// 	input  [PI1RADDRBITSZ -1 : 0]     s_pi1r_mapsz_w [PI1RSLAVECOUNT -1 : 0];
 `include "lib/perint/inst.pi1r.v"
 
 wire [(ARCHBITSZ * PI1RSLAVECOUNT) -1 : 0] devtbl_id_flat_w;
@@ -233,7 +235,7 @@ multipu #(
 	,.halted_o  (intbestdst_w)
 
 	,.rstaddr_i  ((('h1000)>>1) +
-		(s_pi1r_mapsz_w[S_PI1R_RAM]<<1))
+		(s_pi1r_mapsz_w[S_PI1R_RAM]<<(CLOG2PI1RARCHBITSZBY8-1)))
 	,.rstaddr2_i (('h8000-(14/*within parkpu()*/))>>1)
 
 	,.id_i (0)
@@ -410,9 +412,9 @@ uart_sim #(
 assign devtbl_id_w     [S_PI1R_UART] = 5;
 assign devtbl_useintr_w[S_PI1R_UART] = 1;
 
-localparam RAMSZ = ('h800000/*/512*/);
-
 `ifdef WB4SMEM
+
+localparam RAMSZ = 'h2000000/* 32MB */;
 
 localparam WB4SMEM_ARCHBITSZ = 128;
 
@@ -447,7 +449,7 @@ pi1_upconverter #(
 	,.s_pi1_rdy_i  (dcache_m_rdy_w)
 );
 
-assign s_pi1r_mapsz_w[S_PI1R_RAM] = RAMSZ;
+assign s_pi1r_mapsz_w[S_PI1R_RAM] = (RAMSZ/(PI1RARCHBITSZ/8));
 
 reg [RST_CNTR_BITSZ -1 : 0] ram_rst_cntr = {RST_CNTR_BITSZ{1'b1}};
 always @ (posedge pi1r_clk_w) begin
@@ -564,8 +566,8 @@ wb4smem #(
 
 smem #(
 
-	 .ARCHBITSZ (ARCHBITSZ)
-	,.SIZE      (RAMSZ)
+	 .ARCHBITSZ (PI1RARCHBITSZ)
+	,.SIZE      ('h2000000/* 32MB *//(PI1RARCHBITSZ/8))
 	,.DELAY     (0)
 
 ) smem (
@@ -609,11 +611,11 @@ assign devtbl_id_w     [S_PI1R_BOOTLDR] = 0;
 assign devtbl_useintr_w[S_PI1R_BOOTLDR] = 0;
 
 // PI1RDEFAULTSLAVEINDEX to catch invalid physical address space access.
-localparam INVALIDDEVMAPSZ = ('h1000/(ARCHBITSZ/8)) /* 4KB */;
+localparam INVALIDDEVMAPSZ = ('h1000/(PI1RARCHBITSZ/8)) /* 4KB */;
 //s_pi1r_op_w[S_PI1R_INVALIDDEV];
 //s_pi1r_addr_w[S_PI1R_INVALIDDEV];
 //s_pi1r_data_w0[S_PI1R_INVALIDDEV];
-assign s_pi1r_data_w1[S_PI1R_INVALIDDEV] = {ARCHBITSZ{1'b0}};
+assign s_pi1r_data_w1[S_PI1R_INVALIDDEV] = {PI1RARCHBITSZ{1'b0}};
 //s_pi1r_sel_w[S_PI1R_INVALIDDEV];
 assign s_pi1r_rdy_w[S_PI1R_INVALIDDEV]   = 1'b1;
 assign s_pi1r_mapsz_w[S_PI1R_INVALIDDEV] = INVALIDDEVMAPSZ;
