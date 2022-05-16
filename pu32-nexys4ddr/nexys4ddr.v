@@ -336,14 +336,14 @@ wire pi1r_clk_w = clk_2x_w;
 // 	input  [PI1RADDRBITSZ -1 : 0]     s_pi1r_mapsz_w [PI1RSLAVECOUNT -1 : 0];
 `include "lib/perint/inst.pi1r.v"
 
-wire [(ARCHBITSZ * PI1RSLAVECOUNT) -1 : 0] devtbl_id_flat_w;
-wire [ARCHBITSZ -1 : 0]                    devtbl_id_w           [PI1RSLAVECOUNT -1 : 0];
-wire [(ADDRBITSZ * PI1RSLAVECOUNT) -1 : 0] devtbl_mapsz_flat_w;
-wire [PI1RSLAVECOUNT -1 : 0]               devtbl_useintr_flat_w;
-wire [PI1RSLAVECOUNT -1 : 0]               devtbl_useintr_w;
+wire [(PI1RARCHBITSZ * PI1RSLAVECOUNT) -1 : 0] devtbl_id_flat_w;
+wire [PI1RARCHBITSZ -1 : 0]                    devtbl_id_w           [PI1RSLAVECOUNT -1 : 0];
+wire [(PI1RADDRBITSZ * PI1RSLAVECOUNT) -1 : 0] devtbl_mapsz_flat_w;
+wire [PI1RSLAVECOUNT -1 : 0]                   devtbl_useintr_flat_w;
+wire [PI1RSLAVECOUNT -1 : 0]                   devtbl_useintr_w;
 genvar gen_devtbl_id_flat_w_idx;
 generate for (gen_devtbl_id_flat_w_idx = 0; gen_devtbl_id_flat_w_idx < PI1RSLAVECOUNT; gen_devtbl_id_flat_w_idx = gen_devtbl_id_flat_w_idx + 1) begin :gen_devtbl_id_flat_w
-assign devtbl_id_flat_w[((gen_devtbl_id_flat_w_idx+1) * ARCHBITSZ) -1 : gen_devtbl_id_flat_w_idx * ARCHBITSZ] = devtbl_id_w[gen_devtbl_id_flat_w_idx];
+assign devtbl_id_flat_w[((gen_devtbl_id_flat_w_idx+1) * PI1RARCHBITSZ) -1 : gen_devtbl_id_flat_w_idx * PI1RARCHBITSZ] = devtbl_id_w[gen_devtbl_id_flat_w_idx];
 end endgenerate
 assign devtbl_mapsz_flat_w = s_pi1r_mapsz_w_flat /* defined in "lib/perint/inst.pi1r.v" */;
 assign devtbl_useintr_flat_w = devtbl_useintr_w;
@@ -487,6 +487,7 @@ wire devtbl_rst2_w;
 devtbl #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
+	,.XARCHBITSZ (PI1RARCHBITSZ)
 	,.RAMCACHESZ (RAMCACHESZ)
 	,.PRELDRADDR ('h1000)
 	,.DEVMAPCNT  (PI1RSLAVECOUNT)
