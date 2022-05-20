@@ -246,6 +246,7 @@ multipu #(
 sdcard_spi #(
 
 	 .ARCHBITSZ    (ARCHBITSZ)
+	,.XARCHBITSZ   (PI1RARCHBITSZ)
 	// "img.hex" generated using `hexdump -v -e '/1 "%02x "' /path/to/img > img.hex`
 	,.SRCFILE      ("img.hex")
 	,.SIMSTORAGESZ (81920*5)
