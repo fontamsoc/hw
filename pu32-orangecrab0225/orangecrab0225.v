@@ -323,6 +323,7 @@ multipu #(
 sdcard_spi #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
+	,.XARCHBITSZ (PI1RARCHBITSZ)
 	,.PHYCLKFREQ (PI1RCLKFREQ)
 
 ) sdcard (
