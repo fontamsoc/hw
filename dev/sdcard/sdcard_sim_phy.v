@@ -81,11 +81,11 @@ input wire rst_i;
 
 input wire clk_i;
 
-localparam ADDRBITSZ = 32; // Per the spec, read/write address is 32bits.
+localparam CMDADDRBITSZ = 32; // Per the spec, read/write address is 32bits.
 
 output wire                    cmd_pop_o;
 input  wire                    cmd_data_i;
-input  wire [ADDRBITSZ -1 : 0] cmd_addr_i;
+input  wire [CMDADDRBITSZ -1 : 0] cmd_addr_i;
 input  wire                    cmd_empty_i;
 
 output wire            rx_push_o;
@@ -96,7 +96,7 @@ output wire            tx_pop_o;
 input  wire [8 -1 : 0] tx_data_i;
 input  wire            tx_empty_i;
 
-output wire [ADDRBITSZ -1 : 0] blkcnt_o;
+output wire [CMDADDRBITSZ -1 : 0] blkcnt_o;
 assign blkcnt_o = SIMSTORAGESZ;
 
 output wire err_o;
@@ -122,7 +122,7 @@ localparam STATEBITSZ = clog2(64);
 
 reg [STATEBITSZ -1 : 0] state;
 
-reg [ADDRBITSZ -1 : 0] cmdaddr;
+reg [CMDADDRBITSZ -1 : 0] cmdaddr;
 
 reg [clog2(512) -1 : 0] cntr;
 
@@ -131,7 +131,7 @@ assign rx_push_o = (state == CMD17RESP);
 
 assign cmd_pop_o = (state == READY);
 
-wire [ADDRBITSZ -1 : 0] cmdaddr_plus_cntr = (cmdaddr+cntr);
+wire [CMDADDRBITSZ -1 : 0] cmdaddr_plus_cntr = (cmdaddr+cntr);
 
 assign rx_data_o = u[cmdaddr_plus_cntr];
 
