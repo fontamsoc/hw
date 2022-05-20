@@ -116,12 +116,12 @@ input wire rst_i;
 input wire clk_i;
 input wire clk_phy_i;
 
-localparam ADDRBITSZ = 32; // Per the spec, read/write address is 32bits.
+localparam CMDADDRBITSZ = 32; // Per the spec, read/write address is 32bits.
 
-output wire                    cmd_pop_o;
-input  wire                    cmd_data_i;
-input  wire [ADDRBITSZ -1 : 0] cmd_addr_i;
-input  wire                    cmd_empty_i;
+output wire                       cmd_pop_o;
+input  wire                       cmd_data_i;
+input  wire [CMDADDRBITSZ -1 : 0] cmd_addr_i;
+input  wire                       cmd_empty_i;
 
 output wire            rx_push_o;
 output wire [8 -1 : 0] rx_data_o;
@@ -136,7 +136,7 @@ output wire di_o;
 input wire  do_i;
 output wire cs_o;
 
-output reg [ADDRBITSZ -1 : 0] blkcnt_o = 0;
+output reg [CMDADDRBITSZ -1 : 0] blkcnt_o = 0;
 
 output wire err_o;
 
@@ -510,8 +510,8 @@ assign cmd9[5] = dmc9[47:40];
 assign cmd9[6] = dmc9[55:48];
 assign cmd9[7] = dmc9[63:56];
 
-reg  [ADDRBITSZ -1 : 0] cmdaddr = 0;
-wire [ADDRBITSZ -1 : 0] cmdaddrshiftedleft = (cmdaddr << 9);
+reg  [CMDADDRBITSZ -1 : 0] cmdaddr = 0;
+wire [CMDADDRBITSZ -1 : 0] cmdaddrshiftedleft = (cmdaddr << 9);
 
 wire [64 -1 : 0]  dmc17 = {16'hff51, issdcardaddrblockaligned ? cmdaddr : cmdaddrshiftedleft, 16'h01ff};
 wire [8 -1 : 0]   cmd17[7:0];
