@@ -1,7 +1,6 @@
 obj_dir
 sim
 sim_use_vcd
-*.sav
 *.vcd
 *.bin
 *.elf

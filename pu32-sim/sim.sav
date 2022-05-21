@@ -1,0 +1,91 @@
+[*]
+[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
+[*] Wed May 25 19:03:51 2022
+[*]
+[dumpfile] "/home/tambewilliam/Documents/pu32/fontamsoc-hw/pu32-sim/sim.vcd"
+[dumpfile_mtime] "Wed May 25 18:52:55 2022"
+[dumpfile_size] 2456897211
+[savefile] "/home/tambewilliam/Documents/pu32/fontamsoc-hw/pu32-sim/sim.sav"
+[timestart] 2
+[size] 2098 1226
+[pos] -1 -1
+*-4.000000 9 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] TOP.
+[treeopen] TOP.sim.
+[treeopen] TOP.sim.multipu.
+[treeopen] TOP.sim.multipu.genpu[0].
+[sst_width] 211
+[signals_width] 246
+[sst_expanded] 1
+[sst_vpaned_height] 361
+@24
+TOP.sim.multipu.genpu[0].pu.clkcyclecnt[63:0]
+@2024
+>-8
+^1 /home/tambewilliam/Documents/pu32/fontamsoc-hw/pu32-sim/sequencerstate.pu.txt
+TOP.sim.multipu.genpu[0].pu.sequencerstate[31:0]
+@23
+>0
+TOP.sim.multipu.genpu[0].pu.pc_o[31:0]
+@28
+TOP.sim.multipu.genpu[0].pu.inusermode
+@22
+TOP.sim.multipu.genpu[0].pu.instrbufdato[15:0]
+TOP.sim.multipu.genpu[0].pu.gprdata1[31:0]
+TOP.sim.multipu.genpu[0].pu.gprdata2[31:0]
+@24
+TOP.sim.multipu.genpu[0].pu.gpridx1[4:0]
+TOP.sim.multipu.genpu[0].pu.gpridx2[4:0]
+@28
+TOP.sim.multipu.genpu[0].pu.gprrdy1
+TOP.sim.multipu.genpu[0].pu.gprrdy2
+@200
+-
+@24
+TOP.sim.multipu.genpu[0].pu.instrbufusage[1:0]
+@28
+TOP.sim.multipu.genpu[0].pu.instrbufrst
+TOP.sim.multipu.genpu[0].pu.sequencerreadyandgprrdy1
+TOP.sim.multipu.genpu[0].pu.sequencerreadyandgprrdy12
+@200
+-
+@2024
+^2 /home/tambewilliam/Documents/pu32/fontamsoc-hw/pu32-sim/gprctrlstate.pu.txt
+TOP.sim.multipu.genpu[0].pu.gprctrlstate[1:0]
+@24
+TOP.sim.multipu.genpu[0].pu.gpridx[4:0]
+@28
+TOP.sim.multipu.genpu[0].pu.gprwe
+@22
+TOP.sim.multipu.genpu[0].pu.gprdata[31:0]
+@24
+TOP.sim.multipu.genpu[0].pu.gprrdyidx[4:0]
+@28
+TOP.sim.multipu.genpu[0].pu.gprrdywe
+TOP.sim.multipu.genpu[0].pu.gprrdyval
+@200
+-
+@28
+TOP.sim.multipu.genpu[0].pu.dcachemasterop[1:0]
+@22
+TOP.sim.multipu.genpu[0].pu.dcachemasteraddr[29:0]
+TOP.sim.multipu.genpu[0].pu.dcachemastersel[7:0]
+TOP.sim.multipu.genpu[0].pu.dcachemasterdati[63:0]
+TOP.sim.multipu.genpu[0].pu.dcachemasterdato[63:0]
+@28
+TOP.sim.multipu.genpu[0].pu.dcachemasterrdy
+@200
+-
+@28
+TOP.sim.multipu.genpu[0].pu.pi1_op_o[1:0]
+@22
+TOP.sim.multipu.genpu[0].pu.pi1_addr_o[60:0]
+TOP.sim.multipu.genpu[0].pu.pi1_sel_o[7:0]
+TOP.sim.multipu.genpu[0].pu.pi1_data_o[63:0]
+TOP.sim.multipu.genpu[0].pu.pi1_data_i[63:0]
+@28
+TOP.sim.multipu.genpu[0].pu.pi1_rdy_i
+@200
+-
+[pattern_trace] 1
+[pattern_trace] 0
