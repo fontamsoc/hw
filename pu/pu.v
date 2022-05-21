@@ -303,7 +303,12 @@ initial begin
 		$display("could not create \"pc_o.txt\"");
 end
 always @ (posedge clk_i) begin
-	if (sequencerready && pc_o != pc_o_saved) begin
+	if (rst_i)
+		pc_dump_en <= 0;
+	else if (!pc_dump_en) begin
+		if (pc_o == 'h8000)
+			pc_dump_en <= 1;
+	end else if (sequencerreadyandgprrdy12 && pc_o != pc_o_saved) begin
 		pc_o_saved <= pc_o;
 		$fwrite(fd, "0x%x: %d(0x%x) %d(0x%x)\n", pc_o, gpridx1[3:0], gprdata1, gpridx2[3:0], gprdata2);
 		$fflush(fd);
