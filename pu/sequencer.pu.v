@@ -638,14 +638,3 @@ end else if (!inhalt) begin
 		`endif
 	end
 end
-
-`ifdef SIMULATION
-//if (sequencerready && pc_o >= 'h4000 && pc_o != pc_o_saved) begin
-//	pc_o_saved <= pc_o;
-//	$write("0x%x: %d(0x%x) %d(0x%x)\n", pc_o, gpridx1[3:0], gprdata1, gpridx2[3:0], gprdata2); $fflush(1);
-//end
-//if (pc_o == 'h2477c && gpridx1[3:0] == 'd2 && gprdata1 == 'h00003b25 && gpridx2[3:0] == 'd0 && gprdata2 == 'h00659f44) begin
-//	pc_o_saved <= pc_o;
-//	$write("clkcyclecnt == 0x%x\n", clkcyclecnt); $fflush(1);
-//end
-`endif

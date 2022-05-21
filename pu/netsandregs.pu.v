@@ -11,6 +11,7 @@ reg[(ARCHBITSZ-1) -1 : 0] ip;
 `ifdef SIMULATION
 assign pc_o = ({1'b0, ip} << 1'b1);
 reg [ARCHBITSZ -1 : 0] pc_o_saved = 0;
+reg pc_dump_en = 0;
 `endif
 
 reg[(ARCHBITSZ-1) -1 : 0] kip;
