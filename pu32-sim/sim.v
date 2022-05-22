@@ -15,7 +15,7 @@
 `define PUHPTW
 `define PUMULDIVCLK
 `define PUDSPMUL
-//`define PUDCACHE /* issues in linux when enabled; ie: `nano /etc/inittab` or `htop` shows garbaged screen */
+//`define PUDCACHE
 `define PUCOUNT 1
 `include "pu/multipu.v"
 
