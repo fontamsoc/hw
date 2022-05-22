@@ -210,11 +210,12 @@ reg cachehit;
 // Register used to hold the value of the input "m_pi1_op_i".
 reg [2 -1 : 0] m_pi1_op_i_hold;
 
-// Net which is 1 when PIRDOP immediately follows PIWROP
-// and cachedati must be returned instead of cachedato.
+// Net which is 1 when a non-PINOOP immediately follows PIWROP
+// and cachedati must be returned instead of cachedato, or when
+// same cachewayhitidx must be used.
 wire usesampled;
 
-assign cachemiss = ((m_pi1_op_i_hold == PIRDOP) && !cachehit && !usesampled);
+assign cachemiss = ((m_pi1_op_i_hold == PIRDOP) && !cachehit);
 
 // Net set to 1 to make a request to retrieve data from slv.
 wire slvreadrqst = ((cachemiss || (m_pi1_op_i_hold == PIRWOP)) && !conly_r);
@@ -281,7 +282,7 @@ wire m_pi1_is_not_noop = (m_pi1_op_i != PINOOP && m_pi1_rdy_o);
 
 wire cacherdy = ((cacheactive && (!m_pi1_is_not_noop || cenable_i) && !crst_i) || conly_r);
 
-wire cacheen = (cacherdy && m_pi1_is_not_noop);
+wire cacheen = (cacherdy && (m_pi1_is_not_noop || cachemiss));
 
 reg cacherdy_hold;
 
@@ -331,27 +332,25 @@ reg [CLOG2CACHEWAYCOUNT -1 : 0] cachewaywriteidx;
 // ### by verilog within the always block.
 reg                             cachetagwayhit;
 reg [CLOG2CACHEWAYCOUNT -1 : 0] cachetagwayhitidx;
+reg [CLOG2CACHEWAYCOUNT -1 : 0] cachetagwayhitidx_sampled;
 
 wire [ARCHBITSZ -1 : 0] cachedato [CACHEWAYCOUNT -1 : 0];
 
 wire [ARCHBITSZ -1 : 0] _cachedatibitsel = (was_cenable_i_and_cachemiss ? {ARCHBITSZ{1'b1}} : cachedatibitsel);
 
-// Net set to the value to write in the cache.
-wire [ARCHBITSZ -1 : 0] cachedati = (
-	(cachedata & _cachedatibitsel) |
-	(cachedato[cachetagwayhit ? cachetagwayhitidx : cachewaywriteidx] & ~_cachedatibitsel));
+reg [ARCHBITSZ -1 : 0] cachedati_sampled;
 
-reg cachewe__sampled;
+// Net set to the value to write in the cache.
+wire [ARCHBITSZ -1 : 0] cachedati = ((cachedata & _cachedatibitsel) |
+	(cachetagwayhit ? ((usesampled ? cachedati_sampled : cachedato[cachetagwayhitidx]) & ~_cachedatibitsel) : {ARCHBITSZ{1'b0}}));
+
+reg cachewe_sampled;
 
 reg cacheen_sampled;
 
 reg [ADDRBITSZ -1 : 0] m_pi1_addr_i_hold_sampled;
 
-assign usesampled = (
-	cachewe__sampled && cacheen_sampled &&
-	(m_pi1_addr_i_hold == m_pi1_addr_i_hold_sampled));
-
-reg [ARCHBITSZ -1 : 0] cachedati_sampled;
+assign usesampled = (cachewe_sampled && (m_pi1_addr_i_hold == m_pi1_addr_i_hold_sampled));
 
 reg [ARCHBITSZ -1 : 0] s_pi1_data_i_hold;
 
@@ -369,6 +368,11 @@ reg [CLOG2CACHESETCOUNT -1 : 0] cacherstidx;
 
 wire [ARCHBITSZ -1 : 0] cachedatabitselo [CACHEWAYCOUNT -1 : 0];
 
+reg [ARCHBITSZ -1 : 0] cachedatabitseli_sampled;
+
+wire [ARCHBITSZ -1 : 0] cachedatabitseli =
+	((cachetagwayhit ? (usesampled ? cachedatabitseli_sampled : cachedatabitselo[cachetagwayhitidx]) : {ARCHBITSZ{1'b0}}) | _cachedatibitsel);
+
 reg cmiss_i_hold;
 
 // ### Net declared as reg so as to be useable
@@ -381,10 +385,14 @@ always @* begin
 	cachetagwayhit = 0;
 	cachetagwayhitidx = 0;
 	for (gencachetag_idx = 0; gencachetag_idx < CACHEWAYCOUNT; gencachetag_idx = gencachetag_idx + 1) begin
-		cachetaghit[gencachetag_idx] = ((conly_r || ((|(cachedatabitselo[gencachetag_idx])) && cacherdy_hold)) && (m_pi1_addr_i_hold[ADDRBITSZ -1 : CLOG2CACHESETCOUNT] == cachetago[gencachetag_idx]));
+		cachetaghit[gencachetag_idx] = (
+			(conly_r || ((|(usesampled ? cachedatabitseli_sampled : cachedatabitselo[gencachetag_idx])) && cacherdy_hold)) &&
+			(usesampled ?
+				(gencachetag_idx == cachetagwayhitidx_sampled) :
+				(m_pi1_addr_i_hold[ADDRBITSZ -1 : CLOG2CACHESETCOUNT] == cachetago[gencachetag_idx])));
 		if (!cachehit && !cmiss_i_hold &&
 			// There is a cachehit when there is a cache tag hit and the selected bits are in the cache.
-			(cachetaghit[gencachetag_idx] && ((cachedatibitsel & cachedatabitselo[gencachetag_idx]) == cachedatibitsel))) begin
+			(cachetaghit[gencachetag_idx] && ((cachedatibitsel & (usesampled ? cachedatabitseli_sampled : cachedatabitselo[gencachetag_idx])) == cachedatibitsel))) begin
 			cachehit = 1;
 			cachewayhitidx = gencachetag_idx;
 		end
@@ -416,12 +424,16 @@ bram #(
 
 ) cachetags (
 
-	 .clk0_i  (clk_i)        ,.clk1_i  (clk_i)
-	,.en0_i   (cacheen)      ,.en1_i   (1'b1)
-	                         ,.we1_i   (cachewe && (cachetagwayhit ? (cachetagwayhitidx == gencache_idx) : (cachewaywriteidx == gencache_idx)))
-	,.addr0_i (m_pi1_addr_i) ,.addr1_i (m_pi1_addr_i_hold)
-	                         ,.i1      (m_pi1_addr_i_hold[ADDRBITSZ -1 : CLOG2CACHESETCOUNT])
-	,.o0      (cachetago[gencache_idx]) ,.o1      ()
+	 .clk0_i  (clk_i)
+	,.clk1_i  (clk_i)
+	,.en0_i   (cacheen)
+	,.en1_i   (1'b1)
+	,.we1_i   (cachewe && (usesampled ? (cachetagwayhitidx_sampled == gencache_idx) : (cachetagwayhit ? (cachetagwayhitidx == gencache_idx) : (cachewaywriteidx == gencache_idx))))
+	,.addr0_i (cachemiss ? m_pi1_addr_i_hold : m_pi1_addr_i)
+	,.addr1_i (m_pi1_addr_i_hold)
+	,.i1      (m_pi1_addr_i_hold[ADDRBITSZ -1 : CLOG2CACHESETCOUNT])
+	,.o0      (cachetago[gencache_idx])
+	,.o1      ()
 );
 
 bram #(
@@ -433,12 +445,16 @@ bram #(
 
 ) cachedatas (
 
-	 .clk0_i  (clk_i)        ,.clk1_i  (clk_i)
-	,.en0_i   (cacheen)      ,.en1_i   (1'b1)
-	                         ,.we1_i   (cachewe && (cachetagwayhit ? (cachetagwayhitidx == gencache_idx) : (cachewaywriteidx == gencache_idx)))
-	,.addr0_i (m_pi1_addr_i) ,.addr1_i (m_pi1_addr_i_hold)
-	                         ,.i1      (cachedati)
-	,.o0      (cachedato[gencache_idx]) ,.o1      ()
+	 .clk0_i  (clk_i)
+	,.clk1_i  (clk_i)
+	,.en0_i   (cacheen)
+	,.en1_i   (1'b1)
+	,.we1_i   (cachewe && (usesampled ? (cachetagwayhitidx_sampled == gencache_idx) : (cachetagwayhit ? (cachetagwayhitidx == gencache_idx) : (cachewaywriteidx == gencache_idx))))
+	,.addr0_i (cachemiss ? m_pi1_addr_i_hold : m_pi1_addr_i)
+	,.addr1_i (m_pi1_addr_i_hold)
+	,.i1      (cachedati)
+	,.o0      (cachedato[gencache_idx])
+	,.o1      ()
 );
 
 bram #(
@@ -448,12 +464,16 @@ bram #(
 
 ) cachedatabitsels (
 
-	 .clk0_i  (clk_i)               ,.clk1_i  (clk_i)
-	,.en0_i   (cacheen)             ,.en1_i   (1'b1)
-	                                ,.we1_i   ((cachewe && (cachetagwayhit ? (cachetagwayhitidx == gencache_idx) : (cachewaywriteidx == gencache_idx))) || cacheoff)
-	,.addr0_i (m_pi1_addr_i)        ,.addr1_i (cacheoff ? cacherstidx : m_pi1_addr_i_hold)
-	                                ,.i1      (cacheoff ? {ARCHBITSZ{1'b0}} : ((cachetagwayhit ? cachedatabitselo[gencache_idx] : {ARCHBITSZ{1'b0}}) | _cachedatibitsel))
-	,.o0      (cachedatabitselo[gencache_idx]) ,.o1      ()
+	 .clk0_i  (clk_i)
+	,.clk1_i  (clk_i)
+	,.en0_i   (cacheen)
+	,.en1_i   (1'b1)
+	,.we1_i   (cacheoff || (cachewe && (usesampled ? (cachetagwayhitidx_sampled == gencache_idx) : (cachetagwayhit ? (cachetagwayhitidx == gencache_idx) : (cachewaywriteidx == gencache_idx)))))
+	,.addr0_i (cachemiss ? m_pi1_addr_i_hold : m_pi1_addr_i)
+	,.addr1_i (cacheoff ? cacherstidx : m_pi1_addr_i_hold)
+	,.i1      (cacheoff ? {ARCHBITSZ{1'b0}} : cachedatabitseli)
+	,.o0      (cachedatabitselo[gencache_idx])
+	,.o1      ()
 );
 
 end endgenerate
@@ -495,13 +515,12 @@ always @ (posedge clk_i) begin
 	end else
 		cachewe_ <= 0;
 
-	cachewe__sampled <= cachewe_;
-
+	cachewe_sampled <= cachewe;
 	cacheen_sampled <= cacheen;
-
 	m_pi1_addr_i_hold_sampled <= m_pi1_addr_i_hold;
-
+	cachetagwayhitidx_sampled <= (cachetagwayhit ? cachetagwayhitidx : cachewaywriteidx);
 	cachedati_sampled <= cachedati;
+	cachedatabitseli_sampled <= cachedatabitseli;
 
 	if (slvreadrqstdone)
 		s_pi1_data_i_hold <= s_pi1_data_i;
@@ -573,10 +592,12 @@ initial begin
 	cacheactive = 0;
 	cacherdy_hold = 0;
 	cachewe_ = 0;
-	cachewe__sampled = 0;
+	cachewe_sampled = 0;
 	cacheen_sampled = 0;
 	m_pi1_addr_i_hold_sampled = 0;
+	cachetagwayhitidx_sampled = 0;
 	cachedati_sampled = 0;
+	cachedatabitseli_sampled = 0;
 	s_pi1_data_i_hold = 0;
 	cacherstidx = 0;
 end
