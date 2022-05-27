@@ -15,7 +15,7 @@
 `define PUHPTW
 `define PUMULDIVCLK
 `define PUDSPMUL
-//`define PUDCACHE
+`define PUDCACHE
 `define PUCOUNT 1
 `include "pu/multipu.v"
 
@@ -464,11 +464,14 @@ wire [WB4SMEM_ARCHBITSZ -1 : 0]                                dcache_s_data_w0;
 wire [(WB4SMEM_ARCHBITSZ/8) -1 : 0]                            dcache_s_sel_w;
 wire                                                           dcache_s_rdy_w;
 
+localparam WB4SMEM_RAMCACHESZ = (RAMCACHESZ/(WB4SMEM_ARCHBITSZ/ARCHBITSZ));
+
 pi1_dcache #(
 
 	 .ARCHBITSZ     (WB4SMEM_ARCHBITSZ)
-	,.CACHESETCOUNT (RAMCACHESZ/(WB4SMEM_ARCHBITSZ/ARCHBITSZ))
+	,.CACHESETCOUNT (WB4SMEM_RAMCACHESZ)
 	,.CACHEWAYCOUNT (RAMCACHEWAYCOUNT)
+	,.BUFFERDEPTH   (64)
 	,.INITFILE      ("dcacheinit/dcacheinit.hex")
 
 ) dcache (

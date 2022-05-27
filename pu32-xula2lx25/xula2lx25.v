@@ -15,7 +15,7 @@
 //`define PUHPTW
 `define PUMULDIVCLK
 `define PUDSPMUL
-//`define PUDCACHE
+`define PUDCACHE
 `include "pu/multipu.v"
 
 `include "dev/sdcard/sdcard_spi.v"
@@ -463,6 +463,7 @@ pi1_dcache #(
 	 .ARCHBITSZ     (ARCHBITSZ)
 	,.CACHESETCOUNT (RAMCACHESZ)
 	,.CACHEWAYCOUNT (RAMCACHEWAYCOUNT)
+	,.BUFFERDEPTH   (64)
 
 ) dcache (
 

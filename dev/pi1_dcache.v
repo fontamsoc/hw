@@ -61,6 +61,7 @@ parameter ARCHBITSZ = 16;
 
 parameter CACHESETCOUNT = 2;
 parameter CACHEWAYCOUNT = 1;
+parameter BUFFERDEPTH = 2;
 
 parameter FETCHALLONMISS = 1;
 
@@ -68,6 +69,7 @@ parameter INITFILE = "";
 
 localparam CLOG2CACHESETCOUNT = clog2(CACHESETCOUNT);
 localparam CLOG2CACHEWAYCOUNT = clog2(CACHEWAYCOUNT);
+localparam CLOG2BUFFERDEPTH = clog2(BUFFERDEPTH);
 
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
 
@@ -112,7 +114,7 @@ reg conly_r;
 
 assign m_pi1_rdy_o = (conly_r || (m_pi1_rdy_o_ && !cachemiss));
 
-wire [(CLOG2CACHESETCOUNT +1) -1 : 0] bufusage;
+wire [(CLOG2BUFFERDEPTH +1) -1 : 0] bufusage;
 
 wire buffull;
 wire bufempty;
@@ -129,7 +131,7 @@ wire [ADDRBITSZ -1 : 0] addrbufdato;
 fifo #(
 
 	 .WIDTH (ADDRBITSZ)
-	,.DEPTH (CACHESETCOUNT)
+	,.DEPTH (BUFFERDEPTH)
 
 ) addrbuf (
 
@@ -153,7 +155,7 @@ wire [ARCHBITSZ -1 : 0] databufdato;
 fifo #(
 
 	 .WIDTH (ARCHBITSZ)
-	,.DEPTH (CACHESETCOUNT)
+	,.DEPTH (BUFFERDEPTH)
 
 ) databuf (
 
@@ -177,7 +179,7 @@ wire [(ARCHBITSZ/8) -1 : 0] bytselbufdato;
 fifo #(
 
 	 .WIDTH (ARCHBITSZ/8)
-	,.DEPTH (CACHESETCOUNT)
+	,.DEPTH (BUFFERDEPTH)
 
 ) bytselbuf (
 
@@ -552,7 +554,7 @@ always @ (posedge clk_i) begin
 		// setting cmiss_i_hold makes sense only for PIRDOP.
 	end else if (m_pi1_op_i == PIWROP) begin
 		// m_pi1_rdy_o becomes 0 if the data to write in slv will make its buffer full.
-		m_pi1_rdy_o_ <= (bufusage < (CACHESETCOUNT-1));
+		m_pi1_rdy_o_ <= (bufusage < (BUFFERDEPTH-1));
 	end else if (m_pi1_op_i == PIRWOP) begin
 		m_pi1_rdy_o_ <= 0;
 	end
