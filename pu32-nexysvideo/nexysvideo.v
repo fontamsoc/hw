@@ -15,7 +15,7 @@
 `define PUHPTW
 `define PUMULDIVCLK
 `define PUDSPMUL
-//`define PUDCACHE
+`define PUDCACHE
 //`define PUDBG
 //`define PUCOUNT 1 /* 16 max */
 `include "pu/multipu.v"
@@ -689,6 +689,7 @@ pi1_dcache #(
 	 .ARCHBITSZ     (LITEDRAM_ARCHBITSZ)
 	,.CACHESETCOUNT (RAMCACHESZ/(LITEDRAM_ARCHBITSZ/ARCHBITSZ))
 	,.CACHEWAYCOUNT (RAMCACHEWAYCOUNT)
+	,.BUFFERDEPTH   (64)
 	,.INITFILE      ("litedram.hex")
 
 ) dcache (
