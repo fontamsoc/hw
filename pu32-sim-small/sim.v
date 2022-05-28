@@ -72,7 +72,8 @@ wire pi1r_clk_w = clk_w;
 
 multipu #(
 
-	 .ARCHBITSZ (ARCHBITSZ)
+	 .ARCHBITSZ  (ARCHBITSZ)
+	,.XARCHBITSZ (PI1RARCHBITSZ)
 
 ) multipu (
 

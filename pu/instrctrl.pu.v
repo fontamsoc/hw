@@ -73,7 +73,7 @@ end else if (instrbufrst || !instrfetchfaulted) begin
 	// and the penalty for it, is at least 2 clock cycles during
 	// which the sequencer stalls.
 	if (instrbufrst)
-		instrbufwriteidx <= ip[CLOG2INSTRBUFFERSIZE +1 : 1];
+		instrbufwriteidx <= ip[(CLOG2INSTRBUFFERSIZE+CLOG2XARCHBITSZBY8DIFF) +1 : 1+CLOG2XARCHBITSZBY8DIFF];
 
 	// Instructions get fetched only if the pu is not halted.
 	// When the pu resumes from being halted (due to an interrupt),

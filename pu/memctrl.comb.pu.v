@@ -24,14 +24,14 @@ end else if (dcacheslaveop != MEMNOOP) begin
 
 end else if (instrfetchmemaccesspending) begin
 
-	pi1_addr_o = instrfetchppninstrfetchaddr;
+	pi1_addr_o = {{(XADDRBITSZ-ADDRBITSZ){1'b0}}, instrfetchppninstrfetchaddr[ADDRBITSZ -1 : CLOG2XARCHBITSZBY8DIFF]};
 
 	// pi1_data_o is a don't-care in this state
 	// and do not need to be set.
 	// ### Set so that verilog works correctly.
 	pi1_data_o = 0;
 
-	pi1_sel_o = {(ARCHBITSZ/8){1'b1}};
+	pi1_sel_o = {(XARCHBITSZ/8){1'b1}};
 
 	pi1_op_o = MEMREADOP;
 

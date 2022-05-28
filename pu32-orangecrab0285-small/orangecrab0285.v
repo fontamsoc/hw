@@ -139,8 +139,9 @@ wire pi1r_clk_w = clk_4x_w;
 
 multipu #(
 
-	 .ARCHBITSZ (ARCHBITSZ)
-	,.CLKFREQ   (PI1RCLKFREQ)
+	 .ARCHBITSZ  (ARCHBITSZ)
+	,.XARCHBITSZ (PI1RARCHBITSZ)
+	,.CLKFREQ    (PI1RCLKFREQ)
 
 ) multipu (
 
