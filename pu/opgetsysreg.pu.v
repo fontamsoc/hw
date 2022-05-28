@@ -10,13 +10,13 @@ else if (isoptype3) opgetsysregresult = {{(ARCHBITSZ-3){1'b0}}, faultreason};
 else if (isoptype4) opgetsysregresult = clkcyclecnt[ARCHBITSZ -1 : 0];
 else if (isoptype5) opgetsysregresult = clkcyclecnt[(ARCHBITSZ*2) -1 : ARCHBITSZ];
 else if (isoptype6) opgetsysregresult = TLBSETCOUNT;
-else opgetsysregresult = ICACHESETCOUNT;
+else opgetsysregresult = (ICACHESETCOUNT << CLOG2XARCHBITSZBY8DIFF);
 
 // Implement getcoreid, getclkfreq, getdcachesize, gettlb, getcap, getver.
 if (isoptype0) opgetsysreg1result = id_i;
 else if (isoptype1) opgetsysreg1result = CLKFREQ;
 `ifdef PUDCACHE
-else if (isoptype2) opgetsysreg1result = DCACHESETCOUNT;
+else if (isoptype2) opgetsysreg1result = (DCACHESETCOUNT << CLOG2XARCHBITSZBY8DIFF);
 `endif
 `ifdef PUMMU
 else if (isoptype3) opgetsysreg1result = opgettlbresult;

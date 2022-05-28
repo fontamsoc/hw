@@ -79,10 +79,11 @@ parameter DCACHEWAYCOUNT = 1;
 parameter TLBWAYCOUNT    = 1;
 parameter MULDIVCNT      = 4;
 
-parameter ARCHBITSZ = 16;
+parameter ARCHBITSZ  = 16;
+parameter XARCHBITSZ = 16;
 
-localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
-localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
+localparam CLOG2XARCHBITSZBY8 = clog2(XARCHBITSZ/8);
+localparam XADDRBITSZ = (XARCHBITSZ-CLOG2XARCHBITSZBY8);
 
 `ifdef PUCOUNT
 localparam PUCOUNT = `PUCOUNT;
@@ -100,12 +101,12 @@ input wire clk_muldiv_i;
 input wire clk_mem_i;
 `endif
 
-output wire [2 -1 : 0]             pi1_op_o;
-output wire [ADDRBITSZ -1 : 0]     pi1_addr_o;
-output wire [ARCHBITSZ -1 : 0]     pi1_data_o;
-input  wire [ARCHBITSZ -1 : 0]     pi1_data_i;
-output wire [(ARCHBITSZ/8) -1 : 0] pi1_sel_o;
-input  wire                        pi1_rdy_i;
+output wire [2 -1 : 0]              pi1_op_o;
+output wire [XADDRBITSZ -1 : 0]     pi1_addr_o;
+output wire [XARCHBITSZ -1 : 0]     pi1_data_o;
+input  wire [XARCHBITSZ -1 : 0]     pi1_data_i;
+output wire [(XARCHBITSZ/8) -1 : 0] pi1_sel_o;
+input  wire                         pi1_rdy_i;
 
 input  wire [PUCOUNT -1 : 0] intrqst_i;
 output wire [PUCOUNT -1 : 0] intrdy_o;
@@ -132,7 +133,7 @@ output wire [(ARCHBITSZ * PUCOUNT) -1 : 0] pc_o;
 
 `ifdef PUCOUNT
 localparam PI1QMASTERCOUNT       = PUCOUNT;
-localparam PI1QARCHBITSZ         = ARCHBITSZ;
+localparam PI1QARCHBITSZ         = XARCHBITSZ;
 localparam CLOG2PI1QARCHBITSZBY8 = clog2(PI1QARCHBITSZ/8);
 localparam PI1QADDRBITSZ         = (PI1QARCHBITSZ-CLOG2PI1QARCHBITSZBY8);
 wire pi1q_rst_w = rst_i;
@@ -161,15 +162,15 @@ assign pi1_data_o     = s_pi1q_data_w0;
 assign pi1_sel_o      = s_pi1q_sel_w;
 assign s_pi1q_rdy_w   = pi1_rdy_i;
 `else
-wire [2 -1 : 0]             pi1b_op_o;
-wire [ADDRBITSZ -1 : 0]     pi1b_addr_o;
-wire [ARCHBITSZ -1 : 0]     pi1b_data_o;
-wire [ARCHBITSZ -1 : 0]     pi1b_data_i;
-wire [(ARCHBITSZ/8) -1 : 0] pi1b_sel_o;
-wire                        pi1b_rdy_i;
+wire [2 -1 : 0]              pi1b_op_o;
+wire [XADDRBITSZ -1 : 0]     pi1b_addr_o;
+wire [XARCHBITSZ -1 : 0]     pi1b_data_o;
+wire [XARCHBITSZ -1 : 0]     pi1b_data_i;
+wire [(XARCHBITSZ/8) -1 : 0] pi1b_sel_o;
+wire                         pi1b_rdy_i;
 pi1b #(
 
-	.ARCHBITSZ (ARCHBITSZ)
+	.ARCHBITSZ (XARCHBITSZ)
 
 ) pi1b (
 
@@ -225,6 +226,7 @@ assign pc_o[((genpu_idx+1) * ARCHBITSZ) -1 : genpu_idx * ARCHBITSZ] = pc_w[genpu
 pu #(
 
 	 .ARCHBITSZ      (ARCHBITSZ)
+	,.XARCHBITSZ     (XARCHBITSZ)
 	,.CLKFREQ        (CLKFREQ)
 	,.ICACHESETCOUNT (ICACHESETCOUNT)
 	,.DCACHESETCOUNT (DCACHESETCOUNT)

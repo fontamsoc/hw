@@ -51,11 +51,11 @@ reg[(ARCHBITSZ*2) -1 : 0] clkcyclecnt;
 
 // ---------- Registers and nets used for instruction buffering ----------
 
-reg[ARCHBITSZ -1 : 0] instrbuf_[INSTRBUFFERSIZE -1 : 0];
+reg[XARCHBITSZ -1 : 0] instrbuf_[INSTRBUFFERSIZE -1 : 0];
 
 wire instrbufwe;
 
-wire[ARCHBITSZ -1 : 0] instrbufi;
+wire[XARCHBITSZ -1 : 0] instrbufi;
 
 // Write index within the instruction buffer.
 // Only the CLOG2INSTRBUFFERSIZE lsb are used for indexing.
@@ -63,19 +63,48 @@ reg[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufwriteidx;
 
 // Net set to the space used in the instrbuf.
 wire[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufusage =
-	(instrbufwriteidx - ip[CLOG2INSTRBUFFERSIZE +1 : 1]);
+	(instrbufwriteidx - ip[(CLOG2INSTRBUFFERSIZE+CLOG2XARCHBITSZBY8DIFF) +1 : 1+CLOG2XARCHBITSZBY8DIFF]);
 wire[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufusagenxt =
-	(instrbufwriteidx - ipnxt[CLOG2INSTRBUFFERSIZE +1 : 1]);
+	(instrbufwriteidx - ipnxt[(CLOG2INSTRBUFFERSIZE+CLOG2XARCHBITSZBY8DIFF) +1 : 1+CLOG2XARCHBITSZBY8DIFF]);
 
 reg[16 -1 : 0] instrbufdato;
-wire[ARCHBITSZMAX -1 : 0] instrbufip = instrbuf_[ip[CLOG2INSTRBUFFERSIZE : 1]];
+wire[XARCHBITSZMAX -1 : 0] instrbufip = instrbuf_[ip[(CLOG2INSTRBUFFERSIZE+CLOG2XARCHBITSZBY8DIFF) : 1+CLOG2XARCHBITSZBY8DIFF]];
 wire[16 -1 : 0] instrbufdato_ =
-	(ARCHBITSZ == 16) ? instrbufip :
-	(ARCHBITSZ == 32) ? (ip[CLOG2ARCHBITSZBY16 -1 : 0] ? instrbufip[31:16] : instrbufip[15:0]) : (
-			ip[CLOG2ARCHBITSZBY16 -1 : 0] == 0 ? instrbufip[15:0] :
-			ip[CLOG2ARCHBITSZBY16 -1 : 0] == 1 ? instrbufip[31:16] :
-			ip[CLOG2ARCHBITSZBY16 -1 : 0] == 2 ? instrbufip[47:32] :
-							instrbufip[63:48]);
+	(XARCHBITSZ == 16) ? instrbufip :
+	(XARCHBITSZ == 32) ? (
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] ? instrbufip[31:16] :
+		                                 instrbufip[15:0]) :
+	(XARCHBITSZ == 64) ? (
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufip[15:0] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufip[31:16] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufip[47:32] :
+			                                      instrbufip[63:48]) :
+	(XARCHBITSZ == 128) ? (
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufip[15:0] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufip[31:16] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufip[47:32] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufip[63:48] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufip[79:64] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufip[95:80] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufip[111:96] :
+			                                      instrbufip[127:112]) :
+	/* (XARCHBITSZ == 256) ? */ (
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufip[15:0] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufip[31:16] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufip[47:32] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufip[63:48] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufip[79:64] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufip[95:80] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufip[111:96] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 7 ? instrbufip[127:112] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 8 ? instrbufip[143:128] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 9 ? instrbufip[159:144] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufip[175:160] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufip[191:176] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufip[207:192] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufip[223:208] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufip[239:224] :
+			                                       instrbufip[255:240]);
 
 wire[8 -1 : 0] instrbufdato0 = instrbufdato[7:0];
 wire[8 -1 : 0] instrbufdato1 = instrbufdato[15:8];
@@ -87,23 +116,81 @@ wire instrbufnotemptynxt = |instrbufusagenxt;
 // This net indicates whether the instruction buffer is full.
 wire instrbufnotfull = (instrbufusage < INSTRBUFFERSIZE);
 
-wire[ARCHBITSZMAX -1 : 0] instrbufipnxt = (instrbufnotemptynxt ? instrbuf_[ipnxt[CLOG2INSTRBUFFERSIZE : 1]] : instrbufi);
+wire[XARCHBITSZMAX -1 : 0] instrbufipnxt = (instrbufnotemptynxt ? instrbuf_[ipnxt[(CLOG2INSTRBUFFERSIZE+CLOG2XARCHBITSZBY8DIFF) : 1+CLOG2XARCHBITSZBY8DIFF]] : instrbufi);
 wire[16 -1 : 0] instrbufipnxtdato =
-	(ARCHBITSZ == 16) ? instrbufipnxt :
-	(ARCHBITSZ == 32) ? (ipnxt[CLOG2ARCHBITSZBY16 -1 : 0] ? instrbufipnxt[31:16] : instrbufipnxt[15:0]) : (
-			ipnxt[CLOG2ARCHBITSZBY16 -1 : 0] == 0 ? instrbufipnxt[15:0] :
-			ipnxt[CLOG2ARCHBITSZBY16 -1 : 0] == 1 ? instrbufipnxt[31:16] :
-			ipnxt[CLOG2ARCHBITSZBY16 -1 : 0] == 2 ? instrbufipnxt[47:32] :
-							instrbufipnxt[63:48]);
+	(XARCHBITSZ == 16) ? instrbufipnxt :
+	(XARCHBITSZ == 32) ? (
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] ? instrbufipnxt[31:16] :
+		                                    instrbufipnxt[15:0]) :
+	(XARCHBITSZ == 64) ? (
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufipnxt[15:0] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufipnxt[31:16] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufipnxt[47:32] :
+			                                         instrbufipnxt[63:48]) :
+	(XARCHBITSZ == 128) ? (
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufipnxt[15:0] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufipnxt[31:16] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufipnxt[47:32] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufipnxt[63:48] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufipnxt[79:64] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufipnxt[95:80] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufipnxt[111:96] :
+			                                         instrbufipnxt[127:112]) :
+	/* (XARCHBITSZ == 256) ? */ (
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufipnxt[15:0] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufipnxt[31:16] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufipnxt[47:32] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufipnxt[63:48] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufipnxt[79:64] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufipnxt[95:80] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufipnxt[111:96] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 7 ? instrbufipnxt[127:112] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 8 ? instrbufipnxt[143:128] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 9 ? instrbufipnxt[159:144] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufipnxt[175:160] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufipnxt[191:176] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufipnxt[207:192] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufipnxt[223:208] :
+			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufipnxt[239:224] :
+			                                          instrbufipnxt[255:240]);
 
-wire[ARCHBITSZMAX -1 : 0] _instrbufi = instrbufi;
+wire[XARCHBITSZMAX -1 : 0] _instrbufi = instrbufi;
 wire[16 -1 : 0] instrbufidato =
-	(ARCHBITSZ == 16) ? _instrbufi :
-	(ARCHBITSZ == 32) ? (ip[CLOG2ARCHBITSZBY16 -1 : 0] ? _instrbufi[31:16] : _instrbufi[15:0]) : (
-			ip[CLOG2ARCHBITSZBY16 -1 : 0] == 0 ? _instrbufi[15:0] :
-			ip[CLOG2ARCHBITSZBY16 -1 : 0] == 1 ? _instrbufi[31:16] :
-			ip[CLOG2ARCHBITSZBY16 -1 : 0] == 2 ? _instrbufi[47:32] :
-							_instrbufi[63:48]);
+	(XARCHBITSZ == 16) ? _instrbufi :
+	(XARCHBITSZ == 32) ? (
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] ? _instrbufi[31:16] :
+		                                 _instrbufi[15:0]) :
+	(XARCHBITSZ == 64) ? (
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? _instrbufi[15:0] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? _instrbufi[31:16] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? _instrbufi[47:32] :
+			                                      _instrbufi[63:48]) :
+	(XARCHBITSZ == 128) ? (
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? _instrbufi[15:0] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? _instrbufi[31:16] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? _instrbufi[47:32] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? _instrbufi[63:48] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? _instrbufi[79:64] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? _instrbufi[95:80] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? _instrbufi[111:96] :
+			                                      _instrbufi[127:112]) :
+	/* (XARCHBITSZ == 256) ? */ (
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? _instrbufi[15:0] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? _instrbufi[31:16] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? _instrbufi[47:32] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? _instrbufi[63:48] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? _instrbufi[79:64] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? _instrbufi[95:80] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? _instrbufi[111:96] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 7 ? _instrbufi[127:112] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 8 ? _instrbufi[143:128] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 9 ? _instrbufi[159:144] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? _instrbufi[175:160] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? _instrbufi[191:176] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? _instrbufi[207:192] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? _instrbufi[223:208] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? _instrbufi[239:224] :
+			                                       _instrbufi[255:240]);
 
 reg instrbufrst_a;
 reg instrbufrst_b;
@@ -122,7 +209,7 @@ wire not_itlben_or_not_instrbufrst_posedge = (
 reg[ADDRBITSZ -1 : 0] instrfetchaddr;
 
 // Net set to the next value of instrfetchaddr.
-wire[ADDRBITSZ -1 : 0] instrfetchnextaddr = instrbufrst ? ip[ADDRBITSZ:1] : (instrfetchaddr+1);
+wire[ADDRBITSZ -1 : 0] instrfetchnextaddr = instrbufrst ? ip[ADDRBITSZ:1] : (instrfetchaddr+(XARCHBITSZ/ARCHBITSZ));
 
 // Register holding the physical page number of the instruction to fetch.
 reg[PAGENUMBITSZ -1 : 0] instrfetchppn;
@@ -235,9 +322,9 @@ reg[(ARCHBITSZMAX/8) -1 : 0] dcachemastersel; // ### declared as reg so as to be
 wire dcachemasterrdy;
 
 wire[2 -1 : 0] dcacheslaveop;
-wire[ADDRBITSZ -1 : 0] dcacheslaveaddr;
-wire[ARCHBITSZ -1 : 0] dcacheslavedato;
-wire[(ARCHBITSZ/8) -1 : 0] dcacheslavesel;
+wire[XADDRBITSZ -1 : 0] dcacheslaveaddr;
+wire[XARCHBITSZ -1 : 0] dcacheslavedato;
+wire[(XARCHBITSZ/8) -1 : 0] dcacheslavesel;
 
 wire isopgettlb;
 wire isopld;
@@ -761,14 +848,14 @@ wire[PAGENUMBITSZ -1 : 0] instrfetchnextppn =
 wire[ADDRBITSZ -1 : 0] instrfetchnextppninstrfetchnextaddr = {instrfetchnextppn, instrfetchnextaddr[ADDRWITHINPAGEBITSZ-1:0]};
 wire[ADDRBITSZ -1 : 0] instrfetchppninstrfetchaddr = {instrfetchppn, instrfetchaddr[ADDRWITHINPAGEBITSZ-1:0]};
 
-wire[CLOG2ICACHESETCOUNT -1 : 0] icachenextset = instrfetchnextppninstrfetchnextaddr[CLOG2ICACHESETCOUNT-1:0];
-wire[CLOG2ICACHESETCOUNT -1 : 0] icacheset = instrfetchppninstrfetchaddr[CLOG2ICACHESETCOUNT-1:0];
+wire[CLOG2ICACHESETCOUNT -1 : 0] icachenextset = instrfetchnextppninstrfetchnextaddr[(CLOG2ICACHESETCOUNT+CLOG2XARCHBITSZBY8DIFF)-1:CLOG2XARCHBITSZBY8DIFF];
+wire[CLOG2ICACHESETCOUNT -1 : 0] icacheset = instrfetchppninstrfetchaddr[(CLOG2ICACHESETCOUNT+CLOG2XARCHBITSZBY8DIFF)-1:CLOG2XARCHBITSZBY8DIFF];
 
 // Bitsize of an icache tag.
 localparam ICACHETAGBITSIZE = (ADDRBITSZ - CLOG2ICACHESETCOUNT);
 
 // Net set to the tag value being compared for an instruction cache hit.
-wire[ICACHETAGBITSIZE -1 : 0] icachetag = instrfetchppninstrfetchaddr[ADDRBITSZ-1:CLOG2ICACHESETCOUNT];
+wire[ICACHETAGBITSIZE -1 : 0] icachetag = instrfetchppninstrfetchaddr[ADDRBITSZ-1:(CLOG2ICACHESETCOUNT+CLOG2XARCHBITSZBY8DIFF)];
 
 wire [ICACHETAGBITSIZE -1 : 0] icachetago [ICACHEWAYCOUNT -1 : 0];
 
@@ -804,8 +891,8 @@ wire icacheoff = !icacheactive;
 // Register used as counter during the instruction cache reset.
 reg [CLOG2ICACHESETCOUNT -1 : 0] icacherstidx;
 
-wire [ARCHBITSZ -1 : 0] icachedato_ [ICACHEWAYCOUNT -1 : 0];
-wire [ARCHBITSZ -1 : 0] icachedato = icachedato_[icachewayhitidx];
+wire [XARCHBITSZ -1 : 0] icachedato_ [ICACHEWAYCOUNT -1 : 0];
+wire [XARCHBITSZ -1 : 0] icachedato = icachedato_[icachewayhitidx];
 
 reg [CLOG2ICACHESETCOUNT -1 : 0] icachewecnt;
 // Register used to hold icache-way index to write next.
@@ -846,7 +933,7 @@ bram #(
 bram #(
 
 	 .SZ (ICACHESETCOUNT)
-	,.DW (ARCHBITSZ)
+	,.DW (XARCHBITSZ)
 
 ) icachedatas (
 
@@ -1250,11 +1337,42 @@ wire opldstrdy = (isopldst && (
 
 // ---------- Registers and nets used for data caching ----------
 
+wire[2 -1 : 0] _dcachemasterop;
+wire[XADDRBITSZ -1 : 0] _dcachemasteraddr;
+wire[XARCHBITSZ -1 : 0] _dcachemasterdati;
+wire[XARCHBITSZ -1 : 0] _dcachemasterdato;
+wire[(XARCHBITSZ/8) -1 : 0] _dcachemastersel;
+wire _dcachemasterrdy;
+
+pi1_upconverter #(
+
+	 .MARCHBITSZ (ARCHBITSZ)
+	,.SARCHBITSZ (XARCHBITSZ)
+
+) pi1_upconverter_dcache (
+
+	 .clk_i (clk_i)
+
+	,.m_pi1_op_i   (dcachemasterop)
+	,.m_pi1_addr_i (dcachemasteraddr)
+	,.m_pi1_data_i (dcachemasterdati)
+	,.m_pi1_data_o (dcachemasterdato)
+	,.m_pi1_sel_i  (dcachemastersel)
+	,.m_pi1_rdy_o  (dcachemasterrdy)
+
+	,.s_pi1_op_o   (_dcachemasterop)
+	,.s_pi1_addr_o (_dcachemasteraddr)
+	,.s_pi1_data_o (_dcachemasterdati)
+	,.s_pi1_data_i (_dcachemasterdato)
+	,.s_pi1_sel_o  (_dcachemastersel)
+	,.s_pi1_rdy_i  (_dcachemasterrdy)
+);
+
 `ifdef PUDCACHE
 
 pi1_dcache #(
 
-	 .ARCHBITSZ     (ARCHBITSZ)
+	 .ARCHBITSZ     (XARCHBITSZ)
 	,.CACHESETCOUNT (DCACHESETCOUNT)
 	,.CACHEWAYCOUNT (DCACHEWAYCOUNT)
 	,.BUFFERDEPTH   (64)
@@ -1279,12 +1397,12 @@ pi1_dcache #(
 
 	,.conly_i (1'b0)
 
-	,.m_pi1_op_i   (dcachemasterop)
-	,.m_pi1_addr_i (dcachemasteraddr)
-	,.m_pi1_data_i (dcachemasterdati)
-	,.m_pi1_data_o (dcachemasterdato)
-	,.m_pi1_sel_i  (dcachemastersel)
-	,.m_pi1_rdy_o  (dcachemasterrdy)
+	,.m_pi1_op_i   (_dcachemasterop)
+	,.m_pi1_addr_i (_dcachemasteraddr)
+	,.m_pi1_data_i (_dcachemasterdati)
+	,.m_pi1_data_o (_dcachemasterdato)
+	,.m_pi1_sel_i  (_dcachemastersel)
+	,.m_pi1_rdy_o  (_dcachemasterrdy)
 
 	,.s_pi1_op_o   (dcacheslaveop)
 	,.s_pi1_addr_o (dcacheslaveaddr)
@@ -1296,13 +1414,13 @@ pi1_dcache #(
 
 `else
 
-assign dcachemasterrdy = pi1_rdy_i;
-assign dcachemasterdato = pi1_data_i;
+assign _dcachemasterrdy = pi1_rdy_i;
+assign _dcachemasterdato = pi1_data_i;
 
-assign dcacheslaveop = dcachemasterop;
-assign dcacheslaveaddr = dcachemasteraddr;
-assign dcacheslavedato = dcachemasterdati;
-assign dcacheslavesel = dcachemastersel;
+assign dcacheslaveop = _dcachemasterop;
+assign dcacheslaveaddr = _dcachemasteraddr;
+assign dcacheslavedato = _dcachemasterdati;
+assign dcacheslavesel = _dcachemastersel;
 
 `endif
 

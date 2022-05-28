@@ -3,6 +3,11 @@
 
 // Parameters:
 //
+// ARCHBITSZ
+// XARCHBITSZ
+// 	TODO: Document ...
+// 	TODO: XARCHBITSZ must be >= ARCHBITSZ.
+//
 // CLKFREQ
 // 	Frequency of the clock input "clk_i" in Hz.
 //
@@ -113,6 +118,8 @@
 
 `include "./opmuldiv.pu.v"
 
+`include "dev/pi1_upconverter.v"
+
 `ifdef PUDCACHE
 `include "dev/pi1_dcache.v"
 `endif
@@ -172,14 +179,19 @@ localparam CLOG2DCACHESETCOUNT = clog2(DCACHESETCOUNT);
 localparam CLOG2ICACHEWAYCOUNT = clog2(ICACHEWAYCOUNT);
 localparam CLOG2TLBWAYCOUNT    = clog2(TLBWAYCOUNT);
 
-parameter ARCHBITSZ = 16;
+parameter ARCHBITSZ  = 16;
+parameter XARCHBITSZ = 16;
 
 localparam CLOG2ARCHBITSZ = clog2(ARCHBITSZ);
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
 localparam CLOG2ARCHBITSZBY16 = clog2(ARCHBITSZ/16);
-
-// Number of bits in an address.
 localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
+
+localparam CLOG2XARCHBITSZBY8 = clog2(XARCHBITSZ/8);
+localparam CLOG2XARCHBITSZBY16 = clog2(XARCHBITSZ/16);
+localparam XADDRBITSZ = (XARCHBITSZ-CLOG2XARCHBITSZBY8);
+
+localparam CLOG2XARCHBITSZBY8DIFF = (CLOG2XARCHBITSZBY8-CLOG2ARCHBITSZBY8);
 
 input wire rst_i;
 
@@ -189,10 +201,10 @@ input wire clk_i;
 input wire clk_muldiv_i;
 
 output reg[2 -1 : 0] pi1_op_o; // ### declared as reg so as to be usable by verilog within the always block.
-output reg[ADDRBITSZ -1 : 0] pi1_addr_o; // ### declared as reg so as to be usable by verilog within the always block.
-output reg[ARCHBITSZ -1 : 0] pi1_data_o; // ### declared as reg so as to be usable by verilog within the always block.
-input wire[ARCHBITSZ -1 : 0] pi1_data_i;
-output reg[(ARCHBITSZ/8) -1 : 0] pi1_sel_o; // ### declared as reg so as to be usable by verilog within the always block.
+output reg[XADDRBITSZ -1 : 0] pi1_addr_o; // ### declared as reg so as to be usable by verilog within the always block.
+output reg[XARCHBITSZ -1 : 0] pi1_data_o; // ### declared as reg so as to be usable by verilog within the always block.
+input wire[XARCHBITSZ -1 : 0] pi1_data_i;
+output reg[(XARCHBITSZ/8) -1 : 0] pi1_sel_o; // ### declared as reg so as to be usable by verilog within the always block.
 input wire pi1_rdy_i;
 
 input wire intrqst_i;
@@ -250,6 +262,7 @@ localparam ADDRWITHINPAGEBITSZ = (12-CLOG2ARCHBITSZBY8);
 localparam PAGENUMBITSZ = (ARCHBITSZ-12);
 
 localparam ARCHBITSZMAX = 64;
+localparam XARCHBITSZMAX = 256; // TODO: Support all the way up to 1024 ...
 
 `include "./opcodes.pu.v"
 `include "./netsandregs.pu.v"
