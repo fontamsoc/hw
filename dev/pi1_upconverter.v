@@ -46,7 +46,7 @@ input  wire [MARCHBITSZ -1 : 0]     m_pi1_data_i;
 output wire [MARCHBITSZ -1 : 0]     m_pi1_data_o;
 input  wire [(MARCHBITSZ/8) -1 : 0] m_pi1_sel_i;
 output wire                         m_pi1_rdy_o;
-output wire [MADDRBITSZ -1 : 0]     m_pi1_mapsz_o;
+output wire [MARCHBITSZ -1 : 0]     m_pi1_mapsz_o;
 
 output wire [2 -1 : 0]              s_pi1_op_o;
 output wire [SADDRBITSZ -1 : 0]     s_pi1_addr_o;
@@ -54,7 +54,7 @@ output wire [SARCHBITSZ -1 : 0]     s_pi1_data_o;
 input  wire [SARCHBITSZ -1 : 0]     s_pi1_data_i;
 output wire [(SARCHBITSZ/8) -1 : 0] s_pi1_sel_o;
 input wire                          s_pi1_rdy_i;
-input wire  [SADDRBITSZ -1 : 0]     s_pi1_mapsz_i;
+input wire  [SARCHBITSZ -1 : 0]     s_pi1_mapsz_i;
 
 assign s_pi1_op_o = m_pi1_op_i;
 
@@ -82,17 +82,16 @@ generate if (MARCHBITSZ < SARCHBITSZ) begin :gen_pi1_upconverter0
 	assign s_pi1_sel_o = ({{((SARCHBITSZ-MARCHBITSZ)/8){1'b0}}, m_pi1_sel_i} <<
 		(m_pi1_addr_i[(CLOG2SARCHBITSZBY8-CLOG2MARCHBITSZBY8) -1 : 0]*(MARCHBITSZ/8)));
 
-	assign m_pi1_mapsz_o = {s_pi1_mapsz_i, {(CLOG2SARCHBITSZBY8-CLOG2MARCHBITSZBY8){1'b0}}};
-
 end else begin  :gen_pi1_upconverter1
 
 	assign s_pi1_addr_o = m_pi1_addr_i;
 	assign s_pi1_data_o = m_pi1_data_i;
 	assign m_pi1_data_o = s_pi1_data_i;
 	assign s_pi1_sel_o = m_pi1_sel_i;
-	assign m_pi1_mapsz_o = s_pi1_mapsz_i;
 
 end endgenerate
+
+assign m_pi1_mapsz_o = s_pi1_mapsz_i;
 
 endmodule
 

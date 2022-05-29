@@ -212,12 +212,12 @@ input  wire [XARCHBITSZ -1 : 0]     pi1_data_i;
 output wire [XARCHBITSZ -1 : 0]     pi1_data_o;
 input  wire [(XARCHBITSZ/8) -1 : 0] pi1_sel_i;
 output wire                         pi1_rdy_o;
-output wire [XADDRBITSZ -1 : 0]     pi1_mapsz_o;
+output wire [XARCHBITSZ -1 : 0]     pi1_mapsz_o;
 
 output reg  intrqst_o = 0;
 input  wire intrdy_i;
 
-assign pi1_mapsz_o = (PHYBLKSZ/(XARCHBITSZ/8));
+assign pi1_mapsz_o = PHYBLKSZ;
 
 localparam CLOG2PHYBLKSZ = clog2(PHYBLKSZ);
 

@@ -16,7 +16,7 @@ wire [ARCHBITSZ -1 : 0]     s_pi1_data_w0 [PI1SLAVECOUNT -1 : 0];
 wire [ARCHBITSZ -1 : 0]     s_pi1_data_w1 [PI1SLAVECOUNT -1 : 0];
 wire [(ARCHBITSZ/8) -1 : 0] s_pi1_sel_w   [PI1SLAVECOUNT -1 : 0];
 wire                        s_pi1_rdy_w   [PI1SLAVECOUNT -1 : 0];
-wire [ADDRBITSZ -1 : 0]     s_pi1_mapsz_w [PI1SLAVECOUNT -1 : 0];
+wire [ARCHBITSZ -1 : 0]     s_pi1_mapsz_w [PI1SLAVECOUNT -1 : 0];
 
 wire [(2 * PI1MASTERCOUNT) -1 : 0]             m_pi1_op_w_flat;
 wire [(ADDRBITSZ * PI1MASTERCOUNT) -1 : 0]     m_pi1_addr_w_flat;
@@ -31,7 +31,7 @@ wire [(ARCHBITSZ * PI1SLAVECOUNT) -1 : 0]     s_pi1_data_w1_flat;
 wire [(ARCHBITSZ * PI1SLAVECOUNT) -1 : 0]     s_pi1_data_w0_flat;
 wire [((ARCHBITSZ/8) * PI1SLAVECOUNT) -1 : 0] s_pi1_sel_w_flat;
 wire [PI1SLAVECOUNT -1 : 0]                   s_pi1_rdy_w_flat;
-wire [(ADDRBITSZ * PI1SLAVECOUNT) -1 : 0]     s_pi1_mapsz_w_flat;
+wire [(ARCHBITSZ * PI1SLAVECOUNT) -1 : 0]     s_pi1_mapsz_w_flat;
 
 genvar gen_m_pi1_op_w_flat_idx;
 generate for (gen_m_pi1_op_w_flat_idx = 0; gen_m_pi1_op_w_flat_idx < PI1MASTERCOUNT; gen_m_pi1_op_w_flat_idx = gen_m_pi1_op_w_flat_idx + 1) begin :gen_m_pi1_op_w_flat
@@ -95,7 +95,7 @@ end endgenerate
 
 genvar gen_s_pi1_mapsz_w_flat_idx;
 generate for (gen_s_pi1_mapsz_w_flat_idx = 0; gen_s_pi1_mapsz_w_flat_idx < PI1SLAVECOUNT; gen_s_pi1_mapsz_w_flat_idx = gen_s_pi1_mapsz_w_flat_idx + 1) begin :gen_s_pi1_mapsz_w_flat
-assign s_pi1_mapsz_w_flat[((gen_s_pi1_mapsz_w_flat_idx+1) * ADDRBITSZ) -1 : gen_s_pi1_mapsz_w_flat_idx * ADDRBITSZ] = s_pi1_mapsz_w[gen_s_pi1_mapsz_w_flat_idx];
+assign s_pi1_mapsz_w_flat[((gen_s_pi1_mapsz_w_flat_idx+1) * ARCHBITSZ) -1 : gen_s_pi1_mapsz_w_flat_idx * ARCHBITSZ] = s_pi1_mapsz_w[gen_s_pi1_mapsz_w_flat_idx];
 end endgenerate
 
 pi1 #(

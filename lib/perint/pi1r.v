@@ -49,10 +49,12 @@
 // 	It must be less than SLAVECOUNT.
 //
 // FIRSTSLAVEADDR
-// 	Address of slave device at index 0.
+// 	Byte address of slave device at index 0.
 
 `ifndef PI1R_V
 `define PI1R_V
+
+`include "lib/addr.v"
 
 module pi1r (
 
@@ -108,7 +110,7 @@ input  wire [(ARCHBITSZ * SLAVECOUNT) -1 : 0]     s_data_i_flat;
 output wire [(ARCHBITSZ * SLAVECOUNT) -1 : 0]     s_data_o_flat;
 output wire [((ARCHBITSZ/8) * SLAVECOUNT) -1 : 0] s_sel_o_flat;
 input  wire [SLAVECOUNT -1 : 0]                   s_rdy_i_flat;
-input  wire [(ADDRBITSZ * SLAVECOUNT) -1 : 0]     s_mapsz_i_flat;
+input  wire [(ARCHBITSZ * SLAVECOUNT) -1 : 0]     s_mapsz_i_flat;
 
 wire [2 -1 : 0] masterop [MASTERCOUNT -1 : 0];
 genvar gen_masterop_idx;
@@ -182,10 +184,10 @@ generate for (gen_slaverdy_idx = 0; gen_slaverdy_idx < SLAVECOUNT; gen_slaverdy_
 assign slaverdy[gen_slaverdy_idx] = s_rdy_i_flat[((gen_slaverdy_idx+1) * 1) -1 : gen_slaverdy_idx * 1];
 end endgenerate
 
-wire [ADDRBITSZ -1 : 0] slavemapsz [SLAVECOUNT -1 : 0];
+wire [ARCHBITSZ -1 : 0] slavemapsz [SLAVECOUNT -1 : 0];
 genvar gen_slavemapsz_idx;
 generate for (gen_slavemapsz_idx = 0; gen_slavemapsz_idx < SLAVECOUNT; gen_slavemapsz_idx = gen_slavemapsz_idx + 1) begin :gen_slavemapsz
-assign slavemapsz[gen_slavemapsz_idx] = s_mapsz_i_flat[((gen_slavemapsz_idx+1) * ADDRBITSZ) -1 : gen_slavemapsz_idx * ADDRBITSZ];
+assign slavemapsz[gen_slavemapsz_idx] = s_mapsz_i_flat[((gen_slavemapsz_idx+1) * ARCHBITSZ) -1 : gen_slavemapsz_idx * ARCHBITSZ];
 end endgenerate
 
 localparam PINOOP = 2'b00;
@@ -214,7 +216,15 @@ reg [CLOG2MASTERCOUNT -1 : 0] mstrhi;
 
 wire [2 -1 : 0] masteropmasteridx = masterop[masteridx];
 
-wire [ADDRBITSZ -1 : 0] masteraddrmasteridx = masteraddr[masteridx];
+wire [ARCHBITSZ -1 : 0] masteraddrmasteridx;
+
+addr #(
+	.ARCHBITSZ (ARCHBITSZ)
+) addr (
+	 .addr_i (masteraddr[masteridx])
+	,.sel_i  (masterbytsel[masteridx])
+	,.addr_o (masteraddrmasteridx)
+);
 
 wire masterrdymasteridx = masterrdy[masteridx];
 
@@ -257,13 +267,13 @@ always @ (posedge clk_i) begin
 		masteridx <= 0;
 end
 
-reg [ADDRBITSZ -1 : 0] addrspace [SLAVECOUNT -1 : 0];
+reg [ARCHBITSZ -1 : 0] addrspace [SLAVECOUNT -1 : 0];
 reg addrspacerdy;
 
 reg [CLOG2SLAVECOUNT -1 : 0] slaveidx;
-reg [ADDRBITSZ -1 : 0] slavemapszslaveidx;
-reg [ADDRBITSZ -1 : 0] addrspaceslaveidx;
-reg [ADDRBITSZ -1 : 0] addrspaceslaveidxlo; // Also used to initialize addrspace.
+reg [ARCHBITSZ -1 : 0] slavemapszslaveidx;
+reg [ARCHBITSZ -1 : 0] addrspaceslaveidx;
+reg [ARCHBITSZ -1 : 0] addrspaceslaveidxlo; // Also used to initialize addrspace.
 reg slaveidxrdy;
 reg slaveidxbsy;
 
@@ -275,7 +285,7 @@ wire slaveidxinvalid = (masteropmasteridx != PINOOP &&
 	!(masteraddrmasteridx >= addrspaceslaveidxlo &&
 	  masteraddrmasteridx <= addrspaceslaveidx));
 
-wire [ADDRBITSZ -1 : 0] slavemapszslaveidxplusaddrspaceslaveidxlo = (slavemapszslaveidx + addrspaceslaveidxlo);
+wire [ARCHBITSZ -1 : 0] slavemapszslaveidxplusaddrspaceslaveidxlo = (slavemapszslaveidx + addrspaceslaveidxlo);
 
 always @ (posedge clk_i) begin
 
@@ -446,13 +456,13 @@ generate for (gen_slaveop_idx = 0; gen_slaveop_idx < SLAVECOUNT; gen_slaveop_idx
 assign slaveop[gen_slaveop_idx] = (slaveidx == gen_slaveop_idx && nextoprdy) ? masteropmasteridx : PINOOP;
 end endgenerate
 
-wire [ADDRBITSZ -1 : 0] slaveaddri = (masteraddrmasteridx-((addrspaceslaveidx+1'b1)-slavemapszslaveidx));
+wire [ARCHBITSZ -1 : 0] slaveaddri = (masteraddrmasteridx-((addrspaceslaveidx+1'b1)-slavemapszslaveidx));
 genvar gen_slaveaddr_idx;
 generate for (gen_slaveaddr_idx = 0; gen_slaveaddr_idx < SLAVECOUNT; gen_slaveaddr_idx = gen_slaveaddr_idx + 1) begin :gen_slaveaddr
 // Combinational logic that set slaveaddr.
 // Note that signals of slaveaddr are don't-care
 // when there are not being indexed by slaveidx.
-assign slaveaddr[gen_slaveaddr_idx] = slaveaddri;
+assign slaveaddr[gen_slaveaddr_idx] = slaveaddri[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8];
 end endgenerate
 
 wire [ARCHBITSZ -1 : 0] masterdatimasteridx = masterdati[masteridx];

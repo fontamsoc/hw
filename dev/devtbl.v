@@ -63,10 +63,10 @@ input  wire [XARCHBITSZ -1 : 0]     pi1_data_i;
 output wire [XARCHBITSZ -1 : 0]     pi1_data_o;
 input  wire [(XARCHBITSZ/8) -1 : 0] pi1_sel_i;
 output wire                         pi1_rdy_o;
-output reg  [XADDRBITSZ -1 : 0]     pi1_mapsz_o;
+output reg  [XARCHBITSZ -1 : 0]     pi1_mapsz_o;
 
 input wire [(XARCHBITSZ * DEVMAPCNT) -1 : 0] devtbl_id_flat_i;
-input wire [(XADDRBITSZ * DEVMAPCNT) -1 : 0] devtbl_mapsz_flat_i /* verilator lint_off UNOPTFLAT */;
+input wire [(XARCHBITSZ * DEVMAPCNT) -1 : 0] devtbl_mapsz_flat_i /* verilator lint_off UNOPTFLAT */;
 input wire [DEVMAPCNT -1 : 0]                devtbl_useintr_flat_i;
 
 assign pi1_rdy_o = 1;
@@ -82,16 +82,16 @@ addr #(
 );
 
 wire [XARCHBITSZ -1 : 0] devtbl_id_w      [DEVMAPCNT -1 : 0];
-wire [XADDRBITSZ -1 : 0] devtbl_mapsz_w   [DEVMAPCNT -1 : 0];
+wire [XARCHBITSZ -1 : 0] devtbl_mapsz_w   [DEVMAPCNT -1 : 0];
 wire [DEVMAPCNT -1 : 0]  devtbl_useintr_w;
 
-localparam BLOCKDEVMAPSZ = (512/(XARCHBITSZ/8));
+localparam BLOCKDEVMAPSZ = 512;
 
-reg [XADDRBITSZ -1 : 0] pi1_mapsz_o_; // ### declared as reg so as to be usable by verilog within the always block.
-reg [XADDRBITSZ -1 : 0] gen_pi1_mapsz_o_idx_max; // ### declared as reg so as to be usable by verilog within the always block.
+reg [XARCHBITSZ -1 : 0] pi1_mapsz_o_; // ### declared as reg so as to be usable by verilog within the always block.
+reg [XARCHBITSZ -1 : 0] gen_pi1_mapsz_o_idx_max; // ### declared as reg so as to be usable by verilog within the always block.
 integer gen_pi1_mapsz_o_idx;
 always @* begin
-	pi1_mapsz_o_ = (4096/(XARCHBITSZ/8) - BLOCKDEVMAPSZ); /* first 2 devices must be 512B-Block and DevTbl devices */
+	pi1_mapsz_o_ = (4096 - BLOCKDEVMAPSZ); /* first 2 devices must be 512B-Block and DevTbl devices */
 	gen_pi1_mapsz_o_idx_max = DEVMAPCNT;
 	for (
 		gen_pi1_mapsz_o_idx = 2;
@@ -111,7 +111,7 @@ end endgenerate
 
 genvar gen_devtbl_mapsz_w_idx;
 generate for (gen_devtbl_mapsz_w_idx = 2; gen_devtbl_mapsz_w_idx < DEVMAPCNT; gen_devtbl_mapsz_w_idx = gen_devtbl_mapsz_w_idx + 1) begin :gen_devtbl_mapsz_w
-assign devtbl_mapsz_w[gen_devtbl_mapsz_w_idx] = devtbl_mapsz_flat_i[((gen_devtbl_mapsz_w_idx+1) * XADDRBITSZ) -1 : gen_devtbl_mapsz_w_idx * XADDRBITSZ];
+assign devtbl_mapsz_w[gen_devtbl_mapsz_w_idx] = devtbl_mapsz_flat_i[((gen_devtbl_mapsz_w_idx+1) * XARCHBITSZ) -1 : gen_devtbl_mapsz_w_idx * XARCHBITSZ];
 end endgenerate
 
 assign devtbl_useintr_w = devtbl_useintr_flat_i;
@@ -148,9 +148,8 @@ always @ (posedge clk_i) begin
 			data_w0 <= devtbl_id_w[addrby2];
 		else // Return DevMapSz and DevUseIntr.
 			data_w0 <= {(
-				(addrby2 == 0) ? BLOCKDEVMAPSZ[ADDRBITSZ -1 : 0] :
-				(addrby2 == 1) ? pi1_mapsz_o : devtbl_mapsz_w[addrby2]),
-				{(CLOG2XARCHBITSZBY8-1){1'b0}},
+				(addrby2 == 0) ? BLOCKDEVMAPSZ :
+				(addrby2 == 1) ? pi1_mapsz_o : devtbl_mapsz_w[addrby2])>>1,
 				devtbl_useintr_w[addrby2]};
 	end else if (pi1_rdy_o && pi1_op_i == PIRWOP) begin
 		if (addr_w == 0) begin // INFO.

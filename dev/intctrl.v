@@ -127,7 +127,7 @@ input  wire [ARCHBITSZ -1 : 0]     pi1_data_i;
 output reg  [ARCHBITSZ -1 : 0]     pi1_data_o = {ARCHBITSZ{1'b0}};
 input  wire [(ARCHBITSZ/8) -1 : 0] pi1_sel_i;  /* Not used */
 output wire                        pi1_rdy_o;
-output wire [ADDRBITSZ -1 : 0]     pi1_mapsz_o;
+output wire [ARCHBITSZ -1 : 0]     pi1_mapsz_o;
 
 output wire [INTDSTCOUNT -1 : 0] intrqstdst_o;
 input  wire [INTDSTCOUNT -1 : 0] intrdydst_i;
@@ -138,8 +138,8 @@ output wire [INTSRCCOUNT -1 : 0] intrdysrc_o;
 
 assign pi1_rdy_o   = 1; // The output pi1_rdy_o is always 1 because all memory operations complete immediately.
 
-// Actual mapsz is 1, but aligning to 64bits.
-assign pi1_mapsz_o = ((ARCHBITSZ<64)?(64/ARCHBITSZ):1);
+// Actual mapsz is (1*(ARCHBITSZ/8)), but aligning to 64bits.
+assign pi1_mapsz_o = (((ARCHBITSZ<64)?(64/ARCHBITSZ):1)*(ARCHBITSZ/8));
 
 // Registers used to index respectively the source and destination of an interrupt.
 reg [CLOG2INTSRCCOUNT -1 : 0] srcindex = {CLOG2INTSRCCOUNT{1'b0}};

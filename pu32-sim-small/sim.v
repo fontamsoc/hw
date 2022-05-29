@@ -46,7 +46,7 @@ localparam PI1RMASTERCOUNT       = (M_PI1R_LAST + 1);
 localparam PI1RSLAVECOUNT        = (S_PI1R_INVALIDDEV + 1);
 localparam PI1RDEFAULTSLAVEINDEX = S_PI1R_INVALIDDEV;
 localparam PI1RFIRSTSLAVEADDR    = // Set such that memory starts at 0x1000.
-	((('h1000/(ARCHBITSZ/8))/*4KB*/) - (2/*UART_MAPSZ*/));
+	('h1000 - (8/*UART_MAPSZ*/));
 localparam PI1RARCHBITSZ         = ARCHBITSZ;
 localparam CLOG2PI1RARCHBITSZBY8 = clog2(PI1RARCHBITSZ/8);
 localparam PI1RADDRBITSZ         = (PI1RARCHBITSZ-CLOG2PI1RARCHBITSZBY8);
@@ -67,7 +67,7 @@ wire pi1r_clk_w = clk_w;
 // 	input  [PI1RARCHBITSZ -1 : 0]     s_pi1r_data_w1 [PI1RSLAVECOUNT -1 : 0];
 // 	output [(PI1RARCHBITSZ/8) -1 : 0] s_pi1r_sel_w   [PI1RSLAVECOUNT -1 : 0];
 // 	input                             s_pi1r_rdy_w   [PI1RSLAVECOUNT -1 : 0];
-// 	input  [PI1RADDRBITSZ -1 : 0]     s_pi1r_mapsz_w [PI1RSLAVECOUNT -1 : 0];
+// 	input  [PI1RARCHBITSZ -1 : 0]     s_pi1r_mapsz_w [PI1RSLAVECOUNT -1 : 0];
 `include "lib/perint/inst.pi1r.v"
 
 multipu #(
@@ -134,7 +134,7 @@ smem #(
 );
 
 // PI1RDEFAULTSLAVEINDEX to catch invalid physical address space access.
-localparam INVALIDDEVMAPSZ = ('h1000/(PI1RARCHBITSZ/8)) /* 4KB */;
+localparam INVALIDDEVMAPSZ = ('h1000/* 4KB */);
 //s_pi1r_op_w[S_PI1R_INVALIDDEV];
 //s_pi1r_addr_w[S_PI1R_INVALIDDEV];
 //s_pi1r_data_w0[S_PI1R_INVALIDDEV];
