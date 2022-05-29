@@ -36,6 +36,8 @@ localparam SRCFILE =
 	ARCHBITSZ == 16 ? "bootldr16.hex" :
 	ARCHBITSZ == 32 ? "bootldr32.hex" :
 	ARCHBITSZ == 64 ? "bootldr64.hex" :
+	ARCHBITSZ == 128 ? "bootldr128.hex" :
+	ARCHBITSZ == 256 ? "bootldr256.hex" :
 	                  "";
 parameter SIZE = (16/(ARCHBITSZ/16));
 
