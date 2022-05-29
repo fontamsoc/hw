@@ -73,9 +73,9 @@ input  wire [ARCHBITSZ -1 : 0]     pi1_data_i;
 output reg  [ARCHBITSZ -1 : 0]     pi1_data_o;
 input  wire [(ARCHBITSZ/8) -1 : 0] pi1_sel_i;
 output wire                        pi1_rdy_o;
-output wire [ADDRBITSZ -1 : 0]     pi1_mapsz_o;
+output wire [ARCHBITSZ -1 : 0]     pi1_mapsz_o;
 
-assign pi1_mapsz_o = SIZE;
+assign pi1_mapsz_o = (SIZE*(ARCHBITSZ/8));
 
 localparam CNTRBITSZ = clog2(DELAY);
 

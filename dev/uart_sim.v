@@ -44,15 +44,15 @@ input  wire [ARCHBITSZ -1 : 0]     pi1_data_i;
 output reg  [ARCHBITSZ -1 : 0]     pi1_data_o = 0;
 input  wire [(ARCHBITSZ/8) -1 : 0] pi1_sel_i;  /* not used */
 output wire                        pi1_rdy_o;
-output wire [ADDRBITSZ -1 : 0]     pi1_mapsz_o;
+output wire [ARCHBITSZ -1 : 0]     pi1_mapsz_o;
 
 output wire intrqst_o;
 input  wire intrdy_i;
 
 assign pi1_rdy_o = 1;
 
-// Actual mapsz is 1, but aligning to 64bits.
-assign pi1_mapsz_o = ((ARCHBITSZ<64)?(64/ARCHBITSZ):1);
+// Actual mapsz is (1*(ARCHBITSZ/8)), but aligning to 64bits.
+assign pi1_mapsz_o = (((ARCHBITSZ<64)?(64/ARCHBITSZ):1)*(ARCHBITSZ/8));
 
 reg [(CLOG2BUFSZ +1) -1 : 0] rx_usage_r = 0;
 

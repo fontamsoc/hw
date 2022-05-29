@@ -217,12 +217,12 @@ wire pi1r_clk_w = clk_w;
 // 	input  [PI1RARCHBITSZ -1 : 0]     s_pi1r_data_w1 [PI1RSLAVECOUNT -1 : 0];
 // 	output [(PI1RARCHBITSZ/8) -1 : 0] s_pi1r_sel_w   [PI1RSLAVECOUNT -1 : 0];
 // 	input                             s_pi1r_rdy_w   [PI1RSLAVECOUNT -1 : 0];
-// 	input  [PI1RADDRBITSZ -1 : 0]     s_pi1r_mapsz_w [PI1RSLAVECOUNT -1 : 0];
+// 	input  [PI1RARCHBITSZ -1 : 0]     s_pi1r_mapsz_w [PI1RSLAVECOUNT -1 : 0];
 `include "lib/perint/inst.pi1r.v"
 
 wire [(PI1RARCHBITSZ * PI1RSLAVECOUNT) -1 : 0] devtbl_id_flat_w;
 wire [PI1RARCHBITSZ -1 : 0]                    devtbl_id_w           [PI1RSLAVECOUNT -1 : 0];
-wire [(PI1RADDRBITSZ * PI1RSLAVECOUNT) -1 : 0] devtbl_mapsz_flat_w;
+wire [(PI1RARCHBITSZ * PI1RSLAVECOUNT) -1 : 0] devtbl_mapsz_flat_w;
 wire [PI1RSLAVECOUNT -1 : 0]                   devtbl_useintr_flat_w;
 wire [PI1RSLAVECOUNT -1 : 0]                   devtbl_useintr_w;
 genvar gen_devtbl_id_flat_w_idx;
@@ -273,7 +273,7 @@ multipu #(
 	,.halted_o  (intbestdst_w)
 
 	,.rstaddr_i  ((('h1000)>>1) +
-		(s_pi1r_mapsz_w[S_PI1R_RAM]<<(CLOG2PI1RARCHBITSZBY8-1)))
+		(s_pi1r_mapsz_w[S_PI1R_RAM]>>1))
 	,.rstaddr2_i (('h8000-(14/*within parkpu()*/))>>1)
 
 	,.id_i (0)
@@ -570,10 +570,9 @@ wb4sdram #(
 	,.ack_o   (wb4_ack_w)
 );
 
-// (SDRAMDQBITSIZE * SDRAMBURSTLENGTH) must be >= PI1RARCHBITSZ.
-assign s_pi1r_mapsz_w[S_PI1R_RAM] =
-	(1 << ((CLOG2SDRAMROWCOUNT + CLOG2SDRAMBANKCOUNT + (CLOG2SDRAMCOLUMNCOUNT - CLOG2SDRAMBURSTLENGTH)) +
-		(((SDRAMDQBITSIZE * SDRAMBURSTLENGTH) > PI1RARCHBITSZ) ? clog2((SDRAMDQBITSIZE * SDRAMBURSTLENGTH) / PI1RARCHBITSZ) : 0)));
+assign s_pi1r_mapsz_w[S_PI1R_RAM] = (1 << (
+	(CLOG2SDRAMROWCOUNT + CLOG2SDRAMBANKCOUNT + (CLOG2SDRAMCOLUMNCOUNT - CLOG2SDRAMBURSTLENGTH)) +
+	clog2((SDRAMDQBITSIZE * SDRAMBURSTLENGTH) / 8)));
 
 assign devtbl_id_w     [S_PI1R_RAM] = 1;
 assign devtbl_useintr_w[S_PI1R_RAM] = 0;
@@ -599,7 +598,7 @@ assign devtbl_id_w     [S_PI1R_BOOTLDR] = 0;
 assign devtbl_useintr_w[S_PI1R_BOOTLDR] = 0;
 
 // PI1RDEFAULTSLAVEINDEX to catch invalid physical address space access.
-localparam INVALIDDEVMAPSZ = ('h1000/(PI1RARCHBITSZ/8)) /* 4KB */;
+localparam INVALIDDEVMAPSZ = ('h1000/* 4KB */);
 //s_pi1r_op_w[S_PI1R_INVALIDDEV];
 //s_pi1r_addr_w[S_PI1R_INVALIDDEV];
 //s_pi1r_data_w0[S_PI1R_INVALIDDEV];

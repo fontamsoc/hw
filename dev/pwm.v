@@ -139,7 +139,7 @@ input  wire [ARCHBITSZ -1 : 0]     pi1_data_i;
 output reg  [ARCHBITSZ -1 : 0]     pi1_data_o;
 input  wire [(ARCHBITSZ/8) -1 : 0] pi1_sel_i; /* not used */
 output wire                        pi1_rdy_o;
-output wire [ADDRBITSZ -1 : 0]     pi1_mapsz_o;
+output wire [ARCHBITSZ -1 : 0]     pi1_mapsz_o;
 
 input  wire [IOCOUNT -1 : 0] i;
 output wire [IOCOUNT -1 : 0] o;
@@ -148,7 +148,7 @@ output wire [IOCOUNT -1 : 0] o;
 // input "i" is an input.
 output reg  [IOCOUNT -1 : 0] t;
 
-assign pi1_mapsz_o = (IOCOUNT + (((IOCOUNT*ARCHBITSZ)%64)/ARCHBITSZ)/* align to 64bits */);
+assign pi1_mapsz_o = ((IOCOUNT+(((IOCOUNT*ARCHBITSZ)%64)/ARCHBITSZ)/* align to 64bits */)*(ARCHBITSZ/8));
 
 // Registers which hold whether a corresponding IO is
 // to be pulse-width-modulated or pulse-density-modulated

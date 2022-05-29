@@ -162,14 +162,14 @@ input  wire [ARCHBITSZ -1 : 0]     s_pi1_data_i;
 output reg  [ARCHBITSZ -1 : 0]     s_pi1_data_o;
 input  wire [(ARCHBITSZ/8) -1 : 0] s_pi1_sel_i;  /* not used */
 output wire                        s_pi1_rdy_o;
-output wire [ADDRBITSZ -1 : 0]     s_pi1_mapsz_o;
+output wire [ARCHBITSZ -1 : 0]     s_pi1_mapsz_o;
 
 input wire wait_i;
 
 output wire intrqst_o;
 input  wire intrdy_i;
 
-assign s_pi1_mapsz_o = 4;
+assign s_pi1_mapsz_o = (4*(ARCHBITSZ/8));
 
 localparam PINOOP = 2'b00;
 localparam PIWROP = 2'b01;

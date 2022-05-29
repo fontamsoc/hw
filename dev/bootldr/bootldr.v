@@ -39,7 +39,7 @@ localparam SRCFILE =
 	ARCHBITSZ == 128 ? "bootldr128.hex" :
 	ARCHBITSZ == 256 ? "bootldr256.hex" :
 	                  "";
-parameter SIZE = (16/(ARCHBITSZ/16));
+parameter SIZE = ((16/*instruction count*/*2)/(ARCHBITSZ/8));
 
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
 
@@ -53,11 +53,11 @@ input  wire [ARCHBITSZ -1 : 0]     pi1_data_i; /* not used */
 output reg  [ARCHBITSZ -1 : 0]     pi1_data_o;
 input  wire [(ARCHBITSZ/8) -1 : 0] pi1_sel_i; /* not used */
 output wire                        pi1_rdy_o;
-output wire [ADDRBITSZ -1 : 0]     pi1_mapsz_o;
+output wire [ARCHBITSZ -1 : 0]     pi1_mapsz_o;
 
 assign pi1_rdy_o = 1'b1;
 
-assign pi1_mapsz_o = SIZE;
+assign pi1_mapsz_o = (SIZE*(ARCHBITSZ/8));
 
 localparam PINOOP = 2'b00;
 localparam PIWROP = 2'b01;
