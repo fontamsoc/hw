@@ -125,5 +125,5 @@ pi1 #(
 	,.s_data_i_flat  (s_pi1_data_w1_flat)
 	,.s_sel_o_flat   (s_pi1_sel_w_flat)
 	,.s_rdy_i_flat   (s_pi1_rdy_w_flat)
-	,.s_mapsz_o_flat (s_pi1_mapsz_w_flat)
+	,.s_mapsz_i_flat (s_pi1_mapsz_w_flat)
 );
