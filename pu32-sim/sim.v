@@ -11,6 +11,8 @@
 
 `include "lib/perint/pi1r.v"
 
+`include "dev/pi1_downconverter.v"
+
 `define PUMMU
 `define PUHPTW
 `define PUMULDIVCLK
@@ -325,7 +327,7 @@ end
 
 dma #(
 
-	 .ARCHBITSZ  (ARCHBITSZ)
+	 .ARCHBITSZ  (PI1RARCHBITSZ)
 	,.CHANNELCNT (1)
 
 ) dma (
@@ -358,6 +360,34 @@ dma #(
 assign devtbl_id_w     [S_PI1R_DMA] = 2;
 assign devtbl_useintr_w[S_PI1R_DMA] = 1;
 
+wire [2 -1 : 0]             intctrl_op_w;
+wire [ADDRBITSZ -1 : 0]     intctrl_addr_w;
+wire [(ARCHBITSZ/8) -1 : 0] intctrl_sel_w;
+wire [ARCHBITSZ -1 : 0]     intctrl_data_w1;
+wire [ARCHBITSZ -1 : 0]     intctrl_data_w0;
+wire                        intctrl_rdy_w;
+wire [ADDRBITSZ -1 : 0]     intctrl_mapsz_w;
+pi1_downconverter #(
+	 .MARCHBITSZ (PI1RARCHBITSZ)
+	,.SARCHBITSZ (ARCHBITSZ)
+) pi1_downconverter_intctrl (
+	 .clk_i (pi1r_clk_w)
+	,.m_pi1_op_i (s_pi1r_op_w[S_PI1R_INTCTRL])
+	,.m_pi1_addr_i (s_pi1r_addr_w[S_PI1R_INTCTRL])
+	,.m_pi1_data_i (s_pi1r_data_w0[S_PI1R_INTCTRL])
+	,.m_pi1_data_o (s_pi1r_data_w1[S_PI1R_INTCTRL])
+	,.m_pi1_sel_i (s_pi1r_sel_w[S_PI1R_INTCTRL])
+	,.m_pi1_rdy_o (s_pi1r_rdy_w[S_PI1R_INTCTRL])
+	,.m_pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_INTCTRL])
+	,.s_pi1_op_o (intctrl_op_w)
+	,.s_pi1_addr_o (intctrl_addr_w)
+	,.s_pi1_data_o (intctrl_data_w1)
+	,.s_pi1_data_i (intctrl_data_w0)
+	,.s_pi1_sel_o (intctrl_sel_w)
+	,.s_pi1_rdy_i (intctrl_rdy_w)
+	,.s_pi1_mapsz_i (intctrl_mapsz_w)
+);
+
 intctrl #(
 
 	 .ARCHBITSZ   (ARCHBITSZ)
@@ -370,13 +400,13 @@ intctrl #(
 
 	,.clk_i (pi1r_clk_w)
 
-	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_INTCTRL])
-	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_INTCTRL])
-	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_INTCTRL])
-	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_INTCTRL])
-	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_INTCTRL])
-	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_INTCTRL])
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_INTCTRL])
+	,.pi1_op_i    (intctrl_op_w)
+	,.pi1_addr_i  (intctrl_addr_w)
+	,.pi1_data_i  (intctrl_data_w1)
+	,.pi1_data_o  (intctrl_data_w0)
+	,.pi1_sel_i   (intctrl_sel_w)
+	,.pi1_rdy_o   (intctrl_rdy_w)
+	,.pi1_mapsz_o (intctrl_mapsz_w)
 
 	,.intrqstdst_o (intrqstdst_w)
 	,.intrdydst_i  (intrdydst_w)
@@ -389,6 +419,34 @@ intctrl #(
 assign devtbl_id_w     [S_PI1R_INTCTRL] = 3;
 assign devtbl_useintr_w[S_PI1R_INTCTRL] = 0;
 
+wire [2 -1 : 0]             uart_op_w;
+wire [ADDRBITSZ -1 : 0]     uart_addr_w;
+wire [(ARCHBITSZ/8) -1 : 0] uart_sel_w;
+wire [ARCHBITSZ -1 : 0]     uart_data_w1;
+wire [ARCHBITSZ -1 : 0]     uart_data_w0;
+wire                        uart_rdy_w;
+wire [ADDRBITSZ -1 : 0]     uart_mapsz_w;
+pi1_downconverter #(
+	 .MARCHBITSZ (PI1RARCHBITSZ)
+	,.SARCHBITSZ (ARCHBITSZ)
+) pi1_downconverter_uart (
+	 .clk_i (pi1r_clk_w)
+	,.m_pi1_op_i (s_pi1r_op_w[S_PI1R_UART])
+	,.m_pi1_addr_i (s_pi1r_addr_w[S_PI1R_UART])
+	,.m_pi1_data_i (s_pi1r_data_w0[S_PI1R_UART])
+	,.m_pi1_data_o (s_pi1r_data_w1[S_PI1R_UART])
+	,.m_pi1_sel_i (s_pi1r_sel_w[S_PI1R_UART])
+	,.m_pi1_rdy_o (s_pi1r_rdy_w[S_PI1R_UART])
+	,.m_pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_UART])
+	,.s_pi1_op_o (uart_op_w)
+	,.s_pi1_addr_o (uart_addr_w)
+	,.s_pi1_data_o (uart_data_w1)
+	,.s_pi1_data_i (uart_data_w0)
+	,.s_pi1_sel_o (uart_sel_w)
+	,.s_pi1_rdy_i (uart_rdy_w)
+	,.s_pi1_mapsz_i (uart_mapsz_w)
+);
+
 uart_sim #(
 
 	 .ARCHBITSZ (ARCHBITSZ)
@@ -400,13 +458,13 @@ uart_sim #(
 
 	,.clk_i (pi1r_clk_w)
 
-	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_UART])
-	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_UART])
-	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_UART])
-	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_UART])
-	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_UART])
-	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_UART])
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_UART])
+	,.pi1_op_i    (uart_op_w)
+	,.pi1_addr_i  (uart_addr_w)
+	,.pi1_data_i  (uart_data_w1)
+	,.pi1_data_o  (uart_data_w0)
+	,.pi1_sel_i   (uart_sel_w)
+	,.pi1_rdy_o   (uart_rdy_w)
+	,.pi1_mapsz_o (uart_mapsz_w)
 
 	,.intrqst_o (intrqstsrc_w[INTCTRLSRC_UART])
 	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_UART])
@@ -430,7 +488,7 @@ wire                                                           dcache_m_rdy_w;
 
 pi1_upconverter #(
 
-	 .MARCHBITSZ (ARCHBITSZ)
+	 .MARCHBITSZ (PI1RARCHBITSZ)
 	,.SARCHBITSZ (WB4SMEM_ARCHBITSZ)
 
 ) pi1_upconverter (
@@ -595,7 +653,7 @@ assign devtbl_useintr_w[S_PI1R_RAM] = 0;
 
 bootldr #(
 
-	 .ARCHBITSZ (ARCHBITSZ)
+	 .ARCHBITSZ (PI1RARCHBITSZ)
 
 ) bootldr (
 
@@ -627,7 +685,7 @@ assign devtbl_useintr_w[S_PI1R_INVALIDDEV] = 0;
 always @ (posedge pi1r_clk_w) begin
 	if (!rst_i && s_pi1r_op_w[S_PI1R_INVALIDDEV]) begin
 		$write("!!! s_pi1r_op_w[S_PI1R_INVALIDDEV] == 0b%b; s_pi1r_addr_w[S_PI1R_INVALIDDEV] == 0x%x\n",
-			s_pi1r_op_w[S_PI1R_INVALIDDEV], {2'b00, s_pi1r_addr_w[S_PI1R_INVALIDDEV]}<<CLOG2ARCHBITSZBY8);
+			s_pi1r_op_w[S_PI1R_INVALIDDEV], {2'b00, s_pi1r_addr_w[S_PI1R_INVALIDDEV]}<<CLOG2PI1RARCHBITSZBY8);
 		$fflush(1);
 		$finish;
 	end
