@@ -179,6 +179,7 @@ localparam PIRWOP = 2'b11;
 // Commands.
 localparam CMDCHANSEL = 0;
 localparam CMDSETXFER = 1;
+localparam CMDSETBTSZ = 2; // TODO: Set maximum bit size transfer ...
 
 // Registers set by PIWROP through the slave memory interface
 // in order to configure the DMA engine.
@@ -203,7 +204,7 @@ reg [CLOG2CHANNELCNT -1 : 0] selchannel;
 wire [ARCHBITSZ -1 : 0] srcstartaddr_curchannel = srcstartaddr[curchannel];
 wire [ARCHBITSZ -1 : 0] dststartaddr_curchannel = dststartaddr[curchannel];
 
-localparam ARCHBITSZMAX = 64;
+localparam ARCHBITSZMAX = 256;
 wire [ARCHBITSZMAX -1 : 0] srccuraddr_curchannel = srccuraddr[curchannel];
 wire [ARCHBITSZMAX -1 : 0] dstcuraddr_curchannel = dstcuraddr[curchannel];
 
