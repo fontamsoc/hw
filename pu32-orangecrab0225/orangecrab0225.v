@@ -329,14 +329,15 @@ sdcard_spi #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.XARCHBITSZ (PI1RARCHBITSZ)
-	,.PHYCLKFREQ (PI1RCLKFREQ)
+	,.CLKFREQ    (PI1RCLKFREQ)
+	,.PHYCLKFREQ (CLK8XFREQ)
 
 ) sdcard (
 
 	 .rst_i (pi1r_rst_w)
 
 	,.clk_i     (pi1r_clk_w)
-	,.clk_phy_i (pi1r_clk_w)
+	,.clk_phy_i (clk_8x_w)
 
 	,.sclk_o (sdcard_clk)
 	,.di_o   (sdcard_di)

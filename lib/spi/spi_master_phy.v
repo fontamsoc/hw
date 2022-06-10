@@ -109,9 +109,10 @@ reg [CLOG2DATABITSZ -1 : 0] bitcnt = 0;
 assign rdy_o = !bitcnt;
 
 wire [CLOG2SCLKDIVLIMIT -1 : 0] sclkdiv_w;
+wire [CLOG2SCLKDIVLIMIT -1 : 0] sclkdiv_w_minus_one = (sclkdiv_w-1);
 
-assign sclkdiv_w = ((sclkdiv_i == 0) ? (sclkdiv_i+1) : sclkdiv_i);
-assign sclk_o = cntr[sclkdiv_w-1];
+assign sclkdiv_w = ((sclkdiv_i < 1) ? 1 : sclkdiv_i);
+assign sclk_o = cntr[sclkdiv_w_minus_one];
 assign mosi_o = mosibits[DATABITSZ -1];
 
 // Register used to detect a falling edge on "rdy_o".
@@ -141,9 +142,8 @@ assign rcvd_o = ((rdy_o_negedge && !cs_o_negedge) || cs_o_posedge);
 
 always @ (posedge clk_i) begin
 
-	if ((sclkdiv_w == 0) || (cntr == (({{SCLKDIVLIMIT{1'b0}}, 1'b1} << (sclkdiv_w-1)) -1))) begin
+	if (!cs_o && (cntr == (({{SCLKDIVLIMIT{1'b0}}, 1'b1} << sclkdiv_w_minus_one) -1)))
 		data_o <= {data_o[DATABITSZ -2 : 0], miso_i};
-	end
 
 	// When the output "cs_o" is low, this block executes only
 	// after every clock cycle count of ((1 << sclkdiv_w) -1);
@@ -167,7 +167,8 @@ always @ (posedge clk_i) begin
 
 		cntr <= 0;
 
-	end else cntr <= cntr + 1'b1;
+	end else
+		cntr <= cntr + 1'b1;
 
 	rdy_o_sampled <= rdy_o;
 

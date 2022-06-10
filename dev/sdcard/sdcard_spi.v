@@ -166,6 +166,7 @@ module sdcard_spi (
 parameter ARCHBITSZ = 16;
 parameter XARCHBITSZ = 16;
 
+parameter CLKFREQ = 1;
 parameter PHYCLKFREQ = 1;
 `ifdef SIMULATION
 parameter SRCFILE = "";
@@ -316,7 +317,8 @@ sdcard_spi_phy
 `endif
 #(
 	`ifndef SIMULATION
-	 .PHYCLKFREQ (PHYCLKFREQ)
+	 .CLKFREQ    (CLKFREQ)
+	,.PHYCLKFREQ (PHYCLKFREQ)
 	`else
 	 .SRCFILE      (SRCFILE)
 	,.SIMSTORAGESZ (SIMSTORAGESZ)

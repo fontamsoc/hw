@@ -13,6 +13,9 @@
 
 // Parameters:
 //
+// CLKFREQ
+// 	Frequency of the clock input "clk_i" in Hz.
+//
 // PHYCLKFREQ
 // 	Frequency of the clock input "clk_phy_i" in Hz.
 // 	It should be at least 250KHz needed to drive the card's input "sclk_o".
@@ -100,16 +103,23 @@ module sdcard_spi_phy (
 
 `include "lib/clog2.v"
 
-// Clock frequency in Hz.
+parameter CLKFREQ = 250000;
+
+// Phy clock frequency in Hz.
 // It should be at least 250KHz needed to drive the card's input "sclk_o".
 parameter PHYCLKFREQ = 250000;
 
+localparam CLOG2CLKFREQ = clog2(CLKFREQ);
 localparam CLOG2PHYCLKFREQ = clog2(PHYCLKFREQ);
 
-localparam SCLKDIV200000000 = ((PHYCLKFREQ <= 200000000) ? 0 : clog2(PHYCLKFREQ/200000000));
-localparam SCLKDIV100000000 = ((PHYCLKFREQ <= 100000000) ? 0 : clog2(PHYCLKFREQ/100000000));
-localparam SCLKDIV50000000  = ((PHYCLKFREQ <= 50000000 ) ? 0 : clog2(PHYCLKFREQ/50000000));
-localparam SCLKDIV25000000  = ((PHYCLKFREQ <= 25000000 ) ? 0 : clog2(PHYCLKFREQ/25000000));
+// Number of division by 2 needed to go from PHYCLKFREQ to 250 KHz.
+localparam SCLKDIVLIMIT = (((PHYCLKFREQ <= 250000) ? 0 : clog2(PHYCLKFREQ/250000))+1);
+localparam CLOG2SCLKDIVLIMIT = clog2(SCLKDIVLIMIT);
+
+localparam SCLKDIV25000000  = ((PHYCLKFREQ < 25000000 ) ? (SCLKDIVLIMIT-1) : (clog2(PHYCLKFREQ/(25000000/2))-1));
+localparam SCLKDIV50000000  = ((PHYCLKFREQ < 50000000 ) ? SCLKDIV25000000  : (clog2(PHYCLKFREQ/(50000000/2))-1));
+localparam SCLKDIV100000000 = ((PHYCLKFREQ < 100000000) ? SCLKDIV50000000  : (clog2(PHYCLKFREQ/(100000000/2))-1));
+localparam SCLKDIV200000000 = ((PHYCLKFREQ < 200000000) ? SCLKDIV100000000 : (clog2(PHYCLKFREQ/(200000000/2))-1));
 
 input wire rst_i;
 
@@ -201,12 +211,12 @@ output wire err_o;
 
 // Register used to implement timeout.
 // The largest value that it will be set to, is > than the clock cycle count equivalent of 250ms.
-// Since 250ms is 4 Hz, the number of clock cycles using a clock frequency of PHYCLKFREQ
-// would be PHYCLKFREQ/4; the result of that value would largely be greater than
+// Since 250ms is 4 Hz, the number of clock cycles using a clock frequency of CLKFREQ
+// would be CLKFREQ/4; the result of that value would largely be greater than
 // ((spi_master.DATABITSIZE + 1) * (1 << spi_master.SCLKDIVLIMIT))
 // which is the minimum number of clock cycles needed to reset spimaster;
-// in fact PHYCLKFREQ must be at least 250 KHz.
-reg [CLOG2PHYCLKFREQ -1 : 0] timeout = 0;
+// in fact CLKFREQ must be at least 250 KHz.
+reg [CLOG2CLKFREQ -1 : 0] timeout = 0;
 
 // Constants used with the register state.
 
@@ -264,10 +274,6 @@ reg [STATEBITSZ -1 : 0] state = RESET;
 assign err_o = (state == ERROR);
 
 wire cs_w;
-
-// Number of division by 2 needed to go from PHYCLKFREQ to 250 KHz.
-localparam SCLKDIVLIMIT = (((PHYCLKFREQ == 250000) ? 0 : clog2(PHYCLKFREQ/250000))+1);
-localparam CLOG2SCLKDIVLIMIT = clog2(SCLKDIVLIMIT);
 
 // Register that hold the value of the input "spi.sclkdiv_i".
 reg [CLOG2SCLKDIVLIMIT -1 : 0] sclkdiv_r = 0;
@@ -570,12 +576,12 @@ assign cmd59[7] = dmc59[63:56];
 
 // Register used as the controller counter.
 // The largest value that it will be set to, is > than the clock cycle count equivalent of 250ms.
-// Since 250ms is 4 Hz, the number of clock cycles using a clock frequency of PHYCLKFREQ
-// would be PHYCLKFREQ/4; the result of that value would largely be greater than
+// Since 250ms is 4 Hz, the number of clock cycles using a clock frequency of CLKFREQ
+// would be CLKFREQ/4; the result of that value would largely be greater than
 // ((spi_master.DATABITSIZE + 1) * (1 << spi_master.SCLKDIVLIMIT))
 // which is the minimum number of clock cycles needed to reset spimaster;
-// in fact PHYCLKFREQ must be at least 250 KHz.
-reg [CLOG2PHYCLKFREQ -1 : 0] cntr = 0;
+// in fact CLKFREQ must be at least 250 KHz.
+reg [CLOG2CLKFREQ -1 : 0] cntr = 0;
 
 assign tx_pop_o  = ((state == CMD24RESP) && !spitxbufferfull && cntr && cntr <= 512);
 assign rx_push_o = ((state == CMD17RESP) && !spirxbufferempty && cntr > 1 && cntr <= 513);
@@ -682,7 +688,7 @@ always @ (posedge clk_i) begin
 
 		// I set cntr to a clock cycle count
 		// which yield at least 250ms.
-		cntr <= (PHYCLKFREQ/4);
+		cntr <= (CLKFREQ/4);
 
 		// I set the spi clock to a frequency between 100 KHz
 		// and 400 KHz, as required by the card spec after poweron.
@@ -1913,7 +1919,7 @@ always @ (posedge clk_i) begin
 			end
 
 		end else
-			cntr <= (PHYCLKFREQ/20) -1; // 50ms is 20Hz.
+			cntr <= (CLKFREQ/20) -1; // 50ms is 20Hz.
 
 		// I stop writting in the transmit buffer since
 		// I wish to wait that spi.ss become high.
