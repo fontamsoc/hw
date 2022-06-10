@@ -57,7 +57,12 @@ output wire [ARCHBITSZ -1 : 0]     pi1_mapsz_o;
 
 assign pi1_rdy_o = 1'b1;
 
-assign pi1_mapsz_o = (SIZE*(ARCHBITSZ/8));
+assign pi1_mapsz_o = (SIZE*(ARCHBITSZ/8))
+	`ifdef SIMULATION
+	*2 // Double the memory mapping to catch pu prefetch
+	   // memory access that can occur beyond its size.
+	`endif
+	;
 
 localparam PINOOP = 2'b00;
 localparam PIWROP = 2'b01;
