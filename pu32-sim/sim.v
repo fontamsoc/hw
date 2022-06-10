@@ -47,6 +47,7 @@
 `ifdef WB4LITEDRAM
 `include "dev/pi1_dcache.v"
 `include "dev/pi1q_to_wb4.v"
+`include "lib/wb4_to_litedram.v"
 `include "./litedram/litedram.v"
 `elsif WB4SMEM
 `include "dev/pi1_upconverter.v"
@@ -592,8 +593,9 @@ pi1_dcache #(
 	,.s_pi1_rdy_i  (dcache_s_rdy_w)
 );
 
-wire                        wb4_clk_user_port_w;
-wire                        wb4_rst_user_port_w;
+wire                        litedram_user_clk_w;
+wire                        litedram_user_rst_w;
+
 wire                        wb4_cyc_user_port_w;
 wire                        wb4_stb_user_port_w;
 wire                        wb4_we_user_port_w;
@@ -610,7 +612,7 @@ pi1q_to_wb4 #(
 
 ) pi1q_to_wb4_user_port (
 
-	 .wb4_rst_i (wb4_rst_user_port_w)
+	 .wb4_rst_i (litedram_user_rst_w)
 
 	,.pi1_clk_i   (pi1r_clk_w)
 	,.pi1_op_i    (dcache_s_op_w)
@@ -620,7 +622,7 @@ pi1q_to_wb4 #(
 	,.pi1_sel_i   (dcache_s_sel_w)
 	,.pi1_rdy_o   (dcache_s_rdy_w)
 
-	,.wb4_clk_i   (wb4_clk_user_port_w)
+	,.wb4_clk_i   (litedram_user_clk_w)
 	,.wb4_cyc_o   (wb4_cyc_user_port_w)
 	,.wb4_stb_o   (wb4_stb_user_port_w)
 	,.wb4_we_o    (wb4_we_user_port_w)
@@ -630,6 +632,51 @@ pi1q_to_wb4 #(
 	,.wb4_stall_i (wb4_stall_user_port_w)
 	,.wb4_ack_i   (wb4_ack_user_port_w)
 	,.wb4_data_i  (wb4_data_user_port_w1)
+);
+
+wire                                         litedram_cmd_ready_user_port_w;
+wire                                         litedram_cmd_valid_user_port_w;
+wire                                         litedram_cmd_we_user_port_w;
+wire [(ARCHBITSZ-clog2(ARCHBITSZ/8)) -1 : 0] litedram_cmd_addr_user_port_w;
+wire                                         litedram_wdata_ready_user_port_w;
+wire                                         litedram_wdata_valid_user_port_w;
+wire [(ARCHBITSZ/8) -1 : 0]                  litedram_wdata_we_user_port_w;
+wire [ARCHBITSZ -1 : 0]                      litedram_wdata_data_user_port_w;
+wire                                         litedram_rdata_valid_user_port_w;
+wire [ARCHBITSZ -1 : 0]                      litedram_rdata_data_user_port_w;
+wire                                         litedram_rdata_ready_user_port_w;
+
+wb4_to_litedram #(
+
+	.ARCHBITSZ (ARCHBITSZ)
+
+) wb4_to_litedram (
+
+	 .rst_i (litedram_user_rst_w)
+
+	,.clk_i (litedram_user_clk_w)
+
+	,.wb4_addr_i  (wb4_addr_user_port_w)
+	,.wb4_data_i  (wb4_data_user_port_w0)
+	,.wb4_data_o  (wb4_data_user_port_w1)
+	,.wb4_sel_i   (wb4_sel_user_port_w)
+	,.wb4_cyc_i   (wb4_cyc_user_port_w)
+	,.wb4_stb_i   (wb4_stb_user_port_w)
+	,.wb4_stall_o (wb4_stall_user_port_w)
+	,.wb4_ack_o   (wb4_ack_user_port_w)
+	,.wb4_we_i    (wb4_we_user_port_w)
+
+	,.litedram_cmd_ready_i   (litedram_cmd_ready_user_port_w)
+	,.litedram_cmd_valid_o   (litedram_cmd_valid_user_port_w)
+	,.litedram_cmd_we_o      (litedram_cmd_we_user_port_w)
+	,.litedram_cmd_addr_o    (litedram_cmd_addr_user_port_w)
+	,.litedram_wdata_ready_i (litedram_wdata_ready_user_port_w)
+	,.litedram_wdata_valid_o (litedram_wdata_valid_user_port_w)
+	,.litedram_wdata_we_o    (litedram_wdata_we_user_port_w)
+	,.litedram_wdata_data_o  (litedram_wdata_data_user_port_w)
+	,.litedram_rdata_valid_i (litedram_rdata_valid_user_port_w)
+	,.litedram_rdata_data_i  (litedram_rdata_data_user_port_w)
+	,.litedram_rdata_ready_o (litedram_rdata_ready_user_port_w)
 );
 
 wire                        wb4_cyc_wb_ctrl_w;
@@ -648,7 +695,7 @@ pi1q_to_wb4 #(
 
 ) pi1q_to_wb4_wb_ctrl (
 
-	 .wb4_rst_i (wb4_rst_user_port_w)
+	 .wb4_rst_i (litedram_user_rst_w)
 
 	,.pi1_clk_i   (pi1r_clk_w)
 	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_RAMCTRL])
@@ -658,7 +705,7 @@ pi1q_to_wb4 #(
 	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_RAMCTRL])
 	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_RAMCTRL])
 
-	,.wb4_clk_i   (wb4_clk_user_port_w)
+	,.wb4_clk_i   (litedram_user_clk_w)
 	,.wb4_cyc_o   (wb4_cyc_wb_ctrl_w)
 	,.wb4_stb_o   (wb4_stb_wb_ctrl_w)
 	,.wb4_we_o    (wb4_we_wb_ctrl_w)
@@ -679,16 +726,20 @@ litedram litedram (
 	,.init_done  ()
 	,.init_error ()
 
-	,.user_clk                   (wb4_clk_user_port_w)
-	,.user_rst                   (wb4_rst_user_port_w)
-	,.user_port_wishbone_0_adr   (wb4_addr_user_port_w[ARCHBITSZ -1 : clog2(ARCHBITSZ/8)])
-	,.user_port_wishbone_0_dat_w (wb4_data_user_port_w0)
-	,.user_port_wishbone_0_dat_r (wb4_data_user_port_w1)
-	,.user_port_wishbone_0_sel   (wb4_sel_user_port_w)
-	,.user_port_wishbone_0_cyc   (wb4_cyc_user_port_w)
-	,.user_port_wishbone_0_stb   (wb4_stb_user_port_w)
-	,.user_port_wishbone_0_ack   (wb4_ack_user_port_w)
-	,.user_port_wishbone_0_we    (wb4_we_user_port_w)
+	,.user_clk                       (litedram_user_clk_w)
+	,.user_rst                       (litedram_user_rst_w)
+
+	,.user_port_native_0_cmd_valid   (litedram_cmd_valid_user_port_w)
+	,.user_port_native_0_cmd_ready   (litedram_cmd_ready_user_port_w)
+	,.user_port_native_0_cmd_we      (litedram_cmd_we_user_port_w)
+	,.user_port_native_0_cmd_addr    (litedram_cmd_addr_user_port_w)
+	,.user_port_native_0_wdata_valid (litedram_wdata_valid_user_port_w)
+	,.user_port_native_0_wdata_ready (litedram_wdata_ready_user_port_w)
+	,.user_port_native_0_wdata_we    (litedram_wdata_we_user_port_w)
+	,.user_port_native_0_wdata_data  (litedram_wdata_data_user_port_w)
+	,.user_port_native_0_rdata_valid (litedram_rdata_valid_user_port_w)
+	,.user_port_native_0_rdata_ready (litedram_rdata_ready_user_port_w)
+	,.user_port_native_0_rdata_data  (litedram_rdata_data_user_port_w)
 
 	,.wb_ctrl_adr   (wb4_addr_wb_ctrl_w[ARCHBITSZ -1 : clog2(ARCHBITSZ/8)])
 	,.wb_ctrl_dat_w (wb4_data_wb_ctrl_w0)

@@ -9,7 +9,7 @@
 // Filename   : litedram_core.v
 // Device     :
 // LiteX sha1 : a0853d15
-// Date       : 2022-03-27 21:06:13
+// Date       : 2022-03-28 00:32:46
 //------------------------------------------------------------------------------
 /* Generated using:
    git revert 6755c84 bd80053
@@ -34,8 +34,8 @@
 
     # User Ports ---------------------------------------------------------------
     "user_ports": {
-        "wishbone_0" : {
-            "type": "wishbone",
+        "native_0" : {
+            "type": "native",
         },
     },
 }*/
@@ -65,15 +65,17 @@ module litedram (
 	output wire wb_ctrl_err,
 	output wire user_clk,
 	output wire user_rst,
-	input  wire [23:0] user_port_wishbone_0_adr,
-	input  wire [31:0] user_port_wishbone_0_dat_w,
-	output wire [31:0] user_port_wishbone_0_dat_r,
-	input  wire [3:0] user_port_wishbone_0_sel,
-	input  wire user_port_wishbone_0_cyc,
-	input  wire user_port_wishbone_0_stb,
-	output wire user_port_wishbone_0_ack,
-	input  wire user_port_wishbone_0_we,
-	output wire user_port_wishbone_0_err
+	input  wire user_port_native_0_cmd_valid,
+	output wire user_port_native_0_cmd_ready,
+	input  wire user_port_native_0_cmd_we,
+	input  wire [23:0] user_port_native_0_cmd_addr,
+	input  wire user_port_native_0_wdata_valid,
+	output wire user_port_native_0_wdata_ready,
+	input  wire [3:0] user_port_native_0_wdata_we,
+	input  wire [31:0] user_port_native_0_wdata_data,
+	output wire user_port_native_0_rdata_valid,
+	input  wire user_port_native_0_rdata_ready,
+	output wire [31:0] user_port_native_0_rdata_data
 );
 
 
@@ -775,10 +777,8 @@ wire [2:0] soc_wb_bus_cti;
 wire [1:0] soc_wb_bus_bte;
 wire soc_wb_bus_err;
 reg  soc_user_enable = 1'd0;
-wire soc_user_port_flush;
 wire soc_user_port_cmd_valid;
 wire soc_user_port_cmd_ready;
-wire soc_user_port_cmd_last;
 wire soc_user_port_cmd_payload_we;
 wire [23:0] soc_user_port_cmd_payload_addr;
 wire soc_user_port_wdata_valid;
@@ -788,20 +788,6 @@ wire [3:0] soc_user_port_wdata_payload_we;
 wire soc_user_port_rdata_valid;
 wire soc_user_port_rdata_ready;
 wire [31:0] soc_user_port_rdata_payload_data;
-wire [23:0] soc_wb_port_adr;
-wire [31:0] soc_wb_port_dat_w;
-wire [31:0] soc_wb_port_dat_r;
-wire [3:0] soc_wb_port_sel;
-wire soc_wb_port_cyc;
-wire soc_wb_port_stb;
-wire soc_wb_port_ack;
-wire soc_wb_port_we;
-reg  soc_wb_port_err = 1'd0;
-reg  soc_cmd_consumed = 1'd0;
-reg  soc_wdata_consumed = 1'd0;
-wire soc_ack_cmd;
-wire soc_ack_wdata;
-wire soc_ack_rdata;
 reg  [1:0] refresher_state = 2'd0;
 reg  [1:0] refresher_next_state = 2'd0;
 reg  [2:0] bankmachine0_state = 3'd0;
@@ -970,15 +956,17 @@ assign soc_wb_bus_bte = wb_ctrl_bte;
 assign wb_ctrl_err = soc_wb_bus_err;
 assign user_clk = sys_clk;
 assign user_rst = sys_rst;
-assign soc_wb_port_adr = user_port_wishbone_0_adr;
-assign soc_wb_port_dat_w = user_port_wishbone_0_dat_w;
-assign user_port_wishbone_0_dat_r = soc_wb_port_dat_r;
-assign soc_wb_port_sel = user_port_wishbone_0_sel;
-assign soc_wb_port_cyc = (user_port_wishbone_0_cyc & soc_user_enable);
-assign soc_wb_port_stb = (user_port_wishbone_0_stb & soc_user_enable);
-assign user_port_wishbone_0_ack = (soc_wb_port_ack & soc_user_enable);
-assign soc_wb_port_we = user_port_wishbone_0_we;
-assign user_port_wishbone_0_err = soc_wb_port_err;
+assign soc_user_port_cmd_valid = (user_port_native_0_cmd_valid & soc_user_enable);
+assign user_port_native_0_cmd_ready = (soc_user_port_cmd_ready & soc_user_enable);
+assign soc_user_port_cmd_payload_we = user_port_native_0_cmd_we;
+assign soc_user_port_cmd_payload_addr = user_port_native_0_cmd_addr;
+assign soc_user_port_wdata_valid = (user_port_native_0_wdata_valid & soc_user_enable);
+assign user_port_native_0_wdata_ready = (soc_user_port_wdata_ready & soc_user_enable);
+assign soc_user_port_wdata_payload_we = user_port_native_0_wdata_we;
+assign soc_user_port_wdata_payload_data = user_port_native_0_wdata_data;
+assign user_port_native_0_rdata_valid = (soc_user_port_rdata_valid & soc_user_enable);
+assign soc_user_port_rdata_ready = (user_port_native_0_rdata_ready & soc_user_enable);
+assign user_port_native_0_rdata_data = soc_user_port_rdata_payload_data;
 assign sys_clk = clk;
 assign por_clk = clk;
 assign sys_rst = soc_int_rst;
@@ -3377,6 +3365,24 @@ always @(*) begin
 	endcase
 end
 always @(*) begin
+	soc_litedramcore_bankmachine3_refresh_gnt <= 1'd0;
+	case (bankmachine3_state)
+		1'd1: begin
+		end
+		2'd2: begin
+		end
+		2'd3: begin
+		end
+		3'd4: begin
+			if (soc_litedramcore_bankmachine3_twtpcon_ready) begin
+				soc_litedramcore_bankmachine3_refresh_gnt <= 1'd1;
+			end
+		end
+		default: begin
+		end
+	endcase
+end
+always @(*) begin
 	soc_litedramcore_bankmachine3_cmd_payload_is_read <= 1'd0;
 	case (bankmachine3_state)
 		1'd1: begin
@@ -3493,24 +3499,6 @@ always @(*) begin
 					end
 				end
 			end
-		end
-	endcase
-end
-always @(*) begin
-	soc_litedramcore_bankmachine3_refresh_gnt <= 1'd0;
-	case (bankmachine3_state)
-		1'd1: begin
-		end
-		2'd2: begin
-		end
-		2'd3: begin
-		end
-		3'd4: begin
-			if (soc_litedramcore_bankmachine3_twtpcon_ready) begin
-				soc_litedramcore_bankmachine3_refresh_gnt <= 1'd1;
-			end
-		end
-		default: begin
 		end
 	endcase
 end
@@ -3712,6 +3700,26 @@ always @(*) begin
 	endcase
 end
 always @(*) begin
+	soc_litedramcore_cmd_ready <= 1'd0;
+	case (multiplexer_state)
+		1'd1: begin
+		end
+		2'd2: begin
+			soc_litedramcore_cmd_ready <= 1'd1;
+		end
+		2'd3: begin
+		end
+		3'd4: begin
+		end
+		3'd5: begin
+		end
+		3'd6: begin
+		end
+		default: begin
+		end
+	endcase
+end
+always @(*) begin
 	soc_litedramcore_en0 <= 1'd0;
 	case (multiplexer_state)
 		1'd1: begin
@@ -3802,26 +3810,6 @@ always @(*) begin
 			if (1'd1) begin
 				soc_litedramcore_steerer_sel <= 1'd1;
 			end
-		end
-	endcase
-end
-always @(*) begin
-	soc_litedramcore_cmd_ready <= 1'd0;
-	case (multiplexer_state)
-		1'd1: begin
-		end
-		2'd2: begin
-			soc_litedramcore_cmd_ready <= 1'd1;
-		end
-		2'd3: begin
-		end
-		3'd4: begin
-		end
-		3'd5: begin
-		end
-		3'd6: begin
-		end
-		default: begin
 		end
 	endcase
 end
@@ -3926,20 +3914,6 @@ assign roundrobin0_grant = 1'd0;
 assign roundrobin1_grant = 1'd0;
 assign roundrobin2_grant = 1'd0;
 assign roundrobin3_grant = 1'd0;
-assign soc_user_port_cmd_payload_addr = (soc_wb_port_adr - 1'd0);
-assign soc_user_port_cmd_payload_we = soc_wb_port_we;
-assign soc_user_port_wdata_payload_data = soc_wb_port_dat_w;
-assign soc_user_port_wdata_payload_we = soc_wb_port_sel;
-assign soc_wb_port_dat_r = soc_user_port_rdata_payload_data;
-assign soc_user_port_flush = (~soc_wb_port_cyc);
-assign soc_user_port_cmd_last = (~soc_wb_port_we);
-assign soc_user_port_cmd_valid = ((soc_wb_port_cyc & soc_wb_port_stb) & (~soc_cmd_consumed));
-assign soc_user_port_wdata_valid = (((soc_user_port_cmd_valid | soc_cmd_consumed) & soc_user_port_cmd_payload_we) & (~soc_wdata_consumed));
-assign soc_user_port_rdata_ready = ((soc_user_port_cmd_valid | soc_cmd_consumed) & (~soc_user_port_cmd_payload_we));
-assign soc_wb_port_ack = (soc_ack_cmd & ((soc_wb_port_we & soc_ack_wdata) | ((~soc_wb_port_we) & soc_ack_rdata)));
-assign soc_ack_cmd = ((soc_user_port_cmd_valid & soc_user_port_cmd_ready) | soc_cmd_consumed);
-assign soc_ack_wdata = ((soc_user_port_wdata_valid & soc_user_port_wdata_ready) | soc_wdata_consumed);
-assign soc_ack_rdata = (soc_user_port_rdata_valid & soc_user_port_rdata_ready);
 always @(*) begin
 	next_state <= 2'd0;
 	next_state <= state;
@@ -3954,6 +3928,30 @@ always @(*) begin
 			if ((litedramcore_wishbone_cyc & litedramcore_wishbone_stb)) begin
 				next_state <= 1'd1;
 			end
+		end
+	endcase
+end
+always @(*) begin
+	litedramcore_dat_w_next_value0 <= 32'd0;
+	case (state)
+		1'd1: begin
+		end
+		2'd2: begin
+		end
+		default: begin
+			litedramcore_dat_w_next_value0 <= litedramcore_wishbone_dat_w;
+		end
+	endcase
+end
+always @(*) begin
+	litedramcore_dat_w_next_value_ce0 <= 1'd0;
+	case (state)
+		1'd1: begin
+		end
+		2'd2: begin
+		end
+		default: begin
+			litedramcore_dat_w_next_value_ce0 <= 1'd1;
 		end
 	endcase
 end
@@ -4041,30 +4039,6 @@ always @(*) begin
 		end
 	endcase
 end
-always @(*) begin
-	litedramcore_dat_w_next_value0 <= 32'd0;
-	case (state)
-		1'd1: begin
-		end
-		2'd2: begin
-		end
-		default: begin
-			litedramcore_dat_w_next_value0 <= litedramcore_wishbone_dat_w;
-		end
-	endcase
-end
-always @(*) begin
-	litedramcore_dat_w_next_value_ce0 <= 1'd0;
-	case (state)
-		1'd1: begin
-		end
-		2'd2: begin
-		end
-		default: begin
-			litedramcore_dat_w_next_value_ce0 <= 1'd1;
-		end
-	endcase
-end
 assign litedramcore_wishbone_adr = soc_wb_bus_adr;
 assign litedramcore_wishbone_dat_w = soc_wb_bus_dat_w;
 assign soc_wb_bus_dat_r = litedramcore_wishbone_dat_r;
@@ -4092,15 +4066,15 @@ always @(*) begin
 end
 assign csrbank0_init_error0_r = interface0_bank_bus_dat_w[0];
 always @(*) begin
-	csrbank0_init_error0_we <= 1'd0;
-	if ((csrbank0_sel & (interface0_bank_bus_adr[8:0] == 1'd1))) begin
-		csrbank0_init_error0_we <= (~interface0_bank_bus_we);
-	end
-end
-always @(*) begin
 	csrbank0_init_error0_re <= 1'd0;
 	if ((csrbank0_sel & (interface0_bank_bus_adr[8:0] == 1'd1))) begin
 		csrbank0_init_error0_re <= interface0_bank_bus_we;
+	end
+end
+always @(*) begin
+	csrbank0_init_error0_we <= 1'd0;
+	if ((csrbank0_sel & (interface0_bank_bus_adr[8:0] == 1'd1))) begin
+		csrbank0_init_error0_we <= (~interface0_bank_bus_we);
 	end
 end
 assign csrbank0_init_done0_w = soc_init_done_storage;
@@ -4108,15 +4082,15 @@ assign csrbank0_init_error0_w = soc_init_error_storage;
 assign csrbank1_sel = (interface1_bank_bus_adr[13:9] == 1'd1);
 assign csrbank1_dfii_control0_r = interface1_bank_bus_dat_w[3:0];
 always @(*) begin
-	csrbank1_dfii_control0_we <= 1'd0;
-	if ((csrbank1_sel & (interface1_bank_bus_adr[8:0] == 1'd0))) begin
-		csrbank1_dfii_control0_we <= (~interface1_bank_bus_we);
-	end
-end
-always @(*) begin
 	csrbank1_dfii_control0_re <= 1'd0;
 	if ((csrbank1_sel & (interface1_bank_bus_adr[8:0] == 1'd0))) begin
 		csrbank1_dfii_control0_re <= interface1_bank_bus_we;
+	end
+end
+always @(*) begin
+	csrbank1_dfii_control0_we <= 1'd0;
+	if ((csrbank1_sel & (interface1_bank_bus_adr[8:0] == 1'd0))) begin
+		csrbank1_dfii_control0_we <= (~interface1_bank_bus_we);
 	end
 end
 assign csrbank1_dfii_pi0_command0_r = interface1_bank_bus_dat_w[5:0];
@@ -4173,15 +4147,15 @@ always @(*) begin
 end
 assign csrbank1_dfii_pi0_wrdata0_r = interface1_bank_bus_dat_w[31:0];
 always @(*) begin
-	csrbank1_dfii_pi0_wrdata0_re <= 1'd0;
-	if ((csrbank1_sel & (interface1_bank_bus_adr[8:0] == 3'd5))) begin
-		csrbank1_dfii_pi0_wrdata0_re <= interface1_bank_bus_we;
-	end
-end
-always @(*) begin
 	csrbank1_dfii_pi0_wrdata0_we <= 1'd0;
 	if ((csrbank1_sel & (interface1_bank_bus_adr[8:0] == 3'd5))) begin
 		csrbank1_dfii_pi0_wrdata0_we <= (~interface1_bank_bus_we);
+	end
+end
+always @(*) begin
+	csrbank1_dfii_pi0_wrdata0_re <= 1'd0;
+	if ((csrbank1_sel & (interface1_bank_bus_adr[8:0] == 3'd5))) begin
+		csrbank1_dfii_pi0_wrdata0_re <= interface1_bank_bus_we;
 	end
 end
 assign csrbank1_dfii_pi0_rddata_r = interface1_bank_bus_dat_w[31:0];
@@ -5355,17 +5329,6 @@ always @(posedge sys_clk) begin
 	new_master_rdata_valid2 <= new_master_rdata_valid1;
 	new_master_rdata_valid3 <= new_master_rdata_valid2;
 	new_master_rdata_valid4 <= new_master_rdata_valid3;
-	if (soc_wb_port_ack) begin
-		soc_cmd_consumed <= 1'd0;
-		soc_wdata_consumed <= 1'd0;
-	end else begin
-		if ((soc_user_port_cmd_valid & soc_user_port_cmd_ready)) begin
-			soc_cmd_consumed <= 1'd1;
-		end
-		if ((soc_user_port_wdata_valid & soc_user_port_wdata_ready)) begin
-			soc_wdata_consumed <= 1'd1;
-		end
-	end
 	state <= next_state;
 	if (litedramcore_dat_w_next_value_ce0) begin
 		litedramcore_dat_w <= litedramcore_dat_w_next_value0;
@@ -5558,8 +5521,6 @@ always @(posedge sys_clk) begin
 		soc_init_error_storage <= 1'd0;
 		soc_init_error_re <= 1'd0;
 		soc_user_enable <= 1'd0;
-		soc_cmd_consumed <= 1'd0;
-		soc_wdata_consumed <= 1'd0;
 		refresher_state <= 2'd0;
 		bankmachine0_state <= 3'd0;
 		bankmachine1_state <= 3'd0;
@@ -5755,5 +5716,5 @@ endmodule
 /* verilator lint_restore */
 
 // -----------------------------------------------------------------------------
-//  Auto-Generated by LiteX on 2022-03-27 21:06:13.
+//  Auto-Generated by LiteX on 2022-03-28 00:32:46.
 //------------------------------------------------------------------------------
