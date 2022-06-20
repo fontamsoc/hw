@@ -196,9 +196,7 @@ end
 
 assign sd_reset = rst_w;
 
-`ifdef FONTAMSOC_USE_STARTUPE2
 STARTUPE2 startupe (.CLK (clk100mhz_i), .GSR (swcoldrst));
-`endif
 
 `ifdef PUDBG
 // Implementation of reset button long-press for pu 0 to be initially stopped.
