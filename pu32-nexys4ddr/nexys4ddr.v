@@ -18,15 +18,8 @@
 `define PUMULDIVCLK
 `define PUDSPMUL
 `define PUDCACHE
-//`define PUDBG
 //`define PUCOUNT 1 /* 8 max */
 `include "pu/multipu.v"
-
-`ifdef PUDBG
-`include "lib/dbncr.v"
-`include "lib/uart/uart_rx_phy.v"
-`include "lib/uart/uart_tx_phy.v"
-`endif
 
 `include "dev/sdcard/sdcard_spi.v"
 
@@ -92,10 +85,6 @@ module nexys4ddr (
 
 	,activity
 
-	// PUDBG signals.
-	,pudbg_rx
-	,pudbg_tx
-
 	// Used in order to keep the seven-segment-display off.
 	,an
 );
@@ -158,16 +147,6 @@ inout  wire [(DDR2DQBITSIZE / 8) -1 : 0]  ddr2_dqs_n;
 
 output reg activity;
 
-// PUDBG signals.
-input  wire pudbg_rx;
-output wire pudbg_tx;
-
-wire brkonrst_w;
-`ifndef PUDBG
-assign brkonrst_w = 1'b0;
-assign pudbg_tx   = 1'b1;
-`endif
-
 wire litedram_pll_locked;
 wire litedram_init_done;
 wire litedram_init_error;
@@ -213,29 +192,6 @@ assign sd_reset = rst_w;
 
 STARTUPE2 startupe (.CLK (clk100mhz_i), .GSR (swcoldrst));
 
-`ifdef PUDBG
-// Implementation of reset button long-press for pu 0 to be initially stopped.
-localparam DBNCRTHRES      = (CLK2XFREQ*4); // 4 seconds long-press.
-localparam CLOG2DBNCRTHRES = clog2(DBNCRTHRES);
-dbncr  #(
-	 .THRESBITSZ (CLOG2DBNCRTHRES)
-	,.INIT       (1'b0)
-) dbncr (
-	 .rst_i    (rst_n)
-	,.clk_i    (clk100mhz_i)
-	,.i        (rst_p)
-	,.o        (brkonrst_w)
-	,.thresh_i (DBNCRTHRES)
-);
-reg brkonrst_r = 1'b0;
-always @ (posedge clk100mhz_i) begin
-	if (!rst_w)
-		brkonrst_r <= 1'b0;
-	else if (rst_p && brkonrst_w)
-			brkonrst_r <= brkonrst_w;
-end
-`endif
-
 // Used to dim activity intensity.
 localparam ACTIVITY_CNTR_BITSZ = 7;
 reg [ACTIVITY_CNTR_BITSZ -1 : 0] activity_cntr = 0;
@@ -243,7 +199,7 @@ always @ (posedge clk100mhz_i) begin
 	if (activity_cntr) begin
 		activity <= 0;
 		activity_cntr <= activity_cntr - 1'b1;
-	end else if ((~(sd_di & sd_do) || litedram_init_error || brkonrst_w)) begin
+	end else if ((~(sd_di & sd_do) || litedram_init_error)) begin
 		activity <= 1;
 		activity_cntr <= {ACTIVITY_CNTR_BITSZ{1'b1}};
 	end
@@ -360,15 +316,6 @@ localparam TLBWAYCOUNT    = ((PUCOUNT > 4) ? 1 : 2);
 localparam MULTIPUCLKFREQ = CLK2XFREQ;
 wire multipu_clk_w = clk_2x_w;
 
-`ifdef PUDBG
-wire            pudbg_rx_rcvd_w;
-wire [8 -1 : 0] pudbg_rx_data_w1;
-wire            pudbg_rx_rdy_w;
-wire            pudbg_tx_stb_w;
-wire [8 -1 : 0] pudbg_tx_data_w0;
-wire            pudbg_tx_rdy_w;
-`endif
-
 multipu #(
 
 	 .ARCHBITSZ      (ARCHBITSZ)
@@ -411,42 +358,7 @@ multipu #(
 	,.rstaddr2_i (('h8000-(14/*within parkpu()*/))>>1)
 
 	,.id_i (0)
-
-	`ifdef PUDBG
-	,.brkonrst_i (brkonrst_r)
-	,.dbg_rx_rcvd_i (pudbg_rx_rcvd_w)
-	,.dbg_rx_data_i (pudbg_rx_data_w1)
-	,.dbg_rx_rdy_o  (pudbg_rx_rdy_w)
-	,.dbg_tx_stb_o  (pudbg_tx_stb_w)
-	,.dbg_tx_data_o (pudbg_tx_data_w0)
-	,.dbg_tx_rdy_i  (pudbg_tx_rdy_w)
-	`endif
 );
-
-`ifdef PUDBG
-localparam PUDBGPHYBITRATE = 115200;
-uart_rx_phy #(
-	 .CLOCKCYCLESPERBITLIMIT (((CLK2XFREQ/PUDBGPHYBITRATE) + ((CLK2XFREQ/PUDBGPHYBITRATE)/10/2)) +1)
-) pudbg_uart_rx_phy (
-	 .rst_i               (rst_w || !litedram_pll_locked)
-	,.clk_i               (multipu_clk_w) // Must be same as multipu.clk_i .
-	,.clockcyclesperbit_i ((CLK2XFREQ/PUDBGPHYBITRATE) + ((CLK2XFREQ/PUDBGPHYBITRATE)/10/2))
-	,.rx_i                (pudbg_rx)
-	,.rcvd_o              (pudbg_rx_rcvd_w)
-	,.data_o              (pudbg_rx_data_w1)
-);
-uart_tx_phy #(
-	 .CLOCKCYCLESPERBITLIMIT ((CLK2XFREQ/PUDBGPHYBITRATE) +1)
-) pudbg_uart_tx_phy (
-	 .rst_i               (rst_w || !litedram_pll_locked)
-	,.clk_i               (multipu_clk_w) // Must be same as multipu.clk_i .
-	,.clockcyclesperbit_i (CLK2XFREQ/PUDBGPHYBITRATE)
-	,.tx_o                (pudbg_tx)
-	,.stb_i               (pudbg_tx_stb_w)
-	,.data_i              (pudbg_tx_data_w0)
-	,.rdy_o               (pudbg_tx_rdy_w)
-);
-`endif
 
 sdcard_spi #(
 
