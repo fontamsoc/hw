@@ -302,7 +302,7 @@ wire phy_err_w;
 // Since "rst_i" is also used to report whether
 // the device is under power, a controller reset
 // will be done as soon as the device is powered-on.
-wire phy_rst_w = (rst_i | (pi1b_op_i == PIRWOP && addr_w == CMDRESET && pi1b_data_i));
+wire phy_rst_w = (rst_i | (pi1b_op_i == PIRWOP && addr_w == CMDRESET && pi1b_data_i && !phy_err_w));
 
 reg phy_cmd_pending = 0;
 
