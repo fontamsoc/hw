@@ -22,7 +22,9 @@ parameter SRCFILE = "";
 
 input wire                 clk0_i;
 input wire                 clk1_i;
+(* direct_enable = "true" *)
 input wire                 en0_i;
+(* direct_enable = "true" *)
 input wire                 en1_i;
 input wire                 we1_i;
 input wire [clog2(SZ)-1:0] addr0_i;

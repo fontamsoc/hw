@@ -154,6 +154,7 @@ wire swpwroff  = (devtbl_rst0_w && !devtbl_rst1_w);
 
 wire rst_p = !rst_n;
 
+(* direct_reset = "true" *)
 wire rst_w;
 
 localparam RST_CNTR_BITSZ = 20;
