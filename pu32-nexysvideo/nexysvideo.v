@@ -156,42 +156,6 @@ wire rst_p = !rst_n;
 (* direct_reset = "true" *)
 wire rst_w;
 
-localparam RST_CNTR_BITSZ = 16;
-
-reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
-always @ (posedge clk100mhz_i) begin
-	if (!multipu_rst_ow && !swwarmrst && rst_n) begin
-		if (rst_cntr)
-			rst_cntr <= rst_cntr - 1'b1;
-	end else
-		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
-end
-
-always @ (posedge clk100mhz_i) begin
-	if (rst_p)
-		devtbl_rst0_r <= 0;
-	if (swpwroff)
-		devtbl_rst0_r <= 1;
-end
-
-assign sd_reset = rst_w;
-
-STARTUPE2 startupe (.CLK (clk100mhz_i), .GSR (swcoldrst));
-
-reg activity;
-// Used to dim activity intensity.
-localparam ACTIVITY_CNTR_BITSZ = 1;
-reg [ACTIVITY_CNTR_BITSZ -1 : 0] activity_cntr = 0;
-always @ (posedge clk100mhz_i) begin
-	if (activity_cntr) begin
-		activity <= 0;
-		activity_cntr <= activity_cntr - 1'b1;
-	end else if ((~(sd_di & sd_do) || litedram_init_error)) begin
-		activity <= 1;
-		activity_cntr <= {ACTIVITY_CNTR_BITSZ{1'b1}};
-	end
-end
-
 localparam CLKFREQ   = ( 50000000) /*  50 MHz */; // Frequency of clk_w.
 localparam CLK2XFREQ = (100000000) /* 100 MHz */; // Frequency of clk_2x_w.
 localparam CLK4XFREQ = (200000000) /* 200 MHz */; // Frequency of clk_4x_w.
@@ -214,7 +178,43 @@ wire clk_w    = clk50mhz;
 wire clk_2x_w = clk100mhz;
 wire clk_4x_w = clk200mhz;
 
+STARTUPE2 startupe (.CLK (clk100mhz_i), .GSR (swcoldrst));
+
+localparam RST_CNTR_BITSZ = 16;
+
+reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
+always @ (posedge clk100mhz) begin
+	if (!multipu_rst_ow && !swwarmrst && rst_n) begin
+		if (rst_cntr)
+			rst_cntr <= rst_cntr - 1'b1;
+	end else
+		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
+end
+
+always @ (posedge clk100mhz) begin
+	if (rst_p)
+		devtbl_rst0_r <= 0;
+	if (swpwroff)
+		devtbl_rst0_r <= 1;
+end
+
+reg activity;
+// Used to dim activity intensity.
+localparam ACTIVITY_CNTR_BITSZ = 1;
+reg [ACTIVITY_CNTR_BITSZ -1 : 0] activity_cntr = 0;
+always @ (posedge clk100mhz) begin
+	if (activity_cntr) begin
+		activity <= 0;
+		activity_cntr <= activity_cntr - 1'b1;
+	end else if ((~(sd_di & sd_do) || litedram_init_error)) begin
+		activity <= 1;
+		activity_cntr <= {ACTIVITY_CNTR_BITSZ{1'b1}};
+	end
+end
+
 assign rst_w = (!pll_locked || devtbl_rst0_r || (|rst_cntr));
+
+assign sd_reset = rst_w;
 
 `ifdef PUCOUNT
 localparam PUCOUNT = `PUCOUNT;

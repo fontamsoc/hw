@@ -150,26 +150,6 @@ wire swpwroff  = (devtbl_rst0_w && !devtbl_rst1_w);
 
 wire rst_p = !usr_btn_n;
 
-localparam RST_CNTR_BITSZ = 16;
-
-reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
-always @ (posedge clk48mhz_i) begin
-	if (!multipu_rst_ow && !swwarmrst && usr_btn_n) begin
-		if (rst_cntr)
-			rst_cntr <= rst_cntr - 1'b1;
-	end else
-		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
-end
-
-always @ (posedge clk48mhz_i) begin
-	if (rst_p)
-		devtbl_rst0_r <= 0;
-	if (swpwroff)
-		devtbl_rst0_r <= 1;
-end
-
-//GSR GSR_INST (.GSR (~swcoldrst));
-
 localparam CLKFREQ12MHZ = 12000000;
 localparam CLKFREQ24MHZ = 24000000;
 localparam CLKFREQ48MHZ = 48000000;
@@ -211,6 +191,26 @@ wire clk_w    = clk12mhz;
 wire clk_2x_w = clk24mhz;
 wire clk_4x_w = clk48mhz;
 wire clk_8x_w = clk96mhz;
+
+//GSR GSR_INST (.GSR (~swcoldrst));
+
+localparam RST_CNTR_BITSZ = 16;
+
+reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
+always @ (posedge clk48mhz) begin
+	if (!multipu_rst_ow && !swwarmrst && usr_btn_n) begin
+		if (rst_cntr)
+			rst_cntr <= rst_cntr - 1'b1;
+	end else
+		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
+end
+
+always @ (posedge clk48mhz) begin
+	if (rst_p)
+		devtbl_rst0_r <= 0;
+	if (swpwroff)
+		devtbl_rst0_r <= 1;
+end
 
 wire rst_w = (!pll_locked || devtbl_rst0_r || (|rst_cntr));
 
