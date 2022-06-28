@@ -423,7 +423,6 @@ generate for (gen_slavebytsel_idx = 0; gen_slavebytsel_idx < SLAVECOUNT; gen_sla
 assign slavebytsel[gen_slavebytsel_idx] = masterbytselmasteridx;
 end endgenerate
 
-`ifdef SIMULATION
 initial begin
 	masteridx = 0;
 	mstrhinxt = (MASTERCOUNT - 1);
@@ -436,7 +435,6 @@ initial begin
 	masterdatomasteridx = 0;
 
 end
-`endif
 
 endmodule
 

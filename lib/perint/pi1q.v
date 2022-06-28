@@ -314,7 +314,6 @@ always @ (posedge s_clk_i) begin
 	end
 end
 
-`ifdef SIMULATION
 integer init_masterdato_idx;
 initial begin
 	for (init_masterdato_idx = 0; init_masterdato_idx < MASTERCOUNT; init_masterdato_idx = init_masterdato_idx + 1)
@@ -329,7 +328,6 @@ initial begin
 	MASTERCOUNT__less_mstrhi_hold = 1;
 	prevqueuereadidx = 0;
 end
-`endif
 
 endmodule
 

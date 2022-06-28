@@ -553,8 +553,6 @@ always @(posedge clk_i) begin
 	end
 end
 
-`ifdef SIMULATION
-// ### Needed for Verilog simulation.
 integer i;
 initial begin
 	m_pi1_op_o = PINOOP;
@@ -578,6 +576,5 @@ initial begin
 	intrdy_i_sampled = 0;
 	prev_m_pi1_op_o = PINOOP;
 end
-`endif
 
 endmodule

@@ -80,7 +80,6 @@ always @(posedge clk_i) begin
 		m_rdy_o <= 0;
 end
 
-`ifdef SIMULATION
 initial begin
 	m_data_o = 0;
 	m_rdy_o = 0;
@@ -90,7 +89,6 @@ initial begin
 	s_sel_o = 0;
 	_s_op_o = PINOOP;
 end
-`endif
 
 endmodule
 
