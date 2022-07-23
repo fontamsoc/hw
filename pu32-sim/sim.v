@@ -25,8 +25,6 @@
 
 `include "dev/devtbl.v"
 
-`include "dev/dma.v"
-
 `include "dev/intctrl.v"
 
 `include "dev/uart_sim.v"
@@ -125,8 +123,7 @@ localparam PUCOUNT = 1;
 `endif
 
 localparam INTCTRLSRC_SDCARD = 0;
-localparam INTCTRLSRC_DMA    = (INTCTRLSRC_SDCARD + 1);
-localparam INTCTRLSRC_UART   = (INTCTRLSRC_DMA + 1);
+localparam INTCTRLSRC_UART   = (INTCTRLSRC_SDCARD + 1);
 localparam INTCTRLSRCCOUNT   = (INTCTRLSRC_UART +1); // Number of interrupt source.
 localparam INTCTRLDSTCOUNT   = PUCOUNT; // Number of interrupt destination.
 wire [INTCTRLSRCCOUNT -1 : 0] intrqstsrc_w;
@@ -136,12 +133,10 @@ wire [INTCTRLDSTCOUNT -1 : 0] intrdydst_w;
 wire [INTCTRLDSTCOUNT -1 : 0] intbestdst_w;
 
 localparam M_PI1R_MULTIPU    = 0;
-localparam M_PI1R_DMA        = (M_PI1R_MULTIPU + 1);
-localparam M_PI1R_LAST       = M_PI1R_DMA;
+localparam M_PI1R_LAST       = M_PI1R_MULTIPU;
 localparam S_PI1R_SDCARD     = 0;
 localparam S_PI1R_DEVTBL     = (S_PI1R_SDCARD + 1);
-localparam S_PI1R_DMA        = (S_PI1R_DEVTBL + 1);
-localparam S_PI1R_INTCTRL    = (S_PI1R_DMA + 1);
+localparam S_PI1R_INTCTRL    = (S_PI1R_DEVTBL + 1);
 localparam S_PI1R_UART       = (S_PI1R_INTCTRL + 1);
 localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
 localparam S_PI1R_BOOTLDR    = (S_PI1R_RAM + 1);
@@ -324,41 +319,6 @@ always @* begin
 	if (swpwroff)
 		$finish;
 end
-
-dma #(
-
-	 .ARCHBITSZ  (PI1RARCHBITSZ)
-	,.CHANNELCNT (1)
-
-) dma (
-
-	 .rst_i (pi1r_rst_w)
-
-	,.clk_i (pi1r_clk_w)
-
-	,.m_pi1_op_o   (m_pi1r_op_w[M_PI1R_DMA])
-	,.m_pi1_addr_o (m_pi1r_addr_w[M_PI1R_DMA])
-	,.m_pi1_data_o (m_pi1r_data_w1[M_PI1R_DMA])
-	,.m_pi1_data_i (m_pi1r_data_w0[M_PI1R_DMA])
-	,.m_pi1_sel_o  (m_pi1r_sel_w[M_PI1R_DMA])
-	,.m_pi1_rdy_i  (m_pi1r_rdy_w[M_PI1R_DMA])
-
-	,.s_pi1_op_i    (s_pi1r_op_w[S_PI1R_DMA])
-	,.s_pi1_addr_i  (s_pi1r_addr_w[S_PI1R_DMA])
-	,.s_pi1_data_i  (s_pi1r_data_w0[S_PI1R_DMA])
-	,.s_pi1_data_o  (s_pi1r_data_w1[S_PI1R_DMA])
-	,.s_pi1_sel_i   (s_pi1r_sel_w[S_PI1R_DMA])
-	,.s_pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_DMA])
-	,.s_pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_DMA])
-
-	,.wait_i (|m_pi1r_op_w[M_PI1R_MULTIPU])
-
-	,.intrqst_o (intrqstsrc_w[INTCTRLSRC_DMA])
-	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_DMA])
-);
-
-assign devtbl_id_w     [S_PI1R_DMA] = 2;
-assign devtbl_useintr_w[S_PI1R_DMA] = 1;
 
 wire [2 -1 : 0]             intctrl_op_w;
 wire [ADDRBITSZ -1 : 0]     intctrl_addr_w;
