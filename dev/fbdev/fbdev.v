@@ -203,7 +203,7 @@ assign s_pi1_data_o = (data_w0 << data_w0_shift[(CLOG2XARCHBITSZBY8DIFF+CLOG2ARC
 wire [((CLOG2XARCHBITSZBY8-CLOG2ARCHBITSZBY8)+CLOG2ARCHBITSZ):0] data_w1_shift = {s_pi1_addr_w[CLOG2XARCHBITSZBY8:CLOG2ARCHBITSZBY8], {CLOG2ARCHBITSZ{1'b0}}};
 wire [XARCHBITSZ -1 : 0] data_w1 = (s_pi1_data_i >> data_w1_shift[(CLOG2XARCHBITSZBY8DIFF+CLOG2ARCHBITSZ)-1:0]);
 
-localparam PXBITSZ = (8*3);
+localparam PXBITSZ = (8*4);
 localparam PXBUF_WIDTH = (PXBITSZ*(XARCHBITSZ/ARCHBITSZ));
 
 wire [PXBUF_WIDTH -1 : 0] pxbuf_data_w1;
@@ -213,6 +213,7 @@ generate for (
 	gen_pxbuf_data_w1_idx < (XARCHBITSZ/ARCHBITSZ);
 	gen_pxbuf_data_w1_idx = gen_pxbuf_data_w1_idx + 1) begin :gen_pxbuf_data_w1
 assign pxbuf_data_w1[((gen_pxbuf_data_w1_idx+1)*PXBITSZ) -1 : gen_pxbuf_data_w1_idx*PXBITSZ] = {
+	m_pi1_data_i[31+(ARCHBITSZ*gen_pxbuf_data_w1_idx):24+(ARCHBITSZ*gen_pxbuf_data_w1_idx)],
 	m_pi1_data_i[23+(ARCHBITSZ*gen_pxbuf_data_w1_idx):16+(ARCHBITSZ*gen_pxbuf_data_w1_idx)],
 	m_pi1_data_i[15+(ARCHBITSZ*gen_pxbuf_data_w1_idx):8 +(ARCHBITSZ*gen_pxbuf_data_w1_idx)],
 	m_pi1_data_i[7 +(ARCHBITSZ*gen_pxbuf_data_w1_idx):0 +(ARCHBITSZ*gen_pxbuf_data_w1_idx)]};
@@ -227,14 +228,36 @@ assign vga_blue_o  = _pxbuf_data_w0[23:16];
 assign vga_green_o = _pxbuf_data_w0[15:8];
 assign vga_red_o   = _pxbuf_data_w0[7:0];
 
-reg pxbuf_read_en = 0;
+wire [8 -1 : 0] px_repeat_last = (_pxbuf_data_w0[31:24] + 1'b1);
+reg  [8 -1 : 0] px_repeat_idx = 0;
+wire px_repeat_done = (px_repeat_idx == px_repeat_last);
 
-wire pxbuf_read_w = (pxbuf_read_en && !vga_blank_o_ && (datidx == ((XARCHBITSZ/ARCHBITSZ)-1)));
-always @ (posedge clk_i)
-	if (!pxbuf_read_en || vga_blank_o_)
-		datidx <= ((XARCHBITSZ/ARCHBITSZ)-1);
-	else if (CLOG2XARCHBITSZBY8DIFF2)
+reg pxbuf_read_en = 0;
+reg pxbuf_read_en_sampled = 0;
+wire pxbuf_read_en_posedge = (pxbuf_read_en && !pxbuf_read_en_sampled);
+
+wire pxbuf_read_w = pxbuf_read_en_posedge || (
+	pxbuf_read_en && !vga_blank_o_ && (
+	(datidx == ((XARCHBITSZ/ARCHBITSZ)-1) && px_repeat_done) ||
+		/* or last data of the frame */
+		(h_pos_r_ == (H_REZ-1) && v_pos_r_ == (V_REZ-1))));
+
+always @ (posedge clk_i) begin
+
+	pxbuf_read_en_sampled <= pxbuf_read_en;
+
+	if (!pxbuf_read_en || vga_vblank_w_ || (!vga_hblank_w_ && px_repeat_done) || pxbuf_read_w)
+		px_repeat_idx <= 0;
+	else if (vga_hblank_w_); // Do nothing.
+	else if (px_repeat_last)
+		px_repeat_idx <= px_repeat_idx + 1'b1;
+
+	if (!pxbuf_read_en || vga_vblank_w_ || pxbuf_read_w)
+		datidx <= 0;
+	else if (vga_hblank_w_); // Do nothing.
+	else if (CLOG2XARCHBITSZBY8DIFF2 && px_repeat_done)
 		datidx <= datidx + 1'b1;
+end
 
 reg [2 -1 : 0] _m_pi1_op_o = PINOOP;
 
