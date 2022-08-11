@@ -261,7 +261,8 @@ end
 
 reg [2 -1 : 0] _m_pi1_op_o = PINOOP;
 
-localparam PXCNT = (H_REZ*V_REZ);
+localparam PXCNT      = (H_REZ*V_REZ);
+localparam CLOG2PXCNT = clog2(PXCNT);
 
 localparam BUFCNT = 2/*for double-buffering*/;
 
@@ -271,11 +272,26 @@ wire [XADDRBITSZ -1 : 0] pxdat_last_addr_r_next = ((pxdat_first_addr_o + (PXCNT>
 always @ (posedge pi1_clk_i)
 	pxdat_last_addr_o <= ((pxdat_first_addr_o + ((PXCNT*BUFCNT)>>CLOG2XARCHBITSZBY8DIFF2))-1);
 
+integer datpxidx;
+reg [CLOG2PXCNT -1 : 0] m_pi1_data_i_px_cnt; // ### declared as reg so as to be usable by verilog within the always block.
+reg [ARCHBITSZ -1 : 0] m_pi1_data_i_px; // ### declared as reg so as to be usable by verilog within the always block.
+always @* begin
+	for (datpxidx = 0, m_pi1_data_i_px_cnt = 0; datpxidx < (XARCHBITSZ/ARCHBITSZ); datpxidx = datpxidx + 1) begin
+		m_pi1_data_i_px = (m_pi1_data_i>>(ARCHBITSZ*datpxidx));
+		m_pi1_data_i_px_cnt = (m_pi1_data_i_px_cnt + ((m_pi1_data_i_px[31:24]+2)&'hff));
+	end
+end
+reg  [CLOG2PXCNT -1 : 0] m_pi1_data_i_px_cnt_cumul = 0;
+wire [CLOG2PXCNT -1 : 0] m_pi1_data_i_px_cnt_cumul_next = (m_pi1_data_i_px_cnt_cumul + m_pi1_data_i_px_cnt);
+
 wire pxbuf_empty_w;
 wire pxbuf_full_w;
 
 reg pxbuf_empty_w_sampled = 0;
-wire pxbuf_empty_w_posedge = (pxbuf_empty_w && !pxbuf_empty_w_sampled);
+wire pxbuf_empty_w_posedge_ = (pxbuf_empty_w && !pxbuf_empty_w_sampled);
+wire m_pi1_data_i_px_cnt_cumul_next_max = (_m_pi1_op_o == PIRDOP && m_pi1_rdy_i &&
+		m_pi1_data_i_px_cnt_cumul_next >= PXCNT && m_pi1_addr_o < pxdat_last_addr_r);
+wire pxbuf_empty_w_posedge = (pxbuf_empty_w_posedge_ || m_pi1_data_i_px_cnt_cumul_next_max);
 reg pxbuf_empty_w_posedge_sampled = 0;
 
 wire pxbuf_excess_empty_w;
@@ -321,6 +337,7 @@ always @ (posedge pi1_clk_i) begin
 		m_pi1_op_o <= PINOOP;
 		m_pi1_addr_o <= 0;
 		pxdat_last_addr_r <= 0;
+		m_pi1_data_i_px_cnt_cumul <= 0;
 	end else if (m_pi1_op_o == PIRDOP || _m_pi1_op_o == PIRDOP) begin
 		if (m_pi1_rdy_i) begin
 			if (m_pi1_op_o == PIRDOP) begin
@@ -339,7 +356,14 @@ always @ (posedge pi1_clk_i) begin
 				pxdat_last_addr_r <= pxdat_last_addr_r_next;
 			end
 			if (_m_pi1_op_o == PIRDOP) begin
-				// Nothing to do.
+				if (m_pi1_addr_o != pxdat_first_addr_o && m_pi1_addr_o != pxdat_last_addr_r &&
+					(!(pxbuf_empty_w_posedge || pxbuf_empty_w_posedge_sampled))) begin
+					m_pi1_data_i_px_cnt_cumul <= m_pi1_data_i_px_cnt_cumul_next;
+				end else begin
+					m_pi1_data_i_px_cnt_cumul <= 0;
+				end
+			end else if (pxbuf_empty_w_posedge) begin
+					m_pi1_data_i_px_cnt_cumul <= 0;
 			end
 		end else if (!FORCE_PINOOP) begin
 			// Used in order to attempt PIRDOP when next m_pi1_op_o was set to PINOOP.
@@ -350,6 +374,7 @@ always @ (posedge pi1_clk_i) begin
 				if (pxbuf_empty_w_posedge) begin
 					m_pi1_addr_o <= pxdat_first_addr_o;
 					pxdat_last_addr_r <= pxdat_last_addr_r_next;
+					m_pi1_data_i_px_cnt_cumul <= 0;
 				end
 			end
 		end
@@ -359,6 +384,7 @@ always @ (posedge pi1_clk_i) begin
 			if (!m_pi1_addr_o || pxbuf_empty_w) begin
 				m_pi1_addr_o <= pxdat_first_addr_o;
 				pxdat_last_addr_r <= pxdat_last_addr_r_next;
+				m_pi1_data_i_px_cnt_cumul <= 0;
 			end
 		end
 	end
@@ -369,7 +395,7 @@ always @ (posedge pi1_clk_i) begin
 		pxbuf_read_en <= 1;
 end
 
-wire pxbuf_write_w = ((_m_pi1_op_o == PIRDOP && m_pi1_rdy_i) && !(pxbuf_empty_w_posedge || pxbuf_empty_w_posedge_sampled));
+wire pxbuf_write_w = ((_m_pi1_op_o == PIRDOP && m_pi1_rdy_i) && !(pxbuf_empty_w_posedge_ || pxbuf_empty_w_posedge_sampled));
 
 wire [PXBUF_WIDTH -1 : 0] pxbuf_excess_data_w0;
 
