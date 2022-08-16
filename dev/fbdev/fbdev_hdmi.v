@@ -22,7 +22,8 @@
 //   null when a pixel-memory-map is being used instead.
 // CMDGETINFO:
 //   Cmd value is 1.
-//   Arg value can be 0 (screen-width), 1 (screen-height), 2 (refresh-rate), 3 (frame-count).
+//   Arg value can be 0 (screen-width), 1 (screen-height), 2 (refresh-rate),
+//     3 (frame-count), 4 (accel-version).
 //   Return value of corresponding Arg.
 
 `include "./pll_100_to_25_125_mhz.v"

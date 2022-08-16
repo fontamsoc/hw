@@ -184,6 +184,7 @@ localparam GETINFO_WIDTH  = 0;
 localparam GETINFO_HEIGHT = 1;
 localparam GETINFO_HZ     = 2;
 localparam GETINFO_BUFCNT = 3;
+localparam GETINFO_ACCEL  = 4;
 
 wire [XARCHBITSZ -1 : 0] s_pi1_addr_w;
 
@@ -325,6 +326,8 @@ always @ (posedge pi1_clk_i) begin
 				data_w0 <= REFRESH;
 			else if (data_w1[ARCHBITSZ-1:2/*clog2(32/8)*/] == GETINFO_BUFCNT)
 				data_w0 <= BUFCNT;
+			else if (data_w1[ARCHBITSZ-1:2/*clog2(32/8)*/] == GETINFO_ACCEL)
+				data_w0 <= 1/* Acceleration Version */;
 			else
 				data_w0 <= 0;
 		end
