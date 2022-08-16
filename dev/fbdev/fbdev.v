@@ -299,6 +299,11 @@ wire pxbuf_excess_full_w;
 
 wire _pxbuf_full_w = (pxbuf_full_w || !pxbuf_excess_empty_w);
 
+reg wait_for_vblank = 0;
+wire _wait_for_vblank = (wait_for_vblank || _pxbuf_full_w);
+reg vga_vblank_w__sampled = 0;
+reg wait_for_vblank_trigger = 0;
+
 always @ (posedge pi1_clk_i) begin
 
 	if (s_pi1_rdy_o)
@@ -341,7 +346,7 @@ always @ (posedge pi1_clk_i) begin
 	end else if (m_pi1_op_o == PIRDOP || _m_pi1_op_o == PIRDOP) begin
 		if (m_pi1_rdy_i) begin
 			if (m_pi1_op_o == PIRDOP) begin
-				if (FORCE_PINOOP/* can hog bus if no PINOOP */|| _pxbuf_full_w)
+				if (FORCE_PINOOP/* can hog bus if no PINOOP */|| _wait_for_vblank)
 					m_pi1_op_o <= PINOOP;
 				if (m_pi1_addr_o < pxdat_last_addr_r && (!pxbuf_empty_w_posedge || m_pi1_addr_o == pxdat_first_addr_o)) begin
 					m_pi1_addr_o <= m_pi1_addr_o + 1'b1;
@@ -367,7 +372,7 @@ always @ (posedge pi1_clk_i) begin
 			end
 		end else if (!FORCE_PINOOP) begin
 			// Used in order to attempt PIRDOP when next m_pi1_op_o was set to PINOOP.
-			if (_pxbuf_full_w)
+			if (_wait_for_vblank)
 				m_pi1_op_o <= PINOOP;
 			else begin
 				m_pi1_op_o <= PIRDOP;
@@ -378,7 +383,7 @@ always @ (posedge pi1_clk_i) begin
 				end
 			end
 		end
-	end else if (!_pxbuf_full_w) begin
+	end else if (!_wait_for_vblank) begin
 		if (m_pi1_op_o == PINOOP) begin
 			m_pi1_op_o <= PIRDOP;
 			if (!m_pi1_addr_o || pxbuf_empty_w) begin
@@ -387,6 +392,17 @@ always @ (posedge pi1_clk_i) begin
 				m_pi1_data_i_px_cnt_cumul <= 0;
 			end
 		end
+	end
+
+	vga_vblank_w__sampled <= vga_vblank_w_; // To detect posedge.
+	if (vga_rst_o || pxbuf_empty_w || (vga_vblank_w_ && !vga_vblank_w__sampled)) begin
+		wait_for_vblank <= 0;
+		wait_for_vblank_trigger <= 0;
+	end else if (m_pi1_data_i_px_cnt_cumul_next_max) begin
+		// Prevents too many RLE compressed frames in pxbuf.
+		if (wait_for_vblank_trigger)
+			wait_for_vblank <= 1;
+		wait_for_vblank_trigger <= 1;
 	end
 
 	if (vga_rst_o || pxbuf_empty_w)
