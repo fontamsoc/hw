@@ -96,9 +96,9 @@ output reg  [XADDRBITSZ -1 : 0] pxdat_last_addr_o;
 output wire [7:0] vga_red_o;
 output wire [7:0] vga_green_o;
 output wire [7:0] vga_blue_o;
-output reg        vga_blank_o = 0;
-output reg        vga_hsync_o = 0;
-output reg        vga_vsync_o = 0;
+output wire       vga_blank_o;
+output wire       vga_hsync_o;
+output wire       vga_vsync_o;
 
 output wire vga_rst_o;
 
@@ -143,34 +143,28 @@ localparam V_MAX        = (HEIGHT == 480 && REFRESH == 60) ? 525  :
                           (HEIGHT == 720 && REFRESH == 60) ? 750  :
                           (HEIGHT == 1080 && REFRESH == 60)? 1125 : 0;
 
-reg [11:0] h_pos_r_ = 0;
-reg [11:0] v_pos_r_ = 0;
+reg [11:0] h_pos_r = 0;
+reg [11:0] v_pos_r = 0;
 
 reg [ARCHBITSZ -1 : 0] pxdat_addr_r = {ARCHBITSZ{1'b1}};
 
 assign vga_rst_o = (rst_i || (&pxdat_addr_r));
 
 always @ (posedge clk_i)
-	if (vga_rst_o || h_pos_r_ == (H_MAX-1)) begin
-		h_pos_r_ <= 0;
-		if (vga_rst_o || v_pos_r_ == (V_MAX-1))
-			v_pos_r_ <= 0;
+	if (vga_rst_o || h_pos_r == (H_MAX-1)) begin
+		h_pos_r <= 0;
+		if (vga_rst_o || v_pos_r == (V_MAX-1))
+			v_pos_r <= 0;
 		else
-			v_pos_r_ <= v_pos_r_ + 1'b1;
+			v_pos_r <= v_pos_r + 1'b1;
 	end else
-		h_pos_r_ <= h_pos_r_ + 1'b1;
+		h_pos_r <= h_pos_r + 1'b1;
 
-wire vga_hblank_w_ = (h_pos_r_ >= H_REZ);
-wire vga_vblank_w_ = (v_pos_r_ >= V_REZ);
-wire vga_blank_o_ = (vga_hblank_w_ || vga_vblank_w_);
-wire vga_hsync_o_ = (h_pos_r_ >= H_SYNC_START && h_pos_r_ < H_SYNC_END);
-wire vga_vsync_o_ = (v_pos_r_ >= V_SYNC_START && v_pos_r_ < V_SYNC_END);
-
-always @ (posedge clk_i) begin
-	vga_blank_o <= vga_blank_o_;
-	vga_hsync_o <= vga_hsync_o_;
-	vga_vsync_o <= vga_vsync_o_;
-end
+wire vga_hblank_w_ = (h_pos_r >= H_REZ);
+wire vga_vblank_w_ = (v_pos_r >= V_REZ);
+assign vga_blank_o = (vga_hblank_w_ || vga_vblank_w_);
+assign vga_hsync_o = (h_pos_r >= H_SYNC_START && h_pos_r < H_SYNC_END);
+assign vga_vsync_o = (v_pos_r >= V_SYNC_START && v_pos_r < V_SYNC_END);
 
 localparam PINOOP = 2'b00;
 localparam PIWROP = 2'b01;
@@ -238,10 +232,10 @@ reg pxbuf_read_en_sampled = 0;
 wire pxbuf_read_en_posedge = (pxbuf_read_en && !pxbuf_read_en_sampled);
 
 wire pxbuf_read_w = pxbuf_read_en_posedge || (
-	pxbuf_read_en && !vga_blank_o_ && (
+	pxbuf_read_en && !vga_blank_o && (
 	(datidx == ((XARCHBITSZ/ARCHBITSZ)-1) && px_repeat_done) ||
 		/* or last data of the frame */
-		(h_pos_r_ == (H_REZ-1) && v_pos_r_ == (V_REZ-1))));
+		(h_pos_r == (H_REZ-1) && v_pos_r == (V_REZ-1))));
 
 always @ (posedge clk_i) begin
 
