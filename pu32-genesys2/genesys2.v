@@ -38,6 +38,8 @@
 
 `include "dev/bootldr/bootldr.v"
 
+`include "dev/fbdev/fbdev_hdmi.v"
+
 module genesys2 (
 
 	 rst_n
@@ -79,6 +81,10 @@ module genesys2 (
 	,ddr3_dqs_p
 	,ddr3_dqs_n
 	,ddr3_reset_n
+
+	// HDMI signals.
+	,tmds_out_p
+	,tmds_out_n
 );
 
 `include "lib/clog2.v"
@@ -135,6 +141,10 @@ output wire [(DDR3DQBITSIZE / 8) -1 : 0]  ddr3_dm;
 inout  wire [(DDR3DQBITSIZE / 8) -1 : 0]  ddr3_dqs_p;
 inout  wire [(DDR3DQBITSIZE / 8) -1 : 0]  ddr3_dqs_n;
 output wire                               ddr3_reset_n;
+
+// HDMI signals.
+output wire [3:0] tmds_out_p;
+output wire [3:0] tmds_out_n;
 
 wire litedram_pll_locked;
 wire litedram_init_done;
@@ -247,9 +257,12 @@ localparam S_PI1R_UART       = (S_PI1R_INTCTRL + 1);
 localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
 localparam S_PI1R_RAMCTRL    = (S_PI1R_RAM + 1);
 localparam S_PI1R_BOOTLDR    = (S_PI1R_RAMCTRL + 1);
-localparam S_PI1R_INVALIDDEV = (S_PI1R_BOOTLDR + 1);
+localparam S_PI1R_FBDEV      = (S_PI1R_BOOTLDR + 1);
+localparam S_PI1R_INVALIDDEV = (S_PI1R_FBDEV + 1);
 
 localparam LITEDRAM_ARCHBITSZ = 256;
+localparam LITEDRAM_CLOG2ARCHBITSZBY8 = clog2(LITEDRAM_ARCHBITSZ/8);
+localparam LITEDRAM_ADDRBITSZ = (LITEDRAM_ARCHBITSZ-LITEDRAM_CLOG2ARCHBITSZBY8);
 
 localparam PI1RMASTERCOUNT       = (M_PI1R_LAST + 1);
 localparam PI1RSLAVECOUNT        = (S_PI1R_INVALIDDEV + 1);
@@ -653,6 +666,9 @@ wire [LITEDRAM_ARCHBITSZ -1 : 0]                                 dcache_s_data_w
 wire [(LITEDRAM_ARCHBITSZ/8) -1 : 0]                             dcache_s_sel_w;
 wire                                                             dcache_s_rdy_w;
 
+wire [PI1RADDRBITSZ -1 : 0] fbdev_first_addr_w;
+wire [PI1RADDRBITSZ -1 : 0] fbdev_last_addr_w;
+
 pi1_dcache #(
 
 	 .ARCHBITSZ     (LITEDRAM_ARCHBITSZ)
@@ -668,7 +684,9 @@ pi1_dcache #(
 	,.clk_i (pi1r_clk_w)
 
 	,.crst_i    (ram_rst_w || devtbl_rst2_w)
-	,.cenable_i (1'b1)
+	,.cenable_i (
+		(dcache_m_addr_w < fbdev_first_addr_w[PI1RADDRBITSZ-1:(LITEDRAM_CLOG2ARCHBITSZBY8-CLOG2PI1RARCHBITSZBY8)]) ||
+			(dcache_m_addr_w >= (fbdev_last_addr_w[PI1RADDRBITSZ-1:(LITEDRAM_CLOG2ARCHBITSZBY8-CLOG2PI1RARCHBITSZBY8)]+1)))
 	,.cmiss_i   (1'b0)
 	,.conly_i   (ram_rst_w)
 
@@ -687,6 +705,13 @@ pi1_dcache #(
 	,.s_pi1_rdy_i  (dcache_s_rdy_w)
 );
 
+wire [2 -1 : 0]                                                  _fbdev_m_op_w;
+wire [(LITEDRAM_ARCHBITSZ - clog2(LITEDRAM_ARCHBITSZ/8)) -1 : 0] _fbdev_m_addr_w;
+wire [LITEDRAM_ARCHBITSZ -1 : 0]                                 _fbdev_m_data_w0;
+wire [LITEDRAM_ARCHBITSZ -1 : 0]                                 _fbdev_m_data_w1;
+wire [(LITEDRAM_ARCHBITSZ/8) -1 : 0]                             _fbdev_m_sel_w;
+wire                                                             _fbdev_m_rdy_w;
+
 wire                                 wb4_clk_user_port_w;
 wire                                 wb4_rst_user_port_w;
 wire                                 wb4_cyc_user_port_w;
@@ -701,21 +726,23 @@ wire [LITEDRAM_ARCHBITSZ -1 : 0]     wb4_data_user_port_w1;
 
 pi1q_to_wb4 #(
 
-	.ARCHBITSZ (LITEDRAM_ARCHBITSZ)
+	 .MASTERCOUNT (2)
+	,.ARCHBITSZ   (LITEDRAM_ARCHBITSZ)
 
 ) pi1q_to_wb4_user_port (
 
 	 .wb4_rst_i (wb4_rst_user_port_w)
 
 	,.pi1_clk_i   (pi1r_clk_w)
-	,.pi1_op_i    (dcache_s_op_w)
-	,.pi1_addr_i  (dcache_s_addr_w)
-	,.pi1_data_i  (dcache_s_data_w0)
-	,.pi1_data_o  (dcache_s_data_w1)
-	,.pi1_sel_i   (dcache_s_sel_w)
-	,.pi1_rdy_o   (dcache_s_rdy_w)
+	,.pi1_op_i    ({dcache_s_op_w, _fbdev_m_op_w})
+	,.pi1_addr_i  ({dcache_s_addr_w, _fbdev_m_addr_w})
+	,.pi1_data_i  ({dcache_s_data_w0, _fbdev_m_data_w0})
+	,.pi1_data_o  ({dcache_s_data_w1, _fbdev_m_data_w1})
+	,.pi1_sel_i   ({dcache_s_sel_w, _fbdev_m_sel_w})
+	,.pi1_rdy_o   ({dcache_s_rdy_w, _fbdev_m_rdy_w})
 
 	,.wb4_clk_i   (wb4_clk_user_port_w)
+
 	,.wb4_cyc_o   (wb4_cyc_user_port_w)
 	,.wb4_stb_o   (wb4_stb_user_port_w)
 	,.wb4_we_o    (wb4_we_user_port_w)
@@ -863,6 +890,78 @@ bootldr #(
 
 assign devtbl_id_w     [S_PI1R_BOOTLDR] = 0;
 assign devtbl_useintr_w[S_PI1R_BOOTLDR] = 0;
+
+wire [2 -1 : 0]                 fbdev_m_op_w;
+wire [PI1RADDRBITSZ -1 : 0]     fbdev_m_addr_w;
+wire [PI1RARCHBITSZ -1 : 0]     fbdev_m_data_w0;
+wire [PI1RARCHBITSZ -1 : 0]     fbdev_m_data_w1;
+wire [(PI1RARCHBITSZ/8) -1 : 0] fbdev_m_sel_w;
+wire                            fbdev_m_rdy_w;
+
+pi1_upconverter #(
+
+	 .MARCHBITSZ (PI1RARCHBITSZ)
+	,.SARCHBITSZ (LITEDRAM_ARCHBITSZ)
+
+) fbdev_m_upconverter (
+
+	 .clk_i (pi1r_clk_w)
+
+	,.m_pi1_op_i   (fbdev_m_op_w)
+	,.m_pi1_addr_i (fbdev_m_addr_w)
+	,.m_pi1_data_i (fbdev_m_data_w0)
+	,.m_pi1_data_o (fbdev_m_data_w1)
+	,.m_pi1_sel_i  (fbdev_m_sel_w)
+	,.m_pi1_rdy_o  (fbdev_m_rdy_w)
+
+	,.s_pi1_op_o   (_fbdev_m_op_w)
+	,.s_pi1_addr_o (_fbdev_m_addr_w)
+	,.s_pi1_data_o (_fbdev_m_data_w0)
+	,.s_pi1_data_i (_fbdev_m_data_w1)
+	,.s_pi1_sel_o  (_fbdev_m_sel_w)
+	,.s_pi1_rdy_i  (_fbdev_m_rdy_w)
+);
+
+fbdev_hdmi #(
+
+	 .ARCHBITSZ  (ARCHBITSZ)
+	,.XARCHBITSZ (PI1RARCHBITSZ)
+	,.WIDTH      (!0 ? 640 : 800 /* 1280*/)
+	,.HEIGHT     (!0 ? 480 : 600 /* 720*/)
+	,.REFRESH    (!0 ? 60  : 72  /* 60*/)
+	,.BUFSZ      (1024*8)
+
+) fbdev (
+
+	 .rst_i (pi1r_rst_w)
+
+	,.pi1_clk_i   (pi1r_clk_w)
+	,.clk100mhz_i (clk100mhz)
+
+	,.m_pi1_op_o   (fbdev_m_op_w)
+	,.m_pi1_addr_o (fbdev_m_addr_w)
+	,.m_pi1_data_o (fbdev_m_data_w0)
+	,.m_pi1_data_i (fbdev_m_data_w1)
+	,.m_pi1_sel_o  (fbdev_m_sel_w)
+	,.m_pi1_rdy_i  (fbdev_m_rdy_w)
+
+	,.s_pi1_op_i    (s_pi1r_op_w[S_PI1R_FBDEV])
+	,.s_pi1_addr_i  (s_pi1r_addr_w[S_PI1R_FBDEV])
+	,.s_pi1_data_i  (s_pi1r_data_w0[S_PI1R_FBDEV])
+	,.s_pi1_data_o  (s_pi1r_data_w1[S_PI1R_FBDEV])
+	,.s_pi1_sel_i   (s_pi1r_sel_w[S_PI1R_FBDEV])
+	,.s_pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_FBDEV])
+	,.s_pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_FBDEV])
+
+	,.pxdat_first_addr_o (fbdev_first_addr_w)
+	,.pxdat_last_addr_o (fbdev_last_addr_w)
+
+	,.tmds_out_p (tmds_out_p)
+	,.tmds_out_n (tmds_out_n)
+);
+
+assign devtbl_id_w     [S_PI1R_FBDEV] = 10;
+assign devtbl_useintr_w[S_PI1R_FBDEV] = 0;
 
 // PI1RDEFAULTSLAVEINDEX to catch invalid physical address space access.
 localparam INVALIDDEVMAPSZ = ('h1000/* 4KB */);
