@@ -87,6 +87,7 @@
         <Option Name="VerilogDir" Val="$PPRDIR/../../dev/bootldr"/>
         <Option Name="VerilogDir" Val="$PPRDIR/../../dev/sdcard"/>
         <Option Name="VerilogDir" Val="$PPRDIR/../litedram"/>
+        <Option Name="VerilogDir" Val="$PPRDIR/../../dev/fbdev"/>
       </Config>
     </FileSet>
     <FileSet Name="constrs_1" Type="Constrs" RelSrcDir="$PSRCDIR/constrs_1" RelGenDir="$PGENDIR/constrs_1">
