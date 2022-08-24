@@ -27,6 +27,24 @@
 //
 // usage_o
 // 	Count of data in the fifo.
+//  Because the fifo has two clock domains driven by
+//  "clk_push_i" and "clk_pop_i", to prevent hazards
+//  when sampling "usage_o", both clocks should transition
+//  at the same time; also, both clocks should have
+//  the same speed, or one clock should have a speed that
+//  is the speed of the other clock times a power of 2.
+//  If the frequency speed ratio described above between
+//  the two clocks cannot be guaranteed, before attempting
+//  to read data from the fifo, "usage_o" should be debounced
+//  for at least two stable samples using the clock "clk_pop_i",
+//  and its value checked to insure that the fifo is not empty;
+//  and before attempting to write data to the fifo, "usage_o"
+//  should be debounced for at least two stable samples using
+//  the clock "clk_push_i", and its value checked to insure
+//  that the fifo is not full. The debouncing removes noise
+//  from hazards that could occur due to both clocks having
+//  their posedge too narrow for the combinational logic
+//  computing "usage_o" to settle.
 //
 // Ports for pushing data in the fifo:
 //
@@ -43,6 +61,7 @@
 //
 // full_o
 // 	High when the fifo is full.
+//  Asynchronous-safe with respect to "clk_push_i" and "clk_pop_i".
 //
 // Ports for poping data from the fifo:
 //
@@ -59,25 +78,7 @@
 //
 // empty_o
 // 	High when the fifo is empty.
-
-// Note that the fifo has two clock domains driven
-// by "clk_push_i" and "clk_pop_i".
-// To prevent hazards, both clocks should transition
-// at the same time; also, both clocks should have
-// the same speed, or one clock should have a speed that
-// is the speed of the other clock times a power of 2.
-// If the frequency speed ratio described above between
-// the two clocks cannot be guaranteed, before attempting
-// to pop data from the fifo, "usage_o" should be debounced
-// for at least two stable samples using the clock "clk_pop_i",
-// and its value checked to insure that the fifo is not empty;
-// and before attempting to push data to the fifo, "usage_o"
-// should be debounced for at least two stable samples using
-// the clock "clk_push_i", and its value checked to insure
-// that the fifo is not full. The debouncing removes noise
-// from hazards that could occur due to both clocks having
-// their posedge too narrow for the combinational logic
-// computing "usage_o" to settle.
+//  Asynchronous-safe with respect to "clk_push_i" and "clk_pop_i".
 
 `include "lib/ram/ram1i2o.v"
 
@@ -127,6 +128,15 @@ wire we = (push_i && !full_o);
 reg [(CLOG2DEPTH +1) -1 : 0] readidx = 0;
 reg [(CLOG2DEPTH +1) -1 : 0] writeidx = 0;
 
+wire [(CLOG2DEPTH +1) -1 : 0] next_readidx = (readidx + 1'b1);
+wire [(CLOG2DEPTH +1) -1 : 0] next_writeidx = (writeidx + 1'b1);
+
+wire [(CLOG2DEPTH +1) -1 : 0] gray_next_readidx = (next_readidx ^ (next_readidx >> 1));
+wire [(CLOG2DEPTH +1) -1 : 0] gray_next_writeidx = (next_writeidx ^ (next_writeidx >> 1));
+
+reg [(CLOG2DEPTH +1) -1 : 0] gray_readidx = 0;
+reg [(CLOG2DEPTH +1) -1 : 0] gray_writeidx = 0;
+
 ram1i2o #(
 
 	 .SZ (DEPTH)
@@ -145,20 +155,32 @@ ram1i2o #(
 
 assign usage_o = (writeidx - readidx);
 
-assign full_o = (usage_o >= DEPTH);
+generate
+if (CLOG2DEPTH < 2) begin
+assign full_o = (gray_writeidx[CLOG2DEPTH:CLOG2DEPTH-1] == ~gray_readidx[CLOG2DEPTH:CLOG2DEPTH-1]);
+end else begin
+assign full_o = (gray_writeidx[CLOG2DEPTH:CLOG2DEPTH-1] == ~gray_readidx[CLOG2DEPTH:CLOG2DEPTH-1]) &&
+	(gray_writeidx[CLOG2DEPTH-2:0] == gray_readidx[CLOG2DEPTH-2:0]);
+end
+endgenerate
 
-assign empty_o = (usage_o == 0);
+assign empty_o = (gray_writeidx == gray_readidx);
 
 always @ (posedge clk_pop_i) begin
-	if (rst_i)
+	if (rst_i) begin
 		readidx <= writeidx;
-	else if (en)
-		readidx <= readidx + 1'b1;
+		gray_readidx <= gray_writeidx;
+	end else if (en) begin
+		readidx <= next_readidx;
+		gray_readidx <= gray_next_readidx;
+	end
 end
 
 always @ (posedge clk_push_i) begin
-	if (we)
-		writeidx <= writeidx + 1'b1;
+	if (!rst_i && we) begin
+		writeidx <= next_writeidx;
+		gray_writeidx <= gray_next_writeidx;
+	end
 end
 
 endmodule
