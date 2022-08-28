@@ -139,20 +139,33 @@ localparam PIRWOP = 2'b11;
 // The number of master devices is also the size of the queue; in fact,
 // each element of the queue is always used with the same master device.
 
+reg [CLOG2MASTERCOUNT -1 : 0] mstrhi;
+reg [CLOG2MASTERCOUNT -1 : 0] slvhi;
+
+wire [(CLOG2MASTERCOUNT +1) -1 : 0] MASTERCOUNT__less_mstrhi = (MASTERCOUNT_ - mstrhi);
+reg  [(CLOG2MASTERCOUNT +1) -1 : 0] MASTERCOUNT__less_mstrhi_hold;
+
 // Read and write indexes within the queue.
 // Only the clog2($MASTERCOUNT) lsb are used for indexing.
 reg [(CLOG2MASTERCOUNT +1) -1 : 0] queuereadidx  = 0;
 reg [(CLOG2MASTERCOUNT +1) -1 : 0] queuewriteidx = 0;
 
-wire [(CLOG2MASTERCOUNT +1) -1 : 0] queueusage = (queuewriteidx - queuereadidx);
+wire [(CLOG2MASTERCOUNT +1) -1 : 0] next_queuereadidx = ((queuereadidx[CLOG2MASTERCOUNT -1 : 0] < slvhi) ? (queuereadidx + 1'b1) : (queuereadidx + MASTERCOUNT__less_mstrhi_hold));
+wire [(CLOG2MASTERCOUNT +1) -1 : 0] next_queuewriteidx = ((queuewriteidx[CLOG2MASTERCOUNT -1 : 0] < mstrhi) ? (queuewriteidx + 1'b1) : (queuewriteidx + MASTERCOUNT__less_mstrhi));
 
-wire queuenotempty = |queueusage;
+wire [(CLOG2MASTERCOUNT +1) -1 : 0] gray_next_queuereadidx = (next_queuereadidx ^ (next_queuereadidx >> 1));
+wire [(CLOG2MASTERCOUNT +1) -1 : 0] gray_next_queuewriteidx = (next_queuewriteidx ^ (next_queuewriteidx >> 1));
+
+reg [(CLOG2MASTERCOUNT +1) -1 : 0] gray_queuereadidx = 0;
+reg [(CLOG2MASTERCOUNT +1) -1 : 0] gray_queuewriteidx = 0;
+
+wire queueempty = (gray_queuewriteidx == gray_queuereadidx);
 
 wire [2 -1 : 0] queueop_w0;
 
 reg [2 -1 : 0] s_op_o_saved;
 
-wire queueen = (s_rdy_i || (s_op_o_saved == PINOOP && s_op_o == PINOOP)) && queuenotempty;
+wire queueen = (s_rdy_i || (s_op_o_saved == PINOOP && s_op_o == PINOOP)) && !queueempty;
 wire queuewe = (masterrdy[queuewriteidx[CLOG2MASTERCOUNT -1 : 0]]);
 
 wire [2 -1 : 0] queueop_w1;
@@ -219,19 +232,33 @@ dram #(
 	,.o0      (queuebytsel_w0)                        ,.o1      ()
 );
 
-// This net is 1 when the queue is not full.
-wire queuenotfull = (queueusage < MASTERCOUNT);
-
-// This net is 1 when the queue is not almost full.
+// This net is 1 when the queue is almost full.
 // The queue is almost full when there is one remaining
 // queue element for which the result cannot yet be used
 // if it was for either of the operation PIRDOP or PIRWOP;
 // in fact the return value from the slave device for that
 // remaining queue element would still be pending.
-wire queuenotalmostfull = (queueusage < (MASTERCOUNT-1));
+wire queuenearfull_;
+generate
+if (CLOG2MASTERCOUNT < 2) begin
+assign queuenearfull_ = (gray_next_queuewriteidx[CLOG2MASTERCOUNT:CLOG2MASTERCOUNT-1] == ~gray_queuereadidx[CLOG2MASTERCOUNT:CLOG2MASTERCOUNT-1]);
+end else begin
+assign queuenearfull_ = (gray_next_queuewriteidx[CLOG2MASTERCOUNT:CLOG2MASTERCOUNT-1] == ~gray_queuereadidx[CLOG2MASTERCOUNT:CLOG2MASTERCOUNT-1]) &&
+	(gray_next_queuewriteidx[CLOG2MASTERCOUNT-2:0] == gray_queuereadidx[CLOG2MASTERCOUNT-2:0]);
+end
+endgenerate
 
-reg [CLOG2MASTERCOUNT -1 : 0] mstrhi;
-reg [CLOG2MASTERCOUNT -1 : 0] slvhi;
+wire queuefull;
+generate
+if (CLOG2MASTERCOUNT < 2) begin
+assign queuefull = (gray_queuewriteidx[CLOG2MASTERCOUNT:CLOG2MASTERCOUNT-1] == ~gray_queuereadidx[CLOG2MASTERCOUNT:CLOG2MASTERCOUNT-1]);
+end else begin
+assign queuefull = (gray_queuewriteidx[CLOG2MASTERCOUNT:CLOG2MASTERCOUNT-1] == ~gray_queuereadidx[CLOG2MASTERCOUNT:CLOG2MASTERCOUNT-1]) &&
+	(gray_queuewriteidx[CLOG2MASTERCOUNT-2:0] == gray_queuereadidx[CLOG2MASTERCOUNT-2:0]);
+end
+endgenerate
+
+wire queuenearfull = (queuenearfull_ || queuefull);
 
 // Combinational logics that set masterrdy.
 // A masterrdy output is 0 when it is not being indexed
@@ -241,10 +268,10 @@ reg [CLOG2MASTERCOUNT -1 : 0] slvhi;
 genvar gen_masterrdy_idx;
 generate for (gen_masterrdy_idx = 0; gen_masterrdy_idx < MASTERCOUNT; gen_masterrdy_idx = gen_masterrdy_idx + 1) begin :gen_masterrdy
 assign masterrdy[gen_masterrdy_idx] = (queuewriteidx[CLOG2MASTERCOUNT -1 : 0] == gen_masterrdy_idx &&
-	mstrhi == slvhi && queuenotfull && (queuenotalmostfull || !queueop_w1[1]));
+	mstrhi == slvhi && !queuefull && (!queuenearfull || !queueop_w1[1]));
 end endgenerate
 
-assign s_op_o = queuenotempty ? queueop_w0 : PINOOP;
+assign s_op_o = !queueempty ? queueop_w0 : PINOOP;
 
 assign s_addr_o = queueaddr_w0;
 assign s_data_o = queuedata_w0;
@@ -263,9 +290,6 @@ always @ (posedge m_clk_i) begin
 		mstrhiidx <= mstrhiidx - 1'b1;
 end
 
-wire [(CLOG2MASTERCOUNT +1) -1 : 0] MASTERCOUNT__less_mstrhi = (MASTERCOUNT_ - mstrhi);
-reg  [(CLOG2MASTERCOUNT +1) -1 : 0] MASTERCOUNT__less_mstrhi_hold;
-
 always @ (posedge m_clk_i) begin
 	if (rst_i) begin
 		// Reset logic.
@@ -281,11 +305,11 @@ always @ (posedge m_clk_i) begin
 		// Queue the memory operation and increment queuewriteidx
 		// to the next master device from which an operation
 		// for the slave device will be taken for queueing.
-		if (queuewriteidx[CLOG2MASTERCOUNT -1 : 0] < mstrhi)
-			queuewriteidx <= queuewriteidx + 1'b1;
-		else begin
+		gray_queuewriteidx <= gray_next_queuewriteidx;
+		queuewriteidx <= next_queuewriteidx;
+		if (queuewriteidx[CLOG2MASTERCOUNT -1 : 0] < mstrhi) begin
+		end else begin
 			MASTERCOUNT__less_mstrhi_hold <= MASTERCOUNT__less_mstrhi;
-			queuewriteidx <= (queuewriteidx + MASTERCOUNT__less_mstrhi);
 			mstrhi <= mstrhinxt;
 		end
 	end
@@ -305,10 +329,10 @@ always @ (posedge s_clk_i) begin
 		// by queuereadidx complete.
 		masterdato[prevqueuereadidx[CLOG2MASTERCOUNT -1 : 0]] <= s_data_i;
 		prevqueuereadidx <= queuereadidx[CLOG2MASTERCOUNT -1 : 0];
-		if (queuereadidx[CLOG2MASTERCOUNT -1 : 0] < slvhi)
-			queuereadidx <= queuereadidx + 1'b1;
-		else begin
-			queuereadidx <= (queuereadidx + MASTERCOUNT__less_mstrhi_hold);
+		gray_queuereadidx <= gray_next_queuereadidx;
+		queuereadidx <= next_queuereadidx;
+		if (queuereadidx[CLOG2MASTERCOUNT -1 : 0] < slvhi) begin
+		end else begin
 			slvhi <= mstrhi;
 		end
 	end
