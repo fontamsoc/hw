@@ -114,9 +114,9 @@ reg conly_r;
 
 assign m_pi1_rdy_o = (conly_r || (m_pi1_rdy_o_ && !cachemiss));
 
-wire [(CLOG2BUFFERDEPTH +1) -1 : 0] bufusage;
-
+wire bufnearfull;
 wire buffull;
+wire bufnearempty;
 wire bufempty;
 
 wire bufread_rst;
@@ -137,17 +137,13 @@ fifo #(
 
 	 .rst_i (rst_i)
 
-	,.usage_o ()
-
 	,.clk_read_i (clk_i)
 	,.read_i     (bufread_stb)
 	,.data_o     (addrbufdato)
-	,.empty_o    ()
 
 	,.clk_write_i (clk_i)
 	,.write_i     (bufpush)
 	,.data_i      (m_pi1_addr_i)
-	,.full_o      ()
 );
 
 wire [ARCHBITSZ -1 : 0] databufdato;
@@ -161,16 +157,16 @@ fifo #(
 
 	 .rst_i (rst_i)
 
-	,.usage_o (bufusage)
-
-	,.clk_read_i (clk_i)
-	,.read_i     (bufread_stb)
-	,.data_o     (databufdato)
-	,.empty_o    (bufempty)
+	,.clk_read_i   (clk_i)
+	,.read_i       (bufread_stb)
+	,.data_o       (databufdato)
+	,.near_empty_o (bufnearempty)
+	,.empty_o      (bufempty)
 
 	,.clk_write_i (clk_i)
 	,.write_i     (bufpush)
 	,.data_i      (m_pi1_data_i)
+	,.near_full_o (bufnearfull)
 	,.full_o      (buffull)
 );
 
@@ -185,17 +181,13 @@ fifo #(
 
 	 .rst_i (rst_i)
 
-	,.usage_o ()
-
 	,.clk_read_i (clk_i)
 	,.read_i     (bufread_stb)
 	,.data_o     (bytselbufdato)
-	,.empty_o    ()
 
 	,.clk_write_i (clk_i)
 	,.write_i     (bufpush)
 	,.data_i      (m_pi1_sel_i)
-	,.full_o      ()
 );
 
 always @ (posedge clk_i) begin
@@ -241,8 +233,8 @@ reg slvreadwriterqst;
 // Net set to 1 when a request to retrieve data from slv has completed.
 wire slvreadrqstdone = (slvreading && s_pi1_rdy_i);
 
-assign bufread_rst = (s_pi1_rdy_i && slvnotwriting && (bufread_done || (bufusage == 1)) && slvnotreading);
-wire   slvwriterdy  = (s_pi1_rdy_i && slvnotwriting && (bufread_done || (bufusage == 1) || (bufempty && slvreadwriterqst && !slvreadrqstdone)) && slvnotreading);
+assign bufread_rst = (s_pi1_rdy_i && slvnotwriting && (bufread_done || bufnearempty) && slvnotreading);
+wire   slvwriterdy = (s_pi1_rdy_i && slvnotwriting && (bufread_done || bufnearempty || (bufempty && slvreadwriterqst && !slvreadrqstdone)) && slvnotreading);
 
 // Register used to hold the value of the input "m_pi1_addr_i".
 reg [ADDRBITSZ -1 : 0] m_pi1_addr_i_hold;
@@ -263,9 +255,9 @@ wire [(256/*ARCHBITSZ*//8) -1 : 0] _m_pi1_sel_i_hold =
 	(cenable_i_and_cachemiss ? {ARCHBITSZ/8{1'b1}} : m_pi1_sel_i_hold[(ARCHBITSZ/8) -1 : 0]);
 
 assign s_pi1_op_o   = {slvreadrdy, slvwriterdy};
-assign s_pi1_addr_o = ((slvreadrdy || (bufread_rst && !bufread_done && bufusage == 1)) ? m_pi1_addr_i_hold : addrbufdato);
-assign s_pi1_data_o = (((slvwriterdy && slvreadrdy) || (bufread_rst && !bufread_done && bufusage == 1)) ? m_pi1_data_i_hold : databufdato);
-assign s_pi1_sel_o  = ((slvreadrdy || (bufread_rst && !bufread_done && bufusage == 1)) ? _m_pi1_sel_i_hold : bytselbufdato);
+assign s_pi1_addr_o = ((slvreadrdy || (bufread_rst && !bufread_done && bufnearempty)) ? m_pi1_addr_i_hold : addrbufdato);
+assign s_pi1_data_o = (((slvwriterdy && slvreadrdy) || (bufread_rst && !bufread_done && bufnearempty)) ? m_pi1_data_i_hold : databufdato);
+assign s_pi1_sel_o  = ((slvreadrdy || (bufread_rst && !bufread_done && bufnearempty)) ? _m_pi1_sel_i_hold : bytselbufdato);
 
 reg was_cenable_i_and_cachemiss;
 always @ (posedge clk_i) begin
@@ -554,7 +546,7 @@ always @ (posedge clk_i) begin
 		// setting cmiss_i_hold makes sense only for PIRDOP.
 	end else if (m_pi1_op_i == PIWROP) begin
 		// m_pi1_rdy_o becomes 0 if the data to write in slv will make its buffer full.
-		m_pi1_rdy_o_ <= (bufusage < (BUFFERDEPTH-1));
+		m_pi1_rdy_o_ <= !bufnearfull;
 	end else if (m_pi1_op_i == PIRWOP) begin
 		m_pi1_rdy_o_ <= 0;
 	end
