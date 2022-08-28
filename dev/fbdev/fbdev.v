@@ -2,7 +2,6 @@
 // (c) William Fonkou Tambe
 
 `include "lib/fifo.v"
-`include "lib/fifo_fwft.v"
 
 `include "lib/addr.v"
 
@@ -280,7 +279,7 @@ reg  [CLOG2PXCNT -1 : 0] m_pi1_data_i_px_cnt_cumul = 0;
 wire [CLOG2PXCNT -1 : 0] m_pi1_data_i_px_cnt_cumul_next = (m_pi1_data_i_px_cnt_cumul + m_pi1_data_i_px_cnt);
 
 wire pxbuf_empty_w;
-wire pxbuf_full_w;
+wire pxbuf_near_full_w;
 
 reg pxbuf_empty_w_sampled = 0;
 wire pxbuf_empty_w_posedge_ = (pxbuf_empty_w && !pxbuf_empty_w_sampled);
@@ -289,13 +288,8 @@ wire m_pi1_data_i_px_cnt_cumul_next_max = (_m_pi1_op_o == PIRDOP && m_pi1_rdy_i 
 wire pxbuf_empty_w_posedge = (pxbuf_empty_w_posedge_ || m_pi1_data_i_px_cnt_cumul_next_max);
 reg pxbuf_empty_w_posedge_sampled = 0;
 
-wire pxbuf_excess_empty_w;
-wire pxbuf_excess_full_w;
-
-wire _pxbuf_full_w = (pxbuf_full_w || !pxbuf_excess_empty_w);
-
 reg wait_for_vblank = 0;
-wire _wait_for_vblank = (wait_for_vblank || _pxbuf_full_w);
+wire _wait_for_vblank = (wait_for_vblank || pxbuf_near_full_w);
 reg vga_vblank_w__sampled = 0;
 reg wait_for_vblank_trigger = 0;
 
@@ -410,8 +404,6 @@ end
 
 wire pxbuf_write_w = ((_m_pi1_op_o == PIRDOP && m_pi1_rdy_i) && !(pxbuf_empty_w_posedge_ || pxbuf_empty_w_posedge_sampled));
 
-wire [PXBUF_WIDTH -1 : 0] pxbuf_excess_data_w0;
-
 fifo #(
 
 	 .WIDTH (PXBUF_WIDTH)
@@ -427,29 +419,9 @@ fifo #(
 	,.empty_o    (pxbuf_empty_w)
 
 	,.clk_write_i (pi1_clk_i)
-	,.write_i     ((!pxbuf_excess_empty_w) || pxbuf_write_w)
-	,.data_i      ((!pxbuf_excess_empty_w) ? pxbuf_excess_data_w0 : pxbuf_data_w1)
-	,.full_o      (pxbuf_full_w)
-);
-
-fifo_fwft #(
-
-	 .WIDTH (PXBUF_WIDTH)
-	,.DEPTH (2)
-
-) pxbuf_excess (
-
-	 .rst_i (vga_rst_o)
-
-	,.clk_pop_i (pi1_clk_i)
-	,.pop_i     (!pxbuf_full_w)
-	,.data_o    (pxbuf_excess_data_w0)
-	,.empty_o   (pxbuf_excess_empty_w)
-
-	,.clk_push_i (pi1_clk_i)
-	,.push_i     (pxbuf_write_w && _pxbuf_full_w)
-	,.data_i     (pxbuf_data_w1)
-	,.full_o     (pxbuf_excess_full_w)
+	,.write_i     (pxbuf_write_w)
+	,.data_i      (pxbuf_data_w1)
+	,.near_full_o (pxbuf_near_full_w)
 );
 
 endmodule
