@@ -59,6 +59,10 @@
 // 	Data written in the fifo on "clk_write_i" posedge,
 // 	if "write_i" is high.
 //
+// near_full_o
+// 	High when the fifo is full or one write away to full.
+//  Asynchronous-safe with respect to "clk_write_i" and "clk_read_i".
+//
 // full_o
 // 	High when the fifo is full.
 //  Asynchronous-safe with respect to "clk_write_i" and "clk_read_i".
@@ -76,6 +80,10 @@
 // 	Data from the fifo; its value is updated
 // 	on "clk_read_i" posedge, if "read_i" is high.
 //
+// near_empty_o
+// 	High when the fifo is empty or one read away to empty.
+//  Asynchronous-safe with respect to "clk_write_i" and "clk_read_i".
+//
 // empty_o
 // 	High when the fifo is empty.
 //  Asynchronous-safe with respect to "clk_write_i" and "clk_read_i".
@@ -91,11 +99,13 @@ module fifo (
 	,clk_read_i
 	,read_i
 	,data_o
+	,near_empty_o
 	,empty_o
 
 	,clk_write_i
 	,write_i
 	,data_i
+	,near_full_o
 	,full_o
 );
 
@@ -113,11 +123,13 @@ output wire [(CLOG2DEPTH +1) -1 : 0] usage_o;
 input  wire                clk_read_i;
 input  wire                read_i;
 output wire [WIDTH -1 : 0] data_o;
+output wire                near_empty_o;
 output wire                empty_o;
 
 input  wire                clk_write_i;
 input  wire                write_i;
 input  wire [WIDTH -1 : 0] data_i;
+output wire                near_full_o;
 output wire                full_o;
 
 wire en = (read_i && !empty_o);
@@ -154,6 +166,16 @@ bram #(
 
 assign usage_o = (writeidx - readidx);
 
+wire near_full_o_;
+generate
+if (CLOG2DEPTH < 2) begin
+assign near_full_o_ = (gray_next_writeidx[CLOG2DEPTH:CLOG2DEPTH-1] == ~gray_readidx[CLOG2DEPTH:CLOG2DEPTH-1]);
+end else begin
+assign near_full_o_ = (gray_next_writeidx[CLOG2DEPTH:CLOG2DEPTH-1] == ~gray_readidx[CLOG2DEPTH:CLOG2DEPTH-1]) &&
+	(gray_next_writeidx[CLOG2DEPTH-2:0] == gray_readidx[CLOG2DEPTH-2:0]);
+end
+endgenerate
+
 generate
 if (CLOG2DEPTH < 2) begin
 assign full_o = (gray_writeidx[CLOG2DEPTH:CLOG2DEPTH-1] == ~gray_readidx[CLOG2DEPTH:CLOG2DEPTH-1]);
@@ -162,6 +184,10 @@ assign full_o = (gray_writeidx[CLOG2DEPTH:CLOG2DEPTH-1] == ~gray_readidx[CLOG2DE
 	(gray_writeidx[CLOG2DEPTH-2:0] == gray_readidx[CLOG2DEPTH-2:0]);
 end
 endgenerate
+
+assign near_full_o = (near_full_o_ || full_o);
+
+assign near_empty_o = (gray_writeidx == gray_next_readidx);
 
 assign empty_o = (gray_writeidx == gray_readidx);
 
