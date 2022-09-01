@@ -516,9 +516,9 @@ wire isopsetflags = (isopsetsysreg && isoptype6);
 wire isopsettimer = (isopsetsysreg && isoptype7);
 wire isopsetgpr = (instrbufdato0[7:3] == OPSETGPR);
 wire isoploadorstore = (instrbufdato0[7:3] == OPLOADORSTORE);
-wire isopvloadorstore = (instrbufdato0[7:3] == OPVLOADORSTORE);
-assign isopld = ((isoploadorstore || isopvloadorstore) && instrbufdato0[2]);
-assign isopst = ((isoploadorstore || isopvloadorstore) && !instrbufdato0[2]);
+wire isoploadorstorevolatile = (instrbufdato0[7:3] == OPLOADORSTOREVOLATILE);
+assign isopld = ((isoploadorstore || isoploadorstorevolatile) && instrbufdato0[2]);
+assign isopst = ((isoploadorstore || isoploadorstorevolatile) && !instrbufdato0[2]);
 assign isopldst = (instrbufdato0[7:3] == OPLDST);
 wire isopmuldiv = (instrbufdato0[7:3] == OPMULDIV);
 
@@ -1393,7 +1393,7 @@ pi1_dcache #(
 		`endif
 		(dtlben ? dtlbcached[dtlbwayhitidx] : !doutofrange))
 
-	,.cmiss_i (miscrdyandsequencerreadyandgprrdy12 && isopvloadorstore /* volatile load/store */)
+	,.cmiss_i (miscrdyandsequencerreadyandgprrdy12 && isoploadorstorevolatile /* volatile load/store */)
 
 	,.conly_i (1'b0)
 

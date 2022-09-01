@@ -18,7 +18,7 @@
 // 	OPGETSYSREG		5
 // 	OPSETSYSREG		7
 // 	OPNOTAVAIL		8
-// 	OPVLOADORSTORE		14
+// 	OPLOADORSTOREVOLATILE	14
 // 	OPSETGPR		15
 // 
 // General purpose instructions.
@@ -61,7 +61,7 @@ localparam OPSETSYSREG		= 7;
 localparam OPNOTAVAIL		= 8;
 localparam OPSETGPR		= 15;
 // Multi-cycle opcodes.
-localparam OPVLOADORSTORE	= 14;
+localparam OPLOADORSTOREVOLATILE= 14;
 localparam OPLOADORSTORE	= 30;
 localparam OPLDST		= 31;
 localparam OPMULDIV		= 25;

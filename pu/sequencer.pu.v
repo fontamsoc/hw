@@ -130,7 +130,7 @@ end else if (!inhalt) begin
 			sequencerstate <= 9;
 			`endif
 		`endif
-		end else if (instrbufdato0[7] || isopvloadorstore) begin
+		end else if (instrbufdato0[7] || isoploadorstorevolatile) begin
 
 			if (gprrdy1) begin
 
