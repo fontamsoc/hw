@@ -521,6 +521,7 @@ always @ (posedge clk_i) begin
 
 	if (rst_i) begin
 		m_pi1_rdy_o_ <= 1;
+		cmiss_i_hold <= 0;
 	end else if (!m_pi1_rdy_o) begin
 		// In this state, I wait for the data request from slv to complete.
 		// When writing, m_pi1_rdy_o should not become 1 until the buffer,
