@@ -327,7 +327,6 @@ always @ (posedge s_clk_i) begin
 		// I increment queuereadidx to the memory operation
 		// to execute when the current memory operation indexed
 		// by queuereadidx complete.
-		masterdato[prevqueuereadidx[CLOG2MASTERCOUNT -1 : 0]] <= s_data_i;
 		prevqueuereadidx <= queuereadidx[CLOG2MASTERCOUNT -1 : 0];
 		gray_queuereadidx <= gray_next_queuereadidx;
 		queuereadidx <= next_queuereadidx;
@@ -336,6 +335,8 @@ always @ (posedge s_clk_i) begin
 			slvhi <= mstrhi;
 		end
 	end
+	if (s_rdy_i)
+		masterdato[prevqueuereadidx[CLOG2MASTERCOUNT -1 : 0]] <= s_data_i;
 end
 
 integer init_masterdato_idx;
