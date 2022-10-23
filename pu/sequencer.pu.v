@@ -119,7 +119,6 @@ end else if (!inhalt) begin
 
 		if (oplicounter) begin
 			ip <= ipnxt;
-			instrbufdato <= instrbufipnxtdato;
 			`ifdef SIMULATION
 			sequencerstate <= 8;
 			`endif
@@ -157,7 +156,6 @@ end else if (!inhalt) begin
 
 					end else begin
 						ip <= ipnxt;
-						instrbufdato <= instrbufipnxtdato;
 						`ifdef SIMULATION
 						sequencerstate <= 11;
 						`endif
@@ -179,7 +177,6 @@ end else if (!inhalt) begin
 
 						end else begin
 							ip <= ipnxt;
-							instrbufdato <= instrbufipnxtdato;
 							`ifdef SIMULATION
 							sequencerstate <= 13;
 							`endif
@@ -218,7 +215,6 @@ end else if (!inhalt) begin
 
 							end else begin
 								ip <= ipnxt;
-								instrbufdato <= instrbufipnxtdato;
 								`ifdef SIMULATION
 								sequencerstate <= 15;
 								`endif
@@ -264,7 +260,6 @@ end else if (!inhalt) begin
 
 							end else begin
 								ip <= ipnxt;
-								instrbufdato <= instrbufipnxtdato;
 								`ifdef SIMULATION
 								sequencerstate <= 18;
 								`endif
@@ -344,7 +339,6 @@ end else if (!inhalt) begin
 
 								end else begin
 									ip <= ipnxt;
-									instrbufdato <= instrbufipnxtdato;
 									`ifdef SIMULATION
 									sequencerstate <= 22;
 									`endif
@@ -366,7 +360,6 @@ end else if (!inhalt) begin
 							`endif
 							) || opmuldiv_rdy_w) begin
 							ip <= ipnxt;
-							instrbufdato <= instrbufipnxtdato;
 							`ifdef SIMULATION
 							sequencerstate <= 24;
 							`endif
@@ -481,7 +474,6 @@ end else if (!inhalt) begin
 					dohalt <= 1;
 
 					ip <= ipnxt;
-					instrbufdato <= instrbufipnxtdato;
 
 					`ifdef SIMULATION
 					sequencerstate <= 32;
@@ -518,7 +510,6 @@ end else if (!inhalt) begin
 				end else if (isopcacherst) begin
 
 					ip <= ipnxt;
-					instrbufdato <= instrbufipnxtdato;
 
 					`ifdef SIMULATION
 					sequencerstate <= 35;
@@ -528,7 +519,6 @@ end else if (!inhalt) begin
 
 					if (opsetgprrdy1 && opsetgprrdy2) begin
 						ip <= ipnxt;
-						instrbufdato <= instrbufipnxtdato;
 						`ifdef SIMULATION
 						sequencerstate <= 36;
 						`endif
@@ -561,7 +551,6 @@ end else if (!inhalt) begin
 							isopgettlbsize || isopgetcachesize || isopgetcoreid ||
 							isopgetclkfreq))) begin
 						ip <= ipnxt;
-						instrbufdato <= instrbufipnxtdato;
 						if (isopsetuip)
 							uip <= gprdata1[ARCHBITSZ-1:1];
 						`ifdef SIMULATION
@@ -632,7 +621,6 @@ end else if (!inhalt) begin
 
 	end else begin
 		// Stall.
-		instrbufdato <= (instrbufwe ? instrbufidato : instrbufdato_);
 		`ifdef SIMULATION
 		sequencerstate <= 42;
 		`endif

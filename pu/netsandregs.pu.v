@@ -51,7 +51,7 @@ reg[(ARCHBITSZ*2) -1 : 0] clkcyclecnt;
 
 // ---------- Registers and nets used for instruction buffering ----------
 
-reg[XARCHBITSZ -1 : 0] instrbuf_[INSTRBUFFERSIZE -1 : 0];
+reg[XARCHBITSZ -1 : 0] instrbuf[INSTRBUFFERSIZE -1 : 0];
 
 wire instrbufwe;
 
@@ -64,12 +64,10 @@ reg[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufwriteidx;
 // Net set to the space used in the instrbuf.
 wire[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufusage =
 	(instrbufwriteidx - ip[(CLOG2INSTRBUFFERSIZE+CLOG2XARCHBITSZBY8DIFF) +1 : 1+CLOG2XARCHBITSZBY8DIFF]);
-wire[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufusagenxt =
-	(instrbufwriteidx - ipnxt[(CLOG2INSTRBUFFERSIZE+CLOG2XARCHBITSZBY8DIFF) +1 : 1+CLOG2XARCHBITSZBY8DIFF]);
 
-reg[16 -1 : 0] instrbufdato;
-wire[XARCHBITSZMAX -1 : 0] instrbufip = instrbuf_[ip[(CLOG2INSTRBUFFERSIZE+CLOG2XARCHBITSZBY8DIFF) : 1+CLOG2XARCHBITSZBY8DIFF]];
-wire[16 -1 : 0] instrbufdato_ =
+wire[XARCHBITSZMAX -1 : 0] instrbufip = instrbuf[ip[(CLOG2INSTRBUFFERSIZE+CLOG2XARCHBITSZBY8DIFF) : 1+CLOG2XARCHBITSZBY8DIFF]];
+// Net set to 16bits data indexed from instrbuf; note that instructions are 16bits.
+wire[16 -1 : 0] instrbufdato =
 	(XARCHBITSZ == 16) ? instrbufip :
 	(XARCHBITSZ == 32) ? (
 		ip[CLOG2XARCHBITSZBY16 -1 : 0] ? instrbufip[31:16] :
@@ -106,91 +104,15 @@ wire[16 -1 : 0] instrbufdato_ =
 			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufip[239:224] :
 			                                       instrbufip[255:240]);
 
+// Nets set with the bytes from instrbufdato.
 wire[8 -1 : 0] instrbufdato0 = instrbufdato[7:0];
 wire[8 -1 : 0] instrbufdato1 = instrbufdato[15:8];
 
+// Net set to 1 when there is data available in the instruction buffer.
 wire instrbufnotempty = |instrbufusage;
-
-wire instrbufnotemptynxt = |instrbufusagenxt;
 
 // This net indicates whether the instruction buffer is full.
 wire instrbufnotfull = (instrbufusage < INSTRBUFFERSIZE);
-
-wire[XARCHBITSZMAX -1 : 0] instrbufipnxt = (instrbufnotemptynxt ? instrbuf_[ipnxt[(CLOG2INSTRBUFFERSIZE+CLOG2XARCHBITSZBY8DIFF) : 1+CLOG2XARCHBITSZBY8DIFF]] : instrbufi);
-wire[16 -1 : 0] instrbufipnxtdato =
-	(XARCHBITSZ == 16) ? instrbufipnxt :
-	(XARCHBITSZ == 32) ? (
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] ? instrbufipnxt[31:16] :
-		                                    instrbufipnxt[15:0]) :
-	(XARCHBITSZ == 64) ? (
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufipnxt[15:0] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufipnxt[31:16] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufipnxt[47:32] :
-			                                         instrbufipnxt[63:48]) :
-	(XARCHBITSZ == 128) ? (
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufipnxt[15:0] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufipnxt[31:16] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufipnxt[47:32] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufipnxt[63:48] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufipnxt[79:64] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufipnxt[95:80] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufipnxt[111:96] :
-			                                         instrbufipnxt[127:112]) :
-	/* (XARCHBITSZ == 256) ? */ (
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufipnxt[15:0] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufipnxt[31:16] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufipnxt[47:32] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufipnxt[63:48] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufipnxt[79:64] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufipnxt[95:80] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufipnxt[111:96] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 7 ? instrbufipnxt[127:112] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 8 ? instrbufipnxt[143:128] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 9 ? instrbufipnxt[159:144] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufipnxt[175:160] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufipnxt[191:176] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufipnxt[207:192] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufipnxt[223:208] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufipnxt[239:224] :
-			                                          instrbufipnxt[255:240]);
-
-wire[XARCHBITSZMAX -1 : 0] _instrbufi = instrbufi;
-wire[16 -1 : 0] instrbufidato =
-	(XARCHBITSZ == 16) ? _instrbufi :
-	(XARCHBITSZ == 32) ? (
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] ? _instrbufi[31:16] :
-		                                 _instrbufi[15:0]) :
-	(XARCHBITSZ == 64) ? (
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? _instrbufi[15:0] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? _instrbufi[31:16] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? _instrbufi[47:32] :
-			                                      _instrbufi[63:48]) :
-	(XARCHBITSZ == 128) ? (
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? _instrbufi[15:0] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? _instrbufi[31:16] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? _instrbufi[47:32] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? _instrbufi[63:48] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? _instrbufi[79:64] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? _instrbufi[95:80] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? _instrbufi[111:96] :
-			                                      _instrbufi[127:112]) :
-	/* (XARCHBITSZ == 256) ? */ (
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? _instrbufi[15:0] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? _instrbufi[31:16] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? _instrbufi[47:32] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? _instrbufi[63:48] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? _instrbufi[79:64] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? _instrbufi[95:80] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? _instrbufi[111:96] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 7 ? _instrbufi[127:112] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 8 ? _instrbufi[143:128] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 9 ? _instrbufi[159:144] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? _instrbufi[175:160] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? _instrbufi[191:176] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? _instrbufi[207:192] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? _instrbufi[223:208] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? _instrbufi[239:224] :
-			                                       _instrbufi[255:240]);
 
 reg instrbufrst_a;
 reg instrbufrst_b;
@@ -311,6 +233,8 @@ wire dbg_tx_rdy_i_negedge = (!dbg_tx_rdy_i && dbg_tx_rdy_i_sampled);
 
 // ---------- Registers and nets used by Hardware-Page-Table-Walker ----------
 
+// These nets will respectively hold the value of the first
+// and second gpr operand of an instruction being sequenced.
 wire[ARCHBITSZ -1 : 0] gprdata1;
 wire[ARCHBITSZ -1 : 0] gprdata2;
 

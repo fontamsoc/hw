@@ -39,13 +39,11 @@ initial begin
 	// ---------- Registers and nets used for instruction buffering ----------
 
 	for (init_instrbuf_idx = 0; init_instrbuf_idx < INSTRBUFFERSIZE; init_instrbuf_idx = init_instrbuf_idx + 1)
-		instrbuf_[init_instrbuf_idx] = 0;
+		instrbuf[init_instrbuf_idx] = 0;
 
 	// Write index within the instruction buffer.
 	// Only the CLOG2INSTRBUFFERSIZE lsb are used for indexing.
 	instrbufwriteidx = 0;
-
-	instrbufdato = 0;
 
 	instrbufrst_a = 0;
 	instrbufrst_b = 0;
