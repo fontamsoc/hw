@@ -14,7 +14,7 @@
 `include "dev/pi1_downconverter.v"
 
 `define PUMMU
-//`define PUHPTW /* has issues */
+`define PUHPTW
 `define PUMULDIVCLK
 `define PUDSPMUL
 `define PUDCACHE
