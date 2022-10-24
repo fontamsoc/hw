@@ -198,7 +198,7 @@ wire cmdintdstseeking = (cmdintdstdata[1:0] == CMDINTDST && (dstindex != cmdintd
 
 wire cmdenaint = (ismemreadwriteop && pi1b_data_i[1:0] == CMDENAINT);
 
-// Register set to 1 when an interrupt request from a source is waiting to be acknowledged.
+// Register set to 1 when an interrupt request is waiting to be acknowledged.
 reg intrqstpending = 0;
 
 genvar gen_intrdysrc_o_idx;
@@ -210,7 +210,7 @@ end endgenerate
 genvar gen_intrqstdst_o_idx;
 generate for (gen_intrqstdst_o_idx = 0; gen_intrqstdst_o_idx < INTDSTCOUNT; gen_intrqstdst_o_idx = gen_intrqstdst_o_idx + 1) begin :gen_intrqstdst_o
 // Logic that drives the input intrqst of a destination.
-assign intrqstdst_o[gen_intrqstdst_o_idx] = (dstindex == gen_intrqstdst_o_idx && intrqstpending);
+assign intrqstdst_o[gen_intrqstdst_o_idx] = (dstindex == gen_intrqstdst_o_idx && intrqstpending && !cmdintdstseeking);
 end endgenerate
 
 wire [CLOG2INTSRCCOUNT -1 : 0] nextsrcindex =
