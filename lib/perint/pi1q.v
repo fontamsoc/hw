@@ -308,7 +308,7 @@ always @ (posedge m_clk_i) begin
 		gray_queuewriteidx <= gray_next_queuewriteidx;
 		queuewriteidx <= next_queuewriteidx;
 		if (queuewriteidx[CLOG2MASTERCOUNT -1 : 0] < mstrhi) begin
-		end else begin
+		end else if (queuewriteidx[CLOG2MASTERCOUNT -1 : 0] < mstrhinxt) begin
 			MASTERCOUNT__less_mstrhi_hold <= MASTERCOUNT__less_mstrhi;
 			mstrhi <= mstrhinxt;
 		end
