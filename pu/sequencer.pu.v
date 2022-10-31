@@ -63,10 +63,7 @@ end else if (timertriggered && !isflagdistimerintr && inusermode && !oplicounter
 
 	faultreason <= TIMERINTR;
 
-	if (instrbufnotempty)
-		sysopcode <= {instrbufdato1, instrbufdato0};
-	else
-		sysopcode <= {8'h00, OPNOTAVAIL[4:0], 3'b000};
+	sysopcode <= {8'h00, OPNOTAVAIL[4:0], 3'b000};
 
 	dohalt <= 0;
 
@@ -93,10 +90,7 @@ end else if (intrqst_i && !isflagdisextintr && inusermode && !oplicounter
 
 	faultreason <= EXTINTR;
 
-	if (instrbufnotempty)
-		sysopcode <= {instrbufdato1, instrbufdato0};
-	else
-		sysopcode <= {8'h00, OPNOTAVAIL[4:0], 3'b000};
+	sysopcode <= {8'h00, OPNOTAVAIL[4:0], 3'b000};
 
 	dohalt <= 0;
 
@@ -205,7 +199,7 @@ end else if (!inhalt) begin
 
 								instrbufrst_a <= ~instrbufrst_b;
 
-								sysopcode <= {instrbufdato1, instrbufdato0};
+								sysopcode <= {8'h00, OPNOTAVAIL[4:0], 3'b000};
 
 								faultaddr <= gprdata2;
 
@@ -250,7 +244,7 @@ end else if (!inhalt) begin
 
 								instrbufrst_a <= ~instrbufrst_b;
 
-								sysopcode <= {instrbufdato1, instrbufdato0};
+								sysopcode <= {8'h00, OPNOTAVAIL[4:0], 3'b000};
 
 								faultaddr <= gprdata2;
 
@@ -299,7 +293,7 @@ end else if (!inhalt) begin
 
 								instrbufrst_a <= ~instrbufrst_b;
 
-								sysopcode <= {instrbufdato1, instrbufdato0};
+								sysopcode <= {8'h00, OPNOTAVAIL[4:0], 3'b000};
 
 								faultaddr <= gprdata2;
 
