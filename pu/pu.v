@@ -279,7 +279,7 @@ assign halted_o = (inhalt && !isflagdisextintr);
 // ### because signal changes are shown only after
 // ### a clock edge but should show instantaneously.
 always @* begin
-	`include "./dcache.comb.pu.v"
+	`include "./dcache.pu.v"
 	`include "./opalu.pu.v"
 	`include "./opgetsysreg.pu.v"
 end
