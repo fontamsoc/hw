@@ -283,7 +283,6 @@ always @* begin
 	`include "./memctrl.comb.pu.v"
 	`include "./opalu.pu.v"
 	`include "./opgetsysreg.pu.v"
-	`include "./gprctrl.comb.pu.v"
 end
 
 always @ (posedge clk_i) begin
@@ -302,11 +301,12 @@ always @ (posedge clk_i) begin
 	`include "./timers.pu.v"
 	`include "./opli.pu.v"
 	`include "./opsetsysreg.pu.v"
-	`include "./gprctrl.pu.v"
 	`ifdef PUDBG
 	`include "./dbg.pu.v"
 	`endif
 end
+
+`include "./gprctrl.pu.v"
 
 `ifdef SIMULATION_pc_o
 integer fd;
