@@ -280,7 +280,6 @@ assign halted_o = (inhalt && !isflagdisextintr);
 // ### a clock edge but should show instantaneously.
 always @* begin
 	`include "./dcache.comb.pu.v"
-	`include "./memctrl.comb.pu.v"
 	`include "./opalu.pu.v"
 	`include "./opgetsysreg.pu.v"
 end
@@ -292,7 +291,6 @@ always @ (posedge clk_i) begin
 	`include "./hptw.pu.v"
 	`endif
 	`endif
-	`include "./memctrl.pu.v"
 	`include "./instrctrl.pu.v"
 	`include "./opld.pu.v"
 	`include "./opst.pu.v"
@@ -306,6 +304,7 @@ always @ (posedge clk_i) begin
 	`endif
 end
 
+`include "./memctrl.pu.v"
 `include "./gprctrl.pu.v"
 
 `ifdef SIMULATION_pc_o
