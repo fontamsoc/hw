@@ -25,14 +25,6 @@ always @* begin
 		gprrdyidx = 0;
 		gprrdyval = 0;
 		gprrdywe = 0;
-	end else if (gprrdyoff) begin
-		gprctrlstate = GPRCTRLSTATEDONE;
-		gpridx = 0;
-		gprdata = 0;
-		gprwe = 0;
-		gprrdyidx = gprrdyrstidx;
-		gprrdyval = 1;
-		gprrdywe = 1;
 	end else if (sequencerready && oplicountereq1) begin
 		gprctrlstate = GPRCTRLSTATEDONE;
 		gpridx = {inusermode, opligpr};
@@ -175,17 +167,6 @@ always @* begin
 end
 
 always @ (posedge clk_i) begin
-	// Logic used to reset gprrdy[].
-	if (rst_i) begin
-		gprrdyon <= 0;
-		gprrdyrstidx <= {CLOG2GPRCNTTOTAL{1'b1}};
-	end else if (gprrdyoff) begin
-		if (gprrdyrstidx)
-			gprrdyrstidx <= gprrdyrstidx - 1'b1;
-		else
-			gprrdyon <= 1;
-	end
-
 	if (gprwe && gpridx[CLOG2GPRCNTPERCTX -1 : 0] == 13)
 		gpr13val <= gprdata;
 end

@@ -32,12 +32,6 @@ if (rst_i
 	sequencerstate <= 0;
 	`endif
 
-end else if (gprrdyoff) begin
-
-	`ifdef SIMULATION
-	sequencerstate <= 1;
-	`endif
-
 end else if (instrbufrst) begin
 	// Interrupts must not be processed until
 	// resetting the instruction buffer has completed.

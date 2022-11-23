@@ -328,10 +328,6 @@ wire[CLOG2GPRCNTTOTAL -1 : 0] gpridx2 = {inusermode, instrbufdato1[3:0]};
 wire gprrdy1;
 wire gprrdy2;
 
-reg[CLOG2GPRCNTTOTAL -1 : 0] gprrdyrstidx;
-reg gprrdyon;
-wire gprrdyoff = !gprrdyon;
-
 // ### Nets declared as reg so as to be useable
 // ### by verilog within the always block.
 localparam GPRCTRLSTATEDONE     = 0;
@@ -356,7 +352,7 @@ wire isflagdisextintr;
 wire isflagdistimerintr;
 
 wire sequencerready_ = !(
-	rst_i || gprrdyoff || instrbufrst ||
+	rst_i || instrbufrst ||
 	(timertriggered && !isflagdistimerintr && inusermode && !oplicounter && !dbgen
 	`ifdef PUMMU
 	`ifdef PUHPTW
@@ -1137,37 +1133,19 @@ ram1i5o #(
 	,.o4 ()
 );
 
-ram1i5o #(
+reg [GPRCNTTOTAL -1 : 0] gprrdy;
 
-	 .SZ (GPRCNTTOTAL)
-	,.DW (1)
+assign opsetgprrdy1 = gprrdy[opsetgprdstidx];
+assign gprrdy1      = gprrdy[gpridx1];
+assign gprrdy2      = gprrdy[gpridx2];
+assign opsetgprrdy2 = gprrdy[opsetgprsrcidx];
 
-) gprrdy (
-
-	  .rst_i (rst_i)
-
-	,.clk0_i (clk_i)
-	,.clk1_i (clk_i)
-	,.clk2_i (clk_i)
-	,.clk3_i (clk_i)
-	,.clk4_i (clk_i)
-
-	,.we4_i (gprrdywe)
-
-	,.addr0_i (opsetgprdstidx)
-	,.addr1_i (gpridx1)
-	,.addr2_i (gpridx2)
-	,.addr3_i (opsetgprsrcidx)
-	,.addr4_i (gprrdyidx)
-
-	,.i4 (gprrdyval)
-
-	,.o0 (opsetgprrdy1)
-	,.o1 (gprrdy1)
-	,.o2 (gprrdy2)
-	,.o3 (opsetgprrdy2)
-	,.o4 ()
-);
+always @ (posedge clk_i) begin
+	if (rst_i)
+		gprrdy <= {GPRCNTTOTAL{1'b1}};
+	else if (gprrdywe)
+		gprrdy[gprrdyidx] <= gprrdyval;
+end
 
 // ---------- Registers and nets used by opld ----------
 

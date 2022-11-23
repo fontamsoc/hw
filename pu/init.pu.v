@@ -92,9 +92,6 @@ initial begin
 
 	// ---------- Registers and nets used for sequencing and decoding ----------
 
-	gprrdyrstidx = 0;
-	gprrdyon = 0;
-
 	gpr13val = 0;
 
 	`ifdef SIMULATION
@@ -193,6 +190,10 @@ initial begin
 	// ---------- Registers and nets used by opgetsysreg1 ----------
 
 	isopgettlb_or_isopclrtlb_found_sampled = 0;
+
+	// ---------- General purpose registers ----------
+
+	gprrdy = {GPRCNTTOTAL{1'b1}};
 
 	// ---------- Registers and nets used by opld ----------
 
