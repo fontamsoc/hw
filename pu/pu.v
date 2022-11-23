@@ -267,8 +267,6 @@ localparam XARCHBITSZMAX = 256; // TODO: Support all the way up to 1024 ...
 `include "./opcodes.pu.v"
 `include "./netsandregs.pu.v"
 
-`include "./init.pu.v"
-
 assign intrdy_o = (inusermode && !isflagdisextintr && !dbgen);
 wire inhalt = (dohalt && inusermode && !dbgen);
 assign halted_o = (inhalt && !isflagdisextintr);
@@ -327,5 +325,7 @@ always @ (posedge clk_i) begin
 	end
 end
 `endif
+
+`include "./init.pu.v"
 
 endmodule
