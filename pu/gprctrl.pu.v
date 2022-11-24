@@ -14,154 +14,95 @@
 // signal is 1.
 
 always @* begin
+
+	gprctrlstate = GPRCTRLSTATEDONE;
+	gpridx       = 0;
+	gprdata      = 0;
+	gprwe        = 0;
+	gprrdyidx    = 0;
+	gprrdyval    = 0;
+	gprrdywe     = 0;
+
+	if (rst_i) begin
 	// Logic used to set gprrdy[] and gpr[].
 	// The check for whether loading an immediate
 	// is occuring, must be the priority.
-	if (rst_i) begin
-		gprctrlstate = GPRCTRLSTATEDONE;
-		gpridx = 0;
-		gprdata = 0;
-		gprwe = 0;
-		gprrdyidx = 0;
-		gprrdyval = 0;
-		gprrdywe = 0;
 	end else if (sequencerready && oplicountereq1) begin
-		gprctrlstate = GPRCTRLSTATEDONE;
-		gpridx = {inusermode, opligpr};
+		gpridx  = {inusermode, opligpr};
 		gprdata = opliresult;
-		gprwe = 1;
-		gprrdyidx = 0;
-		gprrdyval = 0;
-		gprrdywe = 0;
-	end
+		gprwe   = 1;
 	`ifdef PUDBG
-	else if (dbgbrk && dbgcmd == DBGCMDSETGPR) begin
-		gprctrlstate = GPRCTRLSTATEDONE;
-		gpridx = dbgarg;
+	end else if (dbgbrk && dbgcmd == DBGCMDSETGPR) begin
+		gpridx  = dbgarg;
 		gprdata = dbgiarg;
-		gprwe = 1;
-		gprrdyidx = 0;
-		gprrdyval = 0;
-		gprrdywe = 0;
-	end
+		gprwe   = 1;
 	`endif
-	else if (multicycleoprdy) begin
-		gprctrlstate = GPRCTRLSTATEDONE;
-		gpridx = 0;
-		gprdata = 0;
-		gprwe = 0;
+	end else if (multicycleoprdy) begin
 		gprrdyidx = gpridx1;
-		gprrdyval = 0;
-		gprrdywe = 1;
-	end
+		gprrdywe  = 1;
 	// The check for single-cycle instructions start here.
-	else if (opli8done) begin
-		gprctrlstate = GPRCTRLSTATEDONE;
-		gpridx = gpridx1;
+	end else if (opli8done) begin
+		gpridx  = gpridx1;
 		gprdata = opli8result;
-		gprwe = 1;
-		gprrdyidx = 0;
-		gprrdyval = 0;
-		gprrdywe = 0;
+		gprwe   = 1;
 	end else if (opalu0done) begin
-		gprctrlstate = GPRCTRLSTATEDONE;
-		gpridx = gpridx1;
+		gpridx  = gpridx1;
 		gprdata = opalu0result;
-		gprwe = 1;
-		gprrdyidx = 0;
-		gprrdyval = 0;
-		gprrdywe = 0;
+		gprwe   = 1;
 	end else if (opalu1done) begin
-		gprctrlstate = GPRCTRLSTATEDONE;
-		gpridx = gpridx1;
+		gpridx  = gpridx1;
 		gprdata = opalu1result;
-		gprwe = 1;
-		gprrdyidx = 0;
-		gprrdyval = 0;
-		gprrdywe = 0;
+		gprwe   = 1;
 	end else if (opalu2done) begin
-		gprctrlstate = GPRCTRLSTATEDONE;
-		gpridx = gpridx1;
+		gpridx  = gpridx1;
 		gprdata = opalu2result;
-		gprwe = 1;
-		gprrdyidx = 0;
-		gprrdyval = 0;
-		gprrdywe = 0;
+		gprwe   = 1;
 	`ifdef PUDSPMUL
 	end else if (opdspmuldone) begin
-		gprctrlstate = GPRCTRLSTATEDONE;
-		gpridx = gpridx1;
+		gpridx  = gpridx1;
 		gprdata = opdspmulresult;
-		gprwe = 1;
-		gprrdyidx = 0;
-		gprrdyval = 0;
-		gprrdywe = 0;
+		gprwe   = 1;
 	`endif
 	end else if (opjldone) begin
-		gprctrlstate = GPRCTRLSTATEDONE;
-		gpridx = gpridx1;
+		gpridx  = gpridx1;
 		gprdata = {ipnxt, 1'b0};
-		gprwe = 1;
-		gprrdyidx = 0;
-		gprrdyval = 0;
-		gprrdywe = 0;
+		gprwe   = 1;
 	end else if (opgetsysregdone) begin
-		gprctrlstate = GPRCTRLSTATEDONE;
-		gpridx = gpridx1;
+		gpridx  = gpridx1;
 		gprdata = opgetsysregresult;
-		gprwe = 1;
-		gprrdyidx = 0;
-		gprrdyval = 0;
-		gprrdywe = 0;
+		gprwe   = 1;
 	end else if (opgetsysreg1done) begin
-		gprctrlstate = GPRCTRLSTATEDONE;
-		gpridx = gpridx1;
+		gpridx  = gpridx1;
 		gprdata = opgetsysreg1result;
-		gprwe = 1;
-		gprrdyidx = 0;
-		gprrdyval = 0;
-		gprrdywe = 0;
+		gprwe   = 1;
 	end else if (opsetgprdone) begin
-		gprctrlstate = GPRCTRLSTATEDONE;
-		gpridx = opsetgprdstidx;
+		gpridx  = opsetgprdstidx;
 		gprdata = opsetgprresult;
-		gprwe = 1;
-		gprrdyidx = 0;
-		gprrdyval = 0;
-		gprrdywe = 0;
-	end
+		gprwe   = 1;
 	// The check for multi-cycle instructions start here.
-	else if (oplddone) begin
+	end else if (oplddone) begin
 		gprctrlstate = GPRCTRLSTATEOPLD;
-		gpridx = opldgpr;
-		gprdata = opldresult;
-		gprwe = 1;
-		gprrdyidx = opldgpr;
-		gprrdyval = 1;
-		gprrdywe = 1;
+		gpridx       = opldgpr;
+		gprdata      = opldresult;
+		gprwe        = 1;
+		gprrdyidx    = opldgpr;
+		gprrdyval    = 1;
+		gprrdywe     = 1;
 	end else if (opldstdone) begin
 		gprctrlstate = GPRCTRLSTATEOPLDST;
-		gpridx = opldstgpr;
-		gprdata = opldstresult;
-		gprwe = 1;
-		gprrdyidx = opldstgpr;
-		gprrdyval = 1;
-		gprrdywe = 1;
+		gpridx       = opldstgpr;
+		gprdata      = opldstresult;
+		gprwe        = 1;
+		gprrdyidx    = opldstgpr;
+		gprrdyval    = 1;
+		gprrdywe     = 1;
 	end else if (opmuldivdone) begin
 		gprctrlstate = GPRCTRLSTATEOPMULDIV;
-		gpridx = opmuldivgpr;
-		gprdata = opmuldivresult;
-		gprwe = 1;
-		gprrdyidx = opmuldivgpr;
-		gprrdyval = 1;
-		gprrdywe = 1;
-	end else begin
-		gprctrlstate = GPRCTRLSTATEDONE;
-		gpridx = 0;
-		gprdata = 0;
-		gprwe = 0;
-		gprrdyidx = 0;
-		gprrdyval = 0;
-		gprrdywe = 0;
+		gpridx       = opmuldivgpr;
+		gprdata      = opmuldivresult;
+		gprwe        = 1;
+		gprrdyidx    = opmuldivgpr;
+		gprrdyval    = 1;
+		gprrdywe     = 1;
 	end
 end
