@@ -165,8 +165,3 @@ always @* begin
 		gprrdywe = 0;
 	end
 end
-
-always @ (posedge clk_i) begin
-	if (gprwe && gpridx[CLOG2GPRCNTPERCTX -1 : 0] == 13)
-		gpr13val <= gprdata;
-end

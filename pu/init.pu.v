@@ -92,8 +92,6 @@ initial begin
 
 	// ---------- Registers and nets used for sequencing and decoding ----------
 
-	gpr13val = 0;
-
 	`ifdef SIMULATION
 	sequencerstate = 0;
 	`endif

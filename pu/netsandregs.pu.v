@@ -340,7 +340,7 @@ reg[CLOG2GPRCNTTOTAL -1 : 0] gprrdyidx;
 reg gprrdyval;
 reg gprrdywe;
 
-reg[ARCHBITSZ -1 : 0] gpr13val;
+wire [ARCHBITSZ -1 : 0] gpr13val;
 
 `ifdef SIMULATION
 reg [ARCHBITSZ -1 : 0] sequencerstate;
@@ -1101,6 +1101,7 @@ assign dbggprdata     = gpr[{inusermode, dbg_rx_data_i[3:0]}];
 assign gprdata1       = gpr[gpridx1];
 assign gprdata2       = gpr[gpridx2];
 assign opsetgprresult = gpr[opsetgprsrcidx];
+assign gpr13val       = gpr[{inusermode, 4'd13}];
 
 always @ (posedge clk_i) begin
 	if (gprwe)
