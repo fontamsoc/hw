@@ -3,6 +3,8 @@
 
 // Combinational logic that sets the dcache inputs.
 
+always @* begin
+
 if (miscrdyandsequencerreadyandgprrdy12) begin
 	`ifdef PUMMU
 	`ifdef PUHPTW
@@ -529,4 +531,6 @@ end else begin
 	dcachemasteraddr = 0;
 	dcachemasterdati = 0;
 	dcachemastersel = 0;
+end
+
 end

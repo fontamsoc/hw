@@ -270,13 +270,14 @@ assign intrdy_o = (inusermode && !isflagdisextintr && !dbgen);
 wire inhalt = (dohalt && inusermode && !dbgen);
 assign halted_o = (inhalt && !isflagdisextintr);
 
+`include "./dcache.pu.v"
+
 // ### Block used to implement combinational logic;
 // ### verilog simulation do not handle correctly
 // ### combinational logic within a clock block,
 // ### because signal changes are shown only after
 // ### a clock edge but should show instantaneously.
 always @* begin
-	`include "./dcache.pu.v"
 	`include "./opalu.pu.v"
 	`include "./opgetsysreg.pu.v"
 end
