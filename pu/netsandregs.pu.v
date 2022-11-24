@@ -202,8 +202,6 @@ wire dbgbrk = (dbgen && (dbgcmd != DBGCMDSTEP || dbgcmdsteptilldone || dbgarg ==
 wire[ARCHBITSZ -1 : 0] dbggprdata;
 `else
 wire dbgen = 1'b0;
-wire[5 -1 : 0] dbgarg = 5'b00000;
-wire[ARCHBITSZ -1 : 0] dbggprdata;
 `endif
 
 // Net set to 1, when other miscellaneous logic are
@@ -1095,43 +1093,19 @@ wire opsetgprdone = (miscrdy && sequencerready && opsetgprrdy1 && opsetgprrdy2 &
 
 // ---------- General purpose registers ----------
 
-ram1i5o #(
+reg [ARCHBITSZ -1 : 0] gpr [GPRCNTTOTAL -1 : 0];
 
-	 .SZ (GPRCNTTOTAL)
-	,.DW (ARCHBITSZ)
+`ifdef PUDBG
+assign dbggprdata     = gpr[{inusermode, dbg_rx_data_i[3:0]}];
+`endif
+assign gprdata1       = gpr[gpridx1];
+assign gprdata2       = gpr[gpridx2];
+assign opsetgprresult = gpr[opsetgprsrcidx];
 
-) gpr (
-
-	  .rst_i (rst_i)
-
-	,.clk0_i (clk_i)
-	,.clk1_i (clk_i)
-	,.clk2_i (clk_i)
-	,.clk3_i (clk_i)
-	,.clk4_i (clk_i)
-
-	,.we4_i (gprwe)
-
-	,.addr0_i (
-		`ifdef PUDBG
-		{inusermode, dbg_rx_data_i[3:0]}
-		`else
-		0
-		`endif
-		)
-	,.addr1_i (gpridx1)
-	,.addr2_i (gpridx2)
-	,.addr3_i (opsetgprsrcidx)
-	,.addr4_i (gpridx)
-
-	,.i4 (gprdata)
-
-	,.o0 (dbggprdata)
-	,.o1 (gprdata1)
-	,.o2 (gprdata2)
-	,.o3 (opsetgprresult)
-	,.o4 ()
-);
+always @ (posedge clk_i) begin
+	if (gprwe)
+		gpr[gpridx] <= gprdata;
+end
 
 reg [GPRCNTTOTAL -1 : 0] gprrdy;
 
