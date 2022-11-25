@@ -24,13 +24,6 @@ end else if (dcachemasterrdy && (hptwmemstate == HPTWMEMSTATEINSTR || hptwistate
 		hptwidone <= 1'b1;
 
 	hptwistate <= hptwistate + 1'b1;
-
-	`ifdef SIMULATION
-	//if (hptwitlbwe) begin
-	//	$write("0x%x: dcachemasterdato(0x%x): instrfetchfault(0x%x)\n",
-	//		pc_o, dcachemasterdato, {instrfetchnextaddr, {CLOG2ARCHBITSZBY8{1'b0}}}); $fflush(1);
-	//end
-	`endif
 end
 
 if (rst_i) begin
@@ -56,20 +49,4 @@ end else if (dcachemasterrdy && (hptwmemstate == HPTWMEMSTATEDATA || hptwdstate_
 		hptwddone <= 1'b1;
 
 	hptwdstate <= hptwdstate + 1'b1;
-
-	`ifdef SIMULATION
-	//if (hptwdtlbwe) begin
-	//	$write("0x%x: dcachemasterdato(0x%x): ", pc_o, dcachemasterdato); $fflush(1);
-	//	if (isopld && opldfault) begin
-	//		$write("opldfault(0x%x)\n",
-	//			gprdata2); $fflush(1);
-	//	end else if (isopst && opstfault) begin
-	//		$write("opstfault(0x%x)\n",
-	//			gprdata2); $fflush(1);
-	//	end else if (isopldst && opldstfault) begin
-	//		$write("opldstfault(0x%x)\n",
-	//			gprdata2); $fflush(1);
-	//	end
-	//end
-	`endif
 end

@@ -240,6 +240,7 @@ reg[2 -1 : 0] dcachemasterop; // ### declared as reg so as to be usable by veril
 reg[ADDRBITSZ -1 : 0] dcachemasteraddr; // ### declared as reg so as to be usable by verilog within the always block.
 wire[ARCHBITSZMAX -1 : 0] dcachemasterdato;
 reg[ARCHBITSZMAX -1 : 0] dcachemasterdati; // ### declared as reg so as to be usable by verilog within the always block.
+reg[(ARCHBITSZMAX/8) -1 : 0] dcachemastersel_; // ### declared as reg so as to be usable by verilog within the always block.
 reg[(ARCHBITSZMAX/8) -1 : 0] dcachemastersel; // ### declared as reg so as to be usable by verilog within the always block.
 wire dcachemasterrdy;
 
@@ -304,7 +305,7 @@ wire[10 -1 : 0] hptwdpteoffset = gprdata2[(ARCHBITSZ -10) -1 : (ARCHBITSZ -10) -
 wire[ARCHBITSZ -1 : 0] hptwdpte_plus_hptwdpteoffset = (hptwdpte + {hptwdpteoffset, {CLOG2ARCHBITSZBY8{1'b0}}});
 reg hptwddone;
 
-wire hptwbsy = (hptwistate || hptwdstate);
+wire hptwbsy = (!hptwistate_eq_HPTWSTATEPGD0 || !hptwdstate_eq_HPTWSTATEPGD0);
 
 localparam HPTWMEMSTATENONE  = 0;
 localparam HPTWMEMSTATEINSTR = 1;
@@ -730,7 +731,7 @@ wire itlb_and_instrbuf_rdy = (((!(inusermode && tlbbsy) && instrbufnotfull) || i
 	));
 
 `ifdef PUMMU
-wire itlbfault_ = (itlben && (itlbnotexecutable[itlbwayhitidx] || itlbmiss));
+wire itlbfault_ = (itlben && (itlbmiss || itlbnotexecutable[itlbwayhitidx]));
 wire itlbfault = itlbfault_;
 `ifdef PUHPTW
 wire itlbfault__hptwidone = (!itlbfault_ || !hptwpgd || (hptwidone && !itlbwritten));
@@ -1132,7 +1133,7 @@ reg[ARCHBITSZMAX -1 : 0] opldresult;
 reg[(ARCHBITSZMAX/8) -1 : 0] opldbyteselect;
 
 `ifdef PUMMU
-wire opldfault_ = (dtlben && (dtlbnotreadable[dtlbwayhitidx] || dtlbmiss));
+wire opldfault_ = (dtlben && (dtlbmiss || dtlbnotreadable[dtlbwayhitidx]));
 wire opldfault = ((inusermode && alignfault) || opldfault_);
 `ifdef PUHPTW
 wire opldfault__hptwddone = (!opldfault_ || !hptwpgd || (hptwddone && !dtlbwritten));
@@ -1147,19 +1148,18 @@ reg oplddone;
 reg opldmemrqst;
 
 wire opldrdy_ = (!(opldmemrqst || oplddone) && dtlb_rdy && (dcachemasterrdy || opldfault));
-wire opldrdy = (isopld && (
-	opldrdy_
-		`ifdef PUMMU
-		`ifdef PUHPTW
-		&& opldfault__hptwddone
-		`endif
-		`endif
-	) && !opldfault);
+wire opldrdy = (isopld && opldrdy_
+	`ifdef PUMMU
+	`ifdef PUHPTW
+	&& opldfault__hptwddone
+	`endif
+	`endif
+	&& !opldfault);
 
 // ---------- Registers and nets used by opst ----------
 
 `ifdef PUMMU
-wire opstfault_ = (dtlben && (dtlbnotwritable[dtlbwayhitidx] || dtlbmiss));
+wire opstfault_ = (dtlben && (dtlbmiss || dtlbnotwritable[dtlbwayhitidx]));
 wire opstfault = ((inusermode && alignfault) || opstfault_);
 `ifdef PUHPTW
 wire opstfault__hptwddone = (!opstfault_ || !hptwpgd || (hptwddone && !dtlbwritten));
@@ -1169,14 +1169,13 @@ wire opstfault = 0;
 `endif
 
 wire opstrdy_ = (dtlb_rdy && (dcachemasterrdy || opstfault));
-wire opstrdy = (isopst && (
-	opstrdy_
-		`ifdef PUMMU
-		`ifdef PUHPTW
-		&& opstfault__hptwddone
-		`endif
-		`endif
-	) && !opstfault);
+wire opstrdy = (isopst && opstrdy_
+	`ifdef PUMMU
+	`ifdef PUHPTW
+	&& opstfault__hptwddone
+	`endif
+	`endif
+	&& !opstfault);
 
 // ---------- Registers and nets used by opldst ----------
 
@@ -1188,7 +1187,7 @@ reg[ARCHBITSZ -1 : 0] opldstresult;
 reg[(ARCHBITSZ/8) -1 : 0] opldstbyteselect;
 
 `ifdef PUMMU
-wire opldstfault_ = (dtlben && (dtlbnotreadable[dtlbwayhitidx] || dtlbnotwritable[dtlbwayhitidx] || dtlbmiss));
+wire opldstfault_ = (dtlben && (dtlbmiss || dtlbnotreadable[dtlbwayhitidx] || dtlbnotwritable[dtlbwayhitidx]));
 wire opldstfault = ((inusermode && alignfault) || opldstfault_);
 `ifdef PUHPTW
 wire opldstfault__hptwddone = (!opldstfault_ || !hptwpgd || (hptwddone && !dtlbwritten));
@@ -1203,14 +1202,13 @@ reg opldstdone;
 reg opldstmemrqst;
 
 wire opldstrdy_ = (!(opldstmemrqst || opldstdone) && dtlb_rdy && (dcachemasterrdy || opldstfault));
-wire opldstrdy = (isopldst && (
-	opldstrdy_
-		`ifdef PUMMU
-		`ifdef PUHPTW
-		&& opldstfault__hptwddone
-		`endif
-		`endif
-	) && !opldstfault && !instrbufdato0[2]);
+wire opldstrdy = (isopldst && opldstrdy_
+	`ifdef PUMMU
+	`ifdef PUHPTW
+	&& opldstfault__hptwddone
+	`endif
+	`endif
+	&& (!opldstfault && !instrbufdato0[2]));
 
 // ---------- Registers and nets used for data caching ----------
 
@@ -1265,7 +1263,7 @@ pi1_dcache #(
 	,.cenable_i (
 		`ifdef PUMMU
 		`ifdef PUHPTW
-		(hptwmemstate == HPTWMEMSTATENONE) &&
+		(hptwmemstate != HPTWMEMSTATENONE) ||
 		`endif
 		`endif
 		(dtlben ? dtlbcached[dtlbwayhitidx] : !doutofrange))
