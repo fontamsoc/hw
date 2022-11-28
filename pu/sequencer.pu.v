@@ -295,42 +295,39 @@ end else if (!inhalt) begin
 								sequencerstate <= 20;
 								`endif
 
+							end else if (instrbufdato0[2]) begin
+
+								saved_sysopcode <= sysopcode;
+								saved_faultaddr <= faultaddr;
+
+								sysopcode <= {instrbufdato1, instrbufdato0};
+
+								faultaddr <= {dppn, gprdata2[12 -1 : 0]};
+
+								ksysopfaultmode <= inusermode;
+
+								rst_o <= (!ksysopfaulthdlr);
+
+								if (inusermode)
+									ip <= ksysopfaulthdlr;
+								else
+									ip <= ksysopfaulthdlrplustwo;
+
+								ksysopfaultaddr <= ipnxt;
+
+								inusermode <= 0;
+
+								instrbufrst_a <= ~instrbufrst_b;
+
+								`ifdef SIMULATION
+								sequencerstate <= 21;
+								`endif
+
 							end else begin
-
-								if (instrbufdato0[2]) begin
-
-									saved_sysopcode <= sysopcode;
-									saved_faultaddr <= faultaddr;
-
-									sysopcode <= {instrbufdato1, instrbufdato0};
-
-									faultaddr <= {dppn, gprdata2[12 -1 : 0]};
-
-									ksysopfaultmode <= inusermode;
-
-									rst_o <= (!ksysopfaulthdlr);
-
-									if (inusermode)
-										ip <= ksysopfaulthdlr;
-									else
-										ip <= ksysopfaulthdlrplustwo;
-
-									ksysopfaultaddr <= ipnxt;
-
-									inusermode <= 0;
-
-									instrbufrst_a <= ~instrbufrst_b;
-
-									`ifdef SIMULATION
-									sequencerstate <= 21;
-									`endif
-
-								end else begin
-									ip <= ipnxt;
-									`ifdef SIMULATION
-									sequencerstate <= 22;
-									`endif
-								end
+								ip <= ipnxt;
+								`ifdef SIMULATION
+								sequencerstate <= 22;
+								`endif
 							end
 
 						end else begin
