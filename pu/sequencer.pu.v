@@ -610,4 +610,10 @@ end else if (!inhalt) begin
 		sequencerstate <= 42;
 		`endif
 	end
+
+end else begin
+	// Stall.
+	`ifdef SIMULATION
+	sequencerstate <= 43;
+	`endif
 end

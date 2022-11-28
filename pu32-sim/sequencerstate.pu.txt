@@ -37,3 +37,4 @@
 40 hypercall
 41 execfaultintr
 42 instrfetchstall
+43 halt
