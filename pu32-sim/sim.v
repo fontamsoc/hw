@@ -41,6 +41,7 @@
 
 `include "dev/bootldr/bootldr.v"
 
+`ifdef SIMUSECLKDIV
 module clkdiv (
 	 clk_4x_i
 	,clk_2x_o
@@ -60,6 +61,7 @@ assign clk_2x_o = cntr[0];
 assign clk_o    = cntr[1];
 
 endmodule
+`endif
 
 module sim (
 	 rst_i
@@ -106,6 +108,7 @@ end
 localparam CLKFREQ   = (100000000) /* 100  Mhz */; // Frequency of clk_w.
 localparam CLK2XFREQ = (200000000) /* 200 Mhz */; // Frequency of clk_2x_w.
 
+`ifdef SIMUSECLKDIV
 wire clk_w;
 wire clk_2x_w;
 clkdiv clkdiv (
@@ -113,6 +116,9 @@ clkdiv clkdiv (
 	,.clk_2x_o (clk_2x_w)
 	,.clk_o    (clk_w)
 );
+`else
+wire clk_w = clk_i;
+`endif
 
 wire rst_w = (devtbl_rst0_r || (|rst_cntr));
 

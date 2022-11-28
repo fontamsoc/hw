@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Wed May 25 19:03:51 2022
+[*] Tue Nov 29 20:23:35 2022
 [*]
 [dumpfile] "/home/tambewilliam/Documents/pu32/fontamsoc-hw/pu32-sim/sim.vcd"
-[dumpfile_mtime] "Wed May 25 18:52:55 2022"
-[dumpfile_size] 2456897211
+[dumpfile_mtime] "Tue Nov 29 20:14:12 2022"
+[dumpfile_size] 560565011
 [savefile] "/home/tambewilliam/Documents/pu32/fontamsoc-hw/pu32-sim/sim.sav"
-[timestart] 2
-[size] 2098 1226
+[timestart] 1896315644
+[size] 2098 1223
 [pos] -1 -1
-*-4.000000 9 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-2.000000 1896315654 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] TOP.
 [treeopen] TOP.sim.
 [treeopen] TOP.sim.multipu.
@@ -21,7 +21,7 @@
 @24
 TOP.sim.multipu.genpu[0].pu.clkcyclecnt[63:0]
 @2024
->-8
+>-2
 ^1 /home/tambewilliam/Documents/pu32/fontamsoc-hw/pu32-sim/sequencerstate.pu.txt
 TOP.sim.multipu.genpu[0].pu.sequencerstate[31:0]
 @23
@@ -78,12 +78,6 @@ TOP.sim.multipu.genpu[0].pu.dcachemasterrdy
 -
 @28
 TOP.sim.multipu.genpu[0].pu.pi1_op_o[1:0]
-@22
-TOP.sim.multipu.genpu[0].pu.pi1_addr_o[60:0]
-TOP.sim.multipu.genpu[0].pu.pi1_sel_o[7:0]
-TOP.sim.multipu.genpu[0].pu.pi1_data_o[63:0]
-TOP.sim.multipu.genpu[0].pu.pi1_data_i[63:0]
-@28
 TOP.sim.multipu.genpu[0].pu.pi1_rdy_i
 @200
 -
