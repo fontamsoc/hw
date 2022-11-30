@@ -116,6 +116,8 @@ initial begin
 
 	// ---------- Registers and nets used by Hardware-Page-Table-Walker ----------
 
+	dcachemastersel_saved = 0;
+
 	`ifdef PUMMU
 	`ifdef PUHPTW
 
@@ -200,8 +202,6 @@ initial begin
 
 	opldresult = 0;
 
-	opldbyteselect = 0;
-
 	oplddone = 0;
 
 	// Register set to 1 for a mem request.
@@ -213,8 +213,6 @@ initial begin
 	opldstgpr = 0;
 
 	opldstresult = 0;
-
-	opldstbyteselect = 0;
 
 	opldstdone = 0;
 

@@ -280,3 +280,60 @@ always @* begin
 		end
 	end
 end
+
+always @* begin
+	dcachemasterdato_result = {ARCHBITSZMAX{1'b0}};
+	// Apropriately set dcachemasterdato_result depending on dcachemastersel_saved.
+	if (dcachemastersel_saved == 'b11)
+		dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-16)){1'b0}}, dcachemasterdato[15:0]};
+	else if (dcachemastersel_saved == 'b01)
+		dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[7:0]};
+	else if (dcachemastersel_saved == 'b10)
+		dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[15:8]};
+	else if (ARCHBITSZ == 32 || ARCHBITSZ == 64) begin
+		if (dcachemastersel_saved == 'b1111)
+			dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-32)){1'b0}}, dcachemasterdato[31:0]};
+		else if (dcachemastersel_saved == 'b1100)
+			dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-16)){1'b0}}, dcachemasterdato[31:16]};
+		else if (dcachemastersel_saved == 'b0100)
+			dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[23:16]};
+		else if (dcachemastersel_saved == 'b1000)
+			dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[31:24]};
+		else if (ARCHBITSZ == 64) begin
+			if (dcachemastersel_saved == 'b11111111)
+				dcachemasterdato_result = dcachemasterdato;
+			else if (dcachemastersel_saved == 'b11110000)
+				dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-32)){1'b0}}, dcachemasterdato[63:32]};
+			else if (dcachemastersel_saved == 'b00110000)
+				dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-16)){1'b0}}, dcachemasterdato[47:32]};
+			else if (dcachemastersel_saved == 'b11000000)
+				dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-16)){1'b0}}, dcachemasterdato[63:48]};
+			else if (dcachemastersel_saved == 'b00010000)
+				dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[39:32]};
+			else if (dcachemastersel_saved == 'b00100000)
+				dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[47:40]};
+			else if (dcachemastersel_saved == 'b01000000)
+				dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[55:48]};
+			else if (dcachemastersel_saved == 'b10000000)
+				dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[63:56]};
+		end
+	end
+end
+
+always @ (posedge clk_i) begin
+	if (miscrdyandsequencerreadyandgprrdy12 && dtlb_rdy) begin
+		if ((isopld && dcachemasterrdy && !opldfault
+			`ifdef PUMMU
+			`ifdef PUHPTW
+			&& opldfault__hptwddone
+			`endif
+			`endif
+		) || (isopldst && dcachemasterrdy && !opldstfault
+				`ifdef PUMMU
+				`ifdef PUHPTW
+				&& opldstfault__hptwddone
+				`endif
+				`endif
+		)) dcachemastersel_saved <= dcachemastersel;
+	end
+end

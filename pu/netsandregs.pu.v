@@ -239,9 +239,11 @@ wire[ARCHBITSZ -1 : 0] gprdata2;
 reg[2 -1 : 0] dcachemasterop; // ### declared as reg so as to be usable by verilog within the always block.
 reg[ADDRBITSZ -1 : 0] dcachemasteraddr; // ### declared as reg so as to be usable by verilog within the always block.
 wire[ARCHBITSZMAX -1 : 0] dcachemasterdato;
+reg[ARCHBITSZMAX -1 : 0] dcachemasterdato_result; // ### declared as reg so as to be usable by verilog within the always block.
 reg[ARCHBITSZMAX -1 : 0] dcachemasterdati; // ### declared as reg so as to be usable by verilog within the always block.
 reg[(ARCHBITSZMAX/8) -1 : 0] dcachemastersel_; // ### declared as reg so as to be usable by verilog within the always block.
 reg[(ARCHBITSZMAX/8) -1 : 0] dcachemastersel; // ### declared as reg so as to be usable by verilog within the always block.
+reg[(ARCHBITSZMAX/8) -1 : 0] dcachemastersel_saved;
 wire dcachemasterrdy;
 
 wire[2 -1 : 0] dcacheslaveop;
@@ -1130,8 +1132,6 @@ reg[CLOG2GPRCNTTOTAL -1 : 0] opldgpr;
 
 reg[ARCHBITSZMAX -1 : 0] opldresult;
 
-reg[(ARCHBITSZMAX/8) -1 : 0] opldbyteselect;
-
 `ifdef PUMMU
 wire opldfault_ = (dtlben && (dtlbmiss || dtlbnotreadable[dtlbwayhitidx]));
 wire opldfault = ((inusermode && alignfault) || opldfault_);
@@ -1183,8 +1183,6 @@ wire opstrdy = (isopst && opstrdy_
 reg[CLOG2GPRCNTTOTAL -1 : 0] opldstgpr;
 
 reg[ARCHBITSZ -1 : 0] opldstresult;
-
-reg[(ARCHBITSZ/8) -1 : 0] opldstbyteselect;
 
 `ifdef PUMMU
 wire opldstfault_ = (dtlben && (dtlbmiss || dtlbnotreadable[dtlbwayhitidx] || dtlbnotwritable[dtlbwayhitidx]));
