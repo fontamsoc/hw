@@ -773,7 +773,7 @@ wire[CLOG2ICACHESETCOUNT -1 : 0] icachenextset = instrfetchnextppninstrfetchnext
 wire[CLOG2ICACHESETCOUNT -1 : 0] icacheset = instrfetchppninstrfetchaddr[(CLOG2ICACHESETCOUNT+CLOG2XARCHBITSZBY8DIFF)-1:CLOG2XARCHBITSZBY8DIFF];
 
 // Bitsize of an icache tag.
-localparam ICACHETAGBITSIZE = (ADDRBITSZ - CLOG2ICACHESETCOUNT);
+localparam ICACHETAGBITSIZE = (ADDRBITSZ - (CLOG2ICACHESETCOUNT+CLOG2XARCHBITSZBY8DIFF));
 
 // Net set to the tag value being compared for an instruction cache hit.
 wire[ICACHETAGBITSIZE -1 : 0] icachetag = instrfetchppninstrfetchaddr[ADDRBITSZ-1:(CLOG2ICACHESETCOUNT+CLOG2XARCHBITSZBY8DIFF)];
