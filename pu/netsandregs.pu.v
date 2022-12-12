@@ -805,7 +805,7 @@ wire icachehit = ((
 	`endif
 		!ioutofrange) && icacheactive && icachehit_);
 
-wire icachewe = (!doicacherst && icacheactive && instrfetchmemrqstdone && !instrbufrst);
+wire icachewe = (icacheactive && instrfetchmemrqstdone && !instrbufrst);
 
 wire icacheoff = !icacheactive;
 
