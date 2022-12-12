@@ -13,7 +13,7 @@ prog: ${PROJ}.dfu
 %.json: ../%.v
 	cp ../../dev/bootldr/bootldr*.hex .
 	cp ../litedram/litedram.hex .
-	yosys -p "read_verilog ../../lib/ecp5pll.sv; read_verilog -I../../ $<; synth_ecp5 -no-rw-check -json $@" &>0.$@.log
+	yosys -p "read_verilog ../../lib/ecp5pll.sv; read_verilog -I../../ $<; synth_ecp5 -top ${PROJ} -no-rw-check -json $@" &>0.$@.log
 %_out.config: %.json ../%.lpf
 	nextpnr-ecp5 --json $< --textcfg $@ --85k --package CSFBGA285 --lpf ../${PROJ}.lpf &>1.$@.log
 	rm -rf abc.history # Remove empty file that gets created sometime.

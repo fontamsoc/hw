@@ -9,7 +9,6 @@
 
 `include "lib/perint/pi1r.v"
 
-`define PUDSPMUL
 `include "pu/multipu.v"
 
 `include "dev/usb_serial.v"

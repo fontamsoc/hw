@@ -15,7 +15,7 @@ prog: ${PROJ}.dfu
 %.json: ../%.v
 	if [ ! -e ../smem.rtk ]; then cp -a ../../plain.rtk ../smem.rtk; make -C ../smem.rtk/; fi
 	hexdump -v -e '/4 "%08x "' ../smem.rtk/rtk.bin > smem.hex
-	yosys -p "read_verilog ../../lib/ecp5pll.sv; read_verilog -I../../ $<; synth_ecp5 -json $@" &>0.$@.log
+	yosys -p "read_verilog ../../lib/ecp5pll.sv; read_verilog -I../../ $<; synth_ecp5 -top ${PROJ} -no-rw-check -json $@" &>0.$@.log
 %_out.config: %.json ../%.lpf
 	nextpnr-ecp5 --json $< --textcfg $@ --85k --package CSFBGA285 --lpf ../${PROJ}.lpf &>1.$@.log
 	rm -rf abc.history # Remove empty file that gets created sometime.

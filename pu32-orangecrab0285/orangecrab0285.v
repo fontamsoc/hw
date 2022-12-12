@@ -16,7 +16,7 @@
 `define PUMULDIVCLK
 `define PUDSPMUL
 `define PUDCACHE
-//`define PUCOUNT 1 /* 4 max */
+//`define PUCOUNT 1 /* 2 max */
 `include "pu/multipu.v"
 
 `include "dev/sdcard/sdcard_spi.v"
@@ -248,7 +248,7 @@ localparam PI1RMASTERCOUNT       = (M_PI1R_LAST + 1);
 localparam PI1RSLAVECOUNT        = (S_PI1R_INVALIDDEV + 1);
 localparam PI1RDEFAULTSLAVEINDEX = S_PI1R_INVALIDDEV;
 localparam PI1RFIRSTSLAVEADDR    = 0;
-localparam PI1RARCHBITSZ         = ((PUCOUNT > 2) ? ARCHBITSZ : LITEDRAM_ARCHBITSZ);
+localparam PI1RARCHBITSZ         = LITEDRAM_ARCHBITSZ;
 localparam CLOG2PI1RARCHBITSZBY8 = clog2(PI1RARCHBITSZ/8);
 localparam PI1RADDRBITSZ         = (PI1RARCHBITSZ-CLOG2PI1RARCHBITSZBY8);
 localparam PI1RCLKFREQ           = CLK2XFREQ;
@@ -285,11 +285,12 @@ assign devtbl_mapsz_flat_w = s_pi1r_mapsz_w_flat /* defined in "lib/perint/inst.
 assign devtbl_useintr_flat_w = devtbl_useintr_w;
 
 localparam ICACHESZ = 64;
-localparam TLBSZ    = 128;
+localparam DCACHESZ = 16;
+localparam TLBSZ    = 64;
 
 localparam ICACHEWAYCOUNT = 2;
-localparam DCACHEWAYCOUNT = ((PUCOUNT > 2) ? 1 : 2);
-localparam TLBWAYCOUNT    = 2;
+localparam DCACHEWAYCOUNT = 2;
+localparam TLBWAYCOUNT    = 1;
 
 multipu #(
 
@@ -297,7 +298,7 @@ multipu #(
 	,.XARCHBITSZ     (PI1RARCHBITSZ)
 	,.CLKFREQ        (PI1RCLKFREQ)
 	,.ICACHESETCOUNT ((1024/(PI1RARCHBITSZ/8))*((ICACHESZ/ICACHEWAYCOUNT)/PUCOUNT))
-	,.DCACHESETCOUNT ((1024/(PI1RARCHBITSZ/8))*((16/DCACHEWAYCOUNT)/PUCOUNT))
+	,.DCACHESETCOUNT ((1024/(PI1RARCHBITSZ/8))*((DCACHESZ/DCACHEWAYCOUNT)/PUCOUNT))
 	,.TLBSETCOUNT    (TLBSZ/TLBWAYCOUNT)
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
@@ -369,10 +370,10 @@ sdcard_spi #(
 assign devtbl_id_w     [S_PI1R_SDCARD] = 4;
 assign devtbl_useintr_w[S_PI1R_SDCARD] = 1;
 
-localparam RAMCACHEWAYCOUNT = 2;
+localparam RAMCACHEWAYCOUNT = 1;
 
 localparam RAMCACHESZ = /* In (ARCHBITSZ/8) units */
-	((1024/(ARCHBITSZ/8))*(((PUCOUNT >= 2) ? 32 : 64)/RAMCACHEWAYCOUNT));
+	((1024/(ARCHBITSZ/8))*(32/RAMCACHEWAYCOUNT));
 
 wire devtbl_rst2_w;
 
