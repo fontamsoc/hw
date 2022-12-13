@@ -905,7 +905,7 @@ reg wasoprli;
 // Register used to save the value of gprdata1 when opli is sequenced.
 reg[ARCHBITSZ -1 : 0] opligprdata1;
 
-// Register used to store the type of opli.
+// Register used to store the type of opinc opli oprli.
 reg[2 -1 : 0] oplitype;
 
 // Register used to store the least significant bits of the immediate being loaded.
@@ -915,11 +915,11 @@ reg[(ARCHBITSZMAX -16) -1 : 0] oplilsb;
 wire[ARCHBITSZMAX -1 : 0] opliresult = (
 	(ARCHBITSZ == 16) ? ({instrbufdato1, instrbufdato0}) :
 	(ARCHBITSZ == 32) ? ((oplitype == 1) ? {{(ARCHBITSZ-16){instrbufdato1[7]}}, instrbufdato1, instrbufdato0} :
-			{instrbufdato1, instrbufdato0, oplilsb[((16*(0+1))-1):(16*(0))]}) :
+			  /* (oplitype == 2) */{instrbufdato1, instrbufdato0, oplilsb[((16*(0+1))-1):(16*(0))]}) :
 		((oplitype == 1) ? {{(ARCHBITSZ-16){instrbufdato1[7]}}, instrbufdato1, instrbufdato0} :
 		 (oplitype == 2) ? {{(ARCHBITSZ-32){instrbufdato1[7]}}, instrbufdato1, instrbufdato0,
 					oplilsb[((16*(0+1))-1):(16*(0))]} :
-				{instrbufdato1, instrbufdato0,
+	      /* (oplitype == 3) */{instrbufdato1, instrbufdato0,
 					oplilsb[((16*(0+1))-1):(16*(0))], oplilsb[((16*(1+1))-1):(16*(1))],
 						oplilsb[((16*(2+1))-1):(16*(2))]})) +
 	(wasopinc ? opligprdata1 : (wasoprli ? {ipnxt, 1'b0} : {ARCHBITSZ{1'b0}}));
