@@ -6,8 +6,10 @@ if (rst_i) begin
 	ksysopfaulthdlr <= {(ARCHBITSZ-1){1'b0}};
 	ksl <= KERNELSPACESTART;
 	flags <= ('h2000 /* disTimerIntr */);
+	`ifdef PUMMU
 	`ifdef PUHPTW
 	hptwpgd <= 0;
+	`endif
 	`endif
 end else if (miscrdyandsequencerreadyandgprrdy1 && isopsetsysreg) begin
 	if (isoptype0) ksysopfaulthdlr <= gprdata1[ARCHBITSZ-1:1];

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-if (rst_i) begin
+if (rst_i || instrbufrst_posedge) begin
 
 	hptwistate <= HPTWSTATEPGD0;
 	hptwidone <= 0;

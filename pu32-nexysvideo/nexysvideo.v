@@ -14,7 +14,7 @@
 `include "dev/pi1_downconverter.v"
 
 `define PUMMU
-//`define PUHPTW /* issues with XARCHBITSZ > ARCHBITSZ */
+`define PUHPTW
 `define PUMULDIVCLK
 `define PUDSPMUL
 `define PUDCACHE

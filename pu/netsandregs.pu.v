@@ -276,7 +276,7 @@ wire hptwistate_eq_HPTWSTATEPGD1 = (hptwistate == HPTWSTATEPGD1);
 wire hptwistate_eq_HPTWSTATEPTE0 = (hptwistate == HPTWSTATEPTE0);
 wire hptwistate_eq_HPTWSTATEPTE1 = (hptwistate == HPTWSTATEPTE1);
 wire hptwistate_eq_HPTWSTATEDONE = (hptwistate == HPTWSTATEDONE);
-wire hptwitlbwe = (dcachemasterrdy &&
+wire hptwitlbwe = (dcachemasterrdy && !instrbufrst_posedge &&
 	dcachemasterdato[5] && (inuserspace ? dcachemasterdato[4] : 1'b1) &&
 		dcachemasterdato[0]                                       &&
 	hptwistate_eq_HPTWSTATEPTE1);
