@@ -63,9 +63,9 @@ reg[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufwriteidx;
 
 // Net set to the space used in the instrbuf.
 wire[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufusage =
-	(instrbufwriteidx - ip[(CLOG2INSTRBUFFERSIZE+CLOG2XARCHBITSZBY8DIFF) +1 : 1+CLOG2XARCHBITSZBY8DIFF]);
+	(instrbufwriteidx - ip[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) : ((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)]);
 
-wire[XARCHBITSZMAX -1 : 0] instrbufip = instrbuf[ip[(CLOG2INSTRBUFFERSIZE+CLOG2XARCHBITSZBY8DIFF) : 1+CLOG2XARCHBITSZBY8DIFF]];
+wire[XARCHBITSZMAX -1 : 0] instrbufip = instrbuf[ip[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) -1 : (CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF]];
 // Net set to 16bits data indexed from instrbuf; note that instructions are 16bits.
 wire[16 -1 : 0] instrbufdato =
 	(XARCHBITSZ == 16) ? instrbufip :
