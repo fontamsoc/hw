@@ -347,9 +347,8 @@ reg gprrdywe;
 
 wire [ARCHBITSZ -1 : 0] gpr13val;
 
-`ifdef SIMULATION
-reg [ARCHBITSZ -1 : 0] sequencerstate;
-`endif
+// ### Net declared as reg so as to be useable by verilog within the always block.
+reg [3 -1 : 0] sequencerstate;
 
 wire isflagdistimerintr;
 wire isflagdisextintr;
@@ -375,6 +374,9 @@ wire sequencerintrext = (
 	&& !dbgen);
 
 wire sequencerready_ = !(rst_i || instrbufrst || sequencerintrtimer || sequencerintrext || inhalt);
+
+wire sequencerintrexec = (sequencerready_ && !instrbufnotempty && instrfetchfaulted);
+
 // When this net is 1, the sequencer is ready.
 wire sequencerready = sequencerready_ && instrbufnotempty;
 
@@ -466,6 +468,27 @@ assign isflagdisextintr = flags[12];
 assign isflagdistimerintr = flags[13];
 wire isflagdispreemptintr = flags[14];
 wire isflaghalt = flags[15];
+
+wire isopnop = (isopinc8 && !{instrbufdato0[3:0], instrbufdato1} && !isflagdispreemptintr && inusermode
+	// Disable PREEMPTINTR if debug-stepping.
+	&& !dbgen);
+
+wire sequencerintrsysop = (inusermode && (
+	!(isopsetasid && isflagsetasid) &&
+	!(isopsettimer && isflagsettimer) &&
+	!(isopsettlb && isflagsettlb) &&
+	!(isopclrtlb && isflagclrtlb) &&
+	!((isopgetclkcyclecnt || isopgetclkcyclecnth) && isflaggetclkcyclecnt) &&
+	!((isopgetclkfreq || isopgetcap || isopgetver) && isflaggetclkfreq) &&
+	!(isopgettlbsize && isflaggettlbsize) &&
+	!(isopgetcachesize && isflaggetcachesize) &&
+	!(isopgetcoreid && isflaggetcoreid) &&
+	!(isopcacherst && isflagcacherst) &&
+	!(isopgettlb && isflaggettlb) &&
+	!(isopsetflags && isflagsetflags) &&
+	!(isophalt && isflaghalt)));
+
+wire isopjtrue = (isopj && (isoptype2 || (|gprdata1 == instrbufdato0[0])));
 
 wire isopgettlb_or_isopclrtlb_found_posedge;
 

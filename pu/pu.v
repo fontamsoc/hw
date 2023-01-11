@@ -294,7 +294,6 @@ always @ (posedge clk_i) begin
 	`include "./opld.pu.v"
 	`include "./opst.pu.v"
 	`include "./opldst.pu.v"
-	`include "./sequencer.pu.v"
 	`include "./timers.pu.v"
 	`include "./opli.pu.v"
 	`include "./opsetsysreg.pu.v"
@@ -303,6 +302,7 @@ always @ (posedge clk_i) begin
 	`endif
 end
 
+`include "./sequencer.pu.v"
 `include "./memctrl.pu.v"
 `include "./gprctrl.pu.v"
 

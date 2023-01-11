@@ -92,10 +92,6 @@ initial begin
 
 	// ---------- Registers and nets used for sequencing and decoding ----------
 
-	`ifdef SIMULATION
-	sequencerstate = 0;
-	`endif
-
 	flags = 0;
 
 	// ---------- Registers and nets used for instruction caching ----------
