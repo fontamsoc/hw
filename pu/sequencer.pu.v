@@ -45,14 +45,7 @@ end else if (instrbufrst) begin
 	sequencerstate <= 2;
 	`endif
 
-end else if (timertriggered && !isflagdistimerintr && inusermode && !oplicounter
-	`ifdef PUMMU
-	`ifdef PUHPTW
-	&& !hptwbsy
-	`endif
-	`endif
-	// Disable TIMERINTR if debug-stepping.
-	&& !dbgen) begin
+end else if (sequencerintrtimer) begin
 	// If I get here, I have a timer interrupt.
 
 	faultreason <= TIMERINTR;
@@ -72,14 +65,7 @@ end else if (timertriggered && !isflagdistimerintr && inusermode && !oplicounter
 	sequencerstate <= 6;
 	`endif
 
-end else if (intrqst_i && !isflagdisextintr && inusermode && !oplicounter
-	`ifdef PUMMU
-	`ifdef PUHPTW
-	&& !hptwbsy
-	`endif
-	`endif
-	// Disable EXTINTR if debug-stepping.
-	&& !dbgen) begin
+end else if (sequencerintrext) begin
 	// If I get here, I have an external interrupt.
 
 	faultreason <= EXTINTR;

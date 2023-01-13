@@ -349,26 +349,30 @@ wire [ARCHBITSZ -1 : 0] gpr13val;
 reg [ARCHBITSZ -1 : 0] sequencerstate;
 `endif
 
-wire isflagdisextintr;
 wire isflagdistimerintr;
+wire isflagdisextintr;
 
-wire sequencerready_ = !(
-	rst_i || instrbufrst ||
-	(timertriggered && !isflagdistimerintr && inusermode && !oplicounter && !dbgen
+wire sequencerintrtimer = (
+	timertriggered && !isflagdistimerintr && inusermode && !oplicounter
 	`ifdef PUMMU
 	`ifdef PUHPTW
 	&& !hptwbsy
 	`endif
 	`endif
-	) ||
-	(intrqst_i && !isflagdisextintr && inusermode && !oplicounter && !dbgen
+	// Disable TIMERINTR if debug-stepping.
+	&& !dbgen);
+
+wire sequencerintrext = (
+	intrqst_i && !isflagdisextintr && inusermode && !oplicounter
 	`ifdef PUMMU
 	`ifdef PUHPTW
 	&& !hptwbsy
 	`endif
 	`endif
-	) ||
-	inhalt);
+	// Disable EXTINTR if debug-stepping.
+	&& !dbgen);
+
+wire sequencerready_ = !(rst_i || instrbufrst || sequencerintrtimer || sequencerintrext || inhalt);
 // When this net is 1, the sequencer is ready.
 wire sequencerready = sequencerready_ && instrbufnotempty;
 
