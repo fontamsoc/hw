@@ -76,7 +76,7 @@ always @* begin
 		gprdata = opgetsysreg1result;
 		gprwe   = 1;
 	end else if (opsetgprdone) begin
-		gpridx  = opsetgprdstidx;
+		gpridx  = gpridx1;
 		gprdata = opsetgprresult;
 		gprwe   = 1;
 	// The check for multi-cycle instructions start here.

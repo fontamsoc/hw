@@ -488,7 +488,7 @@ end else if (!inhalt) begin
 
 				end else if (isopsetgpr) begin
 
-					if (opsetgprrdy1 && opsetgprrdy2) begin
+					if (gprrdy1 && gprrdy2) begin
 						ip <= ipnxt;
 						`ifdef SIMULATION
 						sequencerstate <= 36;
