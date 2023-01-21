@@ -3,9 +3,7 @@
 
 // Implement getsysopcode, getuip, getfaultaddr, getfaultreason,
 // getclkcyclecnt, getclkcyclecnth, gettlbsize, geticachesize.
-if (!opgetsysregdone) // Reduce signal changes.
-	opgetsysregresult = {ARCHBITSZ{1'b0}};
-else if (isoptype0) opgetsysregresult = {{(ARCHBITSZ-16){1'b0}}, sysopcode};
+if      (isoptype0) opgetsysregresult = {{(ARCHBITSZ-16){1'b0}}, sysopcode};
 else if (isoptype1) opgetsysregresult = {uip, 1'b0};
 else if (isoptype2) opgetsysregresult = faultaddr;
 else if (isoptype3) opgetsysregresult = {{(ARCHBITSZ-3){1'b0}}, faultreason};
@@ -15,9 +13,7 @@ else if (isoptype6) opgetsysregresult = TLBSETCOUNT;
 else opgetsysregresult = (ICACHESETCOUNT << CLOG2XARCHBITSZBY8DIFF);
 
 // Implement getcoreid, getclkfreq, getdcachesize, gettlb, getcap, getver.
-if (!opgetsysreg1done) // Reduce signal changes.
-	opgetsysreg1result = {ARCHBITSZ{1'b0}};
-else if (isoptype0) opgetsysreg1result = id_i;
+if (isoptype0) opgetsysreg1result = id_i;
 else if (isoptype1) opgetsysreg1result = CLKFREQ;
 `ifdef PUDCACHE
 else if (isoptype2) opgetsysreg1result = (DCACHESETCOUNT << CLOG2XARCHBITSZBY8DIFF);
