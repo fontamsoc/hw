@@ -290,16 +290,42 @@ always @ (posedge clk_i) begin
 
 			uip <= ((!oplicounter && isopsetuip) ? gprdata1[ARCHBITSZ-1:1] : uip);
 
-			ip <= ((!oplicounter && isopjtrue) ? gprdata2[ARCHBITSZ-1:1] : ipnxt);
+			ip <= (
+				`ifdef PUSC2
+				sc2exec ? (sc2isopjtrue ? sc2gprdata2[ARCHBITSZ-1:1] : sc2ipnxt) :
+				`endif
+				((!oplicounter && isopjtrue) ? gprdata2[ARCHBITSZ-1:1] : ipnxt));
 
-			instrbufdato <= (|instrbufusage2 ? _instrbufipnxt : _instrbufi2);
+			instrbufdato <= (
+				`ifdef PUSC2
+				sc2exec ? sc2insn2 :
+				`endif
+				sc1insn2);
+			`ifdef PUSC2
+			sc2instrbufdato <= (sc2exec ? sc2insn3 : sc2insn2);
+			`endif
 
-			instrbufrst_a <= ((!oplicounter && isopjtrue) ? ~instrbufrst_b : instrbufrst_a);
+			instrbufrst_a <= ((
+				`ifdef PUSC2
+				sc2exec ? sc2isopjtrue :
+				`endif
+					(!oplicounter && isopjtrue)) ?
+						~instrbufrst_b : instrbufrst_a);
+		end
+
+		3'd3: begin
+
+			`ifdef PUSC2
+			sc2instrbufdato <= sc1insn2;
+			`endif
 		end
 
 		3'd4: begin
 
 			instrbufdato <= _instrbufi;
+			`ifdef PUSC2
+			sc2instrbufdato <= _sc2instrbufi;
+			`endif
 		end
 
 		3'd5: begin

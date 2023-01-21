@@ -44,7 +44,13 @@ always @* begin
 	end else if (opli8done) begin
 		gpridx  = gpridx1;
 		gprdata = opli8result;
-		gprwe   = 1;
+		gprwe   = (
+			`ifdef PUSC2
+			`ifdef PUSC2SKIPSC1LI8
+			sc2exec ? (!sc2skipsc1li8 || sc2keepgpr1) :
+			`endif
+			`endif
+			1'b1);
 	end else if (opalu0done) begin
 		gpridx  = gpridx1;
 		gprdata = opalu0result;
@@ -56,7 +62,13 @@ always @* begin
 	end else if (opalu2done) begin
 		gpridx  = gpridx1;
 		gprdata = opalu2result;
-		gprwe   = 1;
+		gprwe   = (
+			`ifdef PUSC2
+			`ifdef PUSC2SKIPSC1CPY
+			sc2exec ?  (!sc2skipsc1cpy || sc2keepgpr1) :
+			`endif
+			`endif
+			1'b1);
 	`ifdef PUDSPMUL
 	end else if (opdspmuldone) begin
 		gpridx  = gpridx1;
@@ -106,3 +118,55 @@ always @* begin
 		gprrdywe     = 1;
 	end
 end
+
+`ifdef PUSC2
+always @* begin
+
+	sc2gpridx  = 0;
+	sc2gprdata = 0;
+	sc2gprwe   = 0;
+
+	// SC2 only handles 8bits-immediates, non-branching single-cycle instructions.
+	if (sc2opli8done) begin
+		sc2gpridx  = sc2gpridx1;
+		sc2gprdata = sc2opli8result;
+		sc2gprwe   = 1;
+	end else if (sc2opalu0done) begin
+		sc2gpridx  = sc2gpridx1;
+		sc2gprdata = sc2opalu0result;
+		sc2gprwe   = 1;
+	end else if (sc2opalu1done) begin
+		sc2gpridx  = sc2gpridx1;
+		sc2gprdata = sc2opalu1result;
+		sc2gprwe   = 1;
+	end else if (sc2opalu2done) begin
+		sc2gpridx  = sc2gpridx1;
+		sc2gprdata = sc2opalu2result;
+		sc2gprwe   = 1;
+	`ifdef PUDSPMUL
+	end else if (sc2opdspmuldone) begin
+		sc2gpridx  = sc2gpridx1;
+		sc2gprdata = sc2opdspmulresult;
+		sc2gprwe   = 1;
+	`endif
+	end else if (sc2opjldone) begin
+		sc2gpridx  = sc2gpridx1;
+		sc2gprdata = {sc2ipnxt, 1'b0};
+		sc2gprwe   = 1;
+	`ifdef PUSC2SYSOPS
+	end else if (sc2opgetsysregdone) begin
+		sc2gpridx  = sc2gpridx1;
+		sc2gprdata = sc2opgetsysregresult;
+		sc2gprwe   = 1;
+	end else if (sc2opgetsysreg1done) begin
+		sc2gpridx  = sc2gpridx1;
+		sc2gprdata = sc2opgetsysreg1result;
+		sc2gprwe   = 1;
+	end else if (sc2opsetgprdone) begin
+		sc2gpridx  = sc2gpridx1;
+		sc2gprdata = sc2opsetgprresult;
+		sc2gprwe   = 1;
+	`endif
+	end
+end
+`endif

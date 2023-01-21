@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Tue Nov 29 20:23:35 2022
+[*] Sat Jan 21 19:46:12 2023
 [*]
 [dumpfile] "/home/tambewilliam/Documents/pu32/fontamsoc-hw/pu32-sim/sim.vcd"
-[dumpfile_mtime] "Tue Nov 29 20:14:12 2022"
-[dumpfile_size] 560565011
+[dumpfile_mtime] "Sat Jan 21 19:11:21 2023"
+[dumpfile_size] 5425529348
 [savefile] "/home/tambewilliam/Documents/pu32/fontamsoc-hw/pu32-sim/sim.sav"
-[timestart] 1896315644
+[timestart] 256176
 [size] 2098 1223
 [pos] -1 -1
-*-2.000000 1896315654 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-2.000000 256192 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] TOP.
 [treeopen] TOP.sim.
 [treeopen] TOP.sim.multipu.
@@ -21,29 +21,41 @@
 @24
 TOP.sim.multipu.genpu[0].pu.clkcyclecnt[63:0]
 @2024
->-2
 ^1 /home/tambewilliam/Documents/pu32/fontamsoc-hw/pu32-sim/sequencerstate.pu.txt
-TOP.sim.multipu.genpu[0].pu.sequencerstate[31:0]
-@23
->0
+TOP.sim.multipu.genpu[0].pu.sequencerstate[2:0]
+@28
+TOP.sim.multipu.genpu[0].pu.sc2exec
+@22
 TOP.sim.multipu.genpu[0].pu.pc_o[31:0]
+TOP.sim.multipu.genpu[0].pu.ip[30:0]
+TOP.sim.multipu.genpu[0].pu.sc2ip[30:0]
 @28
 TOP.sim.multipu.genpu[0].pu.inusermode
 @22
 TOP.sim.multipu.genpu[0].pu.instrbufdato[15:0]
+TOP.sim.multipu.genpu[0].pu.sc2instrbufdato[15:0]
 TOP.sim.multipu.genpu[0].pu.gprdata1[31:0]
+TOP.sim.multipu.genpu[0].pu.sc2gprdata1[31:0]
 TOP.sim.multipu.genpu[0].pu.gprdata2[31:0]
+@23
+TOP.sim.multipu.genpu[0].pu.sc2gprdata2[31:0]
 @24
 TOP.sim.multipu.genpu[0].pu.gpridx1[4:0]
+TOP.sim.multipu.genpu[0].pu.sc2gpridx1[4:0]
 TOP.sim.multipu.genpu[0].pu.gpridx2[4:0]
+TOP.sim.multipu.genpu[0].pu.sc2gpridx2[4:0]
 @28
 TOP.sim.multipu.genpu[0].pu.gprrdy1
+TOP.sim.multipu.genpu[0].pu.sc2gprrdy1
 TOP.sim.multipu.genpu[0].pu.gprrdy2
+TOP.sim.multipu.genpu[0].pu.sc2gprrdy2
 @200
+-
 -
 @24
 TOP.sim.multipu.genpu[0].pu.instrbufusage[1:0]
 @28
+TOP.sim.multipu.genpu[0].pu.sc2instrbufrdy
 TOP.sim.multipu.genpu[0].pu.instrbufrst
 TOP.sim.multipu.genpu[0].pu.sequencerreadyandgprrdy1
 TOP.sim.multipu.genpu[0].pu.sequencerreadyandgprrdy12
@@ -54,10 +66,13 @@ TOP.sim.multipu.genpu[0].pu.sequencerreadyandgprrdy12
 TOP.sim.multipu.genpu[0].pu.gprctrlstate[1:0]
 @24
 TOP.sim.multipu.genpu[0].pu.gpridx[4:0]
+TOP.sim.multipu.genpu[0].pu.sc2gpridx[4:0]
 @28
 TOP.sim.multipu.genpu[0].pu.gprwe
+TOP.sim.multipu.genpu[0].pu.sc2gprwe
 @22
 TOP.sim.multipu.genpu[0].pu.gprdata[31:0]
+TOP.sim.multipu.genpu[0].pu.sc2gprdata[31:0]
 @24
 TOP.sim.multipu.genpu[0].pu.gprrdyidx[4:0]
 @28

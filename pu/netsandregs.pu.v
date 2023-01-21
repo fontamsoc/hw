@@ -208,6 +208,8 @@ always @* begin
 	end
 end
 
+wire [16 -1 : 0] sc1insn2 = (|instrbufusage2 ? _instrbufipnxt : _instrbufi2);
+
 reg [16 -1 : 0] instrbufdato;
 
 // Nets set with the bytes from instrbufdato.
@@ -1032,6 +1034,383 @@ assign instrbufwe = ((instrfetchmemrqstdone || (icachecheck && icachehit)) && !i
 
 assign instrbufi = (instrfetchmemrqstdone ? pi1_data_i : icachedato);
 
+`ifdef PUSC2
+// ---------- Registers and nets used for superscalar-2nd-issue ----------
+
+wire [(ARCHBITSZ-1) -1 : 0] sc2ip = ipnxt;
+wire [(ARCHBITSZ-1) -1 : 0] sc2ipnxt = (ip + 2'd2);
+wire [(ARCHBITSZ-1) -1 : 0] sc2ip3 = (ip + 2'd3);
+
+// Net set to the space used in the instrbuf.
+wire [(CLOG2INSTRBUFFERSIZE +1) -1 : 0] sc2instrbufusage =
+	(instrbufwriteidx - sc2ip[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) : ((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)]);
+
+wire [(CLOG2INSTRBUFFERSIZE +1) -1 : 0] sc2instrbufusage2 =
+	(instrbufwriteidx - sc2ipnxt[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) : ((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)]);
+
+wire [(CLOG2INSTRBUFFERSIZE +1) -1 : 0] sc2instrbufusage3 =
+	(instrbufwriteidx - sc2ip3[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) : ((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)]);
+
+wire [XARCHBITSZMAX -1 : 0] sc2instrbufipnxt = instrbuf[sc2ipnxt[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) -1 : (CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF]];
+reg [16 -1 : 0] _sc2instrbufipnxt; // ### declared as reg so as to be usable by verilog within the always block.
+always @* begin
+	_sc2instrbufipnxt = {16{1'b0}};
+	if          (XARCHBITSZ == 16) begin
+		_sc2instrbufipnxt = sc2instrbufipnxt;
+	end else if (XARCHBITSZ == 32) begin
+		_sc2instrbufipnxt = (
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] ? sc2instrbufipnxt[31:16] :
+				                               sc2instrbufipnxt[15:0]);
+	end else if (XARCHBITSZ == 64) begin
+		_sc2instrbufipnxt = (
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? sc2instrbufipnxt[15:0] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? sc2instrbufipnxt[31:16] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? sc2instrbufipnxt[47:32] :
+				                                    sc2instrbufipnxt[63:48]);
+	end else if (XARCHBITSZ == 128) begin
+		_sc2instrbufipnxt = (
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? sc2instrbufipnxt[15:0] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? sc2instrbufipnxt[31:16] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? sc2instrbufipnxt[47:32] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? sc2instrbufipnxt[63:48] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? sc2instrbufipnxt[79:64] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? sc2instrbufipnxt[95:80] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? sc2instrbufipnxt[111:96] :
+				                                    sc2instrbufipnxt[127:112]);
+	end else if (XARCHBITSZ == 256) begin
+		_sc2instrbufipnxt = (
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? sc2instrbufipnxt[15:0] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? sc2instrbufipnxt[31:16] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? sc2instrbufipnxt[47:32] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? sc2instrbufipnxt[63:48] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? sc2instrbufipnxt[79:64] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? sc2instrbufipnxt[95:80] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? sc2instrbufipnxt[111:96] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? sc2instrbufipnxt[127:112] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? sc2instrbufipnxt[143:128] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? sc2instrbufipnxt[159:144] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? sc2instrbufipnxt[175:160] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? sc2instrbufipnxt[191:176] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? sc2instrbufipnxt[207:192] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? sc2instrbufipnxt[223:208] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? sc2instrbufipnxt[239:224] :
+				                                     sc2instrbufipnxt[255:240]);
+	end
+end
+
+wire [XARCHBITSZMAX -1 : 0] sc2instrbufip3 = instrbuf[sc2ip3[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) -1 : (CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF]];
+reg [16 -1 : 0] _sc2instrbufip3; // ### declared as reg so as to be usable by verilog within the always block.
+always @* begin
+	_sc2instrbufip3 = {16{1'b0}};
+	if          (XARCHBITSZ == 16) begin
+		_sc2instrbufip3 = sc2instrbufip3;
+	end else if (XARCHBITSZ == 32) begin
+		_sc2instrbufip3 = (
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] ? sc2instrbufip3[31:16] :
+				                             sc2instrbufip3[15:0]);
+	end else if (XARCHBITSZ == 64) begin
+		_sc2instrbufip3 = (
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? sc2instrbufip3[15:0] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? sc2instrbufip3[31:16] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? sc2instrbufip3[47:32] :
+				                                  sc2instrbufip3[63:48]);
+	end else if (XARCHBITSZ == 128) begin
+		_sc2instrbufip3 = (
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? sc2instrbufip3[15:0] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? sc2instrbufip3[31:16] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? sc2instrbufip3[47:32] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? sc2instrbufip3[63:48] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? sc2instrbufip3[79:64] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? sc2instrbufip3[95:80] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? sc2instrbufip3[111:96] :
+				                                  sc2instrbufip3[127:112]);
+	end else if (XARCHBITSZ == 256) begin
+		_sc2instrbufip3 = (
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? sc2instrbufip3[15:0] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? sc2instrbufip3[31:16] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? sc2instrbufip3[47:32] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? sc2instrbufip3[63:48] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? sc2instrbufip3[79:64] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? sc2instrbufip3[95:80] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? sc2instrbufip3[111:96] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? sc2instrbufip3[127:112] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? sc2instrbufip3[143:128] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? sc2instrbufip3[159:144] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? sc2instrbufip3[175:160] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? sc2instrbufip3[191:176] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? sc2instrbufip3[207:192] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? sc2instrbufip3[223:208] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? sc2instrbufip3[239:224] :
+				                                   sc2instrbufip3[255:240]);
+	end
+end
+
+reg [16 -1 : 0] _sc2instrbufi; // ### declared as reg so as to be usable by verilog within the always block.
+always @* begin
+	_sc2instrbufi = {16{1'b0}};
+	if          (XARCHBITSZ == 16) begin
+		_sc2instrbufi = instrbufi;
+	end else if (XARCHBITSZ == 32) begin
+		_sc2instrbufi = (
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] ? instrbufi[31:16] :
+				                            instrbufi[15:0]);
+	end else if (XARCHBITSZ == 64) begin
+		_sc2instrbufi = (
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
+				                                 instrbufi[63:48]);
+	end else if (XARCHBITSZ == 128) begin
+		_sc2instrbufi = (
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufi[63:48] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufi[79:64] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufi[95:80] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufi[111:96] :
+				                                 instrbufi[127:112]);
+	end else if (XARCHBITSZ == 256) begin
+		_sc2instrbufi = (
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufi[15:0] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufi[31:16] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufi[47:32] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufi[63:48] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufi[79:64] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufi[95:80] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufi[111:96] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufi[127:112] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufi[143:128] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufi[159:144] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufi[175:160] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufi[191:176] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufi[207:192] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufi[223:208] :
+			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufi[239:224] :
+				                                  instrbufi[255:240]);
+	end
+end
+
+reg [16 -1 : 0] _sc2instrbufi2; // ### declared as reg so as to be usable by verilog within the always block.
+always @* begin
+	_sc2instrbufi2 = {16{1'b0}};
+	if          (XARCHBITSZ == 16) begin
+		_sc2instrbufi2 = instrbufi;
+	end else if (XARCHBITSZ == 32) begin
+		_sc2instrbufi2 = (
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] ? instrbufi[31:16] :
+				                               instrbufi[15:0]);
+	end else if (XARCHBITSZ == 64) begin
+		_sc2instrbufi2 = (
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
+				                                    instrbufi[63:48]);
+	end else if (XARCHBITSZ == 128) begin
+		_sc2instrbufi2 = (
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufi[63:48] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufi[79:64] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufi[95:80] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufi[111:96] :
+				                                    instrbufi[127:112]);
+	end else if (XARCHBITSZ == 256) begin
+		_sc2instrbufi2 = (
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufi[15:0] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufi[31:16] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufi[47:32] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufi[63:48] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufi[79:64] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufi[95:80] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufi[111:96] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufi[127:112] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufi[143:128] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufi[159:144] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufi[175:160] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufi[191:176] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufi[207:192] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufi[223:208] :
+			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufi[239:224] :
+				                                     instrbufi[255:240]);
+	end
+end
+
+reg [16 -1 : 0] _sc2instrbufi3; // ### declared as reg so as to be usable by verilog within the always block.
+always @* begin
+	_sc2instrbufi3 = {16{1'b0}};
+	if          (XARCHBITSZ == 16) begin
+		_sc2instrbufi3 = instrbufi;
+	end else if (XARCHBITSZ == 32) begin
+		_sc2instrbufi3 = (
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] ? instrbufi[31:16] :
+				                             instrbufi[15:0]);
+	end else if (XARCHBITSZ == 64) begin
+		_sc2instrbufi3 = (
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
+				                                  instrbufi[63:48]);
+	end else if (XARCHBITSZ == 128) begin
+		_sc2instrbufi3 = (
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufi[63:48] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufi[79:64] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufi[95:80] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufi[111:96] :
+				                                  instrbufi[127:112]);
+	end else if (XARCHBITSZ == 256) begin
+		_sc2instrbufi3 = (
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufi[15:0] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufi[31:16] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufi[47:32] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufi[63:48] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufi[79:64] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufi[95:80] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufi[111:96] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufi[127:112] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufi[143:128] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufi[159:144] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufi[175:160] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufi[191:176] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufi[207:192] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufi[223:208] :
+			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufi[239:224] :
+				                                   instrbufi[255:240]);
+	end
+end
+
+wire [16 -1 : 0] sc2insn2 = (|sc2instrbufusage2 ? _sc2instrbufipnxt : _sc2instrbufi2);
+wire [16 -1 : 0] sc2insn3 = (|sc2instrbufusage3 ? _sc2instrbufip3   : _sc2instrbufi3);
+
+reg [16 -1 : 0] sc2instrbufdato;
+
+wire [8 -1 : 0] sc2instrbufdato0 = sc2instrbufdato[7:0];
+wire [8 -1 : 0] sc2instrbufdato1 = sc2instrbufdato[15:8];
+
+wire sc2isoptype0 = (sc2instrbufdato0[2:0] == 0);
+wire sc2isoptype1 = (sc2instrbufdato0[2:0] == 1);
+wire sc2isoptype2 = (sc2instrbufdato0[2:0] == 2);
+wire sc2isoptype3 = (sc2instrbufdato0[2:0] == 3);
+wire sc2isoptype4 = (sc2instrbufdato0[2:0] == 4);
+wire sc2isoptype5 = (sc2instrbufdato0[2:0] == 5);
+wire sc2isoptype6 = (sc2instrbufdato0[2:0] == 6);
+wire sc2isoptype7 = (sc2instrbufdato0[2:0] == 7);
+
+wire sc2isopli8 = (sc2instrbufdato0[7:4] == OPLI8A[4:1]);
+wire sc2isopinc8 = (sc2instrbufdato0[7:4] == OPINC8A[4:1]);
+wire sc2isoprli8 = (sc2instrbufdato0[7:4] == OPRLI8A[4:1]);
+wire sc2isopalu0 = (sc2instrbufdato0[7:3] == OPALU0);
+wire sc2isopalu1 = (sc2instrbufdato0[7:3] == OPALU1);
+wire sc2isopalu2 = (sc2instrbufdato0[7:3] == OPALU2);
+wire sc2isopj = (sc2instrbufdato0[7:3] == OPJ);
+wire sc2isopmuldiv = (sc2instrbufdato0[7:3] == OPMULDIV);
+`ifdef PUSC2SYSOPS
+wire sc2isopgetsysreg = (sc2instrbufdato0[7:3] == OPGETSYSREG);
+wire sc2isopgetsysreg1 = (sc2instrbufdato0[7:3] == OPGETSYSREG1);
+wire sc2isopsetgpr = (sc2instrbufdato0[7:3] == OPSETGPR);
+`endif
+
+wire sc2isopjtrue = (sc2isopj && (sc2isoptype2 || (|sc2gprdata1 == sc2instrbufdato0[0])));
+
+wire _sc2isopmuldiv = (sc2isopmuldiv && !sc2instrbufdato0[2]);
+
+wire [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx1 = {(
+	`ifdef PUSC2SYSOPS
+	sc2isopsetgpr ? sc2instrbufdato0[1] :
+	`endif
+		inusermode), sc2instrbufdato1[7:4]};
+wire [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx2 = {(
+	`ifdef PUSC2SYSOPS
+	sc2isopsetgpr ? sc2instrbufdato0[0] :
+	`endif
+		inusermode), sc2instrbufdato1[3:0]};
+
+wire [ARCHBITSZ -1 : 0] sc2gprdata1;
+wire [ARCHBITSZ -1 : 0] sc2gprdata2;
+
+wire sc2gprrdy1;
+wire sc2gprrdy2;
+
+// ### Nets declared as reg so as to be useable
+// ### by verilog within the always block.
+reg [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx;
+reg [ARCHBITSZ -1 : 0] sc2gprdata;
+reg sc2gprwe;
+
+wire sc2usegpr2 = (
+	`ifdef PUDSPMUL
+	_sc2isopmuldiv ||
+	`endif
+	`ifdef PUSC2SYSOPS
+	sc2isopsetgpr ||
+	`endif
+	sc2isopalu0 || sc2isopalu1 || sc2isopalu2 || sc2isopj);
+wire sc2usegpr1 = ( // ### sc2usegpr1 is to be true for all SC2 operations.
+	`ifdef PUSC2SYSOPS
+	sc2isopgetsysreg ||
+	(sc2isopgetsysreg1 && !(sc2isoptype3/*isopgettlb*/)) ||
+	`endif
+	sc2usegpr2 || sc2isopli8 || sc2isopinc8 || sc2isoprli8);
+wire sc2ops = sc2usegpr1; // Operations accepted by SC2.
+
+`ifdef PUSC2SKIPSC1LI8
+wire sc2skipsc1li8 = ((isopli8 || isopinc8 || isoprli8) && gpridx1 == sc2gpridx1);
+`endif
+`ifdef PUSC2SKIPSC1CPY
+wire sc2skipsc1cpy = (isopalu2 && isoptype7 && gpridx1 == sc2gpridx1);
+`endif
+
+//wire sc1setgpr1 = ( // ### sc1keepgpr1 is used instead.
+//	isopalu0 || isopalu1 || isopalu2 ||
+//	isopmuldiv || isopfloat ||
+//	isopli8 || isopinc8 || isoprli8 ||
+//	isopld || isopldst ||
+//	isopgetsysreg || isopgetsysreg1 || isopsetgpr);
+wire sc1keepgpr1 = (
+	(isopj /*&& (isoptype0 || isoptype1)*//* simple check because only the conditional variant will be active when needed */) ||
+	isopst || isopsetsysreg || isopcacherst);
+
+wire sc2keepgpr1 = (
+	`ifdef PUSC2SYSOPS
+	sc2isopsetgpr ||
+	`endif
+	(sc2isopj && (sc2isoptype0 || sc2isoptype1)));
+
+wire _sc2gprrdy1 = (sc2gprrdy1 && (
+	`ifdef PUSC2SKIPSC1LI8
+	sc2skipsc1li8 ||
+	`endif
+	`ifdef PUSC2SKIPSC1CPY
+	sc2skipsc1cpy ||
+	`endif
+	sc1keepgpr1 || sc2gpridx1 != gpridx1));
+wire _sc2gprrdy2 = (sc2gprrdy2 && (
+	`ifdef PUSC2SKIPSC1LI8
+	sc2skipsc1li8 ||
+	`endif
+	`ifdef PUSC2SKIPSC1CPY
+	sc2skipsc1cpy ||
+	`endif
+	sc1keepgpr1 || sc2gpridx2 != gpridx1));
+
+wire sc1ops = (!(dbgen || oplicounter || isopimm || isopinc || isopjtrue /*|| isopld || isopst || isopldst*/ || isophalt));
+
+wire sc2rdy = (sc1ops && (|sc2instrbufusage));
+
+wire sc2rdyandgprrdy1 = (sequencerstate == 3'd2 && sc2rdy && _sc2gprrdy1);
+
+wire sc2rdyandgprrdy12 = (sc2rdyandgprrdy1 && _sc2gprrdy2);
+
+wire sc2exec = (sc2rdy && sc2ops &&
+	(/*!sc2usegpr1 ||*/ _sc2gprrdy1) &&
+	(!sc2usegpr2 || _sc2gprrdy2));
+
+`endif
+
 // ---------- Nets used by opali8 ----------
 
 wire[ARCHBITSZ -1 : 0] opli8result = {{(ARCHBITSZ-8){instrbufdato0[3]}}, instrbufdato0[3:0], instrbufdato1[3:0]} +
@@ -1039,6 +1418,14 @@ wire[ARCHBITSZ -1 : 0] opli8result = {{(ARCHBITSZ-8){instrbufdato0[3]}}, instrbu
 
 wire opli8done = (miscrdyandsequencerreadyandgprrdy1 && (isopli8 || isopinc8 || isoprli8));
 
+`ifdef PUSC2
+
+wire [ARCHBITSZ -1 : 0] sc2opli8result = {{(ARCHBITSZ-8){sc2instrbufdato0[3]}}, sc2instrbufdato0[3:0], sc2instrbufdato1[3:0]} +
+	(sc2isopinc8 ? sc2gprdata1 : (sc2isoprli8 ? {sc2ipnxt, 1'b0} : {ARCHBITSZ{1'b0}}));
+
+wire sc2opli8done = (sc2rdyandgprrdy1 && (sc2isopli8 || sc2isopinc8 || sc2isoprli8));
+
+`endif
 // ---------- Registers and nets used by opli ----------
 
 // Register which is 1 for a load immediate increment.
@@ -1105,6 +1492,28 @@ wire opalu1done = (miscrdyandsequencerreadyandgprrdy12 && isopalu1);
 reg[ARCHBITSZ -1 : 0] opalu2result;
 
 wire opalu2done = (miscrdyandsequencerreadyandgprrdy12 && isopalu2);
+
+`ifdef PUSC2
+
+// ### Nets declared as reg so as to be useable
+// ### by verilog within the always block.
+reg[ARCHBITSZ -1 : 0] sc2opalu0result;
+
+wire sc2opalu0done = (sc2rdyandgprrdy12 && sc2isopalu0);
+
+// ### Nets declared as reg so as to be useable
+// ### by verilog within the always block.
+reg[ARCHBITSZ -1 : 0] sc2opalu1result;
+
+wire sc2opalu1done = (sc2rdyandgprrdy12 && sc2isopalu1);
+
+// ### Nets declared as reg so as to be useable
+// ### by verilog within the always block.
+reg[ARCHBITSZ -1 : 0] sc2opalu2result;
+
+wire sc2opalu2done = (sc2rdyandgprrdy12 && sc2isopalu2);
+
+`endif
 
 // ---------- Registers and nets used by opmuldiv ----------
 
@@ -1175,11 +1584,28 @@ wire [(ARCHBITSZ*2) -1 : 0] opdspmulresult_signed   = ($signed(gprdata1) * $sign
 reg [ARCHBITSZ -1 : 0] opdspmulresult;
 
 wire opdspmuldone = (miscrdyandsequencerreadyandgprrdy12 && isopmuldiv && !instrbufdato0[2]);
+
+`ifdef PUSC2
+wire [(ARCHBITSZ*2) -1 : 0] sc2opdspmulresult_unsigned = (sc2gprdata1 * sc2gprdata2);
+wire [(ARCHBITSZ*2) -1 : 0] sc2opdspmulresult_signed   = ($signed(sc2gprdata1) * $signed(sc2gprdata2));
+
+// ### Nets declared as reg so as to be useable
+// ### by verilog within the always block.
+reg [ARCHBITSZ -1 : 0] sc2opdspmulresult;
+
+wire sc2opdspmuldone = (sc2rdyandgprrdy12 && _sc2isopmuldiv);
+`endif
 `endif
 
 // ---------- Nets used by opjl ----------
 
 wire opjldone = (miscrdyandsequencerreadyandgprrdy12 && isopj && isoptype2);
+
+`ifdef PUSC2
+
+wire sc2opjldone = (sc2rdyandgprrdy12 && sc2isopj && sc2isoptype2);
+
+`endif
 
 // ---------- Nets used by opgetsysreg ----------
 
@@ -1192,6 +1618,18 @@ wire opgetsysregdone = (miscrdyandsequencerreadyandgprrdy1 && isopgetsysreg && (
 	(isoptype6 && isflaggettlbsize) ||
 	(isoptype7 && isflaggetcachesize)));
 
+`ifdef PUSC2
+`ifdef PUSC2SYSOPS
+// ### Nets declared as reg so as to be useable by verilog within the always block.
+reg[ARCHBITSZ -1 : 0] sc2opgetsysregresult;
+
+wire sc2opgetsysregdone = (sc2rdyandgprrdy1 && sc2isopgetsysreg && (
+	inkernelmode ||
+	((sc2isoptype4 || sc2isoptype5) && isflaggetclkcyclecnt) ||
+	(sc2isoptype6 && isflaggettlbsize) ||
+	(sc2isoptype7 && isflaggetcachesize)));
+`endif
+`endif
 // ---------- Registers and nets used by opgetsysreg1 ----------
 
 // ### Nets declared as reg so as to be useable
@@ -1230,6 +1668,20 @@ wire opgetsysreg1done = (miscrdyandsequencerreadyandgprrdy1 && isopgetsysreg1 &&
 	(isoptype2 && isflaggetcachesize) ||
 	(isoptype3 && isflaggettlb)));
 
+`ifdef PUSC2
+`ifdef PUSC2SYSOPS
+// ### Nets declared as reg so as to be useable
+// ### by verilog within the always block.
+reg [ARCHBITSZ -1 : 0] sc2opgetsysreg1result;
+
+wire sc2opgetsysreg1done = (sc2rdyandgprrdy1 && sc2isopgetsysreg1 && !(sc2isoptype3/*isopgettlb*/) && (
+	inkernelmode ||
+	(sc2isoptype0 && isflaggetcoreid) ||
+	((sc2isoptype1 || sc2isoptype4 || sc2isoptype5) && isflaggetclkfreq) ||
+	(sc2isoptype2 && isflaggetcachesize)));
+`endif
+`endif
+
 wire isopgettlb_or_isopclrtlb_found = (miscrdyandsequencerreadyandgprrdy12 && (
 	(isopgettlb && (inkernelmode || isflaggettlb)) || (isopclrtlb && (inkernelmode || isflagclrtlb))));
 reg isopgettlb_or_isopclrtlb_found_sampled;
@@ -1249,6 +1701,14 @@ wire opsetgprrdy2;
 
 wire opsetgprdone = (miscrdy && sequencerready && opsetgprrdy1 && opsetgprrdy2 && isopsetgpr && inkernelmode);
 
+`ifdef PUSC2
+`ifdef PUSC2SYSOPS
+wire [ARCHBITSZ -1 : 0] sc2opsetgprresult = sc2gprdata2;
+
+wire sc2opsetgprdone = (sc2rdyandgprrdy12 && sc2isopsetgpr && inkernelmode);
+`endif
+`endif
+
 // ---------- General purpose registers ----------
 
 reg [ARCHBITSZ -1 : 0] gpr [GPRCNTTOTAL -1 : 0];
@@ -1260,10 +1720,32 @@ assign gprdata1       = gpr[gpridx1];
 assign gprdata2       = gpr[gpridx2];
 assign opsetgprresult = gpr[opsetgprsrcidx];
 assign gpr13val       = gpr[{inusermode, 4'd13}];
+`ifdef PUSC2
+assign sc2gprdata1    = (
+	`ifdef PUSC2SKIPSC1LI8
+	(sc2skipsc1li8 /* includes (gpridx1 == sc2gpridx1) */) ? opli8result :
+	`endif
+	`ifdef PUSC2SKIPSC1CPY
+	(sc2skipsc1cpy /* includes (gpridx1 == sc2gpridx1) */) ? gprdata2 :
+	`endif
+	gpr[sc2gpridx1]);
+assign sc2gprdata2    = (
+	`ifdef PUSC2SKIPSC1LI8
+	(sc2skipsc1li8 && gpridx1 == sc2gpridx2) ? opli8result :
+	`endif
+	`ifdef PUSC2SKIPSC1CPY
+	(sc2skipsc1cpy && gpridx1 == sc2gpridx2) ? gprdata2 :
+	`endif
+	gpr[sc2gpridx2]);
+`endif
 
 always @ (posedge clk_i) begin
 	if (gprwe)
 		gpr[gpridx] <= gprdata;
+	`ifdef PUSC2
+	if (sc2gprwe)
+		gpr[sc2gpridx] <= sc2gprdata;
+	`endif
 end
 
 reg [GPRCNTTOTAL -1 : 0] gprrdy;
@@ -1272,6 +1754,10 @@ assign gprrdy1 = gprrdy[gpridx1];
 assign gprrdy2 = gprrdy[gpridx2];
 assign opsetgprrdy1 = gprrdy[opsetgprdstidx];
 assign opsetgprrdy2 = gprrdy[opsetgprsrcidx];
+`ifdef PUSC2
+assign sc2gprrdy1 = gprrdy[sc2gpridx1];
+assign sc2gprrdy2 = gprrdy[sc2gpridx2];
+`endif
 
 always @ (posedge clk_i) begin
 	if (rst_i)

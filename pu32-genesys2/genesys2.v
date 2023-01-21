@@ -18,6 +18,9 @@
 `define PUMULDIVCLK
 `define PUDSPMUL
 `define PUDCACHE
+`define PUSC2
+`define PUSC2SKIPSC1LI8
+`define PUSC2SKIPSC1CPY
 //`define PUCOUNT 1 /* 32 max */
 `include "pu/multipu.v"
 
