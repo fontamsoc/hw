@@ -1,47 +1,50 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-if (rst_i) begin
-	// Reset logic.
+always @ (posedge clk_i) begin
 
-	oplicounter <= 0;
+	if (rst_i) begin
+		// Reset logic.
 
-	oplioffset <= 0;
+		oplicounter <= 0;
 
-end else if (sequencerready && oplicounter) begin
-
-	oplilsb <= {oplilsb[((ARCHBITSZ-16)-1):(16*(0))], {instrbufdato1, instrbufdato0}};
-
-	oplicounter <= (oplicounter - 1'b1);
-
-	if (oplicountereq1)
 		oplioffset <= 0;
-	else
-		oplioffset <= (oplioffset + 1'b1);
 
-end else if (sequencerready_ && !instrbufnotempty && instrfetchfaulted) begin
+	end else if (sequencerready && oplicounter) begin
 
-	oplicounter <= 0;
+		oplilsb <= {oplilsb[((ARCHBITSZ-16)-1):(16*(0))], {instrbufdato1, instrbufdato0}};
 
-	oplioffset <= 0;
+		oplicounter <= (oplicounter - 1'b1);
 
-end else if (miscrdyandsequencerreadyandgprrdy1 && (isopimm || isopinc)) begin
+		if (oplicountereq1)
+			oplioffset <= 0;
+		else
+			oplioffset <= (oplioffset + 1'b1);
 
-	wasopinc <= isopinc;
-	wasoprli <= isoprli;
+	end else if (sequencerready_ && !instrbufnotempty && instrfetchfaulted) begin
 
-	opligprdata1 <= gprdata1;
+		oplicounter <= 0;
 
-	oplitype <= instrbufdato0[1:0];
+		oplioffset <= 0;
 
-	opligpr <= instrbufdato1[7:4];
+	end else if (miscrdyandsequencerreadyandgprrdy1 && (isopimm || isopinc)) begin
 
-	if      (ARCHBITSZ == 16)
-		oplicounter <= instrbufdato0[0];
-	else if (ARCHBITSZ == 32)
-		oplicounter <= instrbufdato0[1:0];
-	else if (ARCHBITSZ == 64)
-		oplicounter <= ((instrbufdato0[1:0] == 2'b11) ? 3'd4 : {1'b0, instrbufdato0[1:0]});
+		wasopinc <= isopinc;
+		wasoprli <= isoprli;
 
-	oplioffset <= 1;
+		opligprdata1 <= gprdata1;
+
+		oplitype <= instrbufdato0[1:0];
+
+		opligpr <= instrbufdato1[7:4];
+
+		if      (ARCHBITSZ == 16)
+			oplicounter <= instrbufdato0[0];
+		else if (ARCHBITSZ == 32)
+			oplicounter <= instrbufdato0[1:0];
+		else if (ARCHBITSZ == 64)
+			oplicounter <= ((instrbufdato0[1:0] == 2'b11) ? 3'd4 : {1'b0, instrbufdato0[1:0]});
+
+		oplioffset <= 1;
+	end
 end

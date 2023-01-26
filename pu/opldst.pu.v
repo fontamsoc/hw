@@ -1,40 +1,43 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-if (rst_i) begin
-	// Reset logic.
+always @ (posedge clk_i) begin
 
-	opldstmemrqst <= 0;
-	opldstdone <= 0;
+	if (rst_i) begin
+		// Reset logic.
 
-end else if (gprctrlstate == GPRCTRLSTATEOPLDST) begin
+		opldstmemrqst <= 0;
+		opldstdone <= 0;
 
-	opldstdone <= 0;
+	end else if (gprctrlstate == GPRCTRLSTATEOPLDST) begin
 
-end else begin
+		opldstdone <= 0;
 
-	if (opldstmemrqst) begin
+	end else begin
 
-		if (dcachemasterrdy) begin
+		if (opldstmemrqst) begin
 
-			opldstresult <= dcachemasterdato_result;
+			if (dcachemasterrdy) begin
 
-			// Signal that the value of the register opldstresult can be stored in the gpr.
-			opldstdone <= 1;
+				opldstresult <= dcachemasterdato_result;
 
-			opldstmemrqst <= 0;
+				// Signal that the value of the register opldstresult can be stored in the gpr.
+				opldstdone <= 1;
+
+				opldstmemrqst <= 0;
+			end
+
+		end else if (miscrdyandsequencerreadyandgprrdy12 && dtlb_rdy && isopldst && dcachemasterrdy && !opldstfault && !instrbufdato0[2]
+			`ifdef PUMMU
+			`ifdef PUHPTW
+			&& opldstfault__hptwddone
+			`endif
+			`endif
+			) begin
+
+			opldstmemrqst <= 1;
+
+			opldstgpr <= gpridx1;
 		end
-
-	end else if (miscrdyandsequencerreadyandgprrdy12 && dtlb_rdy && isopldst && dcachemasterrdy && !opldstfault && !instrbufdato0[2]
-		`ifdef PUMMU
-		`ifdef PUHPTW
-		&& opldstfault__hptwddone
-		`endif
-		`endif
-		) begin
-
-		opldstmemrqst <= 1;
-
-		opldstgpr <= gpridx1;
 	end
 end

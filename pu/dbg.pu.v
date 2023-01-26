@@ -44,83 +44,87 @@
 //  this commands must be issued (ARCHBITSZ/4) times.
 //  No data is returned.
 
-// Logic that set dbgselected.
-if (rst_i)
-	dbgselected <= 0;
-else begin
-	// Note that dbgrcvrphy.received is high for a single clock cycle.
-	if (dbg_rx_rcvd_i && dbg_rx_data_i[7:5] == DBGCMDSELECT)
-		dbgselected <= (dbg_rx_data_i[4:0] == id_i);
-end
-
-// Logic that set dbgen.
-if (rst_i)
-	dbgen <= brkonrst_i;
-else begin
-	// Note that dbgrcvrphy.received is high for a single clock cycle.
-	if (dbg_rx_rcvd_i && dbg_rx_data_i[7:5] == DBGCMDSTEP && dbgselected)
-		dbgen <= (dbg_rx_data_i[4:0] != DBGARGSTEPDISABLE);
-end
-
-if (rst_i) begin
-	dbgcmd <= DBGCMDSTEP;
-	dbgarg <= DBGARGSTEPSTOP;
-	dbgcounter <= 0;
-	dbgcntren <= 0;
-end else if (dbgcounter && dbgcntren) begin
-	// Decrement dbgcounter for each byte transmitted.
-	if (dbg_tx_rdy_i_negedge) begin
-		dbgiarg <= {{8{1'b0}}, dbgiarg[ARCHBITSZ-1:8]};
-		dbgcounter <= dbgcounterminusone;
-		dbgcntren <= |dbgcounterminusone;
-	end
-end else if (dbgcmdsteptilldone &&
-	(sequencerready && !oplicounter)) begin
-	dbgcmd <= DBGCMDSTEP;
-	dbgarg <= DBGARGSTEPSTOP;
-	dbgiarg <= {ip, 1'b0};
-	dbgcounter <= (ARCHBITSZ/8);
-	dbgcntren <= 1;
-// Note that dbgrcvrphy.received is high for a single clock cycle.
-end else if (dbg_rx_rcvd_i && dbgselected) begin
-	if (dbg_rx_data_i[7:5] == DBGCMDSTEP &&
-		dbg_rx_data_i[4:0] == DBGARGSTEPONCE &&
-		(sequencerready && !oplicounter)) begin
-		dbgcmd <= dbg_rx_data_i[7:5];
-		dbgarg <= dbg_rx_data_i[4:0];
-		dbgiarg <= {ip, 1'b0};
-	end else if (dbg_rx_data_i[7:5] == DBGCMDSTEP &&
-		dbg_rx_data_i[4:0] == DBGARGSTEPTILL &&
-		(sequencerready && !oplicounter)) begin
-		dbgcmd <= dbg_rx_data_i[7:5];
-		dbgarg <= dbg_rx_data_i[4:0];
-	end else if (dbg_rx_data_i[7:5] == DBGCMDLOADIARG) begin
-		dbgcmd <= dbg_rx_data_i[7:5];
-		dbgarg <= dbg_rx_data_i[4:0];
-		dbgiarg <= {dbg_rx_data_i[3:0], dbgiarg[ARCHBITSZ-1:4]};
-	end else if (dbg_rx_data_i[7:5] == DBGCMDGETOPCODE &&
-		(sequencerready && !oplicounter)) begin
-		dbgcmd <= dbg_rx_data_i[7:5];
-		dbgarg <= dbg_rx_data_i[4:0];
-		dbgiarg <= {{(ARCHBITSZ-16){1'b0}}, instrbufdato0, instrbufdato1};
-		dbgcounter <= (ARCHBITSZ/8);
-		dbgcntren <= 1;
-	end else if (dbg_rx_data_i[7:5] == DBGCMDGETIP &&
-		(sequencerready && !oplicounter)) begin
-		dbgcmd <= dbg_rx_data_i[7:5];
-		dbgarg <= dbg_rx_data_i[4:0];
-		dbgiarg <= {ip, 1'b0};
-		dbgcounter <= (ARCHBITSZ/8);
-		dbgcntren <= 1;
-	end else if (dbg_rx_data_i[7:5] == DBGCMDGETGPR &&
-		(sequencerready && !oplicounter)) begin
-		dbgcmd <= dbg_rx_data_i[7:5];
-		dbgarg <= dbg_rx_data_i[4:0];
-		dbgiarg <= dbggprdata;
-		dbgcounter <= (ARCHBITSZ/8);
-		dbgcntren <= 1;
+always @ (posedge clk_i) begin
+	if (rst_i)
+		dbgselected <= 0;
+	else begin
+		// Note that dbgrcvrphy.received is high for a single clock cycle.
+		if (dbg_rx_rcvd_i && dbg_rx_data_i[7:5] == DBGCMDSELECT)
+			dbgselected <= (dbg_rx_data_i[4:0] == id_i);
 	end
 end
 
-// Sampling used for negedge detection.
-dbg_tx_rdy_i_sampled <= dbg_tx_rdy_i;
+always @ (posedge clk_i) begin
+	if (rst_i)
+		dbgen <= brkonrst_i;
+	else begin
+		// Note that dbgrcvrphy.received is high for a single clock cycle.
+		if (dbg_rx_rcvd_i && dbg_rx_data_i[7:5] == DBGCMDSTEP && dbgselected)
+			dbgen <= (dbg_rx_data_i[4:0] != DBGARGSTEPDISABLE);
+	end
+end
+
+always @ (posedge clk_i) begin
+	if (rst_i) begin
+		dbgcmd <= DBGCMDSTEP;
+		dbgarg <= DBGARGSTEPSTOP;
+		dbgcounter <= 0;
+		dbgcntren <= 0;
+	end else if (dbgcounter && dbgcntren) begin
+		// Decrement dbgcounter for each byte transmitted.
+		if (dbg_tx_rdy_i_negedge) begin
+			dbgiarg <= {{8{1'b0}}, dbgiarg[ARCHBITSZ-1:8]};
+			dbgcounter <= dbgcounterminusone;
+			dbgcntren <= |dbgcounterminusone;
+		end
+	end else if (dbgcmdsteptilldone &&
+		(sequencerready && !oplicounter)) begin
+		dbgcmd <= DBGCMDSTEP;
+		dbgarg <= DBGARGSTEPSTOP;
+		dbgiarg <= {ip, 1'b0};
+		dbgcounter <= (ARCHBITSZ/8);
+		dbgcntren <= 1;
+	// Note that dbgrcvrphy.received is high for a single clock cycle.
+	end else if (dbg_rx_rcvd_i && dbgselected) begin
+		if (dbg_rx_data_i[7:5] == DBGCMDSTEP &&
+			dbg_rx_data_i[4:0] == DBGARGSTEPONCE &&
+			(sequencerready && !oplicounter)) begin
+			dbgcmd <= dbg_rx_data_i[7:5];
+			dbgarg <= dbg_rx_data_i[4:0];
+			dbgiarg <= {ip, 1'b0};
+		end else if (dbg_rx_data_i[7:5] == DBGCMDSTEP &&
+			dbg_rx_data_i[4:0] == DBGARGSTEPTILL &&
+			(sequencerready && !oplicounter)) begin
+			dbgcmd <= dbg_rx_data_i[7:5];
+			dbgarg <= dbg_rx_data_i[4:0];
+		end else if (dbg_rx_data_i[7:5] == DBGCMDLOADIARG) begin
+			dbgcmd <= dbg_rx_data_i[7:5];
+			dbgarg <= dbg_rx_data_i[4:0];
+			dbgiarg <= {dbg_rx_data_i[3:0], dbgiarg[ARCHBITSZ-1:4]};
+		end else if (dbg_rx_data_i[7:5] == DBGCMDGETOPCODE &&
+			(sequencerready && !oplicounter)) begin
+			dbgcmd <= dbg_rx_data_i[7:5];
+			dbgarg <= dbg_rx_data_i[4:0];
+			dbgiarg <= {{(ARCHBITSZ-16){1'b0}}, instrbufdato0, instrbufdato1};
+			dbgcounter <= (ARCHBITSZ/8);
+			dbgcntren <= 1;
+		end else if (dbg_rx_data_i[7:5] == DBGCMDGETIP &&
+			(sequencerready && !oplicounter)) begin
+			dbgcmd <= dbg_rx_data_i[7:5];
+			dbgarg <= dbg_rx_data_i[4:0];
+			dbgiarg <= {ip, 1'b0};
+			dbgcounter <= (ARCHBITSZ/8);
+			dbgcntren <= 1;
+		end else if (dbg_rx_data_i[7:5] == DBGCMDGETGPR &&
+			(sequencerready && !oplicounter)) begin
+			dbgcmd <= dbg_rx_data_i[7:5];
+			dbgarg <= dbg_rx_data_i[4:0];
+			dbgiarg <= dbggprdata;
+			dbgcounter <= (ARCHBITSZ/8);
+			dbgcntren <= 1;
+		end
+	end
+end
+
+always @ (posedge clk_i)
+	dbg_tx_rdy_i_sampled <= dbg_tx_rdy_i;

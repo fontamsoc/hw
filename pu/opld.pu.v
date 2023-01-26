@@ -1,40 +1,43 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-if (rst_i) begin
-	// Reset logic.
+always @ (posedge clk_i) begin
 
-	opldmemrqst <= 0;
-	oplddone <= 0;
+	if (rst_i) begin
+		// Reset logic.
 
-end else if (gprctrlstate == GPRCTRLSTATEOPLD) begin
+		opldmemrqst <= 0;
+		oplddone <= 0;
 
-	oplddone <= 0;
+	end else if (gprctrlstate == GPRCTRLSTATEOPLD) begin
 
-end else begin
+		oplddone <= 0;
 
-	if (opldmemrqst) begin
+	end else begin
 
-		if (dcachemasterrdy) begin
+		if (opldmemrqst) begin
 
-			opldresult <= dcachemasterdato_result;
+			if (dcachemasterrdy) begin
 
-			// Signal that the value of the register opldresult can be stored in the gpr.
-			oplddone <= 1;
+				opldresult <= dcachemasterdato_result;
 
-			opldmemrqst <= 0;
+				// Signal that the value of the register opldresult can be stored in the gpr.
+				oplddone <= 1;
+
+				opldmemrqst <= 0;
+			end
+
+		end else if (miscrdyandsequencerreadyandgprrdy12 && dtlb_rdy && isopld && dcachemasterrdy && !opldfault
+			`ifdef PUMMU
+			`ifdef PUHPTW
+			&& opldfault__hptwddone
+			`endif
+			`endif
+			) begin
+
+			opldmemrqst <= 1;
+
+			opldgpr <= gpridx1;
 		end
-
-	end else if (miscrdyandsequencerreadyandgprrdy12 && dtlb_rdy && isopld && dcachemasterrdy && !opldfault
-		`ifdef PUMMU
-		`ifdef PUHPTW
-		&& opldfault__hptwddone
-		`endif
-		`endif
-		) begin
-
-		opldmemrqst <= 1;
-
-		opldgpr <= gpridx1;
 	end
 end

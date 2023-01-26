@@ -402,7 +402,9 @@ always @ (posedge clk_i) begin
 	rdy_r  <= rdy_o;
 	data_r <= data_i;
 	`endif
+end
 
+always @ (posedge clk_i) begin
 	if (rst_i) begin
 		rdidx <= wridx;
 	end else if (ordy_o && ostb_i)

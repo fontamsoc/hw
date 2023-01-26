@@ -264,44 +264,31 @@ localparam PAGENUMBITSZ = (ARCHBITSZ-12);
 localparam ARCHBITSZMAX = 64;
 localparam XARCHBITSZMAX = 256; // TODO: Support all the way up to 1024 ...
 
-`include "./opcodes.pu.v"
-`include "./netsandregs.pu.v"
-
 assign intrdy_o = (inusermode && !isflagdisextintr && !dbgen);
 wire inhalt = (dohalt && inusermode && !dbgen);
 assign halted_o = (inhalt && !isflagdisextintr);
 
+`include "./opcodes.pu.v"
+`include "./netsandregs.pu.v"
 `include "./dcache.pu.v"
-
-// ### Block used to implement combinational logic;
-// ### verilog simulation do not handle correctly
-// ### combinational logic within a clock block,
-// ### because signal changes are shown only after
-// ### a clock edge but should show instantaneously.
-always @* begin
-	`include "./opalu.pu.v"
-	`include "./opgetsysreg.pu.v"
-end
-
-always @ (posedge clk_i) begin
-	`ifdef PUMMU
-	`include "./mmu.pu.v"
-	`ifdef PUHPTW
-	`include "./hptw.pu.v"
-	`endif
-	`endif
-	`include "./instrctrl.pu.v"
-	`include "./opld.pu.v"
-	`include "./opst.pu.v"
-	`include "./opldst.pu.v"
-	`include "./timers.pu.v"
-	`include "./opli.pu.v"
-	`include "./opsetsysreg.pu.v"
-	`ifdef PUDBG
-	`include "./dbg.pu.v"
-	`endif
-end
-
+`include "./opalu.pu.v"
+`include "./opgetsysreg.pu.v"
+`ifdef PUMMU
+`include "./mmu.pu.v"
+`ifdef PUHPTW
+`include "./hptw.pu.v"
+`endif
+`endif
+`include "./instrctrl.pu.v"
+`include "./opld.pu.v"
+`include "./opst.pu.v"
+`include "./opldst.pu.v"
+`include "./timers.pu.v"
+`include "./opli.pu.v"
+`include "./opsetsysreg.pu.v"
+`ifdef PUDBG
+`include "./dbg.pu.v"
+`endif
 `include "./sequencer.pu.v"
 `include "./memctrl.pu.v"
 `include "./gprctrl.pu.v"
