@@ -36,11 +36,11 @@ end else if (miscrdyandsequencerreadyandgprrdy1 && (isopimm || isopinc)) begin
 
 	opligpr <= instrbufdato1[7:4];
 
-	if (ARCHBITSZ == 16)
+	if      (ARCHBITSZ == 16)
 		oplicounter <= instrbufdato0[0];
 	else if (ARCHBITSZ == 32)
 		oplicounter <= instrbufdato0[1:0];
-	else
+	else if (ARCHBITSZ == 64)
 		oplicounter <= ((instrbufdato0[1:0] == 2'b11) ? 3'd4 : {1'b0, instrbufdato0[1:0]});
 
 	oplioffset <= 1;

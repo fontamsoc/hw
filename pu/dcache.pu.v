@@ -184,7 +184,8 @@ always @* begin
 end
 
 always @* begin
-
+	dcachemastersel_ = {(ARCHBITSZMAX/8){1'b0}};
+	dcachemasterdati = {ARCHBITSZMAX{1'b0}};
 	if (ARCHBITSZ == 16) begin
 		if (instrbufdato0[0]) begin
 			dcachemastersel_ = 'b11;
@@ -225,7 +226,7 @@ always @* begin
 				dcachemasterdati = {gprdata1[7:0], {24{1'b0}}};
 			end
 		end
-	end else /* if (ARCHBITSZ == 64) */ begin
+	end else if (ARCHBITSZ == 64) begin
 		if (&instrbufdato0[1:0]) begin
 			dcachemastersel_ = 'b11111111;
 			dcachemasterdati = gprdata1;

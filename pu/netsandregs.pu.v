@@ -67,17 +67,23 @@ wire[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufusage =
 
 wire[XARCHBITSZMAX -1 : 0] instrbufip = instrbuf[ip[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) -1 : (CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF]];
 // Net set to 16bits data indexed from instrbuf; note that instructions are 16bits.
-wire[16 -1 : 0] instrbufdato =
-	(XARCHBITSZ == 16) ? instrbufip :
-	(XARCHBITSZ == 32) ? (
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] ? instrbufip[31:16] :
-		                                 instrbufip[15:0]) :
-	(XARCHBITSZ == 64) ? (
+reg [16 -1 : 0] instrbufdato; // ### declared as reg so as to be usable by verilog within the always block.
+always @* begin
+	instrbufdato = {16{1'b0}};
+	if          (XARCHBITSZ == 16) begin
+		instrbufdato = instrbufip;
+	end else if (XARCHBITSZ == 32) begin
+		instrbufdato = (
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] ? instrbufip[31:16] :
+				                         instrbufip[15:0]);
+	end else if (XARCHBITSZ == 64) begin
+		instrbufdato = (
 			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufip[15:0] :
 			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufip[31:16] :
 			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufip[47:32] :
-			                                      instrbufip[63:48]) :
-	(XARCHBITSZ == 128) ? (
+				                              instrbufip[63:48]);
+	end else if (XARCHBITSZ == 128) begin
+		instrbufdato = (
 			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufip[15:0] :
 			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufip[31:16] :
 			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufip[47:32] :
@@ -85,24 +91,27 @@ wire[16 -1 : 0] instrbufdato =
 			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufip[79:64] :
 			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufip[95:80] :
 			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufip[111:96] :
-			                                      instrbufip[127:112]) :
-	/* (XARCHBITSZ == 256) ? */ (
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufip[15:0] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufip[31:16] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufip[47:32] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufip[63:48] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufip[79:64] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufip[95:80] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufip[111:96] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 7 ? instrbufip[127:112] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 8 ? instrbufip[143:128] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 9 ? instrbufip[159:144] :
+				                              instrbufip[127:112]);
+	end else if (XARCHBITSZ == 256) begin
+		instrbufdato = (
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufip[15:0] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufip[31:16] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufip[47:32] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufip[63:48] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufip[79:64] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufip[95:80] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufip[111:96] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufip[127:112] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufip[143:128] :
+			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufip[159:144] :
 			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufip[175:160] :
 			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufip[191:176] :
 			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufip[207:192] :
 			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufip[223:208] :
 			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufip[239:224] :
-			                                       instrbufip[255:240]);
+				                               instrbufip[255:240]);
+	end
+end
 
 // Nets set with the bytes from instrbufdato.
 wire[8 -1 : 0] instrbufdato0 = instrbufdato[7:0];
@@ -773,10 +782,22 @@ wire dtlb_rdy = (!dtlbreadenable);
 
 // ---------- Net used to detect unaligned data memory access ----------
 
-wire alignfault =
-	(ARCHBITSZ == 16) ? (instrbufdato0[0] && gprdata2[0]) :
-	(ARCHBITSZ == 32) ? ((instrbufdato0[1] && gprdata2[1:0]) || (instrbufdato0[0] && gprdata2[0])) :
-		((&instrbufdato0[1:0] && gprdata2[2:0]) || (instrbufdato0[1] && gprdata2[1:0]) || (instrbufdato0[0] && gprdata2[0]));
+reg alignfault; // ### declared as reg so as to be usable by verilog within the always block.
+always @* begin
+	alignfault = 0;
+	if          (ARCHBITSZ == 16) begin
+		alignfault = (instrbufdato0[0] && gprdata2[0]);
+	end else if (ARCHBITSZ == 32) begin
+		alignfault = (
+			(instrbufdato0[1] && gprdata2[1:0]) ||
+			(instrbufdato0[0] && gprdata2[0]));
+	end else if (ARCHBITSZ == 64) begin
+		alignfault = (
+			(&instrbufdato0[1:0] && gprdata2[2:0]) ||
+			(instrbufdato0[1] && gprdata2[1:0]) ||
+			(instrbufdato0[0] && gprdata2[0]));
+	end
+end
 
 // ---------- Registers and nets used for instruction caching ----------
 
@@ -939,17 +960,27 @@ reg[2 -1 : 0] oplitype;
 reg[(ARCHBITSZMAX -16) -1 : 0] oplilsb;
 
 // Net that get set to the immediate loaded.
-wire[ARCHBITSZMAX -1 : 0] opliresult = (
-	(ARCHBITSZ == 16) ? ({instrbufdato1, instrbufdato0}) :
-	(ARCHBITSZ == 32) ? ((oplitype == 1) ? {{(ARCHBITSZ-16){instrbufdato1[7]}}, instrbufdato1, instrbufdato0} :
-			  /* (oplitype == 2) */{instrbufdato1, instrbufdato0, oplilsb[((16*(0+1))-1):(16*(0))]}) :
-		((oplitype == 1) ? {{(ARCHBITSZ-16){instrbufdato1[7]}}, instrbufdato1, instrbufdato0} :
-		 (oplitype == 2) ? {{(ARCHBITSZ-32){instrbufdato1[7]}}, instrbufdato1, instrbufdato0,
-					oplilsb[((16*(0+1))-1):(16*(0))]} :
-	      /* (oplitype == 3) */{instrbufdato1, instrbufdato0,
-					oplilsb[((16*(0+1))-1):(16*(0))], oplilsb[((16*(1+1))-1):(16*(1))],
-						oplilsb[((16*(2+1))-1):(16*(2))]})) +
-	(wasopinc ? opligprdata1 : (wasoprli ? {ipnxt, 1'b0} : {ARCHBITSZ{1'b0}}));
+reg [ARCHBITSZMAX -1 : 0] opliresult_; // ### declared as reg so as to be usable by verilog within the always block.
+always @* begin
+	opliresult_ = {ARCHBITSZMAX{1'b0}};
+	if          (ARCHBITSZ == 16) begin
+		opliresult_ = ({instrbufdato1, instrbufdato0});
+	end else if (ARCHBITSZ == 32) begin
+		opliresult_ = (
+			(oplitype == 1) ? {{(ARCHBITSZ-16){instrbufdato1[7]}}, instrbufdato1, instrbufdato0} :
+			/* (oplitype == 2) */{instrbufdato1, instrbufdato0, oplilsb[((16*(0+1))-1):(16*(0))]});
+	end else if (ARCHBITSZ == 64) begin
+		opliresult_ = (
+			(oplitype == 1) ? {{(ARCHBITSZ-16){instrbufdato1[7]}}, instrbufdato1, instrbufdato0} :
+			(oplitype == 2) ? {{(ARCHBITSZ-32){instrbufdato1[7]}}, instrbufdato1, instrbufdato0,
+				oplilsb[((16*(0+1))-1):(16*(0))]} :
+			/* (oplitype == 3) */{instrbufdato1, instrbufdato0,
+				oplilsb[((16*(0+1))-1):(16*(0))], oplilsb[((16*(1+1))-1):(16*(1))],
+				oplilsb[((16*(2+1))-1):(16*(2))]});
+	end
+end
+wire [ARCHBITSZMAX -1 : 0] opliresult = (
+	opliresult_ + (wasopinc ? opligprdata1 : (wasoprli ? {ipnxt, 1'b0} : {ARCHBITSZ{1'b0}})));
 
 // Register that will hold the id of the GPR to which
 // the result will be stored.
