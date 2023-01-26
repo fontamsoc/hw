@@ -320,10 +320,8 @@ reg[2 -1 : 0] hptwmemstate; // ### declared as reg so as to be usable by verilog
 
 // ---------- Registers and nets used for sequencing and decoding ----------
 
-wire isopsetgpr;
-
-wire[CLOG2GPRCNTTOTAL -1 : 0] gpridx1 = {(isopsetgpr ? instrbufdato0[1] : inusermode), instrbufdato1[7:4]};
-wire[CLOG2GPRCNTTOTAL -1 : 0] gpridx2 = {(isopsetgpr ? instrbufdato0[0] : inusermode), instrbufdato1[3:0]};
+wire[CLOG2GPRCNTTOTAL -1 : 0] gpridx1 = {inusermode, instrbufdato1[7:4]};
+wire[CLOG2GPRCNTTOTAL -1 : 0] gpridx2 = {inusermode, instrbufdato1[3:0]};
 
 // These nets will respectively hold the busy state
 // of the first and second gpr operand of an instruction
@@ -443,7 +441,7 @@ wire isopsetasid = (isopsetsysreg && isoptype4);
 wire isopsetuip = (isopsetsysreg && isoptype5);
 wire isopsetflags = (isopsetsysreg && isoptype6);
 wire isopsettimer = (isopsetsysreg && isoptype7);
-assign isopsetgpr = (instrbufdato0[7:3] == OPSETGPR);
+wire isopsetgpr = (instrbufdato0[7:3] == OPSETGPR);
 wire isoploadorstore = (instrbufdato0[7:3] == OPLOADORSTORE);
 wire isoploadorstorevolatile = (instrbufdato0[7:3] == OPLOADORSTOREVOLATILE);
 assign isopld = ((isoploadorstore || isoploadorstorevolatile) && instrbufdato0[2]);
@@ -1111,9 +1109,17 @@ assign isopgettlb_or_isopclrtlb_found_posedge = (!isopgettlb_or_isopclrtlb_found
 
 // ---------- Nets used by opsetgpr ----------
 
-wire[ARCHBITSZ -1 : 0] opsetgprresult = gprdata2;
+wire[CLOG2GPRCNTTOTAL -1 : 0] opsetgprdstidx = {instrbufdato0[1], instrbufdato1[7:4]};
+wire[CLOG2GPRCNTTOTAL -1 : 0] opsetgprsrcidx = {instrbufdato0[0], instrbufdato1[3:0]};
 
-wire opsetgprdone = (miscrdyandsequencerreadyandgprrdy12 && isopsetgpr && inkernelmode);
+wire[ARCHBITSZ -1 : 0] opsetgprresult;
+
+// These nets will respectively hold the busy state of the first
+// and second gpr operand to be used with opsetgpr.
+wire opsetgprrdy1;
+wire opsetgprrdy2;
+
+wire opsetgprdone = (miscrdy && sequencerready && opsetgprrdy1 && opsetgprrdy2 && isopsetgpr && inkernelmode);
 
 // ---------- General purpose registers ----------
 
@@ -1124,6 +1130,7 @@ assign dbggprdata     = gpr[{inusermode, dbg_rx_data_i[3:0]}];
 `endif
 assign gprdata1       = gpr[gpridx1];
 assign gprdata2       = gpr[gpridx2];
+assign opsetgprresult = gpr[opsetgprsrcidx];
 assign gpr13val       = gpr[{inusermode, 4'd13}];
 
 always @ (posedge clk_i) begin
@@ -1135,6 +1142,8 @@ reg [GPRCNTTOTAL -1 : 0] gprrdy;
 
 assign gprrdy1 = gprrdy[gpridx1];
 assign gprrdy2 = gprrdy[gpridx2];
+assign opsetgprrdy1 = gprrdy[opsetgprdstidx];
+assign opsetgprrdy2 = gprrdy[opsetgprsrcidx];
 
 always @ (posedge clk_i) begin
 	if (rst_i)

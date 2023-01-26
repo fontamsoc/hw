@@ -168,7 +168,16 @@ always @* begin
 
 				sequencerstate = 3'd7;
 
-			end else if (isopsetsysreg || isopgetsysreg || isopgetsysreg1 || isopsetgpr) begin
+			end else if (isopsetgpr) begin
+
+				if (opsetgprrdy1 && opsetgprrdy2) begin
+					sequencerstate = 3'd2;
+				end else begin
+					// Stall.
+					sequencerstate = 3'd3;
+				end
+
+			end else if (isopsetsysreg || isopgetsysreg || isopgetsysreg1) begin
 
 				if (gprrdy1 &&
 					(!istlbop || (!(itlbreadenable_ || dtlbreadenable_
