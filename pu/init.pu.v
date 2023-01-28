@@ -45,6 +45,8 @@ initial begin
 	// Only the CLOG2INSTRBUFFERSIZE lsb are used for indexing.
 	instrbufwriteidx = 0;
 
+	instrbufdato = 0;
+
 	instrbufrst_a = 0;
 	instrbufrst_b = 0;
 	instrbufrst_sampled = 0;

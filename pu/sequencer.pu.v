@@ -219,12 +219,12 @@ always @* begin
 
 		end else begin
 			// Stall.
-			sequencerstate = 3'd3;
+			sequencerstate = 3'd4;
 		end
 
 	end else begin
 		// Stall.
-		sequencerstate = 3'd3;
+		sequencerstate = 3'd6;
 	end
 end
 
@@ -292,7 +292,14 @@ always @ (posedge clk_i) begin
 
 			ip <= ((!oplicounter && isopjtrue) ? gprdata2[ARCHBITSZ-1:1] : ipnxt);
 
+			instrbufdato <= (|instrbufusage2 ? _instrbufipnxt : _instrbufi2);
+
 			instrbufrst_a <= ((!oplicounter && isopjtrue) ? ~instrbufrst_b : instrbufrst_a);
+		end
+
+		3'd4: begin
+
+			instrbufdato <= _instrbufi;
 		end
 
 		3'd5: begin
