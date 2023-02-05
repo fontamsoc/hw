@@ -270,7 +270,7 @@ always @ (posedge clk_i) begin
 				(isopld || isopst || isopldst) ? gprdata2 :
 				                                 {ip, 1'b0});
 
-			sysopcode <= {instrbufdato1, instrbufdato0};
+			sysopcode <= (instrbufnotempty ? {instrbufdato1, instrbufdato0} : {8'h00, OPNOTAVAIL[4:0], 3'b000});
 
 			dohalt <= 0;
 
