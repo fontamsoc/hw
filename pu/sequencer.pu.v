@@ -324,6 +324,13 @@ always @ (posedge clk_i) begin
 			instrbufrst_a <= ~instrbufrst_b;
 		end
 
+		`ifdef SIMULATION
+		3'd6: begin
+			$display("0x%x: halt %d\n", pc_o, clkcyclecnt);
+			$finish;
+		end
+		`endif
+
 		3'd7: begin
 
 			kip <= (isopsysret ? ipnxt : kip);
