@@ -1365,12 +1365,12 @@ wire opldstrdy = (isopldst && opldstrdy_
 
 // ---------- Registers and nets used for data caching ----------
 
-wire[2 -1 : 0] _dcachemasterop;
-wire[XADDRBITSZ -1 : 0] _dcachemasteraddr;
-wire[XARCHBITSZ -1 : 0] _dcachemasterdati;
-wire[XARCHBITSZ -1 : 0] _dcachemasterdato;
-wire[(XARCHBITSZ/8) -1 : 0] _dcachemastersel;
-wire _dcachemasterrdy;
+wire [2 -1 : 0]              pi1_upconverter_dcachemasterop;
+wire [XADDRBITSZ -1 : 0]     pi1_upconverter_dcachemasteraddr;
+wire [XARCHBITSZ -1 : 0]     pi1_upconverter_dcachemasterdati;
+wire [XARCHBITSZ -1 : 0]     pi1_upconverter_dcachemasterdato;
+wire [(XARCHBITSZ/8) -1 : 0] pi1_upconverter_dcachemastersel;
+wire                         pi1_upconverter_dcachemasterrdy;
 
 pi1_upconverter #(
 
@@ -1388,12 +1388,12 @@ pi1_upconverter #(
 	,.m_pi1_sel_i  (dcachemastersel)
 	,.m_pi1_rdy_o  (dcachemasterrdy)
 
-	,.s_pi1_op_o   (_dcachemasterop)
-	,.s_pi1_addr_o (_dcachemasteraddr)
-	,.s_pi1_data_o (_dcachemasterdati)
-	,.s_pi1_data_i (_dcachemasterdato)
-	,.s_pi1_sel_o  (_dcachemastersel)
-	,.s_pi1_rdy_i  (_dcachemasterrdy)
+	,.s_pi1_op_o   (pi1_upconverter_dcachemasterop)
+	,.s_pi1_addr_o (pi1_upconverter_dcachemasteraddr)
+	,.s_pi1_data_o (pi1_upconverter_dcachemasterdati)
+	,.s_pi1_data_i (pi1_upconverter_dcachemasterdato)
+	,.s_pi1_sel_o  (pi1_upconverter_dcachemastersel)
+	,.s_pi1_rdy_i  (pi1_upconverter_dcachemasterrdy)
 );
 
 `ifdef PUDCACHE
@@ -1425,12 +1425,12 @@ pi1_dcache #(
 
 	,.conly_i (1'b0)
 
-	,.m_pi1_op_i   (_dcachemasterop)
-	,.m_pi1_addr_i (_dcachemasteraddr)
-	,.m_pi1_data_i (_dcachemasterdati)
-	,.m_pi1_data_o (_dcachemasterdato)
-	,.m_pi1_sel_i  (_dcachemastersel)
-	,.m_pi1_rdy_o  (_dcachemasterrdy)
+	,.m_pi1_op_i   (pi1_upconverter_dcachemasterop)
+	,.m_pi1_addr_i (pi1_upconverter_dcachemasteraddr)
+	,.m_pi1_data_i (pi1_upconverter_dcachemasterdati)
+	,.m_pi1_data_o (pi1_upconverter_dcachemasterdato)
+	,.m_pi1_sel_i  (pi1_upconverter_dcachemastersel)
+	,.m_pi1_rdy_o  (pi1_upconverter_dcachemasterrdy)
 
 	,.s_pi1_op_o   (dcacheslaveop)
 	,.s_pi1_addr_o (dcacheslaveaddr)
@@ -1442,13 +1442,13 @@ pi1_dcache #(
 
 `else
 
-assign _dcachemasterrdy = pi1_rdy_i;
-assign _dcachemasterdato = pi1_data_i;
+assign pi1_upconverter_dcachemasterrdy = pi1_rdy_i;
+assign pi1_upconverter_dcachemasterdato = pi1_data_i;
 
-assign dcacheslaveop = _dcachemasterop;
-assign dcacheslaveaddr = _dcachemasteraddr;
-assign dcacheslavedato = _dcachemasterdati;
-assign dcacheslavesel = _dcachemastersel;
+assign dcacheslaveop = pi1_upconverter_dcachemasterop;
+assign dcacheslaveaddr = pi1_upconverter_dcachemasteraddr;
+assign dcacheslavedato = pi1_upconverter_dcachemasterdati;
+assign dcacheslavesel = pi1_upconverter_dcachemastersel;
 
 `endif
 
