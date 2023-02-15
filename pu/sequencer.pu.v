@@ -14,12 +14,12 @@ always @* begin
 		// Interrupts must not be processed until
 		// resetting the instruction buffer has completed.
 
-		sequencerstate = 3'd0;
+		sequencerstate = SEQIBUFRST;
 
 	end else if (sequencerintrtimer || sequencerintrext) begin
 		// If I get here, I have a timer/external interrupt.
 
-		sequencerstate = 3'd1;
+		sequencerstate = SEQINTR;
 
 	end else if (!inhalt) begin
 
@@ -28,12 +28,12 @@ always @* begin
 			// the arrangement described in opcodes.pu.v.
 
 			if (oplicounter) begin
-				sequencerstate = 3'd2;
+				sequencerstate = SEQEXEC;
 			`ifdef PUDBG
 			// Stall the sequencer if in a debug break.
 			end else if (dbgbrk) begin
 				// Stall.
-				sequencerstate = 3'd3;
+				sequencerstate = SEQSTALL0;
 			`endif
 			end else if (instrbufdato0[7] || isoploadorstorevolatile) begin
 
@@ -41,16 +41,16 @@ always @* begin
 
 					if (isopimm || isopinc || isopli8 || isopinc8 || isoprli8) begin
 						if (isopnop) begin // NOP instruction "inc8 %0, 0" preempt current context.
-							sequencerstate = 3'd1;
+							sequencerstate = SEQINTR;
 						end else begin
-							sequencerstate = 3'd2;
+							sequencerstate = SEQEXEC;
 						end
 
 					end else if (gprrdy2) begin
 
 						if (isopj) begin
 
-							sequencerstate = 3'd2;
+							sequencerstate = SEQEXEC;
 
 						end else if (isopld) begin
 
@@ -65,14 +65,14 @@ always @* begin
 								if (opldfault) begin
 									// Note that I get in this state only when in usermode
 									// because pagefault occurs only when in usermode.
-									sequencerstate = 3'd1;
+									sequencerstate = SEQINTR;
 								end else begin
-									sequencerstate = 3'd2;
+									sequencerstate = SEQEXEC;
 								end
 
 							end else begin
 								// Stall.
-								sequencerstate = 3'd3;
+								sequencerstate = SEQSTALL0;
 							end
 
 						end else if (isopst) begin
@@ -88,14 +88,14 @@ always @* begin
 								if (opstfault) begin
 									// Note that I get in this state only when in usermode
 									// because pagefault occurs only when in usermode.
-									sequencerstate = 3'd1;
+									sequencerstate = SEQINTR;
 								end else begin
-									sequencerstate = 3'd2;
+									sequencerstate = SEQEXEC;
 								end
 
 							end else begin
 								// Stall.
-								sequencerstate = 3'd3;
+								sequencerstate = SEQSTALL0;
 							end
 
 						end else if (isopldst) begin
@@ -111,17 +111,17 @@ always @* begin
 								if (opldstfault) begin
 									// Note that I get in this state only when in usermode
 									// because pagefault occurs only when in usermode.
-									sequencerstate = 3'd1;
+									sequencerstate = SEQINTR;
 
 								end else if (instrbufdato0[2]) begin
-									sequencerstate = 3'd5;
+									sequencerstate = SEQHCALL;
 								end else begin
-									sequencerstate = 3'd2;
+									sequencerstate = SEQEXEC;
 								end
 
 							end else begin
 								// Stall.
-								sequencerstate = 3'd3;
+								sequencerstate = SEQSTALL0;
 							end
 
 						end else if (isopalu0 || isopalu1 || isopalu2 || isopmuldiv) begin
@@ -131,50 +131,50 @@ always @* begin
 								|| !instrbufdato0[2]
 								`endif
 								) || opmuldiv_rdy_w) begin
-								sequencerstate = 3'd2;
+								sequencerstate = SEQEXEC;
 							end else begin
 								// Stall.
-								sequencerstate = 3'd3;
+								sequencerstate = SEQSTALL0;
 							end
 
 						end else if (inkernelmode || isopfloat /* float traps as ksysfault until implemented */) begin
-							sequencerstate = 3'd5;
+							sequencerstate = SEQHCALL;
 						end else begin
-							sequencerstate = 3'd1; // SYSOPINTR.
+							sequencerstate = SEQINTR; // SYSOPINTR.
 						end
 
 					end else begin
 						// Stall.
-						sequencerstate = 3'd3;
+						sequencerstate = SEQSTALL0;
 					end
 
 				end else begin
 					// Stall.
-					sequencerstate = 3'd3;
+					sequencerstate = SEQSTALL0;
 				end
 
 			// Start here checking for system instructions.
 			end else if (sequencerintrsysop) begin
 				// I get here when in usermode.
 
-				sequencerstate = 3'd1; // SYSOPINTR.
+				sequencerstate = SEQINTR; // SYSOPINTR.
 
 			// Checks continue here when in kernelmode or for a system instruction allowed in usermode.
 			end else if (isophalt || isopcacherst) begin
 
-				sequencerstate = 3'd2;
+				sequencerstate = SEQEXEC;
 
 			end else if (isopsysret || isopksysret) begin
 
-				sequencerstate = 3'd7;
+				sequencerstate = SEQSRET;
 
 			end else if (isopsetgpr) begin
 
 				if (opsetgprrdy1 && opsetgprrdy2) begin
-					sequencerstate = 3'd2;
+					sequencerstate = SEQEXEC;
 				end else begin
 					// Stall.
-					sequencerstate = 3'd3;
+					sequencerstate = SEQSTALL0;
 				end
 
 			end else if (isopsetsysreg || isopgetsysreg || isopgetsysreg1) begin
@@ -198,14 +198,14 @@ always @* begin
 						isopgetfaultreason || (isopgetclkcyclecnt || isopgetclkcyclecnth) ||
 						isopgettlbsize || isopgetcachesize || isopgetcoreid ||
 						isopgetclkfreq))) begin
-					sequencerstate = 3'd2;
+					sequencerstate = SEQEXEC;
 				end else begin
 					// Stall.
-					sequencerstate = 3'd3;
+					sequencerstate = SEQSTALL0;
 				end
 
 			end else begin
-				sequencerstate = 3'd5;
+				sequencerstate = SEQHCALL;
 			end
 
 		end else if (instrfetchfaulted) begin
@@ -215,16 +215,16 @@ always @* begin
 			// becoming empty; hence insuring that instructions buffered before
 			// the pagefault get sequenced, otherwise those instructions would be lost
 			// when resetting the instruction buffer.
-			sequencerstate = 3'd1;
+			sequencerstate = SEQINTR;
 
 		end else begin
 			// Stall.
-			sequencerstate = 3'd4;
+			sequencerstate = SEQSTALL1;
 		end
 
 	end else begin
 		// Stall.
-		sequencerstate = 3'd6;
+		sequencerstate = SEQHALT;
 	end
 end
 
@@ -232,7 +232,7 @@ always @ (posedge clk_i) begin
 
 	case (sequencerstate)
 
-		3'd0: begin
+		SEQIBUFRST: begin
 
 			rst_o <= rst_i ? 0 : rst_o;
 
@@ -250,7 +250,7 @@ always @ (posedge clk_i) begin
 			instrfetchfaulted_b <= instrfetchfaulted_a;
 		end
 
-		3'd1: begin
+		SEQINTR: begin
 
 			faultreason <= (
 				sequencerintrtimer ? TIMERINTR :
@@ -284,7 +284,7 @@ always @ (posedge clk_i) begin
 			instrbufrst_a <= ~instrbufrst_b;
 		end
 
-		3'd2: begin
+		SEQEXEC: begin
 
 			dohalt <= ((!oplicounter && isophalt) ? 1 : dohalt);
 
@@ -313,14 +313,14 @@ always @ (posedge clk_i) begin
 						~instrbufrst_b : instrbufrst_a);
 		end
 
-		3'd3: begin
+		SEQSTALL0: begin
 
 			`ifdef PUSC2
 			sc2instrbufdato <= sc1insn2;
 			`endif
 		end
 
-		3'd4: begin
+		SEQSTALL1: begin
 
 			instrbufdato <= _instrbufi;
 			`ifdef PUSC2
@@ -328,7 +328,7 @@ always @ (posedge clk_i) begin
 			`endif
 		end
 
-		3'd5: begin
+		SEQHCALL: begin
 
 			saved_sysopcode <= sysopcode;
 			saved_faultaddr <= faultaddr;
@@ -351,13 +351,13 @@ always @ (posedge clk_i) begin
 		end
 
 		`ifdef SIMULATION
-		3'd6: begin
+		SEQHALT: begin
 			$display("0x%x: halt %d\n", pc_o, clkcyclecnt);
 			$finish;
 		end
 		`endif
 
-		3'd7: begin
+		SEQSRET: begin
 
 			kip <= (isopsysret ? ipnxt : kip);
 

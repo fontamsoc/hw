@@ -453,6 +453,14 @@ reg gprrdywe;
 
 wire [ARCHBITSZ -1 : 0] gpr13val;
 
+localparam SEQIBUFRST = 3'd0;
+localparam SEQINTR    = 3'd1;
+localparam SEQEXEC    = 3'd2;
+localparam SEQSTALL0  = 3'd3;
+localparam SEQSTALL1  = 3'd4;
+localparam SEQHCALL   = 3'd5;
+localparam SEQHALT    = 3'd6;
+localparam SEQSRET    = 3'd7;
 // ### Net declared as reg so as to be useable by verilog within the always block.
 reg [3 -1 : 0] sequencerstate;
 
@@ -1401,7 +1409,7 @@ wire sc1ops = (!(dbgen || oplicounter || isopimm || isopinc || isopjtrue /*|| is
 
 wire sc2rdy = (sc1ops && (|sc2instrbufusage));
 
-wire sc2rdyandgprrdy1 = (sequencerstate == 3'd2 && sc2rdy && _sc2gprrdy1);
+wire sc2rdyandgprrdy1 = (sequencerstate == SEQEXEC && sc2rdy && _sc2gprrdy1);
 
 wire sc2rdyandgprrdy12 = (sc2rdyandgprrdy1 && _sc2gprrdy2);
 
