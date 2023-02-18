@@ -197,7 +197,7 @@ wire clk_8x_w = clk96mhz;
 localparam RST_CNTR_BITSZ = 16;
 
 reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
-always @ (posedge clk48mhz) begin
+always @ (posedge clk24mhz) begin
 	if (!multipu_rst_ow && !swwarmrst && usr_btn_n) begin
 		if (rst_cntr)
 			rst_cntr <= rst_cntr - 1'b1;
@@ -205,7 +205,7 @@ always @ (posedge clk48mhz) begin
 		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
 end
 
-always @ (posedge clk48mhz) begin
+always @ (posedge clk24mhz) begin
 	if (rst_p)
 		devtbl_rst0_r <= 0;
 	if (swpwroff)
@@ -296,7 +296,7 @@ multipu #(
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
 	,.TLBWAYCOUNT    (TLBWAYCOUNT)
-	,.MULDIVCNT      (4)
+	,.MULDIVCNT      (2)
 
 ) multipu (
 

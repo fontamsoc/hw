@@ -18,10 +18,7 @@
 `define PUMULDIVCLK
 `define PUDSPMUL
 `define PUDCACHE
-`define PUSC2
-`define PUSC2SKIPSC1LI8
-`define PUSC2SKIPSC1CPY
-//`define PUCOUNT 1 /* 32 max */
+`define PUCOUNT 1 /* 32 max */
 `include "pu/multipu.v"
 
 `include "dev/sdcard/sdcard_spi.v"
@@ -200,7 +197,7 @@ STARTUPE2 startupe (.CLK (clk200mhz_w), .GSR (swcoldrst));
 localparam RST_CNTR_BITSZ = 20;
 
 reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
-always @ (posedge clk_4x_w) begin
+always @ (posedge clk_2x_w) begin
 	if (!multipu_rst_ow && !swwarmrst && rst_n) begin
 		if (rst_cntr)
 			rst_cntr <= rst_cntr - 1'b1;
@@ -208,7 +205,7 @@ always @ (posedge clk_4x_w) begin
 		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
 end
 
-always @ (posedge clk_4x_w) begin
+always @ (posedge clk_2x_w) begin
 	if (rst_p)
 		devtbl_rst0_r <= 0;
 	if (swpwroff)
@@ -219,7 +216,7 @@ reg activity;
 // Used to dim activity intensity.
 localparam ACTIVITY_CNTR_BITSZ = 1;
 reg [ACTIVITY_CNTR_BITSZ -1 : 0] activity_cntr = 0;
-always @ (posedge clk_4x_w) begin
+always @ (posedge clk_2x_w) begin
 	if (activity_cntr) begin
 		activity <= 0;
 		activity_cntr <= activity_cntr - 1'b1;
@@ -338,7 +335,7 @@ multipu #(
 	,.rst_o (multipu_rst_ow)
 
 	,.clk_i        (multipu_clk_w)
-	,.clk_muldiv_i (clk_2x_w)
+	,.clk_muldiv_i (clk_4x_w)
 	`ifdef PUCOUNT
 	,.clk_mem_i    (pi1r_clk_w)
 	`endif

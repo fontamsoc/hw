@@ -18,7 +18,7 @@
 `define PUMULDIVCLK
 `define PUDSPMUL
 `define PUDCACHE
-//`define PUCOUNT 1 /* 8 max */
+`define PUCOUNT 1 /* 8 max */
 `include "pu/multipu.v"
 
 `include "dev/sdcard/sdcard_spi.v"
@@ -333,7 +333,7 @@ multipu #(
 	,.rst_o (multipu_rst_ow)
 
 	,.clk_i        (multipu_clk_w)
-	,.clk_muldiv_i (clk_2x_w)
+	,.clk_muldiv_i (clk_4x_w)
 	`ifdef PUCOUNT
 	,.clk_mem_i    (pi1r_clk_w)
 	`endif

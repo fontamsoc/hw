@@ -16,7 +16,7 @@
 `define PUMULDIVCLK
 `define PUDSPMUL
 `define PUDCACHE
-//`define PUCOUNT 1 /* 2 max */
+`define PUCOUNT 1 /* 2 max */
 `include "pu/multipu.v"
 
 `include "dev/sdcard/sdcard_spi.v"
@@ -198,7 +198,7 @@ wire clk_8x_w = clk96mhz;
 localparam RST_CNTR_BITSZ = 16;
 
 reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
-always @ (posedge clk48mhz) begin
+always @ (posedge clk24mhz) begin
 	if (!multipu_rst_ow && !swwarmrst && usr_btn_n) begin
 		if (rst_cntr)
 			rst_cntr <= rst_cntr - 1'b1;
@@ -206,7 +206,7 @@ always @ (posedge clk48mhz) begin
 		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
 end
 
-always @ (posedge clk48mhz) begin
+always @ (posedge clk24mhz) begin
 	if (rst_p)
 		devtbl_rst0_r <= 0;
 	if (swpwroff)
@@ -303,7 +303,7 @@ multipu #(
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
 	,.TLBWAYCOUNT    (TLBWAYCOUNT)
-	,.MULDIVCNT      (4)
+	,.MULDIVCNT      (2)
 
 ) multipu (
 
@@ -370,7 +370,7 @@ sdcard_spi #(
 assign devtbl_id_w     [S_PI1R_SDCARD] = 4;
 assign devtbl_useintr_w[S_PI1R_SDCARD] = 1;
 
-localparam RAMCACHEWAYCOUNT = 1;
+localparam RAMCACHEWAYCOUNT = 2;
 
 localparam RAMCACHESZ = /* In (ARCHBITSZ/8) units */
 	((1024/(ARCHBITSZ/8))*(32/RAMCACHEWAYCOUNT));

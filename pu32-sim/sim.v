@@ -202,13 +202,13 @@ generate for (gen_pc_w_idx = 0; gen_pc_w_idx < PUCOUNT; gen_pc_w_idx = gen_pc_w_
 assign pc_w[gen_pc_w_idx] = pc_w_flat[((gen_pc_w_idx+1) * ARCHBITSZ) -1 : gen_pc_w_idx * ARCHBITSZ];
 end endgenerate
 
-localparam ICACHESZ = 64;
-localparam DCACHESZ = 64;
-localparam TLBSZ    = 256;
+localparam ICACHESZ = 128;
+localparam DCACHESZ = 32;
+localparam TLBSZ    = 64;
 
 localparam ICACHEWAYCOUNT = 4;
-localparam DCACHEWAYCOUNT = 4;
-localparam TLBWAYCOUNT    = 4;
+localparam DCACHEWAYCOUNT = 2;
+localparam TLBWAYCOUNT    = 1;
 
 multipu #(
 
