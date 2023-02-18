@@ -29,21 +29,15 @@ localparam CLOG2GPRCNT    = clog2(GPRCNT);
 
 // Significance of each bit in the field within data_i
 // storing the type of multiplication or division to perform.
-// [3]: 0/1 mean integer/floating-point computation.
-// [2]: 0/1 mean multiplication/division or fadd/fsub depending on [1].
+// [2]: 0/1 means multiplication/division depending on [1].
 // [1]: When doing integer multiplication/division,
-// 	0/1 mean unsigned/signed computation.
-// 	When doing floating-point computation,
-// 	0/1 mean fmul/fdiv when [2] is 0,
-// 	and mean fadd/fsub when [2] is 1.
-// [0]: When doing multiplication, 0/1 mean ARCHBITSZ lsb/msb of result.
-// 	When doing division, 0/1 mean quotient/remainder of result.
-// 	Ignored when doing floating-point multiplication/division.
-localparam MULDIVTYPEBITSZ = 4;
+// 	0/1 means unsigned/signed computation.
+// [0]: When doing multiplication, 0/1 means ARCHBITSZ lsb/msb of result.
+// 	When doing division, 0/1 means quotient/remainder of result.
+localparam MULDIVTYPEBITSZ = 3;
 localparam MULDIVMSBRSLT   = ((ARCHBITSZ*2)+CLOG2GPRCNT);
 localparam MULDIVSIGNED    = ((ARCHBITSZ*2)+CLOG2GPRCNT+1);
 localparam MULDIVISDIV     = ((ARCHBITSZ*2)+CLOG2GPRCNT+2);
-localparam MULDIVISFLOAT   = ((ARCHBITSZ*2)+CLOG2GPRCNT+3);
 
 input wire rst_i;
 
@@ -120,7 +114,9 @@ always @* begin
 		rval = -operands[ARCHBITSZ-1:0];
 	else
 		rval = operands[ARCHBITSZ-1:0];
+end
 
+always @* begin
 	`ifndef PUDSPMUL
 	// Logic used by the multiplication; compute the multiplier
 	// times 0, 1, 2 or 3 based on cumulator[1:0].
@@ -133,7 +129,9 @@ always @* begin
 	else
 		mulx = 0;
 	`endif
+end
 
+always @* begin
 	// Logic setting data_o using the result computed in cumulator.
 	`ifndef PUDSPMUL
 	if (operands[MULDIVISDIV]) begin
@@ -309,17 +307,12 @@ localparam CLOG2GPRCNT = clog2(GPRCNT);
 
 // Significance of each bit in the field within data_i
 // storing the type of multiplication or division to perform.
-// [3]: 0/1 mean integer/floating-point computation.
-// [2]: 0/1 mean multiplication/division or fadd/fsub depending on [1].
+// [2]: 0/1 means multiplication/division depending on [1].
 // [1]: When doing integer multiplication/division,
-// 	0/1 mean unsigned/signed computation.
-// 	When doing floating-point computation,
-// 	0/1 mean fmul/fdiv when [2] is 0,
-// 	and mean fadd/fsub when [2] is 1.
-// [0]: When doing multiplication, 0/1 mean ARCHBITSZ lsb/msb of result.
-// 	When doing division, 0/1 mean quotient/remainder of result.
-// 	Ignored when doing floating-point multiplication/division.
-localparam MULDIVTYPEBITSZ = 4;
+// 	0/1 means unsigned/signed computation.
+// [0]: When doing multiplication, 0/1 means ARCHBITSZ lsb/msb of result.
+// 	When doing division, 0/1 means quotient/remainder of result.
+localparam MULDIVTYPEBITSZ = 3;
 
 // Number of muldiv to instantiate.
 // It is the minimum between the max number of cycles
@@ -362,54 +355,60 @@ output wire ordy_o;
 reg [(CLOG2MULDIVCNT +1) -1 : 0] wridx = 0;
 reg [(CLOG2MULDIVCNT +1) -1 : 0] rdidx = 0;
 
+wire [(CLOG2MULDIVCNT +1) -1 : 0] _wridx = ((MULDIVCNT-1) ? wridx : 0);
+wire [(CLOG2MULDIVCNT +1) -1 : 0] _rdidx = ((MULDIVCNT-1) ? rdidx : 0);
+
 wire [(CLOG2MULDIVCNT +1) -1 : 0] usage;
 assign usage = (wridx - rdidx);
 
 wire [ARCHBITSZ -1 : 0] data_w [MULDIVCNT -1 : 0];
-assign data_o = data_w[rdidx];
+assign data_o = data_w[_rdidx];
 
 wire [CLOG2GPRCNT -1 : 0] gprid_w [MULDIVCNT -1 : 0];
-assign gprid_o = gprid_w[rdidx];
+assign gprid_o = gprid_w[_rdidx];
 
 wire [MULDIVCNT -1 : 0] rdy_w;
 
-assign rdy_o = ((usage < MULDIVCNT) && rdy_w[wridx]);
+assign rdy_o = ((usage < MULDIVCNT) && rdy_w[_wridx]);
 
-assign ordy_o = ((usage != 0) && rdy_w[rdidx]);
+assign ordy_o = ((usage != 0) && rdy_w[_rdidx]);
 
 `ifdef PUMULDIVCLK
-reg                                                        stb_r = 0;
-reg                                                        rdy_r = 0;
-reg [(((ARCHBITSZ*2)+CLOG2GPRCNT)+MULDIVTYPEBITSZ) -1 : 0] data_r;
+reg                                                         stb_r    = 0;
+reg  [(((ARCHBITSZ*2)+CLOG2GPRCNT)+MULDIVTYPEBITSZ) -1 : 0] data_r   = 0;
+reg  [(CLOG2MULDIVCNT +1) -1 : 0]                           _wridx_r = 0;
 `else
 wire                                                        stb_r  = stb_i;
-wire                                                        rdy_r  = rdy_o;
 wire [(((ARCHBITSZ*2)+CLOG2GPRCNT)+MULDIVTYPEBITSZ) -1 : 0] data_r = data_i;
+wire [(CLOG2MULDIVCNT +1) -1 : 0]                           _wridx_r = _wridx;
 `endif
 
 always @ (posedge clk_i) begin
-
-	if (rdy_r && stb_r)
-		wridx <= wridx + 1'b1;
-
-	`ifdef PUMULDIVCLK
-	// With clk_muldiv_i faster than clk_i, muldiv signals stb_i data_i must be
-	// synchronized to clk_i so to be stable input values; it also means that
-	// muldiv sigmal rdy_o posegde must happen (freq(clk_muldiv_i)/freq(clk_i))
-	// clk_muldiv_i cycles after its negedge; which is guarateed by the fact that
-	// the shortest muldiv computation takes (ARCHBITSZ/2) clk_muldiv_i cycles.
-	stb_r  <= stb_i;
-	rdy_r  <= rdy_o;
-	data_r <= data_i;
-	`endif
+	if (rst_i)
+		wridx <= 0;
+	else if (rdy_o && stb_i)
+		wridx <= (wridx + 1'b1);
 end
 
 always @ (posedge clk_i) begin
-	if (rst_i) begin
-		rdidx <= wridx;
-	end else if (ordy_o && ostb_i)
-		rdidx <= rdidx + 1'b1;
+	if (rst_i)
+		rdidx <= 0;
+	else if (ordy_o && ostb_i)
+		rdidx <= (rdidx + 1'b1);
 end
+
+`ifdef PUMULDIVCLK
+always @ (posedge clk_i) begin
+	// With clk_muldiv_i faster than clk_i, muldiv signals stb_i data_i _wridx must
+	// be registered using clk_i so to be stable input values; it also means that
+	// sigmal rdy_o posegde must happen at least (freq(clk_muldiv_i)/freq(clk_i))
+	// clk_muldiv_i cycles after its negedge; which is guarateed by the fact that
+	// the shortest muldiv computation takes (ARCHBITSZ/2) clk_muldiv_i cycles.
+	stb_r  <= stb_i;
+	data_r <= data_i;
+	_wridx_r <= _wridx;
+end
+`endif
 
 genvar gen_muldiv_idx;
 generate for (gen_muldiv_idx = 0; gen_muldiv_idx < MULDIVCNT; gen_muldiv_idx = gen_muldiv_idx + 1) begin :gen_muldiv
@@ -428,7 +427,7 @@ muldiv #(
 	,.clk_i (clk_i)
 	`endif
 
-	,.stb_i (stb_r && (wridx[CLOG2MULDIVCNT -1 : 0] == gen_muldiv_idx))
+	,.stb_i (stb_r && (_wridx_r[CLOG2MULDIVCNT -1 : 0] == gen_muldiv_idx))
 
 	,.data_i  (data_r)
 	,.data_o  (data_w[gen_muldiv_idx])

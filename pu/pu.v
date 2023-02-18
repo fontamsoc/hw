@@ -38,7 +38,7 @@
 //
 // MULDIVCNT
 // 	Number of units making up the muldiv pipeline.
-// 	It must be 4 or 8.
+// 	It must be non-null and less-than-or-equal to 8.
 
 // Ports:
 //

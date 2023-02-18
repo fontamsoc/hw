@@ -1527,38 +1527,29 @@ wire sc2opalu2done = (sc2rdyandgprrdy12 && sc2isopalu2);
 
 // Significance of each bit in the field within opmuldiv_data_w
 // storing the type of multiplication or division to perform.
-// [3]: 0/1 mean integer/floating-point computation.
-// [2]: 0/1 mean multiplication/division or fadd/fsub depending on [1].
+// [2]: 0/1 means multiplication/division depending on [1].
 // [1]: When doing integer multiplication/division,
-// 	0/1 mean unsigned/signed computation.
-// 	When doing floating-point computation,
-// 	0/1 mean fmul/fdiv when [2] is 0,
-// 	and mean fadd/fsub when [2] is 1.
-// [0]: When doing multiplication, 0/1 mean ARCHBITSZ lsb/msb of result.
-// 	When doing division, 0/1 mean quotient/remainder of result.
-// 	Ignored when doing floating-point multiplication/division.
-localparam MULDIVTYPEBITSZ = 4;
+// 	0/1 means unsigned/signed computation.
+// [0]: When doing multiplication, 0/1 means ARCHBITSZ lsb/msb of result.
+// 	When doing division, 0/1 means quotient/remainder of result.
+localparam MULDIVTYPEBITSZ = 3;
 
 wire opmuldiv_rdy_w;
 
-wire opmuldiv_stb_w = (miscrdyandsequencerreadyandgprrdy12 && ((isopmuldiv
+wire opmuldiv_stb_w = (miscrdyandsequencerreadyandgprrdy12 && (isopmuldiv
 	`ifdef PUDSPMUL
 	&& instrbufdato0[2]
 	`endif
-	) /*|| isopfloat*/) && opmuldiv_rdy_w);
+	) && opmuldiv_rdy_w);
 
 wire [(((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+MULDIVTYPEBITSZ) -1 : 0] opmuldiv_data_w =
-	//isopfloat ? // TODO: Fix value to add when isopfloat is true ...
-	//	{1'b1, instrbufdato0[0], {2{1'b0}}, gpridx1, gprdata1, gprdata2} :
-		{1'b0, instrbufdato0[2:0], gpridx1, gprdata1, gprdata2};
+	{instrbufdato0[2:0], gpridx1, gprdata1, gprdata2};
 
 wire [ARCHBITSZ -1 : 0]        opmuldivresult;
 wire [CLOG2GPRCNTTOTAL -1 : 0] opmuldivgpr;
 wire                           opmuldivdone;
 
-// MULDIVCNT must be a power of 2 greater than or equal to 2,
-// and should be less than 8; however it is constrained here to 4 or 8.
-localparam OPMULDIVCNT = ((MULDIVCNT != 4 && MULDIVCNT != 8) ? 4 : MULDIVCNT); // ((GPRCNTPERCTX/4) || (GPRCNTPERCTX/2)).
+localparam OPMULDIVCNT = ((MULDIVCNT != 2 && MULDIVCNT != 4 && MULDIVCNT != 8) ? 1 : MULDIVCNT);
 
 opmuldiv #(
 
@@ -1948,10 +1939,11 @@ assign dcacheslavesel = pi1_upconverter_dcachemastersel;
 
 // --------------------------------------------------
 
-// Net which is 1 for a 2-inputs 1-output multicycle instruction that is about to be sequenced.
+// Net which is true for a 2-inputs 1-output multicycle instruction that is about to be sequenced.
 wire multicycleoprdy = (miscrdyandsequencerreadyandgprrdy12 &&
-	(opldrdy || opldstrdy || (((isopmuldiv
+	(opldrdy || opldstrdy ||
+	(isopmuldiv && opmuldiv_rdy_w
 		`ifdef PUDSPMUL
 		&& instrbufdato0[2]
 		`endif
-		) /*|| isopfloat*/) && opmuldiv_rdy_w)));
+		)));
