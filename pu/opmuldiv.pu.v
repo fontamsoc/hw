@@ -97,10 +97,6 @@ wire [(ARCHBITSZ+2) -1 : 0] cumulatoroperand = (mulx + cumulator[(ARCHBITSZ*2)-1
 // from the divider, and all its bits are used.
 reg [CLOG2ARCHBITSZ -1 : 0] cntr = 0;
 
-reg inprogress = 0;
-
-reg start = 0;
-
 // Register used to capture data_i.
 reg [(((ARCHBITSZ*2)+CLOG2GPRCNT)+MULDIVTYPEBITSZ) -1 : 0] operands = 0;
 
@@ -193,87 +189,77 @@ always @ (posedge clk_i) begin
 	end else if (rdy_o) begin
 
 		if (stb_i) begin
-			inprogress <= 0;
-			start <= 1;
+
 			operands <= data_i;
+
+			// When doing a multiplication:
+			// the multiplicand is in data_i[(ARCHBITSZ*2)-1:ARCHBITSZ],
+			// the multiplier is in data_i[ARCHBITSZ-1:0].
+			// When doing a division:
+			// the dividend is in data_i[(ARCHBITSZ*2)-1:ARCHBITSZ],
+			// the divider is in data_i[ARCHBITSZ-1:0].
+
+			// If data_i[MULDIVSIGNED] == 0, an unsigned computation is to be done.
+			// If data_i[MULDIVSIGNED] == 1, a signed computation is to be done.
+			// If a signed computation is to be done, I turn the left operand positive if it was negative.
+			if (data_i[MULDIVSIGNED] && data_i[(ARCHBITSZ*2)-1])
+				cumulator <= {{ARCHBITSZ{1'b0}}, -data_i[(ARCHBITSZ*2)-1:ARCHBITSZ]};
+			else
+				cumulator <= {{ARCHBITSZ{1'b0}}, data_i[(ARCHBITSZ*2)-1:ARCHBITSZ]};
+
 			rdy_o <= 0;
-		end
 
-	end else begin
-
-		if (inprogress) begin
-			// When operands[MULDIVISDIV] is 1, division
-			// is performed, otherwise multiplication is performed.
-			`ifndef PUDSPMUL
-			if (operands[MULDIVISDIV]) begin
-			`endif
-				// Division logic.
-
-				// divdiff[(ARCHBITSZ*2)-1] is 1 when
-				// the difference is negative, otherwise it is 0.
-				if (divdiff[(ARCHBITSZ*2)-1])
-					cumulator <= {cumulator[(ARCHBITSZ*2)-2:0], 1'b0};
-				else
-					cumulator <= {divdiff[(ARCHBITSZ*2)-2:0], 1'b1};
-
-				if (&cntr) begin
-					// The division is complete after cntr
-					// has been incremented ARCHBITSZ times; the result will be
-					// ready in cumulator after the next clockedge.
-					rdy_o <= 1;
-					inprogress <= 0;
-					start <= 0;
-				end
-			`ifndef PUDSPMUL
-			end else begin
-				// Multiplication logic.
-
-				// Note that although mulx is 34bits,
-				// the result of mulx + cumulator[(ARCHBITSZ*2)-1:ARCHBITSZ]
-				// will never generate a carry, because
-				// mulx[(ARCHBITSZ+1):ARCHBITSZ] is guaranteed to never
-				// be greater than 2'b10.
-				// ### mulx + cumulator[(ARCHBITSZ*2)-1:ARCHBITSZ]
-				// ### was computed in cumulatoroperand so that
-				// ### verilog simulation would work.
-				// ### cumulatoroperand is 34bits.
-				cumulator <= {cumulatoroperand, cumulator[ARCHBITSZ-1:2]};
-
-				if (&(cntr[(CLOG2ARCHBITSZ-1)-1:0])) begin
-					// The multiplication is complete after cntr
-					// has been incremented (ARCHBITSZ/2) times; the result will
-					// be ready in cumulator after the next clockedge.
-					rdy_o <= 1;
-					inprogress <= 0;
-					start <= 0;
-				end
-			end
-			`endif
-
-			cntr <= cntr + 1'b1;
-
-		end else if (start) begin
 			// Note that the multiplication use only the 4lsb
 			// while the division use all 5bits of cntr.
 			cntr <= 0;
-
-			// When doing a multiplication:
-			// the multiplicand is in operands[(ARCHBITSZ*2)-1:ARCHBITSZ],
-			// the multiplier is in operands[ARCHBITSZ-1:0].
-			// When doing a division:
-			// the dividend is in operands[(ARCHBITSZ*2)-1:ARCHBITSZ],
-			// the divider is in operands[ARCHBITSZ-1:0].
-
-			// If operands[MULDIVSIGNED] == 0, an unsigned computation is to be done.
-			// If operands[MULDIVSIGNED] == 1, a signed computation is to be done.
-			// If a signed computation is to be done, I turn the left operand positive if it was negative.
-			if (operands[MULDIVSIGNED] && operands[(ARCHBITSZ*2)-1])
-				cumulator <= {{ARCHBITSZ{1'b0}}, -operands[(ARCHBITSZ*2)-1:ARCHBITSZ]};
-			else
-				cumulator <= {{ARCHBITSZ{1'b0}}, operands[(ARCHBITSZ*2)-1:ARCHBITSZ]};
-
-			inprogress <= 1;
 		end
+
+	end else begin
+		// When operands[MULDIVISDIV] is 1, division
+		// is performed, otherwise multiplication is performed.
+		`ifndef PUDSPMUL
+		if (operands[MULDIVISDIV]) begin
+		`endif
+			// Division logic.
+
+			// divdiff[(ARCHBITSZ*2)-1] is 1 when
+			// the difference is negative, otherwise it is 0.
+			if (divdiff[(ARCHBITSZ*2)-1])
+				cumulator <= {cumulator[(ARCHBITSZ*2)-2:0], 1'b0};
+			else
+				cumulator <= {divdiff[(ARCHBITSZ*2)-2:0], 1'b1};
+
+			if (&cntr) begin
+				// The division is complete after cntr
+				// has been incremented ARCHBITSZ times; the result will be
+				// ready in cumulator after the next clockedge.
+				rdy_o <= 1;
+			end
+		`ifndef PUDSPMUL
+		end else begin
+			// Multiplication logic.
+
+			// Note that although mulx is 34bits,
+			// the result of mulx + cumulator[(ARCHBITSZ*2)-1:ARCHBITSZ]
+			// will never generate a carry, because
+			// mulx[(ARCHBITSZ+1):ARCHBITSZ] is guaranteed to never
+			// be greater than 2'b10.
+			// ### mulx + cumulator[(ARCHBITSZ*2)-1:ARCHBITSZ]
+			// ### was computed in cumulatoroperand so that
+			// ### verilog simulation would work.
+			// ### cumulatoroperand is 34bits.
+			cumulator <= {cumulatoroperand, cumulator[ARCHBITSZ-1:2]};
+
+			if (&(cntr[(CLOG2ARCHBITSZ-1)-1:0])) begin
+				// The multiplication is complete after cntr
+				// has been incremented (ARCHBITSZ/2) times; the result will
+				// be ready in cumulator after the next clockedge.
+				rdy_o <= 1;
+			end
+		end
+		`endif
+
+		cntr <= cntr + 1'b1;
 	end
 end
 
@@ -403,7 +389,7 @@ always @ (posedge clk_i) begin
 	// be registered using clk_i so to be stable input values; it also means that
 	// sigmal rdy_o posegde must happen at least (freq(clk_muldiv_i)/freq(clk_i))
 	// clk_muldiv_i cycles after its negedge; which is guarateed by the fact that
-	// the shortest muldiv computation takes (ARCHBITSZ/2) clk_muldiv_i cycles.
+	// muldiv computation takes at least that many clk_muldiv_i cycles.
 	stb_r  <= stb_i;
 	data_r <= data_i;
 	_wridx_r <= _wridx;
