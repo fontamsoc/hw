@@ -15,7 +15,9 @@
 
 `define PUMMU
 `define PUHPTW
+`ifdef SIMUSECLKDIV
 `define PUMULDIVCLK
+`endif
 `define PUDSPMUL
 `define PUDCACHE
 `define PUSC2
@@ -228,7 +230,9 @@ multipu #(
 	,.rst_o (multipu_rst_ow)
 
 	,.clk_i        (clk_w)
-	,.clk_muldiv_i (clk_w)
+	`ifdef SIMUSECLKDIV
+	,.clk_muldiv_i (clk_4x_w)
+	`endif
 	`ifdef PUCOUNT
 	,.clk_mem_i    (pi1r_clk_w)
 	`endif
