@@ -108,14 +108,16 @@ always @ (posedge clk_i) begin
 		devtbl_rst0_r <= 1;
 end
 
-localparam CLKFREQ   = (100000000) /* 100  Mhz */; // Frequency of clk_w.
+localparam CLKFREQ   = (100000000) /* 100 Mhz */; // Frequency of clk_w.
 localparam CLK2XFREQ = (200000000) /* 200 Mhz */; // Frequency of clk_2x_w.
+localparam CLK4XFREQ = (400000000) /* 400 Mhz */; // Frequency of clk_4x_w.
 
 `ifdef SIMUSECLKDIV
 wire clk_w;
 wire clk_2x_w;
+wire clk_4x_w = clk_i;
 clkdiv clkdiv (
-	 .clk_4x_i (clk_i)
+	 .clk_4x_i (clk_4x_w)
 	,.clk_2x_o (clk_2x_w)
 	,.clk_o    (clk_w)
 );
