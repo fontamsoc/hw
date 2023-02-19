@@ -171,7 +171,7 @@ parameter TLBSETCOUNT    = 2;
 parameter ICACHEWAYCOUNT = 1;
 parameter DCACHEWAYCOUNT = 1;
 parameter TLBWAYCOUNT    = 1;
-parameter MULDIVCNT      = 4;
+parameter MULDIVCNT      = 2;
 parameter VERSION        = {8'd1/*major-version*/, 8'd0/*minor-version*/};
 
 localparam CLOG2ICACHESETCOUNT = clog2(ICACHESETCOUNT);

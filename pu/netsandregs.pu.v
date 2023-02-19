@@ -1555,7 +1555,7 @@ opmuldiv #(
 
 	 .ARCHBITSZ (ARCHBITSZ)
 	,.GPRCNT    (GPRCNTTOTAL)
-	,.DEPTH     (OPMULDIVCNT)
+	,.INSTCNT   (OPMULDIVCNT)
 
 ) opmuldiv (
 

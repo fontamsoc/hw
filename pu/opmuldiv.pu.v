@@ -46,9 +46,9 @@ input wire clk_i;
 input wire stb_i;
 
 // bits[(((ARCHBITSZ*2)+CLOG2GPRCNT)+MULDIVTYPEBITSZ)-1:((ARCHBITSZ*2)+CLOG2GPRCNT)]
-// store the type of multiplication or division to perform,
+// stores the type of multiplication or division to perform,
 // bits[((ARCHBITSZ*2)+CLOG2GPRCNT)-1:ARCHBITSZ*2]
-// store the id of the register to which the result will be saved,
+// stores the id of the register to which the result will be saved,
 // bits[(ARCHBITSZ*2)-1:ARCHBITSZ] and bits[ARCHBITSZ-1:0]
 // respectively store the first and second operand values.
 input wire [(((ARCHBITSZ*2)+CLOG2GPRCNT)+MULDIVTYPEBITSZ) -1 : 0] data_i;
@@ -209,8 +209,8 @@ always @ (posedge clk_i) begin
 
 			rdy_o <= 0;
 
-			// Note that the multiplication use only the 4lsb
-			// while the division use all 5bits of cntr.
+			// Note that the multiplication use only the (CLOG2ARCHBITSZ-1) lsb
+			// while the division use all CLOG2ARCHBITSZ bits of cntr.
 			cntr <= 0;
 		end
 
@@ -229,9 +229,9 @@ always @ (posedge clk_i) begin
 			else
 				cumulator <= {divdiff[(ARCHBITSZ*2)-2:0], 1'b1};
 
-			if (&cntr) begin
-				// The division is complete after cntr
-				// has been incremented ARCHBITSZ times; the result will be
+			if (cntr == (ARCHBITSZ-1)) begin
+				// The division is complete after cntr has been
+				// incremented ARCHBITSZ times; the result will be
 				// ready in cumulator after the next clockedge.
 				rdy_o <= 1;
 			end
@@ -250,9 +250,9 @@ always @ (posedge clk_i) begin
 			// ### cumulatoroperand is 34bits.
 			cumulator <= {cumulatoroperand, cumulator[ARCHBITSZ-1:2]};
 
-			if (&(cntr[(CLOG2ARCHBITSZ-1)-1:0])) begin
-				// The multiplication is complete after cntr
-				// has been incremented (ARCHBITSZ/2) times; the result will
+			if (cntr == ((ARCHBITSZ/2)-1)) begin
+				// The multiplication is complete after cntr has been
+				// incremented (ARCHBITSZ/2) times; the result will
 				// be ready in cumulator after the next clockedge.
 				rdy_o <= 1;
 			end
@@ -287,7 +287,7 @@ module opmuldiv (
 
 parameter ARCHBITSZ = 16;
 parameter GPRCNT    = 32;
-parameter DEPTH     = 32; // pipeline depth.
+parameter INSTCNT   = 8; // pipeline depth.
 
 localparam CLOG2GPRCNT = clog2(GPRCNT);
 
@@ -300,16 +300,7 @@ localparam CLOG2GPRCNT = clog2(GPRCNT);
 // 	When doing division, 0/1 means quotient/remainder of result.
 localparam MULDIVTYPEBITSZ = 3;
 
-// Number of muldiv to instantiate.
-// It is the minimum between the max number of cycles
-// of a computation, and the total number of GPRs. ie:
-// for 64bits, the max number of cycles of a computation is 64;
-// there are 32 GPRs, so the muldiv buffer should be 32 because
-// it is the minimum for which there would always be enough space
-// to add a new computation.
-localparam MULDIVCNT_     = ((ARCHBITSZ < GPRCNT) ? ARCHBITSZ : GPRCNT);
-localparam MULDIVCNT      = ((MULDIVCNT_ < DEPTH) ? MULDIVCNT_ : DEPTH);
-localparam CLOG2MULDIVCNT = clog2(MULDIVCNT);
+localparam CLOG2INSTCNT = clog2(INSTCNT);
 
 input wire rst_i;
 
@@ -319,9 +310,9 @@ input wire clk_muldiv_i;
 input wire stb_i;
 
 // bits[(((ARCHBITSZ*2)+CLOG2GPRCNT)+MULDIVTYPEBITSZ)-1:((ARCHBITSZ*2)+CLOG2GPRCNT)]
-// store the type of multiplication or division to perform,
+// stores the type of multiplication or division to perform,
 // bits[((ARCHBITSZ*2)+CLOG2GPRCNT)-1:ARCHBITSZ*2]
-// store the id of the register to which the result will be saved,
+// stores the id of the register to which the result will be saved,
 // bits[(ARCHBITSZ*2)-1:ARCHBITSZ] and bits[ARCHBITSZ-1:0]
 // respectively store the first and second operand values.
 input wire [(((ARCHBITSZ*2)+CLOG2GPRCNT)+MULDIVTYPEBITSZ) -1 : 0] data_i;
@@ -338,35 +329,35 @@ output wire [CLOG2GPRCNT -1 : 0] gprid_o;
 
 output wire ordy_o;
 
-reg [(CLOG2MULDIVCNT +1) -1 : 0] wridx = 0;
-reg [(CLOG2MULDIVCNT +1) -1 : 0] rdidx = 0;
+reg [(CLOG2INSTCNT +1) -1 : 0] wridx = 0;
+reg [(CLOG2INSTCNT +1) -1 : 0] rdidx = 0;
 
-wire [(CLOG2MULDIVCNT +1) -1 : 0] _wridx = ((MULDIVCNT-1) ? wridx : 0);
-wire [(CLOG2MULDIVCNT +1) -1 : 0] _rdidx = ((MULDIVCNT-1) ? rdidx : 0);
+wire [(CLOG2INSTCNT +1) -1 : 0] _wridx = ((INSTCNT-1) ? wridx : 0);
+wire [(CLOG2INSTCNT +1) -1 : 0] _rdidx = ((INSTCNT-1) ? rdidx : 0);
 
-wire [(CLOG2MULDIVCNT +1) -1 : 0] usage;
+wire [(CLOG2INSTCNT +1) -1 : 0] usage;
 assign usage = (wridx - rdidx);
 
-wire [ARCHBITSZ -1 : 0] data_w [MULDIVCNT -1 : 0];
+wire [ARCHBITSZ -1 : 0] data_w [INSTCNT -1 : 0];
 assign data_o = data_w[_rdidx];
 
-wire [CLOG2GPRCNT -1 : 0] gprid_w [MULDIVCNT -1 : 0];
+wire [CLOG2GPRCNT -1 : 0] gprid_w [INSTCNT -1 : 0];
 assign gprid_o = gprid_w[_rdidx];
 
-wire [MULDIVCNT -1 : 0] rdy_w;
+wire [INSTCNT -1 : 0] rdy_w;
 
-assign rdy_o = ((usage < MULDIVCNT) && rdy_w[_wridx]);
+assign rdy_o = ((usage < INSTCNT) && rdy_w[_wridx]);
 
 assign ordy_o = ((usage != 0) && rdy_w[_rdidx]);
 
 `ifdef PUMULDIVCLK
 reg                                                         stb_r    = 0;
 reg  [(((ARCHBITSZ*2)+CLOG2GPRCNT)+MULDIVTYPEBITSZ) -1 : 0] data_r   = 0;
-reg  [(CLOG2MULDIVCNT +1) -1 : 0]                           _wridx_r = 0;
+reg  [(CLOG2INSTCNT +1) -1 : 0]                             _wridx_r = 0;
 `else
 wire                                                        stb_r  = stb_i;
 wire [(((ARCHBITSZ*2)+CLOG2GPRCNT)+MULDIVTYPEBITSZ) -1 : 0] data_r = data_i;
-wire [(CLOG2MULDIVCNT +1) -1 : 0]                           _wridx_r = _wridx;
+wire [(CLOG2INSTCNT +1) -1 : 0]                             _wridx_r = _wridx;
 `endif
 
 always @ (posedge clk_i) begin
@@ -397,7 +388,7 @@ end
 `endif
 
 genvar gen_muldiv_idx;
-generate for (gen_muldiv_idx = 0; gen_muldiv_idx < MULDIVCNT; gen_muldiv_idx = gen_muldiv_idx + 1) begin :gen_muldiv
+generate for (gen_muldiv_idx = 0; gen_muldiv_idx < INSTCNT; gen_muldiv_idx = gen_muldiv_idx + 1) begin :gen_muldiv
 muldiv #(
 
 	 .ARCHBITSZ (ARCHBITSZ)
@@ -413,7 +404,7 @@ muldiv #(
 	,.clk_i (clk_i)
 	`endif
 
-	,.stb_i (stb_r && (_wridx_r[CLOG2MULDIVCNT -1 : 0] == gen_muldiv_idx))
+	,.stb_i (stb_r && (_wridx_r[CLOG2INSTCNT -1 : 0] == gen_muldiv_idx))
 
 	,.data_i  (data_r)
 	,.data_o  (data_w[gen_muldiv_idx])
