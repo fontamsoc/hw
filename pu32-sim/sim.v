@@ -17,8 +17,10 @@
 `define PUHPTW
 `ifdef SIMUSECLKDIV
 `define PUMULDIVCLK
+`define PUFADDFSUBCLK
 `endif
 `define PUDSPMUL
+`define PUFADDFSUB
 `define PUDCACHE
 `define PUSC2
 `define PUSC2SKIPSC1LI8
@@ -222,6 +224,7 @@ multipu #(
 	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
 	,.TLBWAYCOUNT    (TLBWAYCOUNT)
 	,.MULDIVCNT      (4)
+	,.FADDFSUBCNT    (2)
 
 ) multipu (
 
@@ -231,7 +234,8 @@ multipu #(
 
 	,.clk_i        (clk_w)
 	`ifdef SIMUSECLKDIV
-	,.clk_muldiv_i (clk_4x_w)
+	,.clk_muldiv_i   (clk_4x_w)
+	,.clk_faddfsub_i (clk_4x_w)
 	`endif
 	`ifdef PUCOUNT
 	,.clk_mem_i    (pi1r_clk_w)

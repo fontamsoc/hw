@@ -39,6 +39,10 @@
 // MULDIVCNT
 // 	Number of units making up the muldiv pipeline.
 // 	It must be non-null and less-than-or-equal to 8.
+//
+// FADDFSUBCNT
+// 	Number of units making up the faddfsub pipeline.
+// 	It must be non-null, a power-of-2 less-than-or-equal to 2.
 
 // Ports:
 //
@@ -50,6 +54,9 @@
 // 	Clock signal.
 // clk_muldiv_i
 // 	Clock signal used by muldiv.
+// 	Its frequency must be a power-of-2 multiple of clk_i frequency.
+// clk_faddfsub_i
+// 	Clock signal used by faddfsub.
 // 	Its frequency must be a power-of-2 multiple of clk_i frequency.
 //
 // pi1_op_o
@@ -116,6 +123,7 @@
 `include "lib/ram/bram.v"
 
 `include "./opmuldiv.pu.v"
+`include "./opfaddfsub.pu.v"
 
 `include "dev/pi1_upconverter.v"
 
@@ -131,6 +139,7 @@ module pu (
 
 	,clk_i
 	,clk_muldiv_i
+	,clk_faddfsub_i
 
 	,pi1_op_o
 	,pi1_addr_o
@@ -172,6 +181,7 @@ parameter ICACHEWAYCOUNT = 1;
 parameter DCACHEWAYCOUNT = 1;
 parameter TLBWAYCOUNT    = 1;
 parameter MULDIVCNT      = 2;
+parameter FADDFSUBCNT    = 1;
 parameter VERSION        = {8'd1/*major-version*/, 8'd0/*minor-version*/};
 
 localparam CLOG2ICACHESETCOUNT = clog2(ICACHESETCOUNT);
@@ -199,6 +209,7 @@ output reg rst_o;
 
 input wire clk_i;
 input wire clk_muldiv_i;
+input wire clk_faddfsub_i;
 
 output reg[2 -1 : 0] pi1_op_o; // ### declared as reg so as to be usable by verilog within the always block.
 output reg[XADDRBITSZ -1 : 0] pi1_addr_o; // ### declared as reg so as to be usable by verilog within the always block.

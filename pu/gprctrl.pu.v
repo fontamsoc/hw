@@ -116,6 +116,16 @@ always @* begin
 		gprrdyidx    = opmuldivgpr;
 		gprrdyval    = 1;
 		gprrdywe     = 1;
+	`ifdef PUFADDFSUB
+	end else if (opfaddfsubdone) begin
+		gprctrlstate = GPRCTRLSTATEOPFADDFSUB;
+		gpridx       = opfaddfsubgpr;
+		gprdata      = opfaddfsubresult;
+		gprwe        = 1;
+		gprrdyidx    = opfaddfsubgpr;
+		gprrdyval    = 1;
+		gprrdywe     = 1;
+	`endif
 	end
 end
 

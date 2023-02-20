@@ -14,7 +14,9 @@
 `define PUMMU
 `define PUHPTW
 `define PUMULDIVCLK
+`define PUFADDFSUBCLK
 `define PUDSPMUL
+`define PUFADDFSUB
 `define PUDCACHE
 `define PUCOUNT 1 /* 2 max */
 `include "pu/multipu.v"
@@ -304,6 +306,7 @@ multipu #(
 	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
 	,.TLBWAYCOUNT    (TLBWAYCOUNT)
 	,.MULDIVCNT      (2)
+	,.FADDFSUBCNT    (2)
 
 ) multipu (
 
@@ -311,10 +314,11 @@ multipu #(
 
 	,.rst_o (multipu_rst_ow)
 
-	,.clk_i        (pi1r_clk_w)
-	,.clk_muldiv_i (clk_8x_w)
+	,.clk_i          (pi1r_clk_w)
+	,.clk_muldiv_i   (clk_8x_w)
+	,.clk_faddfsub_i (clk_4x_w)
 	`ifdef PUCOUNT
-	,.clk_mem_i    (pi1r_clk_w)
+	,.clk_mem_i      (pi1r_clk_w)
 	`endif
 
 	,.pi1_op_o   (m_pi1r_op_w[M_PI1R_MULTIPU])

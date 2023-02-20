@@ -124,9 +124,16 @@ always @* begin
 								sequencerstate = SEQSTALL0;
 							end
 
-						end else if (isopalu0 || isopalu1 || isopalu2 || isopmuldiv) begin
+						end else if (
+							`ifdef PUFADDFSUB
+							isopfaddfsub ||
+							`endif
+							isopalu0 || isopalu1 || isopalu2 || isopmuldiv) begin
 
 							if (
+								`ifdef PUFADDFSUB
+								(isopfaddfsub && !opfaddfsub_rdy_w) ||
+								`endif
 								((isopmuldiv
 									`ifdef PUDSPMUL
 									&& instrbufdato0[2]
@@ -139,7 +146,8 @@ always @* begin
 								sequencerstate = SEQEXEC;
 							end
 
-						end else if (inkernelmode || isopfloat /* float traps as ksysfault until implemented */) begin
+						end else if (inkernelmode ||
+							isopfloat /* float traps as ksysfault if not implemented */) begin
 							sequencerstate = SEQHCALL;
 						end else begin
 							sequencerstate = SEQINTR; // SYSOPINTR.

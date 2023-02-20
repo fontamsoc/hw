@@ -439,11 +439,12 @@ wire gprrdy2;
 
 // ### Nets declared as reg so as to be useable
 // ### by verilog within the always block.
-localparam GPRCTRLSTATEDONE     = 0;
-localparam GPRCTRLSTATEOPLD     = 1;
-localparam GPRCTRLSTATEOPLDST   = 2;
-localparam GPRCTRLSTATEOPMULDIV = 3;
-reg[2 -1 : 0] gprctrlstate;
+localparam GPRCTRLSTATEDONE       = 0;
+localparam GPRCTRLSTATEOPLD       = 1;
+localparam GPRCTRLSTATEOPLDST     = 2;
+localparam GPRCTRLSTATEOPMULDIV   = 3;
+localparam GPRCTRLSTATEOPFADDFSUB = 4;
+reg[3 -1 : 0] gprctrlstate;
 reg[CLOG2GPRCNTTOTAL -1 : 0] gpridx;
 reg[ARCHBITSZ -1 : 0] gprdata;
 reg gprwe;
@@ -564,6 +565,7 @@ assign isopld = ((isoploadorstore || isoploadorstorevolatile) && instrbufdato0[2
 assign isopst = ((isoploadorstore || isoploadorstorevolatile) && !instrbufdato0[2]);
 assign isopldst = (instrbufdato0[7:3] == OPLDST);
 wire isopmuldiv = (instrbufdato0[7:3] == OPMULDIV);
+wire isopfaddfsub = (isopfloat && (isoptype0 || isoptype1));
 
 reg[16 -1 : 0] flags;
 wire isflagsetasid = flags[0];
@@ -1596,6 +1598,59 @@ wire sc2opdspmuldone = (sc2rdyandgprrdy12 && _sc2isopmuldiv);
 `endif
 `endif
 
+// ---------- Registers and nets used by opfaddfsub ----------
+
+`ifdef PUFADDFSUB
+
+// The bit within data_i storing whether to perform
+// addition or substraction is 0 or 1 respectively.
+localparam FADDFSUBSELBITSZ = 1;
+
+wire opfaddfsub_rdy_w;
+
+wire opfaddfsub_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopfaddfsub && opfaddfsub_rdy_w);
+
+wire [(((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+FADDFSUBSELBITSZ) -1 : 0] opfaddfsub_data_w =
+	{instrbufdato0[0], gpridx1, gprdata1, gprdata2};
+
+wire [ARCHBITSZ -1 : 0]        opfaddfsubresult;
+wire [CLOG2GPRCNTTOTAL -1 : 0] opfaddfsubgpr;
+wire                           opfaddfsubdone;
+
+localparam OPFADDFSUBCNT = ((FADDFSUBCNT != 2) ? 1 : FADDFSUBCNT);
+
+generate if (ARCHBITSZ == 32) begin :genopfaddfsub
+opfaddfsub #(
+	 .ARCHBITSZ (ARCHBITSZ)
+	,.GPRCNT    (GPRCNTTOTAL)
+	,.EXPBITSZ  (8)
+	,.MANTBITSZ (23)
+	,.INSTCNT   (OPFADDFSUBCNT)
+) opfaddfsub (
+
+	 .rst_i (rst_i)
+
+	,.clk_i          (clk_i)
+	,.clk_faddfsub_i (clk_faddfsub_i)
+
+	,.stb_i  (opfaddfsub_stb_w)
+	,.data_i (opfaddfsub_data_w)
+	,.rdy_o  (opfaddfsub_rdy_w)
+
+	,.ostb_i  (gprctrlstate == GPRCTRLSTATEOPFADDFSUB)
+	,.data_o  (opfaddfsubresult)
+	,.gprid_o (opfaddfsubgpr)
+	,.ordy_o  (opfaddfsubdone)
+);
+end else begin
+assign opfaddfsub_rdy_w = 0;
+assign opfaddfsubresult = 0;
+assign opfaddfsubgpr = 0;
+assign opfaddfsubdone = 0;
+end endgenerate
+
+`endif
+
 // ---------- Nets used by opjl ----------
 
 wire opjldone = (miscrdyandsequencerreadyandgprrdy12 && isopj && isoptype2);
@@ -1942,6 +1997,9 @@ assign dcacheslavesel = pi1_upconverter_dcachemastersel;
 // Net which is true for a 2-inputs 1-output multicycle instruction that is about to be sequenced.
 wire multicycleoprdy = (miscrdyandsequencerreadyandgprrdy12 &&
 	(opldrdy || opldstrdy ||
+	`ifdef PUFADDFSUB
+	(isopfaddfsub && opfaddfsub_rdy_w) ||
+	`endif
 	(isopmuldiv && opmuldiv_rdy_w
 		`ifdef PUDSPMUL
 		&& instrbufdato0[2]
