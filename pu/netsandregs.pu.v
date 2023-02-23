@@ -444,6 +444,7 @@ localparam GPRCTRLSTATEOPLD       = 1;
 localparam GPRCTRLSTATEOPLDST     = 2;
 localparam GPRCTRLSTATEOPMULDIV   = 3;
 localparam GPRCTRLSTATEOPFADDFSUB = 4;
+localparam GPRCTRLSTATEOPFMUL     = 5;
 reg[3 -1 : 0] gprctrlstate;
 reg[CLOG2GPRCNTTOTAL -1 : 0] gpridx;
 reg[ARCHBITSZ -1 : 0] gprdata;
@@ -566,6 +567,7 @@ assign isopst = ((isoploadorstore || isoploadorstorevolatile) && !instrbufdato0[
 assign isopldst = (instrbufdato0[7:3] == OPLDST);
 wire isopmuldiv = (instrbufdato0[7:3] == OPMULDIV);
 wire isopfaddfsub = (isopfloat && (isoptype0 || isoptype1));
+wire isopfmul = (isopfloat && isoptype2);
 
 reg[16 -1 : 0] flags;
 wire isflagsetasid = flags[0];
@@ -1651,6 +1653,59 @@ end endgenerate
 
 `endif
 
+// ---------- Registers and nets used by opfmul ----------
+
+`ifdef PUFMUL
+
+wire opfmul_rdy_w;
+
+wire opfmul_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopfmul && opfmul_rdy_w);
+
+wire [((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL) -1 : 0] opfmul_data_w =
+	{gpridx1, gprdata1, gprdata2};
+
+wire [ARCHBITSZ -1 : 0]        opfmulresult;
+wire [CLOG2GPRCNTTOTAL -1 : 0] opfmulgpr;
+wire                           opfmuldone;
+
+`ifdef PUDSPFMUL
+localparam OPFMULCNT = ((FMULCNT != 2 && FMULCNT != 4) ? 1 : FMULCNT);
+`else
+localparam OPFMULCNT = ((FMULCNT != 2 && FMULCNT != 4 && FMULCNT != 8) ? 1 : FMULCNT);
+`endif
+
+generate if (ARCHBITSZ == 32) begin :genopfmul
+opfmul #(
+	 .ARCHBITSZ (ARCHBITSZ)
+	,.GPRCNT    (GPRCNTTOTAL)
+	,.EXPBITSZ  (8)
+	,.MANTBITSZ (23)
+	,.INSTCNT   (OPFMULCNT)
+) opfmul (
+
+	 .rst_i (rst_i)
+
+	,.clk_i      (clk_i)
+	,.clk_fmul_i (clk_fmul_i)
+
+	,.stb_i  (opfmul_stb_w)
+	,.data_i (opfmul_data_w)
+	,.rdy_o  (opfmul_rdy_w)
+
+	,.ostb_i  (gprctrlstate == GPRCTRLSTATEOPFMUL)
+	,.data_o  (opfmulresult)
+	,.gprid_o (opfmulgpr)
+	,.ordy_o  (opfmuldone)
+);
+end else begin
+assign opfmul_rdy_w = 0;
+assign opfmulresult = 0;
+assign opfmulgpr = 0;
+assign opfmuldone = 0;
+end endgenerate
+
+`endif
+
 // ---------- Nets used by opjl ----------
 
 wire opjldone = (miscrdyandsequencerreadyandgprrdy12 && isopj && isoptype2);
@@ -1999,6 +2054,9 @@ wire multicycleoprdy = (miscrdyandsequencerreadyandgprrdy12 &&
 	(opldrdy || opldstrdy ||
 	`ifdef PUFADDFSUB
 	(isopfaddfsub && opfaddfsub_rdy_w) ||
+	`endif
+	`ifdef PUFMUL
+	(isopfmul && opfmul_rdy_w) ||
 	`endif
 	(isopmuldiv && opmuldiv_rdy_w
 		`ifdef PUDSPMUL

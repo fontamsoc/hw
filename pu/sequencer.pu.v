@@ -128,11 +128,17 @@ always @* begin
 							`ifdef PUFADDFSUB
 							isopfaddfsub ||
 							`endif
+							`ifdef PUFMUL
+							isopfmul ||
+							`endif
 							isopalu0 || isopalu1 || isopalu2 || isopmuldiv) begin
 
 							if (
 								`ifdef PUFADDFSUB
 								(isopfaddfsub && !opfaddfsub_rdy_w) ||
+								`endif
+								`ifdef PUFMUL
+								(isopfmul && !opfmul_rdy_w) ||
 								`endif
 								((isopmuldiv
 									`ifdef PUDSPMUL

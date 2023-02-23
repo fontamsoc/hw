@@ -126,6 +126,16 @@ always @* begin
 		gprrdyval    = 1;
 		gprrdywe     = 1;
 	`endif
+	`ifdef PUFMUL
+	end else if (opfmuldone) begin
+		gprctrlstate = GPRCTRLSTATEOPFMUL;
+		gpridx       = opfmulgpr;
+		gprdata      = opfmulresult;
+		gprwe        = 1;
+		gprrdyidx    = opfmulgpr;
+		gprrdyval    = 1;
+		gprrdywe     = 1;
+	`endif
 	end
 end
 
