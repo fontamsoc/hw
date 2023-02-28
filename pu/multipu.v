@@ -35,6 +35,7 @@ module multipu (
 	,clk_muldiv_i
 	,clk_faddfsub_i
 	,clk_fmul_i
+	,clk_fdiv_i
 	`ifdef PUCOUNT
 	,clk_mem_i
 	`endif
@@ -82,6 +83,7 @@ parameter TLBWAYCOUNT    = 1;
 parameter MULDIVCNT      = 2;
 parameter FADDFSUBCNT    = 1;
 parameter FMULCNT        = 1;
+parameter FDIVCNT        = 1;
 
 parameter ARCHBITSZ  = 16;
 parameter XARCHBITSZ = 16;
@@ -103,6 +105,7 @@ input wire clk_i;
 input wire clk_muldiv_i;
 input wire clk_faddfsub_i;
 input wire clk_fmul_i;
+input wire clk_fdiv_i;
 `ifdef PUCOUNT
 input wire clk_mem_i;
 `endif
@@ -243,6 +246,7 @@ pu #(
 	,.MULDIVCNT      (MULDIVCNT)
 	,.FADDFSUBCNT    (FADDFSUBCNT)
 	,.FMULCNT        (FMULCNT)
+	,.FDIVCNT        (FDIVCNT)
 
 ) pu (
 
@@ -254,6 +258,7 @@ pu #(
 	,.clk_muldiv_i   (clk_muldiv_i)
 	,.clk_faddfsub_i (clk_faddfsub_i)
 	,.clk_fmul_i     (clk_fmul_i)
+	,.clk_fdiv_i     (clk_fdiv_i)
 
 	`ifdef PUCOUNT
 	,.pi1_op_o   (m_pi1q_op_w[genpu_idx])

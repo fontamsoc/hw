@@ -131,6 +131,9 @@ always @* begin
 							`ifdef PUFMUL
 							isopfmul ||
 							`endif
+							`ifdef PUFDIV
+							isopfdiv ||
+							`endif
 							isopalu0 || isopalu1 || isopalu2 || isopmuldiv) begin
 
 							if (
@@ -139,6 +142,9 @@ always @* begin
 								`endif
 								`ifdef PUFMUL
 								(isopfmul && !opfmul_rdy_w) ||
+								`endif
+								`ifdef PUFDIV
+								(isopfdiv && !opfdiv_rdy_w) ||
 								`endif
 								((isopmuldiv
 									`ifdef PUDSPMUL

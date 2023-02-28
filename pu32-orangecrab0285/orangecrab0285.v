@@ -16,10 +16,12 @@
 `define PUMULDIVCLK
 `define PUFADDFSUBCLK
 `define PUFMULCLK
+`define PUFDIVCLK
 `define PUDSPMUL
 `define PUFADDFSUB
 `define PUFMUL
 `define PUDSPFMUL
+`define PUFDIV
 `define PUDCACHE
 `define PUCOUNT 1 /* 2 max */
 `include "pu/multipu.v"
@@ -311,6 +313,7 @@ multipu #(
 	,.MULDIVCNT      (2)
 	,.FADDFSUBCNT    (2)
 	,.FMULCNT        (2)
+	,.FDIVCNT        (4)
 
 ) multipu (
 
@@ -322,6 +325,7 @@ multipu #(
 	,.clk_muldiv_i   (clk_8x_w)
 	,.clk_faddfsub_i (clk_4x_w)
 	,.clk_fmul_i     (clk_4x_w)
+	,.clk_fdiv_i     (clk_4x_w)
 	`ifdef PUCOUNT
 	,.clk_mem_i      (pi1r_clk_w)
 	`endif

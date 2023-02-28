@@ -48,6 +48,10 @@
 // 	Number of units making up the fmul pipeline.
 // 	It must be non-null, a power-of-2 less-than-or-equal
 // 	to 4 (ifdef PUDSPFMUL) or 8.
+//
+// FDIVCNT
+// 	Number of units making up the fdiv pipeline.
+// 	It must be non-null, a power-of-2 less-than-or-equal to 8.
 
 // Ports:
 //
@@ -65,6 +69,9 @@
 // 	Its frequency must be a power-of-2 multiple of clk_i frequency.
 // clk_fmul_i
 // 	Clock signal used by fmul.
+// 	Its frequency must be a power-of-2 multiple of clk_i frequency.
+// clk_fdiv_i
+// 	Clock signal used by fdiv.
 // 	Its frequency must be a power-of-2 multiple of clk_i frequency.
 //
 // pi1_op_o
@@ -133,6 +140,7 @@
 `include "./opmuldiv.pu.v"
 `include "./opfaddfsub.pu.v"
 `include "./opfmul.pu.v"
+`include "./opfdiv.pu.v"
 
 `include "dev/pi1_upconverter.v"
 
@@ -150,6 +158,7 @@ module pu (
 	,clk_muldiv_i
 	,clk_faddfsub_i
 	,clk_fmul_i
+	,clk_fdiv_i
 
 	,pi1_op_o
 	,pi1_addr_o
@@ -193,6 +202,7 @@ parameter TLBWAYCOUNT    = 1;
 parameter MULDIVCNT      = 2;
 parameter FADDFSUBCNT    = 1;
 parameter FMULCNT        = 1;
+parameter FDIVCNT        = 1;
 parameter VERSION        = {8'd1/*major-version*/, 8'd0/*minor-version*/};
 
 localparam CLOG2ICACHESETCOUNT = clog2(ICACHESETCOUNT);
@@ -222,6 +232,7 @@ input wire clk_i;
 input wire clk_muldiv_i;
 input wire clk_faddfsub_i;
 input wire clk_fmul_i;
+input wire clk_fdiv_i;
 
 output reg[2 -1 : 0] pi1_op_o; // ### declared as reg so as to be usable by verilog within the always block.
 output reg[XADDRBITSZ -1 : 0] pi1_addr_o; // ### declared as reg so as to be usable by verilog within the always block.

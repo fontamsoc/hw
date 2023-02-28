@@ -19,11 +19,13 @@
 `define PUMULDIVCLK
 `define PUFADDFSUBCLK
 `define PUFMULCLK
+`define PUFDIVCLK
 `endif
 `define PUDSPMUL
 `define PUFADDFSUB
 `define PUFMUL
 `define PUDSPFMUL
+`define PUFDIV
 `define PUDCACHE
 `define PUSC2
 `define PUSC2SKIPSC1LI8
@@ -229,6 +231,7 @@ multipu #(
 	,.MULDIVCNT      (4)
 	,.FADDFSUBCNT    (2)
 	,.FMULCNT        (2)
+	,.FDIVCNT        (4)
 
 ) multipu (
 
@@ -241,6 +244,7 @@ multipu #(
 	,.clk_muldiv_i   (clk_4x_w)
 	,.clk_faddfsub_i (clk_4x_w)
 	,.clk_fmul_i     (clk_4x_w)
+	,.clk_fdiv_i     (clk_4x_w)
 	`endif
 	`ifdef PUCOUNT
 	,.clk_mem_i    (pi1r_clk_w)

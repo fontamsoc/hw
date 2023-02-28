@@ -136,6 +136,16 @@ always @* begin
 		gprrdyval    = 1;
 		gprrdywe     = 1;
 	`endif
+	`ifdef PUFDIV
+	end else if (opfdivdone) begin
+		gprctrlstate = GPRCTRLSTATEOPFDIV;
+		gpridx       = opfdivgpr;
+		gprdata      = opfdivresult;
+		gprwe        = 1;
+		gprrdyidx    = opfdivgpr;
+		gprrdyval    = 1;
+		gprrdywe     = 1;
+	`endif
 	end
 end
 

@@ -445,6 +445,7 @@ localparam GPRCTRLSTATEOPLDST     = 2;
 localparam GPRCTRLSTATEOPMULDIV   = 3;
 localparam GPRCTRLSTATEOPFADDFSUB = 4;
 localparam GPRCTRLSTATEOPFMUL     = 5;
+localparam GPRCTRLSTATEOPFDIV     = 6;
 reg[3 -1 : 0] gprctrlstate;
 reg[CLOG2GPRCNTTOTAL -1 : 0] gpridx;
 reg[ARCHBITSZ -1 : 0] gprdata;
@@ -568,6 +569,7 @@ assign isopldst = (instrbufdato0[7:3] == OPLDST);
 wire isopmuldiv = (instrbufdato0[7:3] == OPMULDIV);
 wire isopfaddfsub = (isopfloat && (isoptype0 || isoptype1));
 wire isopfmul = (isopfloat && isoptype2);
+wire isopfdiv = (isopfloat && isoptype3);
 
 reg[16 -1 : 0] flags;
 wire isflagsetasid = flags[0];
@@ -1706,6 +1708,55 @@ end endgenerate
 
 `endif
 
+// ---------- Registers and nets used by opfdiv ----------
+
+`ifdef PUFDIV
+
+wire opfdiv_rdy_w;
+
+wire opfdiv_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopfdiv && opfdiv_rdy_w);
+
+wire [((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL) -1 : 0] opfdiv_data_w =
+	{gpridx1, gprdata1, gprdata2};
+
+wire [ARCHBITSZ -1 : 0]        opfdivresult;
+wire [CLOG2GPRCNTTOTAL -1 : 0] opfdivgpr;
+wire                           opfdivdone;
+
+localparam OPFDIVCNT = ((FDIVCNT != 2 && FDIVCNT != 4 && FDIVCNT != 8) ? 1 : FDIVCNT);
+
+generate if (ARCHBITSZ == 32) begin :genopfdiv
+opfdiv #(
+	 .ARCHBITSZ (ARCHBITSZ)
+	,.GPRCNT    (GPRCNTTOTAL)
+	,.EXPBITSZ  (8)
+	,.MANTBITSZ (23)
+	,.INSTCNT   (OPFDIVCNT)
+) opfdiv (
+
+	 .rst_i (rst_i)
+
+	,.clk_i      (clk_i)
+	,.clk_fdiv_i (clk_fdiv_i)
+
+	,.stb_i  (opfdiv_stb_w)
+	,.data_i (opfdiv_data_w)
+	,.rdy_o  (opfdiv_rdy_w)
+
+	,.ostb_i  (gprctrlstate == GPRCTRLSTATEOPFDIV)
+	,.data_o  (opfdivresult)
+	,.gprid_o (opfdivgpr)
+	,.ordy_o  (opfdivdone)
+);
+end else begin
+assign opfdiv_rdy_w = 0;
+assign opfdivresult = 0;
+assign opfdivgpr = 0;
+assign opfdivdone = 0;
+end endgenerate
+
+`endif
+
 // ---------- Nets used by opjl ----------
 
 wire opjldone = (miscrdyandsequencerreadyandgprrdy12 && isopj && isoptype2);
@@ -2057,6 +2108,9 @@ wire multicycleoprdy = (miscrdyandsequencerreadyandgprrdy12 &&
 	`endif
 	`ifdef PUFMUL
 	(isopfmul && opfmul_rdy_w) ||
+	`endif
+	`ifdef PUFDIV
+	(isopfdiv && opfdiv_rdy_w) ||
 	`endif
 	(isopmuldiv && opmuldiv_rdy_w
 		`ifdef PUDSPMUL
