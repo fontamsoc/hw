@@ -36,9 +36,13 @@
 // 	Number of dcache ways.
 // 	It must be non-null and a power-of-2.
 //
-// MULDIVCNT
-// 	Number of units making up the muldiv pipeline.
-// 	It must be non-null and less-than-or-equal to 8.
+// IMULCNT
+// 	Number of units making up the imul pipeline.
+// 	It must be non-null, a power-of-2 less-than-or-equal to 8.
+//
+// IDIVCNT
+// 	Number of units making up the idiv pipeline.
+// 	It must be non-null, a power-of-2 less-than-or-equal to 8.
 //
 // FADDFSUBCNT
 // 	Number of units making up the faddfsub pipeline.
@@ -61,8 +65,11 @@
 //
 // clk_i
 // 	Clock signal.
-// clk_muldiv_i
-// 	Clock signal used by muldiv.
+// clk_imul_i
+// 	Clock signal used by imul.
+// 	Its frequency must be a power-of-2 multiple of clk_i frequency.
+// clk_idiv_i
+// 	Clock signal used by idiv.
 // 	Its frequency must be a power-of-2 multiple of clk_i frequency.
 // clk_faddfsub_i
 // 	Clock signal used by faddfsub.
@@ -137,7 +144,8 @@
 
 `include "lib/ram/bram.v"
 
-`include "./opmuldiv.pu.v"
+`include "./opimul.pu.v"
+`include "./opidiv.pu.v"
 `include "./opfaddfsub.pu.v"
 `include "./opfmul.pu.v"
 `include "./opfdiv.pu.v"
@@ -155,7 +163,8 @@ module pu (
 	,rst_o
 
 	,clk_i
-	,clk_muldiv_i
+	,clk_imul_i
+	,clk_idiv_i
 	,clk_faddfsub_i
 	,clk_fmul_i
 	,clk_fdiv_i
@@ -199,7 +208,8 @@ parameter TLBSETCOUNT    = 2;
 parameter ICACHEWAYCOUNT = 1;
 parameter DCACHEWAYCOUNT = 1;
 parameter TLBWAYCOUNT    = 1;
-parameter MULDIVCNT      = 2;
+parameter IMULCNT        = 2;
+parameter IDIVCNT        = 2;
 parameter FADDFSUBCNT    = 1;
 parameter FMULCNT        = 1;
 parameter FDIVCNT        = 1;
@@ -229,7 +239,8 @@ input wire rst_i;
 output reg rst_o;
 
 input wire clk_i;
-input wire clk_muldiv_i;
+input wire clk_imul_i;
+input wire clk_idiv_i;
 input wire clk_faddfsub_i;
 input wire clk_fmul_i;
 input wire clk_fdiv_i;

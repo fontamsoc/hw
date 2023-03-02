@@ -15,7 +15,8 @@
 
 `define PUMMU
 `define PUHPTW
-`define PUMULDIVCLK
+`define PUIMULCLK
+`define PUIDIVCLK
 `define PUFADDFSUBCLK
 `define PUFMULCLK
 `define PUFDIVCLK
@@ -327,7 +328,8 @@ multipu #(
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
 	,.TLBWAYCOUNT    (TLBWAYCOUNT)
-	,.MULDIVCNT      (4)
+	,.IMULCNT        (2)
+	,.IDIVCNT        (4)
 	,.FADDFSUBCNT    (2)
 	,.FMULCNT        (2)
 	,.FDIVCNT        (4)
@@ -339,7 +341,8 @@ multipu #(
 	,.rst_o (multipu_rst_ow)
 
 	,.clk_i          (multipu_clk_w)
-	,.clk_muldiv_i   (clk_4x_w)
+	,.clk_imul_i     (clk_4x_w)
+	,.clk_idiv_i     (clk_4x_w)
 	,.clk_faddfsub_i (clk_4x_w)
 	,.clk_fmul_i     (clk_4x_w)
 	,.clk_fdiv_i     (clk_4x_w)

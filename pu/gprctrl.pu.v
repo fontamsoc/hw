@@ -108,12 +108,22 @@ always @* begin
 		gprrdyidx    = opldstgpr;
 		gprrdyval    = 1;
 		gprrdywe     = 1;
-	end else if (opmuldivdone) begin
-		gprctrlstate = GPRCTRLSTATEOPMULDIV;
-		gpridx       = opmuldivgpr;
-		gprdata      = opmuldivresult;
+	`ifndef PUDSPMUL
+	end else if (opimuldone) begin
+		gprctrlstate = GPRCTRLSTATEOPIMUL;
+		gpridx       = opimulgpr;
+		gprdata      = opimulresult;
 		gprwe        = 1;
-		gprrdyidx    = opmuldivgpr;
+		gprrdyidx    = opimulgpr;
+		gprrdyval    = 1;
+		gprrdywe     = 1;
+	`endif
+	end else if (opidivdone) begin
+		gprctrlstate = GPRCTRLSTATEOPIDIV;
+		gpridx       = opidivgpr;
+		gprdata      = opidivresult;
+		gprwe        = 1;
+		gprrdyidx    = opidivgpr;
 		gprrdyval    = 1;
 		gprrdywe     = 1;
 	`ifdef PUFADDFSUB

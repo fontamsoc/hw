@@ -442,10 +442,11 @@ wire gprrdy2;
 localparam GPRCTRLSTATEDONE       = 0;
 localparam GPRCTRLSTATEOPLD       = 1;
 localparam GPRCTRLSTATEOPLDST     = 2;
-localparam GPRCTRLSTATEOPMULDIV   = 3;
-localparam GPRCTRLSTATEOPFADDFSUB = 4;
-localparam GPRCTRLSTATEOPFMUL     = 5;
-localparam GPRCTRLSTATEOPFDIV     = 6;
+localparam GPRCTRLSTATEOPIMUL     = 3;
+localparam GPRCTRLSTATEOPIDIV     = 4;
+localparam GPRCTRLSTATEOPFADDFSUB = 5;
+localparam GPRCTRLSTATEOPFMUL     = 6;
+localparam GPRCTRLSTATEOPFDIV     = 7;
 reg[3 -1 : 0] gprctrlstate;
 reg[CLOG2GPRCNTTOTAL -1 : 0] gpridx;
 reg[ARCHBITSZ -1 : 0] gprdata;
@@ -567,6 +568,8 @@ assign isopld = ((isoploadorstore || isoploadorstorevolatile) && instrbufdato0[2
 assign isopst = ((isoploadorstore || isoploadorstorevolatile) && !instrbufdato0[2]);
 assign isopldst = (instrbufdato0[7:3] == OPLDST);
 wire isopmuldiv = (instrbufdato0[7:3] == OPMULDIV);
+wire isopimul = (isopmuldiv && !instrbufdato0[2]);
+wire isopidiv = (isopmuldiv && instrbufdato0[2]);
 wire isopfaddfsub = (isopfloat && (isoptype0 || isoptype1));
 wire isopfmul = (isopfloat && isoptype2);
 wire isopfdiv = (isopfloat && isoptype3);
@@ -1330,7 +1333,7 @@ wire sc2isopsetgpr = (sc2instrbufdato0[7:3] == OPSETGPR);
 
 wire sc2isopjtrue = (sc2isopj && (sc2isoptype2 || (|sc2gprdata1 == sc2instrbufdato0[0])));
 
-wire _sc2isopmuldiv = (sc2isopmuldiv && !sc2instrbufdato0[2]);
+wire sc2isopdspmul = (sc2isopmuldiv && !sc2instrbufdato0[2]);
 
 wire [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx1 = {(
 	`ifdef PUSC2SYSOPS
@@ -1357,7 +1360,7 @@ reg sc2gprwe;
 
 wire sc2usegpr2 = (
 	`ifdef PUDSPMUL
-	_sc2isopmuldiv ||
+	sc2isopdspmul ||
 	`endif
 	`ifdef PUSC2SYSOPS
 	sc2isopsetgpr ||
@@ -1529,58 +1532,52 @@ wire sc2opalu2done = (sc2rdyandgprrdy12 && sc2isopalu2);
 
 `endif
 
-// ---------- Registers and nets used by opmuldiv ----------
+// ---------- Registers and nets used by opimul ----------
 
-// Significance of each bit in the field within opmuldiv_data_w
-// storing the type of multiplication or division to perform.
-// [2]: 0/1 means multiplication/division depending on [1].
-// [1]: When doing integer multiplication/division,
-// 	0/1 means unsigned/signed computation.
-// [0]: When doing multiplication, 0/1 means ARCHBITSZ lsb/msb of result.
-// 	When doing division, 0/1 means quotient/remainder of result.
-localparam MULDIVTYPEBITSZ = 3;
+`ifndef PUDSPMUL
 
-wire opmuldiv_rdy_w;
+// Significance of each bit in the field within
+// opimul_data_w storing the type of multiplication to perform.
+// [1]: 0/1 means unsigned/signed computation.
+// [0]: 0/1 means ARCHBITSZ lsb/msb of result.
+localparam IMULTYPEBITSZ = 2;
 
-wire opmuldiv_stb_w = (miscrdyandsequencerreadyandgprrdy12 && (isopmuldiv
-	`ifdef PUDSPMUL
-	&& instrbufdato0[2]
-	`endif
-	) && opmuldiv_rdy_w);
+wire opimul_rdy_w;
 
-wire [(((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+MULDIVTYPEBITSZ) -1 : 0] opmuldiv_data_w =
-	{instrbufdato0[2:0], gpridx1, gprdata1, gprdata2};
+wire opimul_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopimul && opimul_rdy_w);
 
-wire [ARCHBITSZ -1 : 0]        opmuldivresult;
-wire [CLOG2GPRCNTTOTAL -1 : 0] opmuldivgpr;
-wire                           opmuldivdone;
+wire [(((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+IMULTYPEBITSZ) -1 : 0] opimul_data_w =
+	{instrbufdato0[1:0], gpridx1, gprdata1, gprdata2};
 
-localparam OPMULDIVCNT = ((MULDIVCNT != 2 && MULDIVCNT != 4 && MULDIVCNT != 8) ? 1 : MULDIVCNT);
+wire [ARCHBITSZ -1 : 0]        opimulresult;
+wire [CLOG2GPRCNTTOTAL -1 : 0] opimulgpr;
+wire                           opimuldone;
 
-opmuldiv #(
+localparam OPIMULCNT = ((IMULCNT != 2 && IMULCNT != 4 && IMULCNT != 8) ? 1 : IMULCNT);
 
+opimul #(
 	 .ARCHBITSZ (ARCHBITSZ)
 	,.GPRCNT    (GPRCNTTOTAL)
-	,.INSTCNT   (OPMULDIVCNT)
-
-) opmuldiv (
+	,.INSTCNT   (OPIMULCNT)
+) opimul (
 
 	 .rst_i (rst_i)
 
-	,.clk_i        (clk_i)
-	,.clk_muldiv_i (clk_muldiv_i)
+	,.clk_i      (clk_i)
+	,.clk_imul_i (clk_imul_i)
 
-	,.stb_i  (opmuldiv_stb_w)
-	,.data_i (opmuldiv_data_w)
-	,.rdy_o  (opmuldiv_rdy_w)
+	,.stb_i  (opimul_stb_w)
+	,.data_i (opimul_data_w)
+	,.rdy_o  (opimul_rdy_w)
 
-	,.ostb_i  (gprctrlstate == GPRCTRLSTATEOPMULDIV)
-	,.data_o  (opmuldivresult)
-	,.gprid_o (opmuldivgpr)
-	,.ordy_o  (opmuldivdone)
+	,.ostb_i  (gprctrlstate == GPRCTRLSTATEOPIMUL)
+	,.data_o  (opimulresult)
+	,.gprid_o (opimulgpr)
+	,.ordy_o  (opimuldone)
 );
 
-`ifdef PUDSPMUL
+`else
+
 wire [(ARCHBITSZ*2) -1 : 0] opdspmulresult_unsigned = (gprdata1 * gprdata2);
 wire [(ARCHBITSZ*2) -1 : 0] opdspmulresult_signed   = ($signed(gprdata1) * $signed(gprdata2));
 
@@ -1588,7 +1585,7 @@ wire [(ARCHBITSZ*2) -1 : 0] opdspmulresult_signed   = ($signed(gprdata1) * $sign
 // ### by verilog within the always block.
 reg [ARCHBITSZ -1 : 0] opdspmulresult;
 
-wire opdspmuldone = (miscrdyandsequencerreadyandgprrdy12 && isopmuldiv && !instrbufdato0[2]);
+wire opdspmuldone = (miscrdyandsequencerreadyandgprrdy12 && isopimul);
 
 `ifdef PUSC2
 wire [(ARCHBITSZ*2) -1 : 0] sc2opdspmulresult_unsigned = (sc2gprdata1 * sc2gprdata2);
@@ -1598,9 +1595,51 @@ wire [(ARCHBITSZ*2) -1 : 0] sc2opdspmulresult_signed   = ($signed(sc2gprdata1) *
 // ### by verilog within the always block.
 reg [ARCHBITSZ -1 : 0] sc2opdspmulresult;
 
-wire sc2opdspmuldone = (sc2rdyandgprrdy12 && _sc2isopmuldiv);
+wire sc2opdspmuldone = (sc2rdyandgprrdy12 && sc2isopdspmul);
 `endif
 `endif
+
+// ---------- Registers and nets used by opidiv ----------
+
+// Significance of each bit in the field within
+// opidiv_data_w storing the type of division to perform.
+// [1]: 0/1 means unsigned/signed computation.
+// [0]: 0/1 means quotient/remainder of result.
+localparam IDIVTYPEBITSZ = 2;
+
+wire opidiv_rdy_w;
+
+wire opidiv_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopidiv && opidiv_rdy_w);
+
+wire [(((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+IDIVTYPEBITSZ) -1 : 0] opidiv_data_w =
+	{instrbufdato0[1:0], gpridx1, gprdata1, gprdata2};
+
+wire [ARCHBITSZ -1 : 0]        opidivresult;
+wire [CLOG2GPRCNTTOTAL -1 : 0] opidivgpr;
+wire                           opidivdone;
+
+localparam OPIDIVCNT = ((IDIVCNT != 2 && IDIVCNT != 4 && IDIVCNT != 8) ? 1 : IDIVCNT);
+
+opidiv #(
+	 .ARCHBITSZ (ARCHBITSZ)
+	,.GPRCNT    (GPRCNTTOTAL)
+	,.INSTCNT   (OPIDIVCNT)
+) opidiv (
+
+	 .rst_i (rst_i)
+
+	,.clk_i      (clk_i)
+	,.clk_idiv_i (clk_idiv_i)
+
+	,.stb_i  (opidiv_stb_w)
+	,.data_i (opidiv_data_w)
+	,.rdy_o  (opidiv_rdy_w)
+
+	,.ostb_i  (gprctrlstate == GPRCTRLSTATEOPIDIV)
+	,.data_o  (opidivresult)
+	,.gprid_o (opidivgpr)
+	,.ordy_o  (opidivdone)
+);
 
 // ---------- Registers and nets used by opfaddfsub ----------
 
@@ -2112,8 +2151,7 @@ wire multicycleoprdy = (miscrdyandsequencerreadyandgprrdy12 &&
 	`ifdef PUFDIV
 	(isopfdiv && opfdiv_rdy_w) ||
 	`endif
-	(isopmuldiv && opmuldiv_rdy_w
-		`ifdef PUDSPMUL
-		&& instrbufdato0[2]
-		`endif
-		)));
+	`ifndef PUDSPMUL
+	(isopimul && opimul_rdy_w) ||
+	`endif
+	(isopidiv && opidiv_rdy_w) ));

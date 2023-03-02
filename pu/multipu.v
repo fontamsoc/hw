@@ -32,7 +32,8 @@ module multipu (
 	,rst_o
 
 	,clk_i
-	,clk_muldiv_i
+	,clk_imul_i
+	,clk_idiv_i
 	,clk_faddfsub_i
 	,clk_fmul_i
 	,clk_fdiv_i
@@ -80,7 +81,8 @@ parameter TLBSETCOUNT    = 2;
 parameter ICACHEWAYCOUNT = 1;
 parameter DCACHEWAYCOUNT = 1;
 parameter TLBWAYCOUNT    = 1;
-parameter MULDIVCNT      = 2;
+parameter IMULCNT        = 2;
+parameter IDIVCNT        = 2;
 parameter FADDFSUBCNT    = 1;
 parameter FMULCNT        = 1;
 parameter FDIVCNT        = 1;
@@ -102,7 +104,8 @@ input wire rst_i;
 output wire rst_o;
 
 input wire clk_i;
-input wire clk_muldiv_i;
+input wire clk_imul_i;
+input wire clk_idiv_i;
 input wire clk_faddfsub_i;
 input wire clk_fmul_i;
 input wire clk_fdiv_i;
@@ -243,7 +246,8 @@ pu #(
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
 	,.TLBWAYCOUNT    (TLBWAYCOUNT)
-	,.MULDIVCNT      (MULDIVCNT)
+	,.IMULCNT        (IMULCNT)
+	,.IDIVCNT        (IDIVCNT)
 	,.FADDFSUBCNT    (FADDFSUBCNT)
 	,.FMULCNT        (FMULCNT)
 	,.FDIVCNT        (FDIVCNT)
@@ -255,7 +259,8 @@ pu #(
 	,.rst_o (rst_ow[genpu_idx])
 
 	,.clk_i          (clk_i)
-	,.clk_muldiv_i   (clk_muldiv_i)
+	,.clk_imul_i     (clk_imul_i)
+	,.clk_idiv_i     (clk_idiv_i)
 	,.clk_faddfsub_i (clk_faddfsub_i)
 	,.clk_fmul_i     (clk_fmul_i)
 	,.clk_fdiv_i     (clk_fdiv_i)
