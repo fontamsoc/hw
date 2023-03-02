@@ -126,15 +126,17 @@ always @* begin
 
 						end else if (isopalu0 || isopalu1 || isopalu2 || isopmuldiv) begin
 
-							if ((!isopmuldiv
-								`ifdef PUDSPMUL
-								|| !instrbufdato0[2]
-								`endif
-								) || opmuldiv_rdy_w) begin
-								sequencerstate = SEQEXEC;
-							end else begin
+							if (
+								((isopmuldiv
+									`ifdef PUDSPMUL
+									&& instrbufdato0[2]
+									`endif
+									) && !opmuldiv_rdy_w)
+								) begin
 								// Stall.
 								sequencerstate = SEQSTALL0;
+							end else begin
+								sequencerstate = SEQEXEC;
 							end
 
 						end else if (inkernelmode || isopfloat /* float traps as ksysfault until implemented */) begin
