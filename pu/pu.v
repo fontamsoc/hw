@@ -14,27 +14,27 @@
 // ICACHESETCOUNT
 // 	Number of instruction cache set.
 // 	Each cache set is ARCHBITSZ bits.
-// 	It must be at least 2, a power of 2,
+// 	It must be at least 2, a power-of-2,
 // 	and less than or equal to 2^(ADDRBITSZ-1).
 //
 // DCACHESETCOUNT
 // 	Number of data cache set.
 // 	Each cache set is ARCHBITSZ bits.
-// 	It must be at least 2, a power of 2,
+// 	It must be at least 2, a power-of-2,
 // 	and less than or equal to 2^(ADDRBITSZ-1).
 //
 // TLBSETCOUNT
 // 	Number of tlb entries.
-// 	It must be at least 2, a power of 2,
+// 	It must be at least 2, a power-of-2,
 // 	and less than or equal to 2^(PAGENUMBITSZ-1).
 //
 // ICACHEWAYCOUNT
 // 	Number of icache ways.
-// 	It must be non-null and a power of 2.
+// 	It must be non-null and a power-of-2.
 //
 // DCACHEWAYCOUNT
 // 	Number of dcache ways.
-// 	It must be non-null and a power of 2.
+// 	It must be non-null and a power-of-2.
 //
 // MULDIVCNT
 // 	Number of units making up the muldiv pipeline.
