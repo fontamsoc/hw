@@ -86,6 +86,7 @@ parameter IDIVCNT        = 2;
 parameter FADDFSUBCNT    = 1;
 parameter FMULCNT        = 1;
 parameter FDIVCNT        = 1;
+parameter VERSION        = {8'd1/*major-version*/, 8'd0/*minor-version*/};
 
 parameter ARCHBITSZ  = 16;
 parameter XARCHBITSZ = 16;
@@ -251,6 +252,7 @@ pu #(
 	,.FADDFSUBCNT    (FADDFSUBCNT)
 	,.FMULCNT        (FMULCNT)
 	,.FDIVCNT        (FDIVCNT)
+	,.VERSION        (VERSION)
 
 ) pu (
 
