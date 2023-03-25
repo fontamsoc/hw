@@ -110,9 +110,9 @@ reg [ARCHBITSZ -1 : 0] wb4_data_i_hold;
 
 wire not_wrpending_and_wb4_ack_i = (!wrpending && wb4_ack_i);
 
-assign s_pi1q_data_w1 = not_wrpending_and_wb4_ack_i ?
-	((s_pi1q_op_w_hold == PIRWOP) ? wb4_data_i_hold : wb4_data_i) :
-	{ARCHBITSZ{1'b0}};
+assign s_pi1q_data_w1 = /*not_wrpending_and_wb4_ack_i ?*/
+	((s_pi1q_op_w_hold == PIRWOP) ? wb4_data_i_hold : wb4_data_i)/*:
+	{ARCHBITSZ{1'b0}}*/;
 
 assign s_pi1q_rdy_w = (/*!wb4_rst_i &&*/(!wb4_cyc_o || not_wrpending_and_wb4_ack_i));
 

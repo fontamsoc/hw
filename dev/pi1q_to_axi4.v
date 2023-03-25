@@ -194,9 +194,9 @@ wire ack = (we ? axi4_bvalid_i : axi4_rvalid_i);
 
 wire not_wrpending_and_ack = (!wrpending && ack);
 
-assign s_pi1q_data_w1 = not_wrpending_and_ack ?
-	((s_pi1q_op_w_hold == PIRWOP) ? axi4_rdata_hold : axi4_rdata_i) :
-	{ARCHBITSZ{1'b0}};
+assign s_pi1q_data_w1 = /*not_wrpending_and_ack ?*/
+	((s_pi1q_op_w_hold == PIRWOP) ? axi4_rdata_hold : axi4_rdata_i)/*:
+	{ARCHBITSZ{1'b0}}*/;
 
 reg cyc;
 
