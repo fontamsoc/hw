@@ -359,6 +359,4 @@ always @ (posedge clk_i) begin
 end
 `endif
 
-`include "./init.pu.v"
-
 endmodule
