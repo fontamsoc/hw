@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-// Implementation of PerInt which allows multiple slave devices to be
+// Implementation of PerIntW which allows multiple slave devices to be
 // mapped in an address space accessible by multiple master devices.
 
-// PerInt stays with the same master device for as long as the
-// operation to execute is not PINOOP, otherwise PerInt select
+// PerIntW stays with the same master device for as long as the
+// operation to execute is not PINOOP, otherwise PerIntW select
 // the next master device.
 // During the period in which no PINOOP is seen from the currently
 // selected master device, there can be a mix of read or write operations
 // anywhere in the address space; hence, a master device must include
 // PINOOP in between read or write operations that take too long,
-// so as to allow PerInt to serve other master devices; similarly,
+// so as to allow PerIntW to serve other master devices; similarly,
 // slave devices must not keep their output memrdy low for too long,
-// so as to allow PerInt to look at the next operation from
+// so as to allow PerIntW to look at the next operation from
 // the currently selected master device as soon as possible.
 
-// The clock used by master and slave devices to connect to PerInt
+// The clock used by master and slave devices to connect to PerIntW
 // must be the same.
 
 // Endianness is determined by the device receiving a memory
@@ -48,12 +48,12 @@
 // FIRSTSLAVEADDR
 // 	Byte address of slave device at index 0.
 
-`ifndef PI1_V
-`define PI1_V
+`ifndef PI1W_V
+`define PI1W_V
 
 `include "lib/addr.v"
 
-module pi1 (
+module pi1w (
 
 	 rst_i
 
@@ -438,4 +438,4 @@ end
 
 endmodule
 
-`endif /* PI1_V */
+`endif /* PI1W_V */
