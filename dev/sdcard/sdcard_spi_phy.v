@@ -347,12 +347,12 @@ reg issdcardmmc = 0;
 reg issdcardaddrblockaligned = 0;
 
 // Register which will be used to store the value of the card CSD register.
-reg [8 -1 : 0] sdcardcsd [16 -1 : 0];
-integer init_sdcardcsd_idx;
-initial begin
-	for (init_sdcardcsd_idx = 0; init_sdcardcsd_idx < 16; init_sdcardcsd_idx = init_sdcardcsd_idx + 1)
-		sdcardcsd[init_sdcardcsd_idx] = 0;
-end
+reg [8 -1 : 0] sdcardcsd [0 : 16 -1];
+//integer init_sdcardcsd_idx;
+//initial begin
+//	for (init_sdcardcsd_idx = 0; init_sdcardcsd_idx < 16; init_sdcardcsd_idx = init_sdcardcsd_idx + 1)
+//		sdcardcsd[init_sdcardcsd_idx] = 0;
+//end
 
 always @ (posedge clk_i) begin
 	// Logic which set blkcnt_o to the block count
