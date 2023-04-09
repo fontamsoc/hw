@@ -150,16 +150,12 @@ reg  [(CLOG2MASTERCOUNT +1) -1 : 0] MASTERCOUNT__less_mstrhi_hold;
 reg [(CLOG2MASTERCOUNT +1) -1 : 0] queuereadidx  = 0;
 reg [(CLOG2MASTERCOUNT +1) -1 : 0] queuewriteidx = 0;
 
+wire [(CLOG2MASTERCOUNT +1) -1 : 0] queueusage = (queuewriteidx - queuereadidx);
+
 wire [(CLOG2MASTERCOUNT +1) -1 : 0] next_queuereadidx = ((queuereadidx[CLOG2MASTERCOUNT -1 : 0] < slvhi) ? (queuereadidx + 1'b1) : (queuereadidx + MASTERCOUNT__less_mstrhi_hold));
 wire [(CLOG2MASTERCOUNT +1) -1 : 0] next_queuewriteidx = ((queuewriteidx[CLOG2MASTERCOUNT -1 : 0] < mstrhi) ? (queuewriteidx + 1'b1) : (queuewriteidx + MASTERCOUNT__less_mstrhi));
 
-wire [(CLOG2MASTERCOUNT +1) -1 : 0] gray_next_queuereadidx = (next_queuereadidx ^ (next_queuereadidx >> 1));
-wire [(CLOG2MASTERCOUNT +1) -1 : 0] gray_next_queuewriteidx = (next_queuewriteidx ^ (next_queuewriteidx >> 1));
-
-reg [(CLOG2MASTERCOUNT +1) -1 : 0] gray_queuereadidx = 0;
-reg [(CLOG2MASTERCOUNT +1) -1 : 0] gray_queuewriteidx = 0;
-
-wire queueempty = (gray_queuewriteidx == gray_queuereadidx);
+wire queueempty = (queueusage == {(CLOG2MASTERCOUNT +1){1'b0}});
 
 wire [2 -1 : 0] queueop_w0;
 
@@ -238,25 +234,9 @@ dram #(
 // if it was for either of the operation PIRDOP or PIRWOP;
 // in fact the return value from the slave device for that
 // remaining queue element would still be pending.
-wire queuenearfull_;
-generate
-if (CLOG2MASTERCOUNT < 2) begin
-assign queuenearfull_ = (gray_next_queuewriteidx[CLOG2MASTERCOUNT:CLOG2MASTERCOUNT-1] == ~gray_queuereadidx[CLOG2MASTERCOUNT:CLOG2MASTERCOUNT-1]);
-end else begin
-assign queuenearfull_ = (gray_next_queuewriteidx[CLOG2MASTERCOUNT:CLOG2MASTERCOUNT-1] == ~gray_queuereadidx[CLOG2MASTERCOUNT:CLOG2MASTERCOUNT-1]) &&
-	(gray_next_queuewriteidx[CLOG2MASTERCOUNT-2:0] == gray_queuereadidx[CLOG2MASTERCOUNT-2:0]);
-end
-endgenerate
+wire queuenearfull_ = (queueusage == (MASTERCOUNT-1));
 
-wire queuefull;
-generate
-if (CLOG2MASTERCOUNT < 2) begin
-assign queuefull = (gray_queuewriteidx[CLOG2MASTERCOUNT:CLOG2MASTERCOUNT-1] == ~gray_queuereadidx[CLOG2MASTERCOUNT:CLOG2MASTERCOUNT-1]);
-end else begin
-assign queuefull = (gray_queuewriteidx[CLOG2MASTERCOUNT:CLOG2MASTERCOUNT-1] == ~gray_queuereadidx[CLOG2MASTERCOUNT:CLOG2MASTERCOUNT-1]) &&
-	(gray_queuewriteidx[CLOG2MASTERCOUNT-2:0] == gray_queuereadidx[CLOG2MASTERCOUNT-2:0]);
-end
-endgenerate
+wire queuefull = (queueusage == MASTERCOUNT);
 
 wire queuenearfull = (queuenearfull_ || queuefull);
 
@@ -305,7 +285,6 @@ always @ (posedge m_clk_i) begin
 		// Queue the memory operation and increment queuewriteidx
 		// to the next master device from which an operation
 		// for the slave device will be taken for queueing.
-		gray_queuewriteidx <= gray_next_queuewriteidx;
 		queuewriteidx <= next_queuewriteidx;
 		if (queuewriteidx[CLOG2MASTERCOUNT -1 : 0] < mstrhi) begin
 		end else if (queuewriteidx[CLOG2MASTERCOUNT -1 : 0] < mstrhinxt) begin
@@ -328,7 +307,6 @@ always @ (posedge s_clk_i) begin
 		// to execute when the current memory operation indexed
 		// by queuereadidx complete.
 		prevqueuereadidx <= queuereadidx[CLOG2MASTERCOUNT -1 : 0];
-		gray_queuereadidx <= gray_next_queuereadidx;
 		queuereadidx <= next_queuereadidx;
 		if (queuereadidx[CLOG2MASTERCOUNT -1 : 0] < slvhi) begin
 		end else begin
