@@ -243,7 +243,7 @@ reg [ADDRBITSZ -1 : 0] m_pi1_addr_i_hold;
 reg [ARCHBITSZ -1 : 0] m_pi1_data_i_hold;
 
 // Register used to hold the value of the input "m_pi1_sel_i".
-reg [(256/*ARCHBITSZ*//8) -1 : 0] m_pi1_sel_i_hold;
+reg [(ARCHBITSZ/8) -1 : 0] m_pi1_sel_i_hold;
 
 reg cenable_i_hold;
 
@@ -251,8 +251,8 @@ reg cenable_i_hold;
 // Note that cachemiss occurs only for PIRDOP.
 wire cenable_i_and_cachemiss = (FETCHALLONMISS && cenable_i_hold && cachemiss);
 
-wire [(256/*ARCHBITSZ*//8) -1 : 0] _m_pi1_sel_i_hold =
-	(cenable_i_and_cachemiss ? {ARCHBITSZ/8{1'b1}} : m_pi1_sel_i_hold[(ARCHBITSZ/8) -1 : 0]);
+wire [(ARCHBITSZ/8) -1 : 0] _m_pi1_sel_i_hold =
+	(cenable_i_and_cachemiss ? {(ARCHBITSZ/8){1'b1}} : m_pi1_sel_i_hold[(ARCHBITSZ/8) -1 : 0]);
 
 assign s_pi1_op_o   = {slvreadrdy, slvwriterdy};
 assign s_pi1_addr_o = ((slvreadrdy || (bufread_rst && !bufread_done && bufnearempty)) ? m_pi1_addr_i_hold : addrbufdato);
@@ -288,36 +288,36 @@ wire [CACHETAGBITSIZE -1 : 0] cachetago [CACHEWAYCOUNT -1 : 0];
 
 wire [ARCHBITSZ -1 : 0] cachedata = (slvreadrqstdone ? s_pi1_data_i : m_pi1_data_i_hold);
 
-// ### Net declared as reg so as to be useable by verilog within the always block.
-reg [ARCHBITSZ -1 : 0] cachedatibitsel;
-always @* begin
-	if (ARCHBITSZ == 16)
-		cachedatibitsel = {{8{m_pi1_sel_i_hold[1]}}, {8{m_pi1_sel_i_hold[0]}}};
-	else if (ARCHBITSZ == 32)
-		cachedatibitsel = {{8{m_pi1_sel_i_hold[3]}}, {8{m_pi1_sel_i_hold[2]}}, {8{m_pi1_sel_i_hold[1]}}, {8{m_pi1_sel_i_hold[0]}}};
-	else if (ARCHBITSZ == 64)
-		cachedatibitsel = {
-			{8{m_pi1_sel_i_hold[7]}}, {8{m_pi1_sel_i_hold[6]}}, {8{m_pi1_sel_i_hold[5]}}, {8{m_pi1_sel_i_hold[4]}},
-			{8{m_pi1_sel_i_hold[3]}}, {8{m_pi1_sel_i_hold[2]}}, {8{m_pi1_sel_i_hold[1]}}, {8{m_pi1_sel_i_hold[0]}}};
-	else if (ARCHBITSZ == 128)
-		cachedatibitsel = {
-			{8{m_pi1_sel_i_hold[15]}}, {8{m_pi1_sel_i_hold[14]}}, {8{m_pi1_sel_i_hold[13]}}, {8{m_pi1_sel_i_hold[12]}},
-			{8{m_pi1_sel_i_hold[11]}}, {8{m_pi1_sel_i_hold[10]}}, {8{m_pi1_sel_i_hold[9]}}, {8{m_pi1_sel_i_hold[8]}},
-			{8{m_pi1_sel_i_hold[7]}}, {8{m_pi1_sel_i_hold[6]}}, {8{m_pi1_sel_i_hold[5]}}, {8{m_pi1_sel_i_hold[4]}},
-			{8{m_pi1_sel_i_hold[3]}}, {8{m_pi1_sel_i_hold[2]}}, {8{m_pi1_sel_i_hold[1]}}, {8{m_pi1_sel_i_hold[0]}}};
-	else if (ARCHBITSZ == 256)
-		cachedatibitsel = {
-			{8{m_pi1_sel_i_hold[31]}}, {8{m_pi1_sel_i_hold[30]}}, {8{m_pi1_sel_i_hold[29]}}, {8{m_pi1_sel_i_hold[28]}},
-			{8{m_pi1_sel_i_hold[27]}}, {8{m_pi1_sel_i_hold[26]}}, {8{m_pi1_sel_i_hold[25]}}, {8{m_pi1_sel_i_hold[24]}},
-			{8{m_pi1_sel_i_hold[23]}}, {8{m_pi1_sel_i_hold[22]}}, {8{m_pi1_sel_i_hold[21]}}, {8{m_pi1_sel_i_hold[20]}},
-			{8{m_pi1_sel_i_hold[19]}}, {8{m_pi1_sel_i_hold[18]}}, {8{m_pi1_sel_i_hold[17]}}, {8{m_pi1_sel_i_hold[16]}},
-			{8{m_pi1_sel_i_hold[15]}}, {8{m_pi1_sel_i_hold[14]}}, {8{m_pi1_sel_i_hold[13]}}, {8{m_pi1_sel_i_hold[12]}},
-			{8{m_pi1_sel_i_hold[11]}}, {8{m_pi1_sel_i_hold[10]}}, {8{m_pi1_sel_i_hold[9]}}, {8{m_pi1_sel_i_hold[8]}},
-			{8{m_pi1_sel_i_hold[7]}}, {8{m_pi1_sel_i_hold[6]}}, {8{m_pi1_sel_i_hold[5]}}, {8{m_pi1_sel_i_hold[4]}},
-			{8{m_pi1_sel_i_hold[3]}}, {8{m_pi1_sel_i_hold[2]}}, {8{m_pi1_sel_i_hold[1]}}, {8{m_pi1_sel_i_hold[0]}}};
-	else
-		cachedatibitsel = {ARCHBITSZ{1'b0}};
-end
+wire [ARCHBITSZ -1 : 0] cachedatibitsel;
+generate if (ARCHBITSZ == 16) begin
+	assign cachedatibitsel = {{8{m_pi1_sel_i_hold[1]}}, {8{m_pi1_sel_i_hold[0]}}};
+end endgenerate
+generate if (ARCHBITSZ == 32) begin
+	assign cachedatibitsel = {{8{m_pi1_sel_i_hold[3]}}, {8{m_pi1_sel_i_hold[2]}}, {8{m_pi1_sel_i_hold[1]}}, {8{m_pi1_sel_i_hold[0]}}};
+end endgenerate
+generate if (ARCHBITSZ == 64) begin
+	assign cachedatibitsel = {
+		{8{m_pi1_sel_i_hold[7]}}, {8{m_pi1_sel_i_hold[6]}}, {8{m_pi1_sel_i_hold[5]}}, {8{m_pi1_sel_i_hold[4]}},
+		{8{m_pi1_sel_i_hold[3]}}, {8{m_pi1_sel_i_hold[2]}}, {8{m_pi1_sel_i_hold[1]}}, {8{m_pi1_sel_i_hold[0]}}};
+end endgenerate
+generate if (ARCHBITSZ == 128) begin
+	assign cachedatibitsel = {
+		{8{m_pi1_sel_i_hold[15]}}, {8{m_pi1_sel_i_hold[14]}}, {8{m_pi1_sel_i_hold[13]}}, {8{m_pi1_sel_i_hold[12]}},
+		{8{m_pi1_sel_i_hold[11]}}, {8{m_pi1_sel_i_hold[10]}}, {8{m_pi1_sel_i_hold[9]}}, {8{m_pi1_sel_i_hold[8]}},
+		{8{m_pi1_sel_i_hold[7]}}, {8{m_pi1_sel_i_hold[6]}}, {8{m_pi1_sel_i_hold[5]}}, {8{m_pi1_sel_i_hold[4]}},
+		{8{m_pi1_sel_i_hold[3]}}, {8{m_pi1_sel_i_hold[2]}}, {8{m_pi1_sel_i_hold[1]}}, {8{m_pi1_sel_i_hold[0]}}};
+end endgenerate
+generate if (ARCHBITSZ == 256) begin
+	assign cachedatibitsel = {
+		{8{m_pi1_sel_i_hold[31]}}, {8{m_pi1_sel_i_hold[30]}}, {8{m_pi1_sel_i_hold[29]}}, {8{m_pi1_sel_i_hold[28]}},
+		{8{m_pi1_sel_i_hold[27]}}, {8{m_pi1_sel_i_hold[26]}}, {8{m_pi1_sel_i_hold[25]}}, {8{m_pi1_sel_i_hold[24]}},
+		{8{m_pi1_sel_i_hold[23]}}, {8{m_pi1_sel_i_hold[22]}}, {8{m_pi1_sel_i_hold[21]}}, {8{m_pi1_sel_i_hold[20]}},
+		{8{m_pi1_sel_i_hold[19]}}, {8{m_pi1_sel_i_hold[18]}}, {8{m_pi1_sel_i_hold[17]}}, {8{m_pi1_sel_i_hold[16]}},
+		{8{m_pi1_sel_i_hold[15]}}, {8{m_pi1_sel_i_hold[14]}}, {8{m_pi1_sel_i_hold[13]}}, {8{m_pi1_sel_i_hold[12]}},
+		{8{m_pi1_sel_i_hold[11]}}, {8{m_pi1_sel_i_hold[10]}}, {8{m_pi1_sel_i_hold[9]}}, {8{m_pi1_sel_i_hold[8]}},
+		{8{m_pi1_sel_i_hold[7]}}, {8{m_pi1_sel_i_hold[6]}}, {8{m_pi1_sel_i_hold[5]}}, {8{m_pi1_sel_i_hold[4]}},
+		{8{m_pi1_sel_i_hold[3]}}, {8{m_pi1_sel_i_hold[2]}}, {8{m_pi1_sel_i_hold[1]}}, {8{m_pi1_sel_i_hold[0]}}};
+end endgenerate
 
 // Register used to hold cache-way index to write next.
 reg [CLOG2CACHEWAYCOUNT -1 : 0] cachewaywriteidx;
