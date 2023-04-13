@@ -221,7 +221,7 @@ localparam CLOG2ICACHEWAYCOUNT = clog2(ICACHEWAYCOUNT);
 localparam CLOG2TLBWAYCOUNT    = clog2(TLBWAYCOUNT);
 
 parameter ARCHBITSZ  = 16;
-parameter XARCHBITSZ = 16;
+parameter XARCHBITSZ = 16; // TODO: Support all the way up to 1024 ...
 
 localparam CLOG2ARCHBITSZ = clog2(ARCHBITSZ);
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
@@ -307,7 +307,6 @@ localparam ADDRWITHINPAGEBITSZ = (12-CLOG2ARCHBITSZBY8);
 localparam PAGENUMBITSZ = (ARCHBITSZ-12);
 
 localparam ARCHBITSZMAX = 64;
-localparam XARCHBITSZMAX = 256; // TODO: Support all the way up to 1024 ...
 
 assign intrdy_o = (inusermode && !isflagdisextintr && !dbgen);
 wire inhalt = (dohalt && inusermode && !dbgen);

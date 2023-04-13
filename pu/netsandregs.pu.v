@@ -55,7 +55,7 @@ reg[XARCHBITSZ -1 : 0] instrbuf[INSTRBUFFERSIZE -1 : 0];
 
 wire instrbufwe;
 
-wire[XARCHBITSZMAX -1 : 0] instrbufi;
+wire [XARCHBITSZ -1 : 0] instrbufi;
 
 // Write index within the instruction buffer.
 // Only the CLOG2INSTRBUFFERSIZE lsb are used for indexing.
@@ -68,145 +68,152 @@ wire[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufusage =
 wire [(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufusage2 =
 	(instrbufwriteidx - ipnxt[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) : ((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)]);
 
-wire [XARCHBITSZMAX -1 : 0] instrbufipnxt = instrbuf[ipnxt[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) -1 : (CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF]];
+wire [XARCHBITSZ -1 : 0] instrbufipnxt = instrbuf[ipnxt[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) -1 : (CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF]];
+
 // Net set to 16bits data indexed from instrbuf; note that instructions are 16bits.
-reg [16 -1 : 0] _instrbufipnxt; // ### declared as reg so as to be usable by verilog within the always block.
-always @* begin
-	_instrbufipnxt = {16{1'b0}};
-	if          (XARCHBITSZ == 16) begin
-		_instrbufipnxt = instrbufipnxt;
-	end else if (XARCHBITSZ == 32) begin
-		_instrbufipnxt = (
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] ? instrbufipnxt[31:16] :
-				                            instrbufipnxt[15:0]);
-	end else if (XARCHBITSZ == 64) begin
-		_instrbufipnxt = (
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufipnxt[15:0] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufipnxt[31:16] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufipnxt[47:32] :
-				                                 instrbufipnxt[63:48]);
-	end else if (XARCHBITSZ == 128) begin
-		_instrbufipnxt = (
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufipnxt[15:0] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufipnxt[31:16] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufipnxt[47:32] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufipnxt[63:48] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufipnxt[79:64] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufipnxt[95:80] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufipnxt[111:96] :
-				                                 instrbufipnxt[127:112]);
-	end else if (XARCHBITSZ == 256) begin
-		_instrbufipnxt = (
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufipnxt[15:0] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufipnxt[31:16] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufipnxt[47:32] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufipnxt[63:48] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufipnxt[79:64] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufipnxt[95:80] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufipnxt[111:96] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufipnxt[127:112] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufipnxt[143:128] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufipnxt[159:144] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufipnxt[175:160] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufipnxt[191:176] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufipnxt[207:192] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufipnxt[223:208] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufipnxt[239:224] :
-				                                  instrbufipnxt[255:240]);
-	end
-end
+wire [16 -1 : 0] _instrbufipnxt;
+generate if (XARCHBITSZ == 16) begin
+	assign _instrbufipnxt = instrbufipnxt;
+end endgenerate
+generate if (XARCHBITSZ == 32) begin
+	assign _instrbufipnxt = (
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] ?
+			instrbufipnxt[31:16] :
+			instrbufipnxt[15:0]);
+end endgenerate
+generate if (XARCHBITSZ == 64) begin
+	assign _instrbufipnxt = (
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufipnxt[15:0] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufipnxt[31:16] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufipnxt[47:32] :
+		                                         instrbufipnxt[63:48]);
+end endgenerate
+generate if (XARCHBITSZ == 128) begin
+	assign _instrbufipnxt = (
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufipnxt[15:0] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufipnxt[31:16] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufipnxt[47:32] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufipnxt[63:48] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufipnxt[79:64] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufipnxt[95:80] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufipnxt[111:96] :
+		                                         instrbufipnxt[127:112]);
+end endgenerate
+generate if (XARCHBITSZ == 256) begin
+	assign _instrbufipnxt = (
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufipnxt[15:0] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufipnxt[31:16] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufipnxt[47:32] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufipnxt[63:48] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufipnxt[79:64] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufipnxt[95:80] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufipnxt[111:96] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufipnxt[127:112] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufipnxt[143:128] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufipnxt[159:144] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufipnxt[175:160] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufipnxt[191:176] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufipnxt[207:192] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufipnxt[223:208] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufipnxt[239:224] :
+		                                          instrbufipnxt[255:240]);
+end endgenerate
 
-reg [16 -1 : 0] _instrbufi; // ### declared as reg so as to be usable by verilog within the always block.
-always @* begin
-	_instrbufi = {16{1'b0}};
-	if          (XARCHBITSZ == 16) begin
-		_instrbufi = instrbufi;
-	end else if (XARCHBITSZ == 32) begin
-		_instrbufi = (
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] ? instrbufi[31:16] :
-				                         instrbufi[15:0]);
-	end else if (XARCHBITSZ == 64) begin
-		_instrbufi = (
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
-				                              instrbufi[63:48]);
-	end else if (XARCHBITSZ == 128) begin
-		_instrbufi = (
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufi[63:48] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufi[79:64] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufi[95:80] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufi[111:96] :
-				                              instrbufi[127:112]);
-	end else if (XARCHBITSZ == 256) begin
-		_instrbufi = (
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufi[15:0] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufi[31:16] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufi[47:32] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufi[63:48] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufi[79:64] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufi[95:80] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufi[111:96] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufi[127:112] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufi[143:128] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufi[159:144] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufi[175:160] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufi[191:176] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufi[207:192] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufi[223:208] :
-			ip[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufi[239:224] :
-				                               instrbufi[255:240]);
-	end
-end
+wire [16 -1 : 0] _instrbufi;
+generate if (XARCHBITSZ == 16) begin
+	assign _instrbufi = instrbufi;
+end endgenerate
+generate if (XARCHBITSZ == 32) begin
+	assign _instrbufi = (
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] ?
+			instrbufi[31:16] :
+			instrbufi[15:0]);
+end endgenerate
+generate if (XARCHBITSZ == 64) begin
+	assign _instrbufi = (
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
+		                                      instrbufi[63:48]);
+end endgenerate
+generate if (XARCHBITSZ == 128) begin
+	assign _instrbufi = (
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufi[63:48] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufi[79:64] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufi[95:80] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufi[111:96] :
+		                                      instrbufi[127:112]);
+end endgenerate
+generate if (XARCHBITSZ == 256) begin
+	assign _instrbufi = (
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufi[15:0] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufi[31:16] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufi[47:32] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufi[63:48] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufi[79:64] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufi[95:80] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufi[111:96] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufi[127:112] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufi[143:128] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufi[159:144] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufi[175:160] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufi[191:176] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufi[207:192] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufi[223:208] :
+		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufi[239:224] :
+		                                       instrbufi[255:240]);
+end endgenerate
 
-reg [16 -1 : 0] _instrbufi2; // ### declared as reg so as to be usable by verilog within the always block.
-always @* begin
-	_instrbufi2 = {16{1'b0}};
-	if          (XARCHBITSZ == 16) begin
-		_instrbufi2 = instrbufi;
-	end else if (XARCHBITSZ == 32) begin
-		_instrbufi2 = (
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] ? instrbufi[31:16] :
-				                            instrbufi[15:0]);
-	end else if (XARCHBITSZ == 64) begin
-		_instrbufi2 = (
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
-				                                 instrbufi[63:48]);
-	end else if (XARCHBITSZ == 128) begin
-		_instrbufi2 = (
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufi[63:48] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufi[79:64] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufi[95:80] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufi[111:96] :
-				                                 instrbufi[127:112]);
-	end else if (XARCHBITSZ == 256) begin
-		_instrbufi2 = (
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufi[15:0] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufi[31:16] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufi[47:32] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufi[63:48] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufi[79:64] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufi[95:80] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufi[111:96] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufi[127:112] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufi[143:128] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufi[159:144] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufi[175:160] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufi[191:176] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufi[207:192] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufi[223:208] :
-			ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufi[239:224] :
-				                                  instrbufi[255:240]);
-	end
-end
+wire [16 -1 : 0] _instrbufi2;
+generate if (XARCHBITSZ == 16) begin
+	assign _instrbufi2 = instrbufi;
+end endgenerate
+generate if (XARCHBITSZ == 32) begin
+	assign _instrbufi2 = (
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] ?
+			instrbufi[31:16] :
+			instrbufi[15:0]);
+end endgenerate
+generate if (XARCHBITSZ == 64) begin
+	assign _instrbufi2 = (
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
+		                                         instrbufi[63:48]);
+end endgenerate
+generate if (XARCHBITSZ == 128) begin
+	assign _instrbufi2 = (
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufi[63:48] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufi[79:64] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufi[95:80] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufi[111:96] :
+		                                         instrbufi[127:112]);
+end endgenerate
+generate if (XARCHBITSZ == 256) begin
+	assign _instrbufi2 = (
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufi[15:0] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufi[31:16] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufi[47:32] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufi[63:48] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufi[79:64] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufi[95:80] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufi[111:96] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufi[127:112] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufi[143:128] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufi[159:144] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufi[175:160] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufi[191:176] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufi[207:192] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufi[223:208] :
+		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufi[239:224] :
+		                                          instrbufi[255:240]);
+end endgenerate
 
 wire [16 -1 : 0] sc1insn2 = (|instrbufusage2 ? _instrbufipnxt : _instrbufi2);
 
@@ -1068,237 +1075,249 @@ wire [(CLOG2INSTRBUFFERSIZE +1) -1 : 0] sc2instrbufusage2 =
 wire [(CLOG2INSTRBUFFERSIZE +1) -1 : 0] sc2instrbufusage3 =
 	(instrbufwriteidx - sc2ip3[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) : ((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)]);
 
-wire [XARCHBITSZMAX -1 : 0] sc2instrbufipnxt = instrbuf[sc2ipnxt[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) -1 : (CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF]];
-reg [16 -1 : 0] _sc2instrbufipnxt; // ### declared as reg so as to be usable by verilog within the always block.
-always @* begin
-	_sc2instrbufipnxt = {16{1'b0}};
-	if          (XARCHBITSZ == 16) begin
-		_sc2instrbufipnxt = sc2instrbufipnxt;
-	end else if (XARCHBITSZ == 32) begin
-		_sc2instrbufipnxt = (
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] ? sc2instrbufipnxt[31:16] :
-				                               sc2instrbufipnxt[15:0]);
-	end else if (XARCHBITSZ == 64) begin
-		_sc2instrbufipnxt = (
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? sc2instrbufipnxt[15:0] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? sc2instrbufipnxt[31:16] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? sc2instrbufipnxt[47:32] :
-				                                    sc2instrbufipnxt[63:48]);
-	end else if (XARCHBITSZ == 128) begin
-		_sc2instrbufipnxt = (
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? sc2instrbufipnxt[15:0] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? sc2instrbufipnxt[31:16] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? sc2instrbufipnxt[47:32] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? sc2instrbufipnxt[63:48] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? sc2instrbufipnxt[79:64] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? sc2instrbufipnxt[95:80] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? sc2instrbufipnxt[111:96] :
-				                                    sc2instrbufipnxt[127:112]);
-	end else if (XARCHBITSZ == 256) begin
-		_sc2instrbufipnxt = (
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? sc2instrbufipnxt[15:0] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? sc2instrbufipnxt[31:16] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? sc2instrbufipnxt[47:32] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? sc2instrbufipnxt[63:48] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? sc2instrbufipnxt[79:64] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? sc2instrbufipnxt[95:80] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? sc2instrbufipnxt[111:96] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? sc2instrbufipnxt[127:112] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? sc2instrbufipnxt[143:128] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? sc2instrbufipnxt[159:144] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? sc2instrbufipnxt[175:160] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? sc2instrbufipnxt[191:176] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? sc2instrbufipnxt[207:192] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? sc2instrbufipnxt[223:208] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? sc2instrbufipnxt[239:224] :
-				                                     sc2instrbufipnxt[255:240]);
-	end
-end
+wire [XARCHBITSZ -1 : 0] sc2instrbufipnxt = instrbuf[sc2ipnxt[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) -1 : (CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF]];
 
-wire [XARCHBITSZMAX -1 : 0] sc2instrbufip3 = instrbuf[sc2ip3[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) -1 : (CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF]];
-reg [16 -1 : 0] _sc2instrbufip3; // ### declared as reg so as to be usable by verilog within the always block.
-always @* begin
-	_sc2instrbufip3 = {16{1'b0}};
-	if          (XARCHBITSZ == 16) begin
-		_sc2instrbufip3 = sc2instrbufip3;
-	end else if (XARCHBITSZ == 32) begin
-		_sc2instrbufip3 = (
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] ? sc2instrbufip3[31:16] :
-				                             sc2instrbufip3[15:0]);
-	end else if (XARCHBITSZ == 64) begin
-		_sc2instrbufip3 = (
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? sc2instrbufip3[15:0] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? sc2instrbufip3[31:16] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? sc2instrbufip3[47:32] :
-				                                  sc2instrbufip3[63:48]);
-	end else if (XARCHBITSZ == 128) begin
-		_sc2instrbufip3 = (
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? sc2instrbufip3[15:0] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? sc2instrbufip3[31:16] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? sc2instrbufip3[47:32] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? sc2instrbufip3[63:48] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? sc2instrbufip3[79:64] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? sc2instrbufip3[95:80] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? sc2instrbufip3[111:96] :
-				                                  sc2instrbufip3[127:112]);
-	end else if (XARCHBITSZ == 256) begin
-		_sc2instrbufip3 = (
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? sc2instrbufip3[15:0] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? sc2instrbufip3[31:16] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? sc2instrbufip3[47:32] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? sc2instrbufip3[63:48] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? sc2instrbufip3[79:64] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? sc2instrbufip3[95:80] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? sc2instrbufip3[111:96] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? sc2instrbufip3[127:112] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? sc2instrbufip3[143:128] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? sc2instrbufip3[159:144] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? sc2instrbufip3[175:160] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? sc2instrbufip3[191:176] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? sc2instrbufip3[207:192] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? sc2instrbufip3[223:208] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? sc2instrbufip3[239:224] :
-				                                   sc2instrbufip3[255:240]);
-	end
-end
+wire [16 -1 : 0] _sc2instrbufipnxt;
+generate if (XARCHBITSZ == 16) begin
+	assign _sc2instrbufipnxt = sc2instrbufipnxt;
+end endgenerate
+generate if (XARCHBITSZ == 32) begin
+	assign _sc2instrbufipnxt = (
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] ?
+			sc2instrbufipnxt[31:16] :
+			sc2instrbufipnxt[15:0]);
+end endgenerate
+generate if (XARCHBITSZ == 64) begin
+	assign _sc2instrbufipnxt = (
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? sc2instrbufipnxt[15:0] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? sc2instrbufipnxt[31:16] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? sc2instrbufipnxt[47:32] :
+		                                            sc2instrbufipnxt[63:48]);
+end endgenerate
+generate if (XARCHBITSZ == 128) begin
+	assign _sc2instrbufipnxt = (
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? sc2instrbufipnxt[15:0] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? sc2instrbufipnxt[31:16] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? sc2instrbufipnxt[47:32] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? sc2instrbufipnxt[63:48] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? sc2instrbufipnxt[79:64] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? sc2instrbufipnxt[95:80] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? sc2instrbufipnxt[111:96] :
+		                                            sc2instrbufipnxt[127:112]);
+end endgenerate
+generate if (XARCHBITSZ == 256) begin
+	assign _sc2instrbufipnxt = (
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? sc2instrbufipnxt[15:0] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? sc2instrbufipnxt[31:16] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? sc2instrbufipnxt[47:32] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? sc2instrbufipnxt[63:48] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? sc2instrbufipnxt[79:64] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? sc2instrbufipnxt[95:80] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? sc2instrbufipnxt[111:96] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? sc2instrbufipnxt[127:112] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? sc2instrbufipnxt[143:128] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? sc2instrbufipnxt[159:144] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? sc2instrbufipnxt[175:160] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? sc2instrbufipnxt[191:176] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? sc2instrbufipnxt[207:192] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? sc2instrbufipnxt[223:208] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? sc2instrbufipnxt[239:224] :
+		                                             sc2instrbufipnxt[255:240]);
+end endgenerate
 
-reg [16 -1 : 0] _sc2instrbufi; // ### declared as reg so as to be usable by verilog within the always block.
-always @* begin
-	_sc2instrbufi = {16{1'b0}};
-	if          (XARCHBITSZ == 16) begin
-		_sc2instrbufi = instrbufi;
-	end else if (XARCHBITSZ == 32) begin
-		_sc2instrbufi = (
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] ? instrbufi[31:16] :
-				                            instrbufi[15:0]);
-	end else if (XARCHBITSZ == 64) begin
-		_sc2instrbufi = (
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
-				                                 instrbufi[63:48]);
-	end else if (XARCHBITSZ == 128) begin
-		_sc2instrbufi = (
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufi[63:48] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufi[79:64] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufi[95:80] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufi[111:96] :
-				                                 instrbufi[127:112]);
-	end else if (XARCHBITSZ == 256) begin
-		_sc2instrbufi = (
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufi[15:0] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufi[31:16] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufi[47:32] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufi[63:48] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufi[79:64] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufi[95:80] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufi[111:96] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufi[127:112] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufi[143:128] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufi[159:144] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufi[175:160] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufi[191:176] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufi[207:192] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufi[223:208] :
-			sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufi[239:224] :
-				                                  instrbufi[255:240]);
-	end
-end
+wire [XARCHBITSZ -1 : 0] sc2instrbufip3 = instrbuf[sc2ip3[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) -1 : (CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF]];
 
-reg [16 -1 : 0] _sc2instrbufi2; // ### declared as reg so as to be usable by verilog within the always block.
-always @* begin
-	_sc2instrbufi2 = {16{1'b0}};
-	if          (XARCHBITSZ == 16) begin
-		_sc2instrbufi2 = instrbufi;
-	end else if (XARCHBITSZ == 32) begin
-		_sc2instrbufi2 = (
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] ? instrbufi[31:16] :
-				                               instrbufi[15:0]);
-	end else if (XARCHBITSZ == 64) begin
-		_sc2instrbufi2 = (
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
-				                                    instrbufi[63:48]);
-	end else if (XARCHBITSZ == 128) begin
-		_sc2instrbufi2 = (
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufi[63:48] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufi[79:64] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufi[95:80] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufi[111:96] :
-				                                    instrbufi[127:112]);
-	end else if (XARCHBITSZ == 256) begin
-		_sc2instrbufi2 = (
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufi[15:0] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufi[31:16] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufi[47:32] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufi[63:48] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufi[79:64] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufi[95:80] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufi[111:96] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufi[127:112] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufi[143:128] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufi[159:144] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufi[175:160] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufi[191:176] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufi[207:192] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufi[223:208] :
-			sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufi[239:224] :
-				                                     instrbufi[255:240]);
-	end
-end
+wire [16 -1 : 0] _sc2instrbufip3;
+generate if (XARCHBITSZ == 16) begin
+	assign _sc2instrbufip3 = sc2instrbufip3;
+end endgenerate
+generate if (XARCHBITSZ == 32) begin
+	assign _sc2instrbufip3 = (
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] ?
+			sc2instrbufip3[31:16] :
+			sc2instrbufip3[15:0]);
+end endgenerate
+generate if (XARCHBITSZ == 64) begin
+	assign _sc2instrbufip3 = (
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? sc2instrbufip3[15:0] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? sc2instrbufip3[31:16] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? sc2instrbufip3[47:32] :
+		                                          sc2instrbufip3[63:48]);
+end endgenerate
+generate if (XARCHBITSZ == 128) begin
+	assign _sc2instrbufip3 = (
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? sc2instrbufip3[15:0] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? sc2instrbufip3[31:16] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? sc2instrbufip3[47:32] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? sc2instrbufip3[63:48] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? sc2instrbufip3[79:64] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? sc2instrbufip3[95:80] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? sc2instrbufip3[111:96] :
+		                                          sc2instrbufip3[127:112]);
+end endgenerate
+generate if (XARCHBITSZ == 256) begin
+	assign _sc2instrbufip3 = (
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? sc2instrbufip3[15:0] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? sc2instrbufip3[31:16] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? sc2instrbufip3[47:32] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? sc2instrbufip3[63:48] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? sc2instrbufip3[79:64] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? sc2instrbufip3[95:80] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? sc2instrbufip3[111:96] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? sc2instrbufip3[127:112] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? sc2instrbufip3[143:128] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? sc2instrbufip3[159:144] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? sc2instrbufip3[175:160] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? sc2instrbufip3[191:176] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? sc2instrbufip3[207:192] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? sc2instrbufip3[223:208] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? sc2instrbufip3[239:224] :
+		                                           sc2instrbufip3[255:240]);
+end endgenerate
 
-reg [16 -1 : 0] _sc2instrbufi3; // ### declared as reg so as to be usable by verilog within the always block.
-always @* begin
-	_sc2instrbufi3 = {16{1'b0}};
-	if          (XARCHBITSZ == 16) begin
-		_sc2instrbufi3 = instrbufi;
-	end else if (XARCHBITSZ == 32) begin
-		_sc2instrbufi3 = (
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] ? instrbufi[31:16] :
-				                             instrbufi[15:0]);
-	end else if (XARCHBITSZ == 64) begin
-		_sc2instrbufi3 = (
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
-				                                  instrbufi[63:48]);
-	end else if (XARCHBITSZ == 128) begin
-		_sc2instrbufi3 = (
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufi[63:48] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufi[79:64] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufi[95:80] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufi[111:96] :
-				                                  instrbufi[127:112]);
-	end else if (XARCHBITSZ == 256) begin
-		_sc2instrbufi3 = (
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufi[15:0] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufi[31:16] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufi[47:32] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufi[63:48] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufi[79:64] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufi[95:80] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufi[111:96] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufi[127:112] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufi[143:128] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufi[159:144] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufi[175:160] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufi[191:176] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufi[207:192] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufi[223:208] :
-			sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufi[239:224] :
-				                                   instrbufi[255:240]);
-	end
-end
+wire [16 -1 : 0] _sc2instrbufi;
+generate if (XARCHBITSZ == 16) begin
+	assign _sc2instrbufi = instrbufi;
+end endgenerate
+generate if (XARCHBITSZ == 32) begin
+	assign _sc2instrbufi = (
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] ?
+			instrbufi[31:16] :
+			instrbufi[15:0]);
+end endgenerate
+generate if (XARCHBITSZ == 64) begin
+	assign _sc2instrbufi = (
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
+		                                         instrbufi[63:48]);
+end endgenerate
+generate if (XARCHBITSZ == 128) begin
+	assign _sc2instrbufi = (
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufi[63:48] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufi[79:64] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufi[95:80] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufi[111:96] :
+		                                         instrbufi[127:112]);
+end endgenerate
+generate if (XARCHBITSZ == 256) begin
+	assign _sc2instrbufi = (
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufi[15:0] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufi[31:16] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufi[47:32] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufi[63:48] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufi[79:64] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufi[95:80] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufi[111:96] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufi[127:112] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufi[143:128] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufi[159:144] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufi[175:160] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufi[191:176] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufi[207:192] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufi[223:208] :
+		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufi[239:224] :
+		                                          instrbufi[255:240]);
+end endgenerate
+
+wire [16 -1 : 0] _sc2instrbufi2;
+generate if (XARCHBITSZ == 16) begin
+	assign _sc2instrbufi2 = instrbufi;
+end endgenerate
+generate if (XARCHBITSZ == 32) begin
+	assign _sc2instrbufi2 = (
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] ?
+			instrbufi[31:16] :
+			instrbufi[15:0]);
+end endgenerate
+generate if (XARCHBITSZ == 64) begin
+	assign _sc2instrbufi2 = (
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
+		                                            instrbufi[63:48]);
+end endgenerate
+generate if (XARCHBITSZ == 128) begin
+	assign _sc2instrbufi2 = (
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufi[63:48] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufi[79:64] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufi[95:80] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufi[111:96] :
+		                                            instrbufi[127:112]);
+end endgenerate
+generate if (XARCHBITSZ == 256) begin
+	assign _sc2instrbufi2 = (
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufi[15:0] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufi[31:16] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufi[47:32] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufi[63:48] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufi[79:64] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufi[95:80] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufi[111:96] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufi[127:112] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufi[143:128] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufi[159:144] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufi[175:160] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufi[191:176] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufi[207:192] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufi[223:208] :
+		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufi[239:224] :
+		                                             instrbufi[255:240]);
+end endgenerate
+
+wire [16 -1 : 0] _sc2instrbufi3;
+generate if (XARCHBITSZ == 16) begin
+	assign _sc2instrbufi3 = instrbufi;
+end endgenerate
+generate if (XARCHBITSZ == 32) begin
+	assign _sc2instrbufi3 = (
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] ?
+			instrbufi[31:16] :
+			instrbufi[15:0]);
+end endgenerate
+generate if (XARCHBITSZ == 64) begin
+	assign _sc2instrbufi3 = (
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
+		                                          instrbufi[63:48]);
+end endgenerate
+generate if (XARCHBITSZ == 128) begin
+	assign _sc2instrbufi3 = (
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufi[63:48] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufi[79:64] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufi[95:80] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufi[111:96] :
+		                                          instrbufi[127:112]);
+end endgenerate
+generate if (XARCHBITSZ == 256) begin
+	assign _sc2instrbufi3 = (
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufi[15:0] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufi[31:16] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufi[47:32] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufi[63:48] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufi[79:64] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufi[95:80] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufi[111:96] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufi[127:112] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufi[143:128] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufi[159:144] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufi[175:160] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufi[191:176] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufi[207:192] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufi[223:208] :
+		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufi[239:224] :
+		                                           instrbufi[255:240]);
+end endgenerate
 
 wire [16 -1 : 0] sc2insn2 = (|sc2instrbufusage2 ? _sc2instrbufipnxt : _sc2instrbufi2);
 wire [16 -1 : 0] sc2insn3 = (|sc2instrbufusage3 ? _sc2instrbufip3   : _sc2instrbufi3);
