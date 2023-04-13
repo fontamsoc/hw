@@ -232,7 +232,7 @@ reg [2 -1 : 0] masteropsaved;
 always @ (posedge clk_i) begin
 	if (rst_i)
 		masteropsaved <= PINOOP;
-	if (masterrdymasteridx)
+	else if (masterrdymasteridx)
 		masteropsaved <= masteropmasteridx;
 end
 
