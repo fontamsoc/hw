@@ -109,37 +109,36 @@ initial begin
 	end
 end
 
-wire [(256/*ARCHBITSZ*//8) -1 : 0] _wb4_sel_i = wb4_sel_i;
-// ### Net declared as reg so as to be useable by verilog within the always block.
-reg [ARCHBITSZ -1 : 0] sel_w;
-always @* begin
-	if (ARCHBITSZ == 16)
-		sel_w = {{8{_wb4_sel_i[1]}}, {8{_wb4_sel_i[0]}}};
-	else if (ARCHBITSZ == 32)
-		sel_w = {{8{_wb4_sel_i[3]}}, {8{_wb4_sel_i[2]}}, {8{_wb4_sel_i[1]}}, {8{_wb4_sel_i[0]}}};
-	else if (ARCHBITSZ == 64)
-		sel_w = {
-			{8{_wb4_sel_i[7]}}, {8{_wb4_sel_i[6]}}, {8{_wb4_sel_i[5]}}, {8{_wb4_sel_i[4]}},
-			{8{_wb4_sel_i[3]}}, {8{_wb4_sel_i[2]}}, {8{_wb4_sel_i[1]}}, {8{_wb4_sel_i[0]}}};
-	else if (ARCHBITSZ == 128)
-		sel_w = {
-			{8{_wb4_sel_i[15]}}, {8{_wb4_sel_i[14]}}, {8{_wb4_sel_i[13]}}, {8{_wb4_sel_i[12]}},
-			{8{_wb4_sel_i[11]}}, {8{_wb4_sel_i[10]}}, {8{_wb4_sel_i[9]}}, {8{_wb4_sel_i[8]}},
-			{8{_wb4_sel_i[7]}}, {8{_wb4_sel_i[6]}}, {8{_wb4_sel_i[5]}}, {8{_wb4_sel_i[4]}},
-			{8{_wb4_sel_i[3]}}, {8{_wb4_sel_i[2]}}, {8{_wb4_sel_i[1]}}, {8{_wb4_sel_i[0]}}};
-	else if (ARCHBITSZ == 256)
-		sel_w = {
-			{8{_wb4_sel_i[31]}}, {8{_wb4_sel_i[30]}}, {8{_wb4_sel_i[29]}}, {8{_wb4_sel_i[28]}},
-			{8{_wb4_sel_i[27]}}, {8{_wb4_sel_i[26]}}, {8{_wb4_sel_i[25]}}, {8{_wb4_sel_i[24]}},
-			{8{_wb4_sel_i[23]}}, {8{_wb4_sel_i[22]}}, {8{_wb4_sel_i[21]}}, {8{_wb4_sel_i[20]}},
-			{8{_wb4_sel_i[19]}}, {8{_wb4_sel_i[18]}}, {8{_wb4_sel_i[17]}}, {8{_wb4_sel_i[16]}},
-			{8{_wb4_sel_i[15]}}, {8{_wb4_sel_i[14]}}, {8{_wb4_sel_i[13]}}, {8{_wb4_sel_i[12]}},
-			{8{_wb4_sel_i[11]}}, {8{_wb4_sel_i[10]}}, {8{_wb4_sel_i[9]}}, {8{_wb4_sel_i[8]}},
-			{8{_wb4_sel_i[7]}}, {8{_wb4_sel_i[6]}}, {8{_wb4_sel_i[5]}}, {8{_wb4_sel_i[4]}},
-			{8{_wb4_sel_i[3]}}, {8{_wb4_sel_i[2]}}, {8{_wb4_sel_i[1]}}, {8{_wb4_sel_i[0]}}};
-	else
-		sel_w = {ARCHBITSZ{1'b0}};
-end
+wire [ARCHBITSZ -1 : 0] sel_w;
+generate if (ARCHBITSZ == 16) begin
+	assign sel_w = {{8{wb4_sel_i[1]}}, {8{wb4_sel_i[0]}}};
+end endgenerate
+generate if (ARCHBITSZ == 32) begin
+	assign sel_w = {{8{wb4_sel_i[3]}}, {8{wb4_sel_i[2]}}, {8{wb4_sel_i[1]}}, {8{wb4_sel_i[0]}}};
+end endgenerate
+generate if (ARCHBITSZ == 64) begin
+	assign sel_w = {
+		{8{wb4_sel_i[7]}}, {8{wb4_sel_i[6]}}, {8{wb4_sel_i[5]}}, {8{wb4_sel_i[4]}},
+		{8{wb4_sel_i[3]}}, {8{wb4_sel_i[2]}}, {8{wb4_sel_i[1]}}, {8{wb4_sel_i[0]}}};
+end endgenerate
+generate if (ARCHBITSZ == 128) begin
+	assign sel_w = {
+		{8{wb4_sel_i[15]}}, {8{wb4_sel_i[14]}}, {8{wb4_sel_i[13]}}, {8{wb4_sel_i[12]}},
+		{8{wb4_sel_i[11]}}, {8{wb4_sel_i[10]}}, {8{wb4_sel_i[9]}}, {8{wb4_sel_i[8]}},
+		{8{wb4_sel_i[7]}}, {8{wb4_sel_i[6]}}, {8{wb4_sel_i[5]}}, {8{wb4_sel_i[4]}},
+		{8{wb4_sel_i[3]}}, {8{wb4_sel_i[2]}}, {8{wb4_sel_i[1]}}, {8{wb4_sel_i[0]}}};
+end endgenerate
+generate if (ARCHBITSZ == 256) begin
+	assign sel_w = {
+		{8{wb4_sel_i[31]}}, {8{wb4_sel_i[30]}}, {8{wb4_sel_i[29]}}, {8{wb4_sel_i[28]}},
+		{8{wb4_sel_i[27]}}, {8{wb4_sel_i[26]}}, {8{wb4_sel_i[25]}}, {8{wb4_sel_i[24]}},
+		{8{wb4_sel_i[23]}}, {8{wb4_sel_i[22]}}, {8{wb4_sel_i[21]}}, {8{wb4_sel_i[20]}},
+		{8{wb4_sel_i[19]}}, {8{wb4_sel_i[18]}}, {8{wb4_sel_i[17]}}, {8{wb4_sel_i[16]}},
+		{8{wb4_sel_i[15]}}, {8{wb4_sel_i[14]}}, {8{wb4_sel_i[13]}}, {8{wb4_sel_i[12]}},
+		{8{wb4_sel_i[11]}}, {8{wb4_sel_i[10]}}, {8{wb4_sel_i[9]}}, {8{wb4_sel_i[8]}},
+		{8{wb4_sel_i[7]}}, {8{wb4_sel_i[6]}}, {8{wb4_sel_i[5]}}, {8{wb4_sel_i[4]}},
+		{8{wb4_sel_i[3]}}, {8{wb4_sel_i[2]}}, {8{wb4_sel_i[1]}}, {8{wb4_sel_i[0]}}};
+end endgenerate
 
 wire [ADDRBITSZ -1 : 0] addr_w = wb4_addr_i[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8];
 
