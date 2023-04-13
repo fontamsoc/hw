@@ -306,8 +306,6 @@ localparam ADDRWITHINPAGEBITSZ = (12-CLOG2ARCHBITSZBY8);
 // Number of bits in a page number.
 localparam PAGENUMBITSZ = (ARCHBITSZ-12);
 
-localparam ARCHBITSZMAX = 64;
-
 assign intrdy_o = (inusermode && !isflagdisextintr && !dbgen);
 wire inhalt = (dohalt && inusermode && !dbgen);
 assign halted_o = (inhalt && !isflagdisextintr);

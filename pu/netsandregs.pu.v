@@ -353,12 +353,12 @@ wire[ARCHBITSZ -1 : 0] gprdata2;
 
 reg[2 -1 : 0] dcachemasterop; // ### declared as reg so as to be usable by verilog within the always block.
 reg[ADDRBITSZ -1 : 0] dcachemasteraddr; // ### declared as reg so as to be usable by verilog within the always block.
-wire[ARCHBITSZMAX -1 : 0] dcachemasterdato;
-reg[ARCHBITSZMAX -1 : 0] dcachemasterdato_result; // ### declared as reg so as to be usable by verilog within the always block.
-reg[ARCHBITSZMAX -1 : 0] dcachemasterdati; // ### declared as reg so as to be usable by verilog within the always block.
-reg[(ARCHBITSZMAX/8) -1 : 0] dcachemastersel_; // ### declared as reg so as to be usable by verilog within the always block.
-reg[(ARCHBITSZMAX/8) -1 : 0] dcachemastersel; // ### declared as reg so as to be usable by verilog within the always block.
-reg[(ARCHBITSZMAX/8) -1 : 0] dcachemastersel_saved;
+wire[ARCHBITSZ -1 : 0] dcachemasterdato;
+wire[ARCHBITSZ -1 : 0] dcachemasterdato_result;
+reg[ARCHBITSZ -1 : 0] dcachemasterdati; // ### declared as reg so as to be usable by verilog within the always block.
+reg[(ARCHBITSZ/8) -1 : 0] dcachemastersel_; // ### declared as reg so as to be usable by verilog within the always block.
+reg[(ARCHBITSZ/8) -1 : 0] dcachemastersel; // ### declared as reg so as to be usable by verilog within the always block.
+reg[(ARCHBITSZ/8) -1 : 0] dcachemastersel_saved;
 wire dcachemasterrdy;
 
 wire[2 -1 : 0] dcacheslaveop;
@@ -1477,29 +1477,28 @@ reg[ARCHBITSZ -1 : 0] opligprdata1;
 reg[2 -1 : 0] oplitype;
 
 // Register used to store the least significant bits of the immediate being loaded.
-reg[(ARCHBITSZMAX -16) -1 : 0] oplilsb;
+reg [(ARCHBITSZ -16) -1 : 0] oplilsb;
 
 // Net that get set to the immediate loaded.
-reg [ARCHBITSZMAX -1 : 0] opliresult_; // ### declared as reg so as to be usable by verilog within the always block.
-always @* begin
-	opliresult_ = {ARCHBITSZMAX{1'b0}};
-	if          (ARCHBITSZ == 16) begin
-		opliresult_ = ({instrbufdato1, instrbufdato0});
-	end else if (ARCHBITSZ == 32) begin
-		opliresult_ = (
-			(oplitype == 1) ? {{(ARCHBITSZ-16){instrbufdato1[7]}}, instrbufdato1, instrbufdato0} :
-			/* (oplitype == 2) */{instrbufdato1, instrbufdato0, oplilsb[((16*(0+1))-1):(16*(0))]});
-	end else if (ARCHBITSZ == 64) begin
-		opliresult_ = (
-			(oplitype == 1) ? {{(ARCHBITSZ-16){instrbufdato1[7]}}, instrbufdato1, instrbufdato0} :
-			(oplitype == 2) ? {{(ARCHBITSZ-32){instrbufdato1[7]}}, instrbufdato1, instrbufdato0,
-				oplilsb[((16*(0+1))-1):(16*(0))]} :
-			/* (oplitype == 3) */{instrbufdato1, instrbufdato0,
-				oplilsb[((16*(0+1))-1):(16*(0))], oplilsb[((16*(1+1))-1):(16*(1))],
-				oplilsb[((16*(2+1))-1):(16*(2))]});
-	end
-end
-wire [ARCHBITSZMAX -1 : 0] opliresult = (
+wire [ARCHBITSZ -1 : 0] opliresult_;
+generate if (ARCHBITSZ == 16) begin
+	assign opliresult_ = ({instrbufdato1, instrbufdato0});
+end endgenerate
+generate if (ARCHBITSZ == 32) begin
+	assign opliresult_ = (
+		(oplitype == 1) ? {{(ARCHBITSZ-16){instrbufdato1[7]}}, instrbufdato1, instrbufdato0} :
+		/* (oplitype == 2) */{instrbufdato1, instrbufdato0, oplilsb[((16*(0+1))-1):(16*(0))]});
+end endgenerate
+generate if (ARCHBITSZ == 64) begin
+	assign opliresult_ = (
+		(oplitype == 1) ? {{(ARCHBITSZ-16){instrbufdato1[7]}}, instrbufdato1, instrbufdato0} :
+		(oplitype == 2) ? {{(ARCHBITSZ-32){instrbufdato1[7]}}, instrbufdato1, instrbufdato0,
+			oplilsb[((16*(0+1))-1):(16*(0))]} :
+		/*(oplitype == 3)*/{instrbufdato1, instrbufdato0,
+			oplilsb[((16*(0+1))-1):(16*(0))], oplilsb[((16*(1+1))-1):(16*(1))],
+			oplilsb[((16*(2+1))-1):(16*(2))]});
+end endgenerate
+wire [ARCHBITSZ -1 : 0] opliresult = (
 	opliresult_ + (wasopinc ? opligprdata1 : (wasoprli ? {ipnxt, 1'b0} : {ARCHBITSZ{1'b0}})));
 
 // Register that will hold the id of the GPR to which
@@ -1989,7 +1988,7 @@ end
 // Register that will hold the id of the gpr to which the result will be stored.
 reg[CLOG2GPRCNTTOTAL -1 : 0] opldgpr;
 
-reg[ARCHBITSZMAX -1 : 0] opldresult;
+reg[ARCHBITSZ -1 : 0] opldresult;
 
 `ifdef PUMMU
 wire opldfault_ = (dtlben && (dtlbmiss || dtlbnotreadable[dtlbwayhitidx]));

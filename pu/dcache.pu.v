@@ -183,143 +183,150 @@ always @* begin
 	end
 end
 
-always @* begin
-	dcachemastersel_ = {(ARCHBITSZMAX/8){1'b0}};
-	dcachemasterdati = {ARCHBITSZMAX{1'b0}};
-	if (ARCHBITSZ == 16) begin
+generate if (ARCHBITSZ == 16) begin
+	always @* begin
+		dcachemastersel_ = {(ARCHBITSZ/8){1'b0}};
+		dcachemasterdati = {ARCHBITSZ{1'b0}};
 		if (instrbufdato0[0]) begin
-			dcachemastersel_ = 'b11;
+			dcachemastersel_ = 2'b11;
 			dcachemasterdati = gprdata1;
 		end else begin
 			if (gprdata2[0] == 0) begin
-				dcachemastersel_ = 'b01;
+				dcachemastersel_ = 2'b01;
 				dcachemasterdati = {{8{1'b0}}, gprdata1[7:0]};
 			end else /* if (gprdata2[0] == 1) */ begin
-				dcachemastersel_ = 'b10;
+				dcachemastersel_ = 2'b10;
 				dcachemasterdati = {gprdata1[7:0], {8{1'b0}}};
 			end
 		end
-	end else if (ARCHBITSZ == 32) begin
+	end
+end endgenerate
+generate if (ARCHBITSZ == 32) begin
+	always @* begin
+		dcachemastersel_ = {(ARCHBITSZ/8){1'b0}};
+		dcachemasterdati = {ARCHBITSZ{1'b0}};
 		if (instrbufdato0[1]) begin
-			dcachemastersel_ = 'b1111;
+			dcachemastersel_ = 4'b1111;
 			dcachemasterdati = gprdata1;
 		end else if (instrbufdato0[0]) begin
 			if (gprdata2[1]) begin
-				dcachemastersel_ = 'b1100;
+				dcachemastersel_ = 4'b1100;
 				dcachemasterdati = {gprdata1[15:0], {16{1'b0}}};
 			end else begin
-				dcachemastersel_ = 'b0011;
+				dcachemastersel_ = 4'b0011;
 				dcachemasterdati = {{16{1'b0}}, gprdata1[15:0]};
 			end
 		end else begin
 			if (gprdata2[1:0] == 0) begin
-				dcachemastersel_ = 'b0001;
+				dcachemastersel_ = 4'b0001;
 				dcachemasterdati = {{24{1'b0}}, gprdata1[7:0]};
 			end else if (gprdata2[1:0] == 1) begin
-				dcachemastersel_ = 'b0010;
+				dcachemastersel_ = 4'b0010;
 				dcachemasterdati = {{16{1'b0}}, gprdata1[7:0], {8{1'b0}}};
 			end else if (gprdata2[1:0] == 2) begin
-				dcachemastersel_ = 'b0100;
+				dcachemastersel_ = 4'b0100;
 				dcachemasterdati = {{8{1'b0}}, gprdata1[7:0], {16{1'b0}}};
 			end else /* if (gprdata2[1:0] == 3) */ begin
-				dcachemastersel_ = 'b1000;
+				dcachemastersel_ = 4'b1000;
 				dcachemasterdati = {gprdata1[7:0], {24{1'b0}}};
 			end
 		end
-	end else if (ARCHBITSZ == 64) begin
+	end
+end endgenerate
+generate if (ARCHBITSZ == 64) begin
+	always @* begin
+		dcachemastersel_ = {(ARCHBITSZ/8){1'b0}};
+		dcachemasterdati = {ARCHBITSZ{1'b0}};
 		if (&instrbufdato0[1:0]) begin
-			dcachemastersel_ = 'b11111111;
+			dcachemastersel_ = 8'b11111111;
 			dcachemasterdati = gprdata1;
 		end else if (instrbufdato0[1]) begin
 			if (gprdata2[2]) begin
-				dcachemastersel_ = 'b11110000;
+				dcachemastersel_ = 8'b11110000;
 				dcachemasterdati = {gprdata1[31:0], {32{1'b0}}};
 			end else begin
-				dcachemastersel_ = 'b00001111;
+				dcachemastersel_ = 8'b00001111;
 				dcachemasterdati = {{32{1'b0}}, gprdata1[31:0]};
 			end
 		end else if (instrbufdato0[0]) begin
 			if (gprdata2[2:1] == 0) begin
-				dcachemastersel_ = 'b00000011;
+				dcachemastersel_ = 8'b00000011;
 				dcachemasterdati = {{48{1'b0}}, gprdata1[15:0]};
 			end else if (gprdata2[2:1] == 1) begin
-				dcachemastersel_ = 'b00001100;
+				dcachemastersel_ = 8'b00001100;
 				dcachemasterdati = {{32{1'b0}}, gprdata1[15:0], {16{1'b0}}};
 			end else if (gprdata2[2:1] == 2) begin
-				dcachemastersel_ = 'b00110000;
+				dcachemastersel_ = 8'b00110000;
 				dcachemasterdati = {{16{1'b0}}, gprdata1[15:0], {32{1'b0}}};
 			end else /* if (gprdata2[2:1] == 3) */ begin
-				dcachemastersel_ = 'b11000000;
+				dcachemastersel_ = 8'b11000000;
 				dcachemasterdati = {gprdata1[15:0], {48{1'b0}}};
 			end
 		end else begin
 			if (gprdata2[2:0] == 0) begin
-				dcachemastersel_ = 'b00000001;
+				dcachemastersel_ = 8'b00000001;
 				dcachemasterdati = {{56{1'b0}}, gprdata1[7:0]};
 			end else if (gprdata2[2:0] == 1) begin
-				dcachemastersel_ = 'b00000010;
+				dcachemastersel_ = 8'b00000010;
 				dcachemasterdati = {{48{1'b0}}, gprdata1[7:0], {8{1'b0}}};
 			end else if (gprdata2[2:0] == 2) begin
-				dcachemastersel_ = 'b00000100;
+				dcachemastersel_ = 8'b00000100;
 				dcachemasterdati = {{40{1'b0}}, gprdata1[7:0], {16{1'b0}}};
 			end else if (gprdata2[2:0] == 3) begin
-				dcachemastersel_ = 'b00001000;
+				dcachemastersel_ = 8'b00001000;
 				dcachemasterdati = {{32{1'b0}}, gprdata1[7:0], {24{1'b0}}};
 			end else if (gprdata2[2:0] == 4) begin
-				dcachemastersel_ = 'b00010000;
+				dcachemastersel_ = 8'b00010000;
 				dcachemasterdati = {{24{1'b0}}, gprdata1[7:0], {32{1'b0}}};
 			end else if (gprdata2[2:0] == 5) begin
-				dcachemastersel_ = 'b00100000;
+				dcachemastersel_ = 8'b00100000;
 				dcachemasterdati = {{16{1'b0}}, gprdata1[7:0], {40{1'b0}}};
 			end else if (gprdata2[2:0] == 6) begin
-				dcachemastersel_ = 'b01000000;
+				dcachemastersel_ = 8'b01000000;
 				dcachemasterdati = {{8{1'b0}}, gprdata1[7:0], {48{1'b0}}};
 			end else /* if (gprdata2[2:0] == 7) */ begin
-				dcachemastersel_ = 'b10000000;
+				dcachemastersel_ = 8'b10000000;
 				dcachemasterdati = {gprdata1[7:0], {56{1'b0}}};
 			end
 		end
 	end
-end
+end endgenerate
 
-always @* begin
-	dcachemasterdato_result = {ARCHBITSZMAX{1'b0}};
-	// Apropriately set dcachemasterdato_result depending on dcachemastersel_saved.
-	if (dcachemastersel_saved == 'b11)
-		dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-16)){1'b0}}, dcachemasterdato[15:0]};
-	else if (dcachemastersel_saved == 'b01)
-		dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[7:0]};
-	else if (dcachemastersel_saved == 'b10)
-		dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[15:8]};
-	else if (ARCHBITSZ == 32 || ARCHBITSZ == 64) begin
-		if (dcachemastersel_saved == 'b1111)
-			dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-32)){1'b0}}, dcachemasterdato[31:0]};
-		else if (dcachemastersel_saved == 'b1100)
-			dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-16)){1'b0}}, dcachemasterdato[31:16]};
-		else if (dcachemastersel_saved == 'b0100)
-			dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[23:16]};
-		else if (dcachemastersel_saved == 'b1000)
-			dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[31:24]};
-		else if (ARCHBITSZ == 64) begin
-			if (dcachemastersel_saved == 'b11111111)
-				dcachemasterdato_result = dcachemasterdato;
-			else if (dcachemastersel_saved == 'b11110000)
-				dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-32)){1'b0}}, dcachemasterdato[63:32]};
-			else if (dcachemastersel_saved == 'b00110000)
-				dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-16)){1'b0}}, dcachemasterdato[47:32]};
-			else if (dcachemastersel_saved == 'b11000000)
-				dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-16)){1'b0}}, dcachemasterdato[63:48]};
-			else if (dcachemastersel_saved == 'b00010000)
-				dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[39:32]};
-			else if (dcachemastersel_saved == 'b00100000)
-				dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[47:40]};
-			else if (dcachemastersel_saved == 'b01000000)
-				dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[55:48]};
-			else if (dcachemastersel_saved == 'b10000000)
-				dcachemasterdato_result = {{(ARCHBITSZMAX-(ARCHBITSZ-8)){1'b0}}, dcachemasterdato[63:56]};
-		end
-	end
-end
+// Apropriately set dcachemasterdato_result depending on dcachemastersel_saved.
+generate if (ARCHBITSZ == 16) begin
+	assign dcachemasterdato_result =
+		(dcachemastersel_saved == 2'b10) ? {{8{1'b0}}, dcachemasterdato[15:8]} :
+		(dcachemastersel_saved == 2'b01) ? {{8{1'b0}}, dcachemasterdato[7:0]} :
+		                                   dcachemasterdato;
+end endgenerate
+generate if (ARCHBITSZ == 32) begin
+	assign dcachemasterdato_result =
+		(dcachemastersel_saved == 4'b1100) ? {{16{1'b0}}, dcachemasterdato[31:16]} :
+		(dcachemastersel_saved == 4'b0011) ? {{16{1'b0}}, dcachemasterdato[15:0]} :
+		(dcachemastersel_saved == 4'b1000) ? {{24{1'b0}}, dcachemasterdato[31:24]} :
+		(dcachemastersel_saved == 4'b0100) ? {{24{1'b0}}, dcachemasterdato[23:16]} :
+		(dcachemastersel_saved == 4'b0010) ? {{24{1'b0}}, dcachemasterdato[15:8]} :
+		(dcachemastersel_saved == 4'b0001) ? {{24{1'b0}}, dcachemasterdato[7:0]} :
+		                                     dcachemasterdato;
+end endgenerate
+generate if (ARCHBITSZ == 64) begin
+	assign dcachemasterdato_result =
+		(dcachemastersel_saved == 8'b11110000) ? {{32{1'b0}}, dcachemasterdato[63:32]} :
+		(dcachemastersel_saved == 8'b00001111) ? {{32{1'b0}}, dcachemasterdato[31:0]} :
+		(dcachemastersel_saved == 8'b11000000) ? {{16{1'b0}}, dcachemasterdato[63:48]} :
+		(dcachemastersel_saved == 8'b00110000) ? {{16{1'b0}}, dcachemasterdato[47:32]} :
+		(dcachemastersel_saved == 8'b00001100) ? {{16{1'b0}}, dcachemasterdato[31:16]} :
+		(dcachemastersel_saved == 8'b00000011) ? {{16{1'b0}}, dcachemasterdato[15:0]} :
+		(dcachemastersel_saved == 8'b10000000) ? {{24{1'b0}}, dcachemasterdato[63:56]} :
+		(dcachemastersel_saved == 8'b01000000) ? {{24{1'b0}}, dcachemasterdato[55:48]} :
+		(dcachemastersel_saved == 8'b00100000) ? {{24{1'b0}}, dcachemasterdato[47:40]} :
+		(dcachemastersel_saved == 8'b00010000) ? {{24{1'b0}}, dcachemasterdato[39:32]} :
+		(dcachemastersel_saved == 8'b00001000) ? {{24{1'b0}}, dcachemasterdato[31:24]} :
+		(dcachemastersel_saved == 8'b00000100) ? {{24{1'b0}}, dcachemasterdato[23:16]} :
+		(dcachemastersel_saved == 8'b00000010) ? {{24{1'b0}}, dcachemasterdato[15:8]} :
+		(dcachemastersel_saved == 8'b00000001) ? {{24{1'b0}}, dcachemasterdato[7:0]} :
+		                                         dcachemasterdato;
+end endgenerate
 
 always @ (posedge clk_i) begin
 	if (miscrdyandsequencerreadyandgprrdy12 && dtlb_rdy) begin
