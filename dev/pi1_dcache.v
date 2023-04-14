@@ -571,32 +571,6 @@ always @ (posedge clk_i) begin
 		conly_r <= conly_i;
 end
 
-initial begin
-	m_pi1_rdy_o_ = 0;
-	conly_r = 0;
-	cmiss_i_hold = 0;
-	m_pi1_op_i_hold = PINOOP;
-	slvreading = 0;
-	slvwriting = 0;
-	slvreadwriterqst = 0;
-	m_pi1_addr_i_hold = 0;
-	m_pi1_data_i_hold = 0;
-	m_pi1_sel_i_hold = 0;
-	cenable_i_hold = 0;
-	was_cenable_i_and_cachemiss = 0;
-	cacheactive = 0;
-	cacherdy_hold = 0;
-	cachewe_ = 0;
-	cachewe_sampled = 0;
-	cacheen_sampled = 0;
-	m_pi1_addr_i_hold_sampled = 0;
-	cachetagwayhitidx_sampled = 0;
-	cachedati_sampled = 0;
-	cachedatabitseli_sampled = 0;
-	s_pi1_data_i_hold = 0;
-	cacherstidx = 0;
-end
-
 endmodule
 
 `endif /* PI1_DCACHE_V */
