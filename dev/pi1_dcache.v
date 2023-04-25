@@ -268,8 +268,6 @@ end
 // Bitsize of a cache tag.
 localparam CACHETAGBITSIZE = (ADDRBITSZ - CLOG2CACHESETCOUNT);
 
-// The caching is 1way set associative.
-
 reg cacheactive; // The data cache is active when the value of this register is 1.
 
 wire m_pi1_is_not_noop = (m_pi1_op_i != PINOOP && m_pi1_rdy_o);
