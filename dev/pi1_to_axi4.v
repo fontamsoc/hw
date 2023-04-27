@@ -261,23 +261,6 @@ always @ (posedge clk_i) begin
 	end
 end
 
-initial begin
-	cyc = 0;
-	we = 0;
-	axi4_awaddr_o = 0;
-	axi4_awvalid_o_ = 0;
-	axi4_wdata_o = 0;
-	axi4_wstrb_o = 0;
-	axi4_wvalid_o_ = 0;
-	axi4_bready_o = 0;
-	axi4_araddr_o = 0;
-	axi4_arvalid_o_ = 0;
-	axi4_rready_o = 0;
-	axi4_rdata_hold = 0;
-	pi1_op_i_hold = 0;
-	wrpending = 0;
-end
-
 endmodule
 
 `endif /* PI1_TO_AXI4_V */
