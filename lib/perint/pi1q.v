@@ -147,8 +147,8 @@ reg  [(CLOG2MASTERCOUNT +1) -1 : 0] MASTERCOUNT__less_mstrhi_hold;
 
 // Read and write indexes within the queue.
 // Only the clog2($MASTERCOUNT) lsb are used for indexing.
-reg [(CLOG2MASTERCOUNT +1) -1 : 0] queuereadidx  = 0;
-reg [(CLOG2MASTERCOUNT +1) -1 : 0] queuewriteidx = 0;
+reg [(CLOG2MASTERCOUNT +1) -1 : 0] queuereadidx;
+reg [(CLOG2MASTERCOUNT +1) -1 : 0] queuewriteidx;
 
 wire [(CLOG2MASTERCOUNT +1) -1 : 0] queueusage = (queuewriteidx - queuereadidx);
 
@@ -263,8 +263,10 @@ wire masterop_mstrhiidx_not_PINOOP = (masterop[mstrhiidx] != PINOOP);
 always @ (posedge m_clk_i) begin
 	if (rst_i || !mstrhiidx || masterop_mstrhiidx_not_PINOOP) begin
 		if (masterop_mstrhiidx_not_PINOOP)
-			mstrhinxt <= ((mstrhiidx > 0) ? mstrhiidx :
-				{{(CLOG2MASTERCOUNT-1){1'b0}}, 1'b1}); // mstrhinxt must be > 0.
+			mstrhinxt <= (
+				(mstrhiidx > 0) ?
+					mstrhiidx :
+					{{(CLOG2MASTERCOUNT-1){1'b0}}, 1'b1}); // mstrhinxt must be > 0.
 		mstrhiidx <= (MASTERCOUNT - 1);
 	end else
 		mstrhiidx <= mstrhiidx - 1'b1;
@@ -280,6 +282,7 @@ always @ (posedge m_clk_i) begin
 		// unless the combinational logic that set masterrdy took rst_i into account,
 		// but that would require more logic.
 		queuewriteidx <= queuereadidx;
+		MASTERCOUNT__less_mstrhi_hold <= 1;
 		mstrhi <= (MASTERCOUNT - 1);
 	end else if (queuewe) begin
 		// Queue the memory operation and increment queuewriteidx
@@ -315,21 +318,6 @@ always @ (posedge s_clk_i) begin
 	end
 	if (s_rdy_i)
 		masterdato[prevqueuereadidx[CLOG2MASTERCOUNT -1 : 0]] <= s_data_i;
-end
-
-integer init_masterdato_idx;
-initial begin
-	for (init_masterdato_idx = 0; init_masterdato_idx < MASTERCOUNT; init_masterdato_idx = init_masterdato_idx + 1)
-		masterdato[init_masterdato_idx] = 0;
-	queuereadidx = 0;
-	queuewriteidx = 0;
-	s_op_o_saved = PINOOP;
-	mstrhi = (MASTERCOUNT - 1);
-	slvhi = (MASTERCOUNT - 1);
-	mstrhinxt = (MASTERCOUNT - 1);
-	mstrhiidx = (MASTERCOUNT - 1);
-	MASTERCOUNT__less_mstrhi_hold = 1;
-	prevqueuereadidx = 0;
 end
 
 endmodule
