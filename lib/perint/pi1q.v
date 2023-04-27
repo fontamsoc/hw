@@ -26,8 +26,6 @@
 `ifndef PI1Q_V
 `define PI1Q_V
 
-`include "lib/ram/dram.v"
-
 module pi1q (
 
 	 rst_i
@@ -157,76 +155,43 @@ wire [(CLOG2MASTERCOUNT +1) -1 : 0] next_queuewriteidx = ((queuewriteidx[CLOG2MA
 
 wire queueempty = (queueusage == {(CLOG2MASTERCOUNT +1){1'b0}});
 
-wire [2 -1 : 0] queueop_w0;
-
 reg [2 -1 : 0] s_op_o_saved;
 
 wire queueen = (s_rdy_i || (s_op_o_saved == PINOOP && s_op_o == PINOOP)) && !queueempty;
 wire queuewe = (masterrdy[queuewriteidx[CLOG2MASTERCOUNT -1 : 0]]);
 
-wire [2 -1 : 0] queueop_w1;
+reg [2 -1 : 0] queueop [0 : MASTERCOUNT-1];
+always @ (posedge m_clk_i) begin
+	if (queuewe)
+		queueop[queuewriteidx[CLOG2MASTERCOUNT -1 : 0]] <=
+			masterop[queuewriteidx[CLOG2MASTERCOUNT -1 : 0]];
+end
+wire [2 -1 : 0] queueop_w0 = queueop[queuereadidx[CLOG2MASTERCOUNT -1 : 0]];
+wire [2 -1 : 0] queueop_w1 = queueop[queuewriteidx[CLOG2MASTERCOUNT -1 : 0]];
 
-dram #(
+reg [ADDRBITSZ -1 : 0] queueaddr [0 : MASTERCOUNT-1];
+always @ (posedge m_clk_i) begin
+	if (queuewe)
+		queueaddr[queuewriteidx[CLOG2MASTERCOUNT -1 : 0]] <=
+			masteraddr[queuewriteidx[CLOG2MASTERCOUNT -1 : 0]];
+end
+wire [ADDRBITSZ -1 : 0] queueaddr_w0 = queueaddr[queuereadidx[CLOG2MASTERCOUNT -1 : 0]];
 
-	 .SZ (MASTERCOUNT)
-	,.DW (2)
+reg [ARCHBITSZ -1 : 0] queuedata [0 : MASTERCOUNT-1];
+always @ (posedge m_clk_i) begin
+	if (queuewe)
+		queuedata[queuewriteidx[CLOG2MASTERCOUNT -1 : 0]] <=
+			masterdati[queuewriteidx[CLOG2MASTERCOUNT -1 : 0]];
+end
+wire [ARCHBITSZ -1 : 0] queuedata_w0 = queuedata[queuereadidx[CLOG2MASTERCOUNT -1 : 0]];
 
-) queueop (
-
-	                                                   .clk1_i  (m_clk_i)
-	                                                  ,.we1_i   (queuewe)
-	,.addr0_i (queuereadidx[CLOG2MASTERCOUNT -1 : 0]) ,.addr1_i (queuewriteidx[CLOG2MASTERCOUNT -1 : 0])
-	                                                  ,.i1      (masterop[queuewriteidx[CLOG2MASTERCOUNT -1 : 0]])
-	,.o0      (queueop_w0)                            ,.o1      (queueop_w1)
-);
-
-wire [ADDRBITSZ -1 : 0] queueaddr_w0;
-
-dram #(
-
-	 .SZ (MASTERCOUNT)
-	,.DW (ADDRBITSZ)
-
-) queueaddr (
-
-	                                                   .clk1_i  (m_clk_i)
-	                                                  ,.we1_i   (queuewe)
-	,.addr0_i (queuereadidx[CLOG2MASTERCOUNT -1 : 0]) ,.addr1_i (queuewriteidx[CLOG2MASTERCOUNT -1 : 0])
-	                                                  ,.i1      (masteraddr[queuewriteidx[CLOG2MASTERCOUNT -1 : 0]])
-	,.o0      (queueaddr_w0)                          ,.o1      ()
-);
-
-wire [ARCHBITSZ -1 : 0] queuedata_w0;
-
-dram #(
-
-	 .SZ (MASTERCOUNT)
-	,.DW (ARCHBITSZ)
-
-) queuedata (
-
-	                                                   .clk1_i  (m_clk_i)
-	                                                  ,.we1_i   (queuewe)
-	,.addr0_i (queuereadidx[CLOG2MASTERCOUNT -1 : 0]) ,.addr1_i (queuewriteidx[CLOG2MASTERCOUNT -1 : 0])
-	                                                  ,.i1      (masterdati[queuewriteidx[CLOG2MASTERCOUNT -1 : 0]])
-	,.o0      (queuedata_w0)                          ,.o1      ()
-);
-
-wire [(ARCHBITSZ/8) -1 : 0] queuebytsel_w0;
-
-dram #(
-
-	 .SZ (MASTERCOUNT)
-	,.DW (ARCHBITSZ/8)
-
-) queuebytsel (
-
-	                                                   .clk1_i  (m_clk_i)
-	                                                  ,.we1_i   (queuewe)
-	,.addr0_i (queuereadidx[CLOG2MASTERCOUNT -1 : 0]) ,.addr1_i (queuewriteidx[CLOG2MASTERCOUNT -1 : 0])
-	                                                  ,.i1      (masterbytsel[queuewriteidx[CLOG2MASTERCOUNT -1 : 0]])
-	,.o0      (queuebytsel_w0)                        ,.o1      ()
-);
+reg [(ARCHBITSZ/8) -1 : 0] queuebytsel [0 : MASTERCOUNT-1];
+always @ (posedge m_clk_i) begin
+	if (queuewe)
+		queuebytsel[queuewriteidx[CLOG2MASTERCOUNT -1 : 0]] <=
+			masterbytsel[queuewriteidx[CLOG2MASTERCOUNT -1 : 0]];
+end
+wire [(ARCHBITSZ/8) -1 : 0] queuebytsel_w0 = queuebytsel[queuereadidx[CLOG2MASTERCOUNT -1 : 0]];
 
 // This net is 1 when the queue is almost full.
 // The queue is almost full when there is one remaining
