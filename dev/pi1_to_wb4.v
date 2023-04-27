@@ -140,18 +140,6 @@ always @ (posedge clk_i) begin
 		wb4_stb_o <= 0; // Request accepted.
 end
 
-initial begin
-	wb4_cyc_o = 0;
-	wb4_stb_o = 0;
-	wb4_we_o = 0;
-	wb4_addr_o = 0;
-	wb4_data_o = 0;
-	wb4_sel_o = 0;
-	wb4_data_i_hold = 0;
-	pi1_op_i_hold = 0;
-	wrpending = 0;
-end
-
 endmodule
 
 `endif /* PI1_TO_WB4_V */
