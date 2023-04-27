@@ -192,15 +192,11 @@ reg we;
 
 wire ack = (we ? axi4_bvalid_i : axi4_rvalid_i);
 
-wire not_wrpending_and_ack = (!wrpending && ack);
-
-assign s_pi1q_data_w1 = /*not_wrpending_and_ack ?*/
-	((s_pi1q_op_w_hold == PIRWOP) ? axi4_rdata_hold : axi4_rdata_i)/*:
-	{ARCHBITSZ{1'b0}}*/;
+assign s_pi1q_data_w1 = axi4_rdata_hold;
 
 reg cyc;
 
-assign s_pi1q_rdy_w = (/*!axi4_rst_i &&*/(!cyc || not_wrpending_and_ack));
+assign s_pi1q_rdy_w = !cyc;
 
 wire [ARCHBITSZ -1 : 0] axi4_axaddr_w;
 
@@ -226,15 +222,18 @@ assign axi4_arvalid_o = (stall_n && axi4_arvalid_o_);
 
 always @ (posedge axi4_clk_i) begin
 
-	if (axi4_rst_i) begin
+	if (axi4_rst_i || (!wrpending && ack)) begin
 
 		cyc <= 0;
-		wrpending <= 0;
+		we <= 0;
 		axi4_awvalid_o_ <= 0;
 		axi4_wvalid_o_ <= 0;
 		axi4_arvalid_o_ <= 0;
 		axi4_bready_o <= 0;
 		axi4_rready_o <= 0;
+
+		if (s_pi1q_op_w_hold == PIRDOP)
+			axi4_rdata_hold <= axi4_rdata_i;
 
 	end else if (s_pi1q_rdy_w) begin
 
@@ -242,38 +241,31 @@ always @ (posedge axi4_clk_i) begin
 		axi4_wdata_o <= s_pi1q_data_w0;
 		axi4_wstrb_o <= s_pi1q_sel_w;
 
-		if (s_pi1q_op_w == PIRDOP) begin
-
-			cyc <= 1;
-			we <= 0;
-			axi4_araddr_o <= axi4_axaddr_w;
-			axi4_arvalid_o_ <= 1;
-			axi4_rready_o <= 1;
-
-		end else if (s_pi1q_op_w == PIWROP) begin
-
-			cyc <= 1;
-			we <= 1;
-			axi4_awaddr_o <= axi4_axaddr_w;
-			axi4_awvalid_o_ <= 1;
-			axi4_wvalid_o_ <= 1;
-			axi4_bready_o <= 1;
-
-		end else if (s_pi1q_op_w == PIRWOP) begin
-
-			cyc <= 1;
-			we <= 0;
-			wrpending <= 1;
-			axi4_araddr_o <= axi4_axaddr_w;
-			axi4_arvalid_o_ <= 1;
-			axi4_rready_o <= 1;
-
-		end else begin
-
-			cyc <= 0;
-			we <= 0;
-			axi4_bready_o <= 0;
-		end
+		case (s_pi1q_op_w)
+			PIRDOP: begin
+				cyc <= 1;
+				we <= 0;
+				axi4_araddr_o <= axi4_axaddr_w;
+				axi4_arvalid_o_ <= 1;
+				axi4_rready_o <= 1;
+			end
+			PIWROP: begin
+				cyc <= 1;
+				we <= 1;
+				axi4_awaddr_o <= axi4_axaddr_w;
+				axi4_awvalid_o_ <= 1;
+				axi4_wvalid_o_ <= 1;
+				axi4_bready_o <= 1;
+			end
+			PIRWOP: begin
+				cyc <= 1;
+				we <= 0;
+				wrpending <= 1;
+				axi4_araddr_o <= axi4_axaddr_w;
+				axi4_arvalid_o_ <= 1;
+				axi4_rready_o <= 1;
+			end
+		endcase
 
 	end else if (wrpending && ack) begin
 
