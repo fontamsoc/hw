@@ -108,13 +108,9 @@ reg wrpending;
 reg [2 -1 : 0]         s_pi1q_op_w_hold;
 reg [ARCHBITSZ -1 : 0] wb4_data_i_hold;
 
-wire not_wrpending_and_wb4_ack_i = (!wrpending && wb4_ack_i);
+assign s_pi1q_data_w1 = wb4_data_i_hold;
 
-assign s_pi1q_data_w1 = /*not_wrpending_and_wb4_ack_i ?*/
-	((s_pi1q_op_w_hold == PIRWOP) ? wb4_data_i_hold : wb4_data_i)/*:
-	{ARCHBITSZ{1'b0}}*/;
-
-assign s_pi1q_rdy_w = (/*!wb4_rst_i &&*/(!wb4_cyc_o || not_wrpending_and_wb4_ack_i));
+assign s_pi1q_rdy_w = !wb4_cyc_o;
 
 wire [ARCHBITSZ -1 : 0] wb4_addr_w;
 
@@ -128,11 +124,14 @@ addr #(
 
 always @ (posedge wb4_clk_i) begin
 
-	if (wb4_rst_i) begin
+	if (wb4_rst_i || (!wrpending && wb4_ack_i)) begin
 
 		wb4_cyc_o <= 0;
 		wb4_stb_o <= 0;
-		wrpending <= 0;
+		wb4_we_o <= 0;
+
+		if (s_pi1q_op_w_hold == PIRDOP)
+			wb4_data_i_hold <= wb4_data_i;
 
 	end else if (s_pi1q_rdy_w) begin
 
@@ -141,31 +140,24 @@ always @ (posedge wb4_clk_i) begin
 		wb4_data_o <= s_pi1q_data_w0;
 		wb4_sel_o <= s_pi1q_sel_w;
 
-		if (s_pi1q_op_w == PIRDOP) begin
-
-			wb4_cyc_o <= 1;
-			wb4_stb_o <= 1;
-			wb4_we_o <= 0;
-
-		end else if (s_pi1q_op_w == PIWROP) begin
-
-			wb4_cyc_o <= 1;
-			wb4_stb_o <= 1;
-			wb4_we_o <= 1;
-
-		end else if (s_pi1q_op_w == PIRWOP) begin
-
-			wb4_cyc_o <= 1;
-			wb4_stb_o <= 1;
-			wb4_we_o <= 0;
-			wrpending <= 1;
-
-		end else begin
-
-			wb4_cyc_o <= 0;
-			wb4_stb_o <= 0;
-			wb4_we_o <= 0;
-		end
+		case (s_pi1q_op_w)
+			PIRDOP: begin
+				wb4_cyc_o <= 1;
+				wb4_stb_o <= 1;
+				wb4_we_o <= 0;
+			end
+			PIWROP: begin
+				wb4_cyc_o <= 1;
+				wb4_stb_o <= 1;
+				wb4_we_o <= 1;
+			end
+			PIRWOP: begin
+				wb4_cyc_o <= 1;
+				wb4_stb_o <= 1;
+				wb4_we_o <= 0;
+				wrpending <= 1;
+			end
+		endcase
 
 	end else if (wrpending && wb4_ack_i) begin
 
