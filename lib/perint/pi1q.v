@@ -153,7 +153,7 @@ wire [(CLOG2MASTERCOUNT +1) -1 : 0] queueusage = (queuewriteidx - queuereadidx);
 wire [(CLOG2MASTERCOUNT +1) -1 : 0] next_queuereadidx = ((queuereadidx[CLOG2MASTERCOUNT -1 : 0] < slvhi) ? (queuereadidx + 1'b1) : (queuereadidx + MASTERCOUNT__less_mstrhi_hold));
 wire [(CLOG2MASTERCOUNT +1) -1 : 0] next_queuewriteidx = ((queuewriteidx[CLOG2MASTERCOUNT -1 : 0] < mstrhi) ? (queuewriteidx + 1'b1) : (queuewriteidx + MASTERCOUNT__less_mstrhi));
 
-wire queueempty = (queueusage == {(CLOG2MASTERCOUNT +1){1'b0}});
+wire queueempty = (queueusage == {(CLOG2MASTERCOUNT+1){1'b0}});
 
 reg [2 -1 : 0] s_op_o_saved;
 
@@ -216,8 +216,7 @@ assign masterrdy[gen_masterrdy_idx] = (queuewriteidx[CLOG2MASTERCOUNT -1 : 0] ==
 	mstrhi == slvhi && !queuefull && (!queuenearfull || !queueop_w1[1]));
 end endgenerate
 
-assign s_op_o = !queueempty ? queueop_w0 : PINOOP;
-
+assign s_op_o   = (!queueempty ? queueop_w0 : PINOOP);
 assign s_addr_o = queueaddr_w0;
 assign s_data_o = queuedata_w0;
 assign s_sel_o  = queuebytsel_w0;
@@ -263,7 +262,6 @@ always @ (posedge m_clk_i) begin
 end
 
 reg [CLOG2MASTERCOUNT -1 : 0] prevqueuereadidx;
-
 always @ (posedge s_clk_i) begin
 	if (rst_i) begin
 		s_op_o_saved <= PINOOP;
