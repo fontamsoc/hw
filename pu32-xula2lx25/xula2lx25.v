@@ -17,7 +17,7 @@
 `define PUIDIVCLK
 `define PUDSPMUL
 `define PUDCACHE
-`include "pu/multipu.v"
+`include "pu/cpu.v"
 
 `include "dev/sdcard/sdcard_spi.v"
 
@@ -111,7 +111,7 @@ output wire [(SDRAMDQBITSIZE / 8) -1 : 0] sdram_dm;
 // SPI FLASH CS pin kept high to keep it disabled.
 assign flash_cs2 = 1;
 
-wire multipu_rst_ow;
+wire cpu_rst_ow;
 
 wire devtbl_rst0_w;
 reg  devtbl_rst0_r = 0;
@@ -125,7 +125,7 @@ localparam RST_CNTR_BITSZ = 4;
 
 reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
 always @ (posedge clk120mhz) begin
-	if (multipu_rst_ow || swwarmrst || rst_p)
+	if (cpu_rst_ow || swwarmrst || rst_p)
 		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
 	else if (rst_cntr)
 		rst_cntr <= rst_cntr - 1'b1;
@@ -178,8 +178,8 @@ wire [INTCTRLDSTCOUNT -1 : 0] intrqstdst_w;
 wire [INTCTRLDSTCOUNT -1 : 0] intrdydst_w;
 wire [INTCTRLDSTCOUNT -1 : 0] intbestdst_w;
 
-localparam M_PI1R_MULTIPU    = 0;
-localparam M_PI1R_LAST       = M_PI1R_MULTIPU;
+localparam M_PI1R_CPU        = 0;
+localparam M_PI1R_LAST       = M_PI1R_CPU;
 localparam S_PI1R_SDCARD     = 0;
 localparam S_PI1R_DEVTBL     = (S_PI1R_SDCARD + 1);
 localparam S_PI1R_INTCTRL    = (S_PI1R_DEVTBL + 1);
@@ -236,7 +236,7 @@ localparam ICACHEWAYCOUNT = 2;
 localparam DCACHEWAYCOUNT = 2;
 localparam TLBWAYCOUNT    = 2;
 
-multipu #(
+cpu #(
 
 	 .ARCHBITSZ      (ARCHBITSZ)
 	,.XARCHBITSZ     (PI1RARCHBITSZ)
@@ -250,22 +250,22 @@ multipu #(
 	,.IMULCNT        (2)
 	,.IDIVCNT        (2)
 
-) multipu (
+) cpu (
 
 	 .rst_i (rst_w)
 
-	,.rst_o (multipu_rst_ow)
+	,.rst_o (cpu_rst_ow)
 
 	,.clk_i      (pi1r_clk_w)
 	,.clk_imul_i (clk_2x_w)
 	,.clk_idiv_i (clk_2x_w)
 
-	,.pi1_op_o   (m_pi1r_op_w[M_PI1R_MULTIPU])
-	,.pi1_addr_o (m_pi1r_addr_w[M_PI1R_MULTIPU])
-	,.pi1_data_o (m_pi1r_data_w1[M_PI1R_MULTIPU])
-	,.pi1_data_i (m_pi1r_data_w0[M_PI1R_MULTIPU])
-	,.pi1_sel_o  (m_pi1r_sel_w[M_PI1R_MULTIPU])
-	,.pi1_rdy_i  (m_pi1r_rdy_w[M_PI1R_MULTIPU])
+	,.pi1_op_o   (m_pi1r_op_w[M_PI1R_CPU])
+	,.pi1_addr_o (m_pi1r_addr_w[M_PI1R_CPU])
+	,.pi1_data_o (m_pi1r_data_w1[M_PI1R_CPU])
+	,.pi1_data_i (m_pi1r_data_w0[M_PI1R_CPU])
+	,.pi1_sel_o  (m_pi1r_sel_w[M_PI1R_CPU])
+	,.pi1_rdy_i  (m_pi1r_rdy_w[M_PI1R_CPU])
 
 	,.intrqst_i (intrqstdst_w)
 	,.intrdy_o  (intrdydst_w)

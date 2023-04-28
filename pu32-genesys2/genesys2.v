@@ -27,7 +27,7 @@
 `define PUFDIV
 `define PUDCACHE
 `define PUCOUNT 1 /* 32 max */
-`include "pu/multipu.v"
+`include "pu/cpu.v"
 
 `include "dev/sdcard/sdcard_spi.v"
 
@@ -158,7 +158,7 @@ wire litedram_pll_locked;
 wire litedram_init_done;
 wire litedram_init_error;
 
-wire multipu_rst_ow;
+wire cpu_rst_ow;
 
 wire devtbl_rst0_w;
 reg  devtbl_rst0_r = 0;
@@ -206,7 +206,7 @@ localparam RST_CNTR_BITSZ = 20;
 
 reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
 always @ (posedge clk_2x_w) begin
-	if (!multipu_rst_ow && !swwarmrst && rst_n) begin
+	if (!cpu_rst_ow && !swwarmrst && rst_n) begin
 		if (rst_cntr)
 			rst_cntr <= rst_cntr - 1'b1;
 	end else
@@ -255,8 +255,8 @@ wire [INTCTRLDSTCOUNT -1 : 0] intrqstdst_w;
 wire [INTCTRLDSTCOUNT -1 : 0] intrdydst_w;
 wire [INTCTRLDSTCOUNT -1 : 0] intbestdst_w;
 
-localparam M_PI1R_MULTIPU    = 0;
-localparam M_PI1R_LAST       = M_PI1R_MULTIPU;
+localparam M_PI1R_CPU        = 0;
+localparam M_PI1R_LAST       = M_PI1R_CPU;
 localparam S_PI1R_SDCARD     = 0;
 localparam S_PI1R_DEVTBL     = (S_PI1R_SDCARD + 1);
 localparam S_PI1R_GPIO       = (S_PI1R_DEVTBL + 1);
@@ -320,14 +320,14 @@ localparam ICACHEWAYCOUNT = ((PUCOUNT > 8) ? 2 : 4);
 localparam DCACHEWAYCOUNT = ((PUCOUNT > 8) ? 1 : 2);
 localparam TLBWAYCOUNT    = 1;
 
-localparam MULTIPUCLKFREQ = CLK2XFREQ;
-wire multipu_clk_w = clk_2x_w;
+localparam CPUCLKFREQ = CLK2XFREQ;
+wire cpu_clk_w = clk_2x_w;
 
-multipu #(
+cpu #(
 
 	 .ARCHBITSZ      (ARCHBITSZ)
 	,.XARCHBITSZ     (PI1RARCHBITSZ)
-	,.CLKFREQ        (MULTIPUCLKFREQ)
+	,.CLKFREQ        (CPUCLKFREQ)
 	,.ICACHESETCOUNT ((1024/(PI1RARCHBITSZ/8))*((ICACHESZ/ICACHEWAYCOUNT)/PUCOUNT))
 	,.DCACHESETCOUNT ((1024/(PI1RARCHBITSZ/8))*((DCACHESZ/DCACHEWAYCOUNT)/PUCOUNT))
 	,.TLBSETCOUNT    (TLBSZ/TLBWAYCOUNT)
@@ -340,13 +340,13 @@ multipu #(
 	,.FMULCNT        (2)
 	,.FDIVCNT        (4)
 
-) multipu (
+) cpu (
 
 	 .rst_i (rst_w || !litedram_pll_locked)
 
-	,.rst_o (multipu_rst_ow)
+	,.rst_o (cpu_rst_ow)
 
-	,.clk_i          (multipu_clk_w)
+	,.clk_i          (cpu_clk_w)
 	,.clk_imul_i     (clk_4x_w)
 	,.clk_idiv_i     (clk_4x_w)
 	,.clk_faddfsub_i (clk_4x_w)
@@ -356,12 +356,12 @@ multipu #(
 	,.clk_mem_i      (pi1r_clk_w)
 	`endif
 
-	,.pi1_op_o   (m_pi1r_op_w[M_PI1R_MULTIPU])
-	,.pi1_addr_o (m_pi1r_addr_w[M_PI1R_MULTIPU])
-	,.pi1_data_o (m_pi1r_data_w1[M_PI1R_MULTIPU])
-	,.pi1_data_i (m_pi1r_data_w0[M_PI1R_MULTIPU])
-	,.pi1_sel_o  (m_pi1r_sel_w[M_PI1R_MULTIPU])
-	,.pi1_rdy_i  (m_pi1r_rdy_w[M_PI1R_MULTIPU])
+	,.pi1_op_o   (m_pi1r_op_w[M_PI1R_CPU])
+	,.pi1_addr_o (m_pi1r_addr_w[M_PI1R_CPU])
+	,.pi1_data_o (m_pi1r_data_w1[M_PI1R_CPU])
+	,.pi1_data_i (m_pi1r_data_w0[M_PI1R_CPU])
+	,.pi1_sel_o  (m_pi1r_sel_w[M_PI1R_CPU])
+	,.pi1_rdy_i  (m_pi1r_rdy_w[M_PI1R_CPU])
 
 	,.intrqst_i (intrqstdst_w)
 	,.intrdy_o  (intrdydst_w)

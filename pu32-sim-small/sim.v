@@ -12,7 +12,7 @@
 `include "lib/perint/pi1r.v"
 
 `define PUDSPMUL
-`include "pu/multipu.v"
+`include "pu/cpu.v"
 
 `include "dev/uart_sim.v"
 
@@ -36,8 +36,8 @@ input wire clk_i;
 wire rst_w = rst_i;
 wire clk_w = clk_i;
 
-localparam M_PI1R_MULTIPU    = 0;
-localparam M_PI1R_LAST       = M_PI1R_MULTIPU;
+localparam M_PI1R_CPU    = 0;
+localparam M_PI1R_LAST       = M_PI1R_CPU;
 localparam S_PI1R_UART       = 0;
 localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
 localparam S_PI1R_INVALIDDEV = (S_PI1R_RAM + 1);
@@ -70,23 +70,23 @@ wire pi1r_clk_w = clk_w;
 // 	input  [PI1RARCHBITSZ -1 : 0]     s_pi1r_mapsz_w [PI1RSLAVECOUNT -1 : 0];
 `include "lib/perint/inst.pi1r.v"
 
-multipu #(
+cpu #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.XARCHBITSZ (PI1RARCHBITSZ)
 
-) multipu (
+) cpu (
 
 	 .rst_i (rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
-	,.pi1_op_o   (m_pi1r_op_w[M_PI1R_MULTIPU])
-	,.pi1_addr_o (m_pi1r_addr_w[M_PI1R_MULTIPU])
-	,.pi1_data_o (m_pi1r_data_w1[M_PI1R_MULTIPU])
-	,.pi1_data_i (m_pi1r_data_w0[M_PI1R_MULTIPU])
-	,.pi1_sel_o  (m_pi1r_sel_w[M_PI1R_MULTIPU])
-	,.pi1_rdy_i  (m_pi1r_rdy_w[M_PI1R_MULTIPU])
+	,.pi1_op_o   (m_pi1r_op_w[M_PI1R_CPU])
+	,.pi1_addr_o (m_pi1r_addr_w[M_PI1R_CPU])
+	,.pi1_data_o (m_pi1r_data_w1[M_PI1R_CPU])
+	,.pi1_data_i (m_pi1r_data_w0[M_PI1R_CPU])
+	,.pi1_sel_o  (m_pi1r_sel_w[M_PI1R_CPU])
+	,.pi1_rdy_i  (m_pi1r_rdy_w[M_PI1R_CPU])
 
 	,.rstaddr_i (('h1000)>>1)
 );

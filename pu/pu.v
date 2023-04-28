@@ -109,8 +109,8 @@
 // 	an EXTINTR context-switch if the signal intrqst_i become high.
 //
 // id_i
-// 	Index of the pu when used in multipu.
-// 	Must be 0, when not used in multipu.
+// 	Index of the pu when used in a multi-pu configuration,
+// 	otherwise must be 0.
 //
 // brkonrst_i
 // 	When the debugging interface is enabled by PUDBG,

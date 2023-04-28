@@ -45,7 +45,7 @@
 // 	The destination drives intrdy high when it is ready to take
 // 	on a requested interrupt; it keeps intbest low when it wouldn't
 // 	be the best choice to service the interrupt; intbest is used
-// 	in a multipu system where it is driven by PUs output "halted"
+// 	in a multi-pu system where it is driven by PUs output "halted"
 // 	in order to give a preference to PUs that are halted when looking
 // 	for an interrupt destination.
 // 	The destination with the lowest index is always preferred.

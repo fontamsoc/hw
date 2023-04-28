@@ -4,7 +4,7 @@
 // Macros:
 //
 // PUCOUNT
-// 	Number of PU making up the multipu.
+// 	Number of PU making up the cpu.
 // 	When defined, it must be non-null.
 // 	When not defined, clk_mem_i is not available.
 
@@ -25,7 +25,7 @@
 `include "lib/perint/pi1b.v"
 `endif
 
-module multipu (
+module cpu (
 
 	 rst_i
 
