@@ -3,14 +3,8 @@
 
 PROJ=orangecrab0285
 
-.PHONY: all prog clean
-
+.PHONY: all
 all: ${PROJ}.dfu
-
-prog: ${PROJ}.dfu
-	# While holding the button on the OrangeCrab, plug it in;
-	# it enters the bootloader and enables programming a new bitstream.
-	dfu-util --alt 0 -D $<
 
 %.json: ../%.v
 	if [ ! -e ../smem.rtk ]; then cp -a ../../plain.rtk ../smem.rtk; make -C ../smem.rtk/; fi
@@ -25,6 +19,13 @@ prog: ${PROJ}.dfu
 	cp -a $< $@
 	dfu-suffix -v 1209 -p 5af0 -a $@ &>3.$@.log
 
+.PHONY: prog
+prog: ${PROJ}.dfu
+	# While holding the button on the OrangeCrab, plug it in;
+	# it enters the bootloader and enables programming a new bitstream.
+	dfu-util --alt 0 -D $<
+
+.PHONY: clean
 clean:
 	rm -rf *.log *.dfu *.bit *_out.config *.json *.hex
 	#if [ -e ../smem.rtk ]; then make -C ../smem.rtk/ clean; fi

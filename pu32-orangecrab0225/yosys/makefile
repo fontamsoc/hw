@@ -3,12 +3,8 @@
 
 PROJ=orangecrab0225
 
+.PHONY: all
 all: ${PROJ}.dfu
-
-prog: ${PROJ}.dfu
-	# While holding the button on the OrangeCrab, plug it in;
-	# it enters the bootloader and enables programming a new bitstream.
-	dfu-util -D $<
 
 %.json: ../%.v
 	cp ../../dev/bootldr/bootldr*.hex .
@@ -23,7 +19,12 @@ prog: ${PROJ}.dfu
 	cp -a $< $@
 	dfu-suffix -v 1209 -p 5af0 -a $@ &>3.$@.log
 
+.PHONY: prog
+prog: ${PROJ}.dfu
+	# While holding the button on the OrangeCrab, plug it in;
+	# it enters the bootloader and enables programming a new bitstream.
+	dfu-util -D $<
+
+.PHONY: clean
 clean:
 	rm -rf *.log *.dfu *.bit *_out.config *.json *.hex
-
-.PHONY: all prog clean
