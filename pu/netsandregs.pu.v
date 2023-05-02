@@ -1344,26 +1344,13 @@ wire sc2isopalu1 = (sc2instrbufdato0[7:3] == OPALU1);
 wire sc2isopalu2 = (sc2instrbufdato0[7:3] == OPALU2);
 wire sc2isopj = (sc2instrbufdato0[7:3] == OPJ);
 wire sc2isopmuldiv = (sc2instrbufdato0[7:3] == OPMULDIV);
-`ifdef PUSC2SYSOPS
-wire sc2isopgetsysreg = (sc2instrbufdato0[7:3] == OPGETSYSREG);
-wire sc2isopgetsysreg1 = (sc2instrbufdato0[7:3] == OPGETSYSREG1);
-wire sc2isopsetgpr = (sc2instrbufdato0[7:3] == OPSETGPR);
-`endif
 
 wire sc2isopjtrue = (sc2isopj && (sc2isoptype2 || (|sc2gprdata1 == sc2instrbufdato0[0])));
 
 wire sc2isopdspmul = (sc2isopmuldiv && !sc2instrbufdato0[2]);
 
-wire [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx1 = {(
-	`ifdef PUSC2SYSOPS
-	sc2isopsetgpr ? sc2instrbufdato0[1] :
-	`endif
-		inusermode), sc2instrbufdato1[7:4]};
-wire [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx2 = {(
-	`ifdef PUSC2SYSOPS
-	sc2isopsetgpr ? sc2instrbufdato0[0] :
-	`endif
-		inusermode), sc2instrbufdato1[3:0]};
+wire [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx1 = {inusermode, sc2instrbufdato1[7:4]};
+wire [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx2 = {inusermode, sc2instrbufdato1[3:0]};
 
 wire [ARCHBITSZ -1 : 0] sc2gprdata1;
 wire [ARCHBITSZ -1 : 0] sc2gprdata2;
@@ -1381,15 +1368,8 @@ wire sc2usegpr2 = (
 	`ifdef PUDSPMUL
 	sc2isopdspmul ||
 	`endif
-	`ifdef PUSC2SYSOPS
-	sc2isopsetgpr ||
-	`endif
 	sc2isopalu0 || sc2isopalu1 || sc2isopalu2 || sc2isopj);
 wire sc2usegpr1 = ( // ### sc2usegpr1 is to be true for all SC2 operations.
-	`ifdef PUSC2SYSOPS
-	sc2isopgetsysreg ||
-	(sc2isopgetsysreg1 && !(sc2isoptype3/*isopgettlb*/)) ||
-	`endif
 	sc2usegpr2 || sc2isopli8 || sc2isopinc8 || sc2isoprli8);
 wire sc2ops = sc2usegpr1; // Operations accepted by SC2.
 
@@ -1410,11 +1390,7 @@ wire sc1keepgpr1 = (
 	(isopj /*&& (isoptype0 || isoptype1)*//* simple check because only the conditional variant will be active when needed */) ||
 	isopst || isopsetsysreg || isopcacherst);
 
-wire sc2keepgpr1 = (
-	`ifdef PUSC2SYSOPS
-	sc2isopsetgpr ||
-	`endif
-	(sc2isopj && (sc2isoptype0 || sc2isoptype1)));
+wire sc2keepgpr1 = (sc2isopj && (sc2isoptype0 || sc2isoptype1));
 
 wire _sc2gprrdy1 = (sc2gprrdy1 && (
 	`ifdef PUSC2SKIPSC1LI8
@@ -1835,18 +1811,6 @@ wire opgetsysregdone = (miscrdyandsequencerreadyandgprrdy1 && isopgetsysreg && (
 	(isoptype6 && isflaggettlbsize) ||
 	(isoptype7 && isflaggetcachesize)));
 
-`ifdef PUSC2
-`ifdef PUSC2SYSOPS
-// ### Nets declared as reg so as to be useable by verilog within the always block.
-reg[ARCHBITSZ -1 : 0] sc2opgetsysregresult;
-
-wire sc2opgetsysregdone = (sc2rdyandgprrdy1 && sc2isopgetsysreg && (
-	inkernelmode ||
-	((sc2isoptype4 || sc2isoptype5) && isflaggetclkcyclecnt) ||
-	(sc2isoptype6 && isflaggettlbsize) ||
-	(sc2isoptype7 && isflaggetcachesize)));
-`endif
-`endif
 // ---------- Registers and nets used by opgetsysreg1 ----------
 
 // ### Nets declared as reg so as to be useable
@@ -1885,20 +1849,6 @@ wire opgetsysreg1done = (miscrdyandsequencerreadyandgprrdy1 && isopgetsysreg1 &&
 	(isoptype2 && isflaggetcachesize) ||
 	(isoptype3 && isflaggettlb)));
 
-`ifdef PUSC2
-`ifdef PUSC2SYSOPS
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
-reg [ARCHBITSZ -1 : 0] sc2opgetsysreg1result;
-
-wire sc2opgetsysreg1done = (sc2rdyandgprrdy1 && sc2isopgetsysreg1 && !(sc2isoptype3/*isopgettlb*/) && (
-	inkernelmode ||
-	(sc2isoptype0 && isflaggetcoreid) ||
-	((sc2isoptype1 || sc2isoptype4 || sc2isoptype5) && isflaggetclkfreq) ||
-	(sc2isoptype2 && isflaggetcachesize)));
-`endif
-`endif
-
 wire isopgettlb_or_isopclrtlb_found = (miscrdyandsequencerreadyandgprrdy12 && (
 	(isopgettlb && (inkernelmode || isflaggettlb)) || (isopclrtlb && (inkernelmode || isflagclrtlb))));
 reg isopgettlb_or_isopclrtlb_found_sampled;
@@ -1917,14 +1867,6 @@ wire opsetgprrdy1;
 wire opsetgprrdy2;
 
 wire opsetgprdone = (miscrdy && sequencerready && opsetgprrdy1 && opsetgprrdy2 && isopsetgpr && inkernelmode);
-
-`ifdef PUSC2
-`ifdef PUSC2SYSOPS
-wire [ARCHBITSZ -1 : 0] sc2opsetgprresult = sc2gprdata2;
-
-wire sc2opsetgprdone = (sc2rdyandgprrdy12 && sc2isopsetgpr && inkernelmode);
-`endif
-`endif
 
 // ---------- General purpose registers ----------
 

@@ -193,20 +193,6 @@ always @* begin
 		sc2gpridx  = sc2gpridx1;
 		sc2gprdata = {sc2ipnxt, 1'b0};
 		sc2gprwe   = 1;
-	`ifdef PUSC2SYSOPS
-	end else if (sc2opgetsysregdone) begin
-		sc2gpridx  = sc2gpridx1;
-		sc2gprdata = sc2opgetsysregresult;
-		sc2gprwe   = 1;
-	end else if (sc2opgetsysreg1done) begin
-		sc2gpridx  = sc2gpridx1;
-		sc2gprdata = sc2opgetsysreg1result;
-		sc2gprwe   = 1;
-	end else if (sc2opsetgprdone) begin
-		sc2gpridx  = sc2gpridx1; // TODO: Wrong; something like opsetgprdstidx needed instead ...
-		sc2gprdata = sc2opsetgprresult;
-		sc2gprwe   = 1;
-	`endif
 	end
 end
 `endif
