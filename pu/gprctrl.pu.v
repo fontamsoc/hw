@@ -161,36 +161,33 @@ end
 
 `ifdef PUSC2
 always @* begin
-
-	sc2gpridx  = 0;
+	sc2gpridx  = sc2gpridx1;
 	sc2gprdata = 0;
 	sc2gprwe   = 0;
-
 	// SC2 only handles 8bits-immediates, non-branching single-cycle instructions.
 	if (sc2opli8done) begin
-		sc2gpridx  = sc2gpridx1;
 		sc2gprdata = sc2opli8result;
 		sc2gprwe   = 1;
-	end else if (sc2opalu0done) begin
-		sc2gpridx  = sc2gpridx1;
+	end
+	if (sc2opalu0done) begin
 		sc2gprdata = sc2opalu0result;
 		sc2gprwe   = 1;
-	end else if (sc2opalu1done) begin
-		sc2gpridx  = sc2gpridx1;
+	end
+	if (sc2opalu1done) begin
 		sc2gprdata = sc2opalu1result;
 		sc2gprwe   = 1;
-	end else if (sc2opalu2done) begin
-		sc2gpridx  = sc2gpridx1;
+	end
+	if (sc2opalu2done) begin
 		sc2gprdata = sc2opalu2result;
 		sc2gprwe   = 1;
+	end
 	`ifdef PUDSPMUL
-	end else if (sc2opdspmuldone) begin
-		sc2gpridx  = sc2gpridx1;
+	if (sc2opdspmuldone) begin
 		sc2gprdata = sc2opdspmulresult;
 		sc2gprwe   = 1;
+	end
 	`endif
-	end else if (sc2opjldone) begin
-		sc2gpridx  = sc2gpridx1;
+	if (sc2opjldone) begin
 		sc2gprdata = {sc2ipnxt, 1'b0};
 		sc2gprwe   = 1;
 	end
