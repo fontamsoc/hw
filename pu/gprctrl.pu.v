@@ -203,7 +203,7 @@ always @* begin
 		sc2gprdata = sc2opgetsysreg1result;
 		sc2gprwe   = 1;
 	end else if (sc2opsetgprdone) begin
-		sc2gpridx  = sc2gpridx1;
+		sc2gpridx  = sc2gpridx1; // TODO: Wrong; something like opsetgprdstidx needed instead ...
 		sc2gprdata = sc2opsetgprresult;
 		sc2gprwe   = 1;
 	`endif
