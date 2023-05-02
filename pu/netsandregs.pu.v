@@ -642,20 +642,20 @@ wire isopnop = (isopinc8 && !{instrbufdato0[3:0], instrbufdato1} && !isflagdispr
 	// Disable PREEMPTINTR if debug-stepping.
 	&& !dbgen);
 
-wire sequencerintrsysop = (inusermode && (
-	!(isopsetasid && isflagsetasid) &&
-	!(isopsettimer && isflagsettimer) &&
-	!(isopsettlb && isflagsettlb) &&
-	!(isopclrtlb && isflagclrtlb) &&
-	!((isopgetclkcyclecnt || isopgetclkcyclecnth) && isflaggetclkcyclecnt) &&
-	!((isopgetclkfreq || isopgetcap || isopgetver) && isflaggetclkfreq) &&
-	!(isopgettlbsize && isflaggettlbsize) &&
-	!(isopgetcachesize && isflaggetcachesize) &&
-	!(isopgetcoreid && isflaggetcoreid) &&
-	!(isopcacherst && isflagcacherst) &&
-	!(isopgettlb && isflaggettlb) &&
-	!(isopsetflags && isflagsetflags) &&
-	!(isophalt && isflaghalt)));
+wire sequencerintrsysop = (inusermode & !(
+	(isopsetasid && isflagsetasid) ||
+	(isopsettimer && isflagsettimer) ||
+	(isopsettlb && isflagsettlb) ||
+	(isopclrtlb && isflagclrtlb) ||
+	((isopgetclkcyclecnt || isopgetclkcyclecnth) && isflaggetclkcyclecnt) ||
+	((isopgetclkfreq || isopgetcap || isopgetver) && isflaggetclkfreq) ||
+	(isopgettlbsize && isflaggettlbsize) ||
+	(isopgetcachesize && isflaggetcachesize) ||
+	(isopgetcoreid && isflaggetcoreid) ||
+	(isopcacherst && isflagcacherst) ||
+	(isopgettlb && isflaggettlb) ||
+	(isopsetflags && isflagsetflags) ||
+	(isophalt && isflaghalt)));
 
 wire isopjtrue = (isopj && (isoptype2 || (|gprdata1 == instrbufdato0[0])));
 
