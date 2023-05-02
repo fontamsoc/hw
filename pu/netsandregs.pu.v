@@ -71,148 +71,187 @@ wire [(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufusage2 =
 wire [XARCHBITSZ -1 : 0] instrbufipnxt = instrbuf[ipnxt[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) -1 : (CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF]];
 
 // Net set to 16bits data indexed from instrbuf; note that instructions are 16bits.
-wire [16 -1 : 0] _instrbufipnxt;
+reg [16 -1 : 0] _instrbufipnxt; // ### declared as reg to be usable within always block.
 generate if (XARCHBITSZ == 16) begin
-	assign _instrbufipnxt = instrbufipnxt;
+	always @* begin
+		_instrbufipnxt = instrbufipnxt;
+	end
 end endgenerate
 generate if (XARCHBITSZ == 32) begin
-	assign _instrbufipnxt = (
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] ?
-			instrbufipnxt[31:16] :
-			instrbufipnxt[15:0]);
+	always @* begin
+		case (ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _instrbufipnxt = instrbufipnxt[15:0];
+		default: _instrbufipnxt = instrbufipnxt[31:16];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 64) begin
-	assign _instrbufipnxt = (
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufipnxt[15:0] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufipnxt[31:16] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufipnxt[47:32] :
-		                                         instrbufipnxt[63:48]);
+	always @* begin
+		case (ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _instrbufipnxt = instrbufipnxt[15:0];
+		1:       _instrbufipnxt = instrbufipnxt[31:16];
+		2:       _instrbufipnxt = instrbufipnxt[47:32];
+		default: _instrbufipnxt = instrbufipnxt[63:48];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 128) begin
-	assign _instrbufipnxt = (
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufipnxt[15:0] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufipnxt[31:16] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufipnxt[47:32] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufipnxt[63:48] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufipnxt[79:64] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufipnxt[95:80] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufipnxt[111:96] :
-		                                         instrbufipnxt[127:112]);
+	always @* begin
+		case (ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _instrbufipnxt = instrbufipnxt[15:0];
+		1:       _instrbufipnxt = instrbufipnxt[31:16];
+		2:       _instrbufipnxt = instrbufipnxt[47:32];
+		3:       _instrbufipnxt = instrbufipnxt[63:48];
+		4:       _instrbufipnxt = instrbufipnxt[79:64];
+		5:       _instrbufipnxt = instrbufipnxt[95:80];
+		6:       _instrbufipnxt = instrbufipnxt[111:96];
+		default: _instrbufipnxt = instrbufipnxt[127:112];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 256) begin
-	assign _instrbufipnxt = (
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufipnxt[15:0] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufipnxt[31:16] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufipnxt[47:32] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufipnxt[63:48] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufipnxt[79:64] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufipnxt[95:80] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufipnxt[111:96] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufipnxt[127:112] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufipnxt[143:128] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufipnxt[159:144] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufipnxt[175:160] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufipnxt[191:176] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufipnxt[207:192] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufipnxt[223:208] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufipnxt[239:224] :
-		                                          instrbufipnxt[255:240]);
+	always @* begin
+		case (ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		0 :      _instrbufipnxt = instrbufipnxt[15:0];
+		1 :      _instrbufipnxt = instrbufipnxt[31:16];
+		2 :      _instrbufipnxt = instrbufipnxt[47:32];
+		3 :      _instrbufipnxt = instrbufipnxt[63:48];
+		4 :      _instrbufipnxt = instrbufipnxt[79:64];
+		5 :      _instrbufipnxt = instrbufipnxt[95:80];
+		6 :      _instrbufipnxt = instrbufipnxt[111:96];
+		7 :      _instrbufipnxt = instrbufipnxt[127:112];
+		8 :      _instrbufipnxt = instrbufipnxt[143:128];
+		9 :      _instrbufipnxt = instrbufipnxt[159:144];
+		10:      _instrbufipnxt = instrbufipnxt[175:160];
+		11:      _instrbufipnxt = instrbufipnxt[191:176];
+		12:      _instrbufipnxt = instrbufipnxt[207:192];
+		13:      _instrbufipnxt = instrbufipnxt[223:208];
+		14:      _instrbufipnxt = instrbufipnxt[239:224];
+		default: _instrbufipnxt = instrbufipnxt[255:240];
+		endcase
+	end
 end endgenerate
 
-wire [16 -1 : 0] _instrbufi;
+reg [16 -1 : 0] _instrbufi; // ### declared as reg to be usable within always block.
 generate if (XARCHBITSZ == 16) begin
-	assign _instrbufi = instrbufi;
+	always @* begin
+		_instrbufi = instrbufi;
+	end
 end endgenerate
 generate if (XARCHBITSZ == 32) begin
-	assign _instrbufi = (
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] ?
-			instrbufi[31:16] :
-			instrbufi[15:0]);
+	always @* begin
+		case (ip[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _instrbufi = instrbufi[15:0];
+		default: _instrbufi = instrbufi[31:16];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 64) begin
-	assign _instrbufi = (
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
-		                                      instrbufi[63:48]);
+	always @* begin
+		case (ip[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _instrbufi = instrbufi[15:0];
+		1:       _instrbufi = instrbufi[31:16];
+		2:       _instrbufi = instrbufi[47:32];
+		default: _instrbufi = instrbufi[63:48];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 128) begin
-	assign _instrbufi = (
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufi[63:48] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufi[79:64] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufi[95:80] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufi[111:96] :
-		                                      instrbufi[127:112]);
+	always @* begin
+		case (ip[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _instrbufi = instrbufi[15:0];
+		1:       _instrbufi = instrbufi[31:16];
+		2:       _instrbufi = instrbufi[47:32];
+		3:       _instrbufi = instrbufi[63:48];
+		4:       _instrbufi = instrbufi[79:64];
+		5:       _instrbufi = instrbufi[95:80];
+		6:       _instrbufi = instrbufi[111:96];
+		default: _instrbufi = instrbufi[127:112];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 256) begin
-	assign _instrbufi = (
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufi[15:0] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufi[31:16] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufi[47:32] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufi[63:48] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufi[79:64] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufi[95:80] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufi[111:96] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufi[127:112] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufi[143:128] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufi[159:144] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufi[175:160] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufi[191:176] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufi[207:192] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufi[223:208] :
-		ip[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufi[239:224] :
-		                                       instrbufi[255:240]);
+	always @* begin
+		case (ip[CLOG2XARCHBITSZBY16 -1 : 0])
+		0 :      _instrbufi = instrbufi[15:0];
+		1 :      _instrbufi = instrbufi[31:16];
+		2 :      _instrbufi = instrbufi[47:32];
+		3 :      _instrbufi = instrbufi[63:48];
+		4 :      _instrbufi = instrbufi[79:64];
+		5 :      _instrbufi = instrbufi[95:80];
+		6 :      _instrbufi = instrbufi[111:96];
+		7 :      _instrbufi = instrbufi[127:112];
+		8 :      _instrbufi = instrbufi[143:128];
+		9 :      _instrbufi = instrbufi[159:144];
+		10:      _instrbufi = instrbufi[175:160];
+		11:      _instrbufi = instrbufi[191:176];
+		12:      _instrbufi = instrbufi[207:192];
+		13:      _instrbufi = instrbufi[223:208];
+		14:      _instrbufi = instrbufi[239:224];
+		default: _instrbufi = instrbufi[255:240];
+		endcase
+	end
 end endgenerate
 
-wire [16 -1 : 0] _instrbufi2;
+reg [16 -1 : 0] _instrbufi2; // ### declared as reg to be usable within always block.
 generate if (XARCHBITSZ == 16) begin
-	assign _instrbufi2 = instrbufi;
+	always @* begin
+		_instrbufi2 = instrbufi;
+	end
 end endgenerate
 generate if (XARCHBITSZ == 32) begin
-	assign _instrbufi2 = (
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] ?
-			instrbufi[31:16] :
-			instrbufi[15:0]);
+	always @* begin
+		case (ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _instrbufi2 = instrbufi[15:0];
+		default: _instrbufi2 = instrbufi[31:16];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 64) begin
-	assign _instrbufi2 = (
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
-		                                         instrbufi[63:48]);
+	always @* begin
+		case (ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _instrbufi2 = instrbufi[15:0];
+		1:       _instrbufi2 = instrbufi[31:16];
+		2:       _instrbufi2 = instrbufi[47:32];
+		default: _instrbufi2 = instrbufi[63:48];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 128) begin
-	assign _instrbufi2 = (
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufi[63:48] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufi[79:64] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufi[95:80] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufi[111:96] :
-		                                         instrbufi[127:112]);
+	always @* begin
+		case (ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _instrbufi2 = instrbufi[15:0];
+		1:       _instrbufi2 = instrbufi[31:16];
+		2:       _instrbufi2 = instrbufi[47:32];
+		3:       _instrbufi2 = instrbufi[63:48];
+		4:       _instrbufi2 = instrbufi[79:64];
+		5:       _instrbufi2 = instrbufi[95:80];
+		6:       _instrbufi2 = instrbufi[111:96];
+		default: _instrbufi2 = instrbufi[127:112];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 256) begin
-	assign _instrbufi2 = (
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufi[15:0] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufi[31:16] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufi[47:32] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufi[63:48] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufi[79:64] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufi[95:80] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufi[111:96] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufi[127:112] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufi[143:128] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufi[159:144] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufi[175:160] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufi[191:176] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufi[207:192] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufi[223:208] :
-		ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufi[239:224] :
-		                                          instrbufi[255:240]);
+	always @* begin
+		case (ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		0 :      _instrbufi2 = instrbufi[15:0];
+		1 :      _instrbufi2 = instrbufi[31:16];
+		2 :      _instrbufi2 = instrbufi[47:32];
+		3 :      _instrbufi2 = instrbufi[63:48];
+		4 :      _instrbufi2 = instrbufi[79:64];
+		5 :      _instrbufi2 = instrbufi[95:80];
+		6 :      _instrbufi2 = instrbufi[111:96];
+		7 :      _instrbufi2 = instrbufi[127:112];
+		8 :      _instrbufi2 = instrbufi[143:128];
+		9 :      _instrbufi2 = instrbufi[159:144];
+		10:      _instrbufi2 = instrbufi[175:160];
+		11:      _instrbufi2 = instrbufi[191:176];
+		12:      _instrbufi2 = instrbufi[207:192];
+		13:      _instrbufi2 = instrbufi[223:208];
+		14:      _instrbufi2 = instrbufi[239:224];
+		default: _instrbufi2 = instrbufi[255:240];
+		endcase
+	end
 end endgenerate
 
 wire [16 -1 : 0] sc1insn2 = (|instrbufusage2 ? _instrbufipnxt : _instrbufi2);
@@ -1077,246 +1116,311 @@ wire [(CLOG2INSTRBUFFERSIZE +1) -1 : 0] sc2instrbufusage3 =
 
 wire [XARCHBITSZ -1 : 0] sc2instrbufipnxt = instrbuf[sc2ipnxt[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) -1 : (CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF]];
 
-wire [16 -1 : 0] _sc2instrbufipnxt;
+reg [16 -1 : 0] _sc2instrbufipnxt; // ### declared as reg to be usable within always block.
 generate if (XARCHBITSZ == 16) begin
-	assign _sc2instrbufipnxt = sc2instrbufipnxt;
+	always @* begin
+		_sc2instrbufipnxt = sc2instrbufipnxt;
+	end
 end endgenerate
 generate if (XARCHBITSZ == 32) begin
-	assign _sc2instrbufipnxt = (
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] ?
-			sc2instrbufipnxt[31:16] :
-			sc2instrbufipnxt[15:0]);
+	always @* begin
+		case (sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _sc2instrbufipnxt = sc2instrbufipnxt[15:0];
+		default: _sc2instrbufipnxt = sc2instrbufipnxt[31:16];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 64) begin
-	assign _sc2instrbufipnxt = (
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? sc2instrbufipnxt[15:0] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? sc2instrbufipnxt[31:16] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? sc2instrbufipnxt[47:32] :
-		                                            sc2instrbufipnxt[63:48]);
+	always @* begin
+		case (sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _sc2instrbufipnxt = sc2instrbufipnxt[15:0];
+		1:       _sc2instrbufipnxt = sc2instrbufipnxt[31:16];
+		2:       _sc2instrbufipnxt = sc2instrbufipnxt[47:32];
+		default: _sc2instrbufipnxt = sc2instrbufipnxt[63:48];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 128) begin
-	assign _sc2instrbufipnxt = (
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? sc2instrbufipnxt[15:0] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? sc2instrbufipnxt[31:16] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? sc2instrbufipnxt[47:32] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? sc2instrbufipnxt[63:48] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? sc2instrbufipnxt[79:64] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? sc2instrbufipnxt[95:80] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? sc2instrbufipnxt[111:96] :
-		                                            sc2instrbufipnxt[127:112]);
+	always @* begin
+		case (sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _sc2instrbufipnxt = sc2instrbufipnxt[15:0];
+		1:       _sc2instrbufipnxt = sc2instrbufipnxt[31:16];
+		2:       _sc2instrbufipnxt = sc2instrbufipnxt[47:32];
+		3:       _sc2instrbufipnxt = sc2instrbufipnxt[63:48];
+		4:       _sc2instrbufipnxt = sc2instrbufipnxt[79:64];
+		5:       _sc2instrbufipnxt = sc2instrbufipnxt[95:80];
+		6:       _sc2instrbufipnxt = sc2instrbufipnxt[111:96];
+		default: _sc2instrbufipnxt = sc2instrbufipnxt[127:112];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 256) begin
-	assign _sc2instrbufipnxt = (
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? sc2instrbufipnxt[15:0] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? sc2instrbufipnxt[31:16] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? sc2instrbufipnxt[47:32] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? sc2instrbufipnxt[63:48] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? sc2instrbufipnxt[79:64] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? sc2instrbufipnxt[95:80] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? sc2instrbufipnxt[111:96] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? sc2instrbufipnxt[127:112] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? sc2instrbufipnxt[143:128] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? sc2instrbufipnxt[159:144] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? sc2instrbufipnxt[175:160] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? sc2instrbufipnxt[191:176] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? sc2instrbufipnxt[207:192] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? sc2instrbufipnxt[223:208] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? sc2instrbufipnxt[239:224] :
-		                                             sc2instrbufipnxt[255:240]);
+	always @* begin
+		case (sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		0 :      _sc2instrbufipnxt = sc2instrbufipnxt[15:0];
+		1 :      _sc2instrbufipnxt = sc2instrbufipnxt[31:16];
+		2 :      _sc2instrbufipnxt = sc2instrbufipnxt[47:32];
+		3 :      _sc2instrbufipnxt = sc2instrbufipnxt[63:48];
+		4 :      _sc2instrbufipnxt = sc2instrbufipnxt[79:64];
+		5 :      _sc2instrbufipnxt = sc2instrbufipnxt[95:80];
+		6 :      _sc2instrbufipnxt = sc2instrbufipnxt[111:96];
+		7 :      _sc2instrbufipnxt = sc2instrbufipnxt[127:112];
+		8 :      _sc2instrbufipnxt = sc2instrbufipnxt[143:128];
+		9 :      _sc2instrbufipnxt = sc2instrbufipnxt[159:144];
+		10:      _sc2instrbufipnxt = sc2instrbufipnxt[175:160];
+		11:      _sc2instrbufipnxt = sc2instrbufipnxt[191:176];
+		12:      _sc2instrbufipnxt = sc2instrbufipnxt[207:192];
+		13:      _sc2instrbufipnxt = sc2instrbufipnxt[223:208];
+		14:      _sc2instrbufipnxt = sc2instrbufipnxt[239:224];
+		default: _sc2instrbufipnxt = sc2instrbufipnxt[255:240];
+		endcase
+	end
 end endgenerate
 
 wire [XARCHBITSZ -1 : 0] sc2instrbufip3 = instrbuf[sc2ip3[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) -1 : (CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF]];
 
-wire [16 -1 : 0] _sc2instrbufip3;
+reg [16 -1 : 0] _sc2instrbufip3; // ### declared as reg to be usable within always block.
 generate if (XARCHBITSZ == 16) begin
-	assign _sc2instrbufip3 = sc2instrbufip3;
+	always @* begin
+		_sc2instrbufip3 = sc2instrbufip3;
+	end
 end endgenerate
 generate if (XARCHBITSZ == 32) begin
-	assign _sc2instrbufip3 = (
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] ?
-			sc2instrbufip3[31:16] :
-			sc2instrbufip3[15:0]);
+	always @* begin
+		case (sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _sc2instrbufip3 = sc2instrbufip3[15:0];
+		default: _sc2instrbufip3 = sc2instrbufip3[31:16];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 64) begin
-	assign _sc2instrbufip3 = (
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? sc2instrbufip3[15:0] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? sc2instrbufip3[31:16] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? sc2instrbufip3[47:32] :
-		                                          sc2instrbufip3[63:48]);
+	always @* begin
+		case (sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _sc2instrbufip3 = sc2instrbufip3[15:0];
+		1:       _sc2instrbufip3 = sc2instrbufip3[31:16];
+		2:       _sc2instrbufip3 = sc2instrbufip3[47:32];
+		default: _sc2instrbufip3 = sc2instrbufip3[63:48];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 128) begin
-	assign _sc2instrbufip3 = (
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? sc2instrbufip3[15:0] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? sc2instrbufip3[31:16] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? sc2instrbufip3[47:32] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? sc2instrbufip3[63:48] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? sc2instrbufip3[79:64] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? sc2instrbufip3[95:80] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? sc2instrbufip3[111:96] :
-		                                          sc2instrbufip3[127:112]);
+	always @* begin
+		case (sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _sc2instrbufip3 = sc2instrbufip3[15:0];
+		1:       _sc2instrbufip3 = sc2instrbufip3[31:16];
+		2:       _sc2instrbufip3 = sc2instrbufip3[47:32];
+		3:       _sc2instrbufip3 = sc2instrbufip3[63:48];
+		4:       _sc2instrbufip3 = sc2instrbufip3[79:64];
+		5:       _sc2instrbufip3 = sc2instrbufip3[95:80];
+		6:       _sc2instrbufip3 = sc2instrbufip3[111:96];
+		default: _sc2instrbufip3 = sc2instrbufip3[127:112];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 256) begin
-	assign _sc2instrbufip3 = (
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? sc2instrbufip3[15:0] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? sc2instrbufip3[31:16] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? sc2instrbufip3[47:32] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? sc2instrbufip3[63:48] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? sc2instrbufip3[79:64] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? sc2instrbufip3[95:80] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? sc2instrbufip3[111:96] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? sc2instrbufip3[127:112] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? sc2instrbufip3[143:128] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? sc2instrbufip3[159:144] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? sc2instrbufip3[175:160] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? sc2instrbufip3[191:176] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? sc2instrbufip3[207:192] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? sc2instrbufip3[223:208] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? sc2instrbufip3[239:224] :
-		                                           sc2instrbufip3[255:240]);
+	always @* begin
+		case (sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0])
+		0 :      _sc2instrbufip3 = sc2instrbufip3[15:0];
+		1 :      _sc2instrbufip3 = sc2instrbufip3[31:16];
+		2 :      _sc2instrbufip3 = sc2instrbufip3[47:32];
+		3 :      _sc2instrbufip3 = sc2instrbufip3[63:48];
+		4 :      _sc2instrbufip3 = sc2instrbufip3[79:64];
+		5 :      _sc2instrbufip3 = sc2instrbufip3[95:80];
+		6 :      _sc2instrbufip3 = sc2instrbufip3[111:96];
+		7 :      _sc2instrbufip3 = sc2instrbufip3[127:112];
+		8 :      _sc2instrbufip3 = sc2instrbufip3[143:128];
+		9 :      _sc2instrbufip3 = sc2instrbufip3[159:144];
+		10:      _sc2instrbufip3 = sc2instrbufip3[175:160];
+		11:      _sc2instrbufip3 = sc2instrbufip3[191:176];
+		12:      _sc2instrbufip3 = sc2instrbufip3[207:192];
+		13:      _sc2instrbufip3 = sc2instrbufip3[223:208];
+		14:      _sc2instrbufip3 = sc2instrbufip3[239:224];
+		default: _sc2instrbufip3 = sc2instrbufip3[255:240];
+		endcase
+	end
 end endgenerate
 
-wire [16 -1 : 0] _sc2instrbufi;
+reg [16 -1 : 0] _sc2instrbufi; // ### declared as reg to be usable within always block.
 generate if (XARCHBITSZ == 16) begin
-	assign _sc2instrbufi = instrbufi;
+	always @* begin
+		_sc2instrbufi = instrbufi;
+	end
 end endgenerate
 generate if (XARCHBITSZ == 32) begin
-	assign _sc2instrbufi = (
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] ?
-			instrbufi[31:16] :
-			instrbufi[15:0]);
+	always @* begin
+		case (sc2ip[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _sc2instrbufi = instrbufi[15:0];
+		default: _sc2instrbufi = instrbufi[31:16];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 64) begin
-	assign _sc2instrbufi = (
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
-		                                         instrbufi[63:48]);
+	always @* begin
+		case (sc2ip[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _sc2instrbufi = instrbufi[15:0];
+		1:       _sc2instrbufi = instrbufi[31:16];
+		2:       _sc2instrbufi = instrbufi[47:32];
+		default: _sc2instrbufi = instrbufi[63:48];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 128) begin
-	assign _sc2instrbufi = (
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufi[63:48] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufi[79:64] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufi[95:80] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufi[111:96] :
-		                                         instrbufi[127:112]);
+	always @* begin
+		case (sc2ip[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _sc2instrbufi = instrbufi[15:0];
+		1:       _sc2instrbufi = instrbufi[31:16];
+		2:       _sc2instrbufi = instrbufi[47:32];
+		3:       _sc2instrbufi = instrbufi[63:48];
+		4:       _sc2instrbufi = instrbufi[79:64];
+		5:       _sc2instrbufi = instrbufi[95:80];
+		6:       _sc2instrbufi = instrbufi[111:96];
+		default: _sc2instrbufi = instrbufi[127:112];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 256) begin
-	assign _sc2instrbufi = (
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufi[15:0] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufi[31:16] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufi[47:32] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufi[63:48] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufi[79:64] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufi[95:80] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufi[111:96] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufi[127:112] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufi[143:128] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufi[159:144] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufi[175:160] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufi[191:176] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufi[207:192] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufi[223:208] :
-		sc2ip[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufi[239:224] :
-		                                          instrbufi[255:240]);
+	always @* begin
+		case (sc2ip[CLOG2XARCHBITSZBY16 -1 : 0])
+		0 :      _sc2instrbufi = instrbufi[15:0];
+		1 :      _sc2instrbufi = instrbufi[31:16];
+		2 :      _sc2instrbufi = instrbufi[47:32];
+		3 :      _sc2instrbufi = instrbufi[63:48];
+		4 :      _sc2instrbufi = instrbufi[79:64];
+		5 :      _sc2instrbufi = instrbufi[95:80];
+		6 :      _sc2instrbufi = instrbufi[111:96];
+		7 :      _sc2instrbufi = instrbufi[127:112];
+		8 :      _sc2instrbufi = instrbufi[143:128];
+		9 :      _sc2instrbufi = instrbufi[159:144];
+		10:      _sc2instrbufi = instrbufi[175:160];
+		11:      _sc2instrbufi = instrbufi[191:176];
+		12:      _sc2instrbufi = instrbufi[207:192];
+		13:      _sc2instrbufi = instrbufi[223:208];
+		14:      _sc2instrbufi = instrbufi[239:224];
+		default: _sc2instrbufi = instrbufi[255:240];
+		endcase
+	end
 end endgenerate
 
-wire [16 -1 : 0] _sc2instrbufi2;
+reg [16 -1 : 0] _sc2instrbufi2; // ### declared as reg to be usable within always block.
 generate if (XARCHBITSZ == 16) begin
-	assign _sc2instrbufi2 = instrbufi;
+	always @* begin
+		_sc2instrbufi2 = instrbufi;
+	end
 end endgenerate
 generate if (XARCHBITSZ == 32) begin
-	assign _sc2instrbufi2 = (
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] ?
-			instrbufi[31:16] :
-			instrbufi[15:0]);
+	always @* begin
+		case (sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _sc2instrbufi2 = instrbufi[15:0];
+		default: _sc2instrbufi2 = instrbufi[31:16];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 64) begin
-	assign _sc2instrbufi2 = (
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
-		                                            instrbufi[63:48]);
+	always @* begin
+		case (sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _sc2instrbufi2 = instrbufi[15:0];
+		1:       _sc2instrbufi2 = instrbufi[31:16];
+		2:       _sc2instrbufi2 = instrbufi[47:32];
+		default: _sc2instrbufi2 = instrbufi[63:48];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 128) begin
-	assign _sc2instrbufi2 = (
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufi[63:48] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufi[79:64] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufi[95:80] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufi[111:96] :
-		                                            instrbufi[127:112]);
+	always @* begin
+		case (sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _sc2instrbufi2 = instrbufi[15:0];
+		1:       _sc2instrbufi2 = instrbufi[31:16];
+		2:       _sc2instrbufi2 = instrbufi[47:32];
+		3:       _sc2instrbufi2 = instrbufi[63:48];
+		4:       _sc2instrbufi2 = instrbufi[79:64];
+		5:       _sc2instrbufi2 = instrbufi[95:80];
+		6:       _sc2instrbufi2 = instrbufi[111:96];
+		default: _sc2instrbufi2 = instrbufi[127:112];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 256) begin
-	assign _sc2instrbufi2 = (
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufi[15:0] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufi[31:16] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufi[47:32] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufi[63:48] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufi[79:64] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufi[95:80] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufi[111:96] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufi[127:112] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufi[143:128] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufi[159:144] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufi[175:160] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufi[191:176] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufi[207:192] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufi[223:208] :
-		sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufi[239:224] :
-		                                             instrbufi[255:240]);
+	always @* begin
+		case (sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		0 :      _sc2instrbufi2 = instrbufi[15:0];
+		1 :      _sc2instrbufi2 = instrbufi[31:16];
+		2 :      _sc2instrbufi2 = instrbufi[47:32];
+		3 :      _sc2instrbufi2 = instrbufi[63:48];
+		4 :      _sc2instrbufi2 = instrbufi[79:64];
+		5 :      _sc2instrbufi2 = instrbufi[95:80];
+		6 :      _sc2instrbufi2 = instrbufi[111:96];
+		7 :      _sc2instrbufi2 = instrbufi[127:112];
+		8 :      _sc2instrbufi2 = instrbufi[143:128];
+		9 :      _sc2instrbufi2 = instrbufi[159:144];
+		10:      _sc2instrbufi2 = instrbufi[175:160];
+		11:      _sc2instrbufi2 = instrbufi[191:176];
+		12:      _sc2instrbufi2 = instrbufi[207:192];
+		13:      _sc2instrbufi2 = instrbufi[223:208];
+		14:      _sc2instrbufi2 = instrbufi[239:224];
+		default: _sc2instrbufi2 = instrbufi[255:240];
+		endcase
+	end
 end endgenerate
 
-wire [16 -1 : 0] _sc2instrbufi3;
+reg [16 -1 : 0] _sc2instrbufi3; // ### declared as reg to be usable within always block.
 generate if (XARCHBITSZ == 16) begin
-	assign _sc2instrbufi3 = instrbufi;
+	always @* begin
+		_sc2instrbufi3 = instrbufi;
+	end
 end endgenerate
 generate if (XARCHBITSZ == 32) begin
-	assign _sc2instrbufi3 = (
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] ?
-			instrbufi[31:16] :
-			instrbufi[15:0]);
+	always @* begin
+		case (sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _sc2instrbufi3 = instrbufi[15:0];
+		default: _sc2instrbufi3 = instrbufi[31:16];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 64) begin
-	assign _sc2instrbufi3 = (
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
-		                                          instrbufi[63:48]);
+	always @* begin
+		case (sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _sc2instrbufi3 = instrbufi[15:0];
+		1:       _sc2instrbufi3 = instrbufi[31:16];
+		2:       _sc2instrbufi3 = instrbufi[47:32];
+		default: _sc2instrbufi3 = instrbufi[63:48];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 128) begin
-	assign _sc2instrbufi3 = (
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0 ? instrbufi[15:0] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1 ? instrbufi[31:16] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2 ? instrbufi[47:32] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 3 ? instrbufi[63:48] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 4 ? instrbufi[79:64] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 5 ? instrbufi[95:80] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 6 ? instrbufi[111:96] :
-		                                          instrbufi[127:112]);
+	always @* begin
+		case (sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0])
+		0:       _sc2instrbufi3 = instrbufi[15:0];
+		1:       _sc2instrbufi3 = instrbufi[31:16];
+		2:       _sc2instrbufi3 = instrbufi[47:32];
+		3:       _sc2instrbufi3 = instrbufi[63:48];
+		4:       _sc2instrbufi3 = instrbufi[79:64];
+		5:       _sc2instrbufi3 = instrbufi[95:80];
+		6:       _sc2instrbufi3 = instrbufi[111:96];
+		default: _sc2instrbufi3 = instrbufi[127:112];
+		endcase
+	end
 end endgenerate
 generate if (XARCHBITSZ == 256) begin
-	assign _sc2instrbufi3 = (
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 0  ? instrbufi[15:0] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 1  ? instrbufi[31:16] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 2  ? instrbufi[47:32] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 3  ? instrbufi[63:48] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 4  ? instrbufi[79:64] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 5  ? instrbufi[95:80] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 6  ? instrbufi[111:96] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 7  ? instrbufi[127:112] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 8  ? instrbufi[143:128] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 9  ? instrbufi[159:144] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 10 ? instrbufi[175:160] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 11 ? instrbufi[191:176] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 12 ? instrbufi[207:192] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 13 ? instrbufi[223:208] :
-		sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0] == 14 ? instrbufi[239:224] :
-		                                           instrbufi[255:240]);
+	always @* begin
+		case (sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0])
+		0 :      _sc2instrbufi3 = instrbufi[15:0];
+		1 :      _sc2instrbufi3 = instrbufi[31:16];
+		2 :      _sc2instrbufi3 = instrbufi[47:32];
+		3 :      _sc2instrbufi3 = instrbufi[63:48];
+		4 :      _sc2instrbufi3 = instrbufi[79:64];
+		5 :      _sc2instrbufi3 = instrbufi[95:80];
+		6 :      _sc2instrbufi3 = instrbufi[111:96];
+		7 :      _sc2instrbufi3 = instrbufi[127:112];
+		8 :      _sc2instrbufi3 = instrbufi[143:128];
+		9 :      _sc2instrbufi3 = instrbufi[159:144];
+		10:      _sc2instrbufi3 = instrbufi[175:160];
+		11:      _sc2instrbufi3 = instrbufi[191:176];
+		12:      _sc2instrbufi3 = instrbufi[207:192];
+		13:      _sc2instrbufi3 = instrbufi[223:208];
+		14:      _sc2instrbufi3 = instrbufi[239:224];
+		default: _sc2instrbufi3 = instrbufi[255:240];
+		endcase
+	end
 end endgenerate
 
 wire [16 -1 : 0] sc2insn2 = (|sc2instrbufusage2 ? _sc2instrbufipnxt : _sc2instrbufi2);
