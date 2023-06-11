@@ -3,35 +3,35 @@
 
 // Instantiation of PerIntW and all its signals.
 
-wire [2 -1 : 0]             m_pi1w_op_w    [PI1WMASTERCOUNT -1 : 0];
-wire [ADDRBITSZ -1 : 0]     m_pi1w_addr_w  [PI1WMASTERCOUNT -1 : 0];
-wire [ARCHBITSZ -1 : 0]     m_pi1w_data_w1 [PI1WMASTERCOUNT -1 : 0];
-wire [ARCHBITSZ -1 : 0]     m_pi1w_data_w0 [PI1WMASTERCOUNT -1 : 0];
-wire [(ARCHBITSZ/8) -1 : 0] m_pi1w_sel_w   [PI1WMASTERCOUNT -1 : 0];
-wire                        m_pi1w_rdy_w   [PI1WMASTERCOUNT -1 : 0];
+wire [2 -1 : 0]                 m_pi1w_op_w    [PI1WMASTERCOUNT -1 : 0];
+wire [PI1WADDRBITSZ -1 : 0]     m_pi1w_addr_w  [PI1WMASTERCOUNT -1 : 0];
+wire [PI1WARCHBITSZ -1 : 0]     m_pi1w_data_w1 [PI1WMASTERCOUNT -1 : 0];
+wire [PI1WARCHBITSZ -1 : 0]     m_pi1w_data_w0 [PI1WMASTERCOUNT -1 : 0];
+wire [(PI1WARCHBITSZ/8) -1 : 0] m_pi1w_sel_w   [PI1WMASTERCOUNT -1 : 0];
+wire                            m_pi1w_rdy_w   [PI1WMASTERCOUNT -1 : 0];
 
-wire [2 -1 : 0]             s_pi1w_op_w    [PI1WSLAVECOUNT -1 : 0];
-wire [ADDRBITSZ -1 : 0]     s_pi1w_addr_w  [PI1WSLAVECOUNT -1 : 0];
-wire [ARCHBITSZ -1 : 0]     s_pi1w_data_w0 [PI1WSLAVECOUNT -1 : 0];
-wire [ARCHBITSZ -1 : 0]     s_pi1w_data_w1 [PI1WSLAVECOUNT -1 : 0];
-wire [(ARCHBITSZ/8) -1 : 0] s_pi1w_sel_w   [PI1WSLAVECOUNT -1 : 0];
-wire                        s_pi1w_rdy_w   [PI1WSLAVECOUNT -1 : 0];
-wire [ARCHBITSZ -1 : 0]     s_pi1w_mapsz_w [PI1WSLAVECOUNT -1 : 0];
+wire [2 -1 : 0]                 s_pi1w_op_w    [PI1WSLAVECOUNT -1 : 0];
+wire [PI1WADDRBITSZ -1 : 0]     s_pi1w_addr_w  [PI1WSLAVECOUNT -1 : 0];
+wire [PI1WARCHBITSZ -1 : 0]     s_pi1w_data_w0 [PI1WSLAVECOUNT -1 : 0];
+wire [PI1WARCHBITSZ -1 : 0]     s_pi1w_data_w1 [PI1WSLAVECOUNT -1 : 0];
+wire [(PI1WARCHBITSZ/8) -1 : 0] s_pi1w_sel_w   [PI1WSLAVECOUNT -1 : 0];
+wire                            s_pi1w_rdy_w   [PI1WSLAVECOUNT -1 : 0];
+wire [PI1WARCHBITSZ -1 : 0]     s_pi1w_mapsz_w [PI1WSLAVECOUNT -1 : 0];
 
-wire [(2 * PI1WMASTERCOUNT) -1 : 0]             m_pi1w_op_w_flat;
-wire [(ADDRBITSZ * PI1WMASTERCOUNT) -1 : 0]     m_pi1w_addr_w_flat;
-wire [(ARCHBITSZ * PI1WMASTERCOUNT) -1 : 0]     m_pi1w_data_w1_flat;
-wire [(ARCHBITSZ * PI1WMASTERCOUNT) -1 : 0]     m_pi1w_data_w0_flat;
-wire [((ARCHBITSZ/8) * PI1WMASTERCOUNT) -1 : 0] m_pi1w_sel_w_flat;
-wire [PI1WMASTERCOUNT -1 : 0]                   m_pi1w_rdy_w_flat;
+wire [(2 * PI1WMASTERCOUNT) -1 : 0]                 m_pi1w_op_w_flat;
+wire [(PI1WADDRBITSZ * PI1WMASTERCOUNT) -1 : 0]     m_pi1w_addr_w_flat;
+wire [(PI1WARCHBITSZ * PI1WMASTERCOUNT) -1 : 0]     m_pi1w_data_w1_flat;
+wire [(PI1WARCHBITSZ * PI1WMASTERCOUNT) -1 : 0]     m_pi1w_data_w0_flat;
+wire [((PI1WARCHBITSZ/8) * PI1WMASTERCOUNT) -1 : 0] m_pi1w_sel_w_flat;
+wire [PI1WMASTERCOUNT -1 : 0]                       m_pi1w_rdy_w_flat;
 
-wire [(2 * PI1WSLAVECOUNT) -1 : 0]             s_pi1w_op_w_flat;
-wire [(ADDRBITSZ * PI1WSLAVECOUNT) -1 : 0]     s_pi1w_addr_w_flat;
-wire [(ARCHBITSZ * PI1WSLAVECOUNT) -1 : 0]     s_pi1w_data_w1_flat;
-wire [(ARCHBITSZ * PI1WSLAVECOUNT) -1 : 0]     s_pi1w_data_w0_flat;
-wire [((ARCHBITSZ/8) * PI1WSLAVECOUNT) -1 : 0] s_pi1w_sel_w_flat;
-wire [PI1WSLAVECOUNT -1 : 0]                   s_pi1w_rdy_w_flat;
-wire [(ARCHBITSZ * PI1WSLAVECOUNT) -1 : 0]     s_pi1w_mapsz_w_flat;
+wire [(2 * PI1WSLAVECOUNT) -1 : 0]                 s_pi1w_op_w_flat;
+wire [(PI1WADDRBITSZ * PI1WSLAVECOUNT) -1 : 0]     s_pi1w_addr_w_flat;
+wire [(PI1WARCHBITSZ * PI1WSLAVECOUNT) -1 : 0]     s_pi1w_data_w1_flat;
+wire [(PI1WARCHBITSZ * PI1WSLAVECOUNT) -1 : 0]     s_pi1w_data_w0_flat;
+wire [((PI1WARCHBITSZ/8) * PI1WSLAVECOUNT) -1 : 0] s_pi1w_sel_w_flat;
+wire [PI1WSLAVECOUNT -1 : 0]                       s_pi1w_rdy_w_flat;
+wire [(PI1WARCHBITSZ * PI1WSLAVECOUNT) -1 : 0]     s_pi1w_mapsz_w_flat;
 
 genvar gen_m_pi1w_op_w_flat_idx;
 generate for (gen_m_pi1w_op_w_flat_idx = 0; gen_m_pi1w_op_w_flat_idx < PI1WMASTERCOUNT; gen_m_pi1w_op_w_flat_idx = gen_m_pi1w_op_w_flat_idx + 1) begin :gen_m_pi1w_op_w_flat
@@ -40,22 +40,22 @@ end endgenerate
 
 genvar gen_m_pi1w_addr_w_flat_idx;
 generate for (gen_m_pi1w_addr_w_flat_idx = 0; gen_m_pi1w_addr_w_flat_idx < PI1WMASTERCOUNT; gen_m_pi1w_addr_w_flat_idx = gen_m_pi1w_addr_w_flat_idx + 1) begin :gen_m_pi1w_addr_w_flat
-assign m_pi1w_addr_w_flat[((gen_m_pi1w_addr_w_flat_idx+1) * ADDRBITSZ) -1 : gen_m_pi1w_addr_w_flat_idx * ADDRBITSZ] = m_pi1w_addr_w[gen_m_pi1w_addr_w_flat_idx];
+assign m_pi1w_addr_w_flat[((gen_m_pi1w_addr_w_flat_idx+1) * PI1WADDRBITSZ) -1 : gen_m_pi1w_addr_w_flat_idx * PI1WADDRBITSZ] = m_pi1w_addr_w[gen_m_pi1w_addr_w_flat_idx];
 end endgenerate
 
 genvar gen_m_pi1w_data_w1_flat_idx;
 generate for (gen_m_pi1w_data_w1_flat_idx = 0; gen_m_pi1w_data_w1_flat_idx < PI1WMASTERCOUNT; gen_m_pi1w_data_w1_flat_idx = gen_m_pi1w_data_w1_flat_idx + 1) begin :gen_m_pi1w_data_w1_flat
-assign m_pi1w_data_w1_flat[((gen_m_pi1w_data_w1_flat_idx+1) * ARCHBITSZ) -1 : gen_m_pi1w_data_w1_flat_idx * ARCHBITSZ] = m_pi1w_data_w1[gen_m_pi1w_data_w1_flat_idx];
+assign m_pi1w_data_w1_flat[((gen_m_pi1w_data_w1_flat_idx+1) * PI1WARCHBITSZ) -1 : gen_m_pi1w_data_w1_flat_idx * PI1WARCHBITSZ] = m_pi1w_data_w1[gen_m_pi1w_data_w1_flat_idx];
 end endgenerate
 
 genvar gen_m_pi1w_data_w0_idx;
 generate for (gen_m_pi1w_data_w0_idx = 0; gen_m_pi1w_data_w0_idx < PI1WMASTERCOUNT; gen_m_pi1w_data_w0_idx = gen_m_pi1w_data_w0_idx + 1) begin :gen_m_pi1w_data_w0
-assign m_pi1w_data_w0[gen_m_pi1w_data_w0_idx] = m_pi1w_data_w0_flat[((gen_m_pi1w_data_w0_idx+1) * ARCHBITSZ) -1 : gen_m_pi1w_data_w0_idx * ARCHBITSZ];
+assign m_pi1w_data_w0[gen_m_pi1w_data_w0_idx] = m_pi1w_data_w0_flat[((gen_m_pi1w_data_w0_idx+1) * PI1WARCHBITSZ) -1 : gen_m_pi1w_data_w0_idx * PI1WARCHBITSZ];
 end endgenerate
 
 genvar gen_m_pi1w_sel_w_flat_idx;
 generate for (gen_m_pi1w_sel_w_flat_idx = 0; gen_m_pi1w_sel_w_flat_idx < PI1WMASTERCOUNT; gen_m_pi1w_sel_w_flat_idx = gen_m_pi1w_sel_w_flat_idx + 1) begin :gen_m_pi1w_sel_w_flat
-assign m_pi1w_sel_w_flat[((gen_m_pi1w_sel_w_flat_idx+1) * (ARCHBITSZ/8)) -1 : gen_m_pi1w_sel_w_flat_idx * (ARCHBITSZ/8)] = m_pi1w_sel_w[gen_m_pi1w_sel_w_flat_idx];
+assign m_pi1w_sel_w_flat[((gen_m_pi1w_sel_w_flat_idx+1) * (PI1WARCHBITSZ/8)) -1 : gen_m_pi1w_sel_w_flat_idx * (PI1WARCHBITSZ/8)] = m_pi1w_sel_w[gen_m_pi1w_sel_w_flat_idx];
 end endgenerate
 
 genvar gen_m_pi1w_rdy_w_idx;
@@ -70,22 +70,22 @@ end endgenerate
 
 genvar gen_s_pi1w_addr_w_idx;
 generate for (gen_s_pi1w_addr_w_idx = 0; gen_s_pi1w_addr_w_idx < PI1WSLAVECOUNT; gen_s_pi1w_addr_w_idx = gen_s_pi1w_addr_w_idx + 1) begin :gen_s_pi1w_addr_w
-assign s_pi1w_addr_w[gen_s_pi1w_addr_w_idx] = s_pi1w_addr_w_flat[((gen_s_pi1w_addr_w_idx+1) * ADDRBITSZ) -1 : gen_s_pi1w_addr_w_idx * ADDRBITSZ];
+assign s_pi1w_addr_w[gen_s_pi1w_addr_w_idx] = s_pi1w_addr_w_flat[((gen_s_pi1w_addr_w_idx+1) * PI1WADDRBITSZ) -1 : gen_s_pi1w_addr_w_idx * PI1WADDRBITSZ];
 end endgenerate
 
 genvar gen_s_pi1w_data_w1_flat_idx;
 generate for (gen_s_pi1w_data_w1_flat_idx = 0; gen_s_pi1w_data_w1_flat_idx < PI1WSLAVECOUNT; gen_s_pi1w_data_w1_flat_idx = gen_s_pi1w_data_w1_flat_idx + 1) begin :gen_s_pi1w_data_w1_flat
-assign s_pi1w_data_w1_flat[((gen_s_pi1w_data_w1_flat_idx+1) * ARCHBITSZ) -1 : gen_s_pi1w_data_w1_flat_idx * ARCHBITSZ] = s_pi1w_data_w1[gen_s_pi1w_data_w1_flat_idx];
+assign s_pi1w_data_w1_flat[((gen_s_pi1w_data_w1_flat_idx+1) * PI1WARCHBITSZ) -1 : gen_s_pi1w_data_w1_flat_idx * PI1WARCHBITSZ] = s_pi1w_data_w1[gen_s_pi1w_data_w1_flat_idx];
 end endgenerate
 
 genvar gen_s_pi1w_data_w0_idx;
 generate for (gen_s_pi1w_data_w0_idx = 0; gen_s_pi1w_data_w0_idx < PI1WSLAVECOUNT; gen_s_pi1w_data_w0_idx = gen_s_pi1w_data_w0_idx + 1) begin :gen_s_pi1w_data_w0
-assign s_pi1w_data_w0[gen_s_pi1w_data_w0_idx] = s_pi1w_data_w0_flat[((gen_s_pi1w_data_w0_idx+1) * ARCHBITSZ) -1 : gen_s_pi1w_data_w0_idx * ARCHBITSZ];
+assign s_pi1w_data_w0[gen_s_pi1w_data_w0_idx] = s_pi1w_data_w0_flat[((gen_s_pi1w_data_w0_idx+1) * PI1WARCHBITSZ) -1 : gen_s_pi1w_data_w0_idx * PI1WARCHBITSZ];
 end endgenerate
 
 genvar gen_s_pi1w_sel_w_idx;
 generate for (gen_s_pi1w_sel_w_idx = 0; gen_s_pi1w_sel_w_idx < PI1WSLAVECOUNT; gen_s_pi1w_sel_w_idx = gen_s_pi1w_sel_w_idx + 1) begin :gen_s_pi1w_sel_w
-assign s_pi1w_sel_w[gen_s_pi1w_sel_w_idx] = s_pi1w_sel_w_flat[((gen_s_pi1w_sel_w_idx+1) * (ARCHBITSZ/8)) -1 : gen_s_pi1w_sel_w_idx * (ARCHBITSZ/8)];
+assign s_pi1w_sel_w[gen_s_pi1w_sel_w_idx] = s_pi1w_sel_w_flat[((gen_s_pi1w_sel_w_idx+1) * (PI1WARCHBITSZ/8)) -1 : gen_s_pi1w_sel_w_idx * (PI1WARCHBITSZ/8)];
 end endgenerate
 
 genvar gen_s_pi1w_rdy_w_flat_idx;
@@ -95,7 +95,7 @@ end endgenerate
 
 genvar gen_s_pi1w_mapsz_w_flat_idx;
 generate for (gen_s_pi1w_mapsz_w_flat_idx = 0; gen_s_pi1w_mapsz_w_flat_idx < PI1WSLAVECOUNT; gen_s_pi1w_mapsz_w_flat_idx = gen_s_pi1w_mapsz_w_flat_idx + 1) begin :gen_s_pi1w_mapsz_w_flat
-assign s_pi1w_mapsz_w_flat[((gen_s_pi1w_mapsz_w_flat_idx+1) * ARCHBITSZ) -1 : gen_s_pi1w_mapsz_w_flat_idx * ARCHBITSZ] = s_pi1w_mapsz_w[gen_s_pi1w_mapsz_w_flat_idx];
+assign s_pi1w_mapsz_w_flat[((gen_s_pi1w_mapsz_w_flat_idx+1) * PI1WARCHBITSZ) -1 : gen_s_pi1w_mapsz_w_flat_idx * PI1WARCHBITSZ] = s_pi1w_mapsz_w[gen_s_pi1w_mapsz_w_flat_idx];
 end endgenerate
 
 pi1w #(
