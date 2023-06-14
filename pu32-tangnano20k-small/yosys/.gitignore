@@ -1,0 +1,6 @@
+*.json
+*_out.config
+*.bit
+*.dfu
+*.log
+*.hex
