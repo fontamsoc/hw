@@ -621,17 +621,11 @@ wire isopfmul = (isopfloat && isoptype2);
 wire isopfdiv = (isopfloat && isoptype3);
 
 reg[16 -1 : 0] flags;
-wire isflagsetasid = flags[0];
+wire isflagmmucmds = flags[0];
 wire isflagsettimer = flags[1];
-wire isflagsettlb = flags[2];
-wire isflagclrtlb = flags[3];
-wire isflaggetclkcyclecnt = flags[4];
-wire isflaggetclkfreq = flags[5];
-wire isflaggettlbsize = flags[6];
-wire isflaggetcachesize = flags[7];
-wire isflaggetcoreid = flags[8];
-wire isflagcacherst = flags[9];
-wire isflaggettlb = flags[10];
+wire isflagclkinfo = flags[4];
+wire isflagsysinfo = flags[5];
+wire isflagcachecmds = flags[7];
 wire isflagsetflags = flags[11];
 assign isflagdisextintr = flags[12];
 assign isflagdistimerintr = flags[13];
@@ -643,17 +637,17 @@ wire isopnop = (isopinc8 && !{instrbufdato0[3:0], instrbufdato1} && !isflagdispr
 	&& !dbgen);
 
 wire sequencerintrsysop = (inusermode & !(
-	(isopsetasid && isflagsetasid) ||
+	(isopsetasid && isflagmmucmds) ||
 	(isopsettimer && isflagsettimer) ||
-	(isopsettlb && isflagsettlb) ||
-	(isopclrtlb && isflagclrtlb) ||
-	((isopgetclkcyclecnt || isopgetclkcyclecnth) && isflaggetclkcyclecnt) ||
-	((isopgetclkfreq || isopgetcap || isopgetver) && isflaggetclkfreq) ||
-	(isopgettlbsize && isflaggettlbsize) ||
-	(isopgetcachesize && isflaggetcachesize) ||
-	(isopgetcoreid && isflaggetcoreid) ||
-	(isopcacherst && isflagcacherst) ||
-	(isopgettlb && isflaggettlb) ||
+	(isopsettlb && isflagmmucmds) ||
+	(isopclrtlb && isflagmmucmds) ||
+	((isopgetclkcyclecnt || isopgetclkcyclecnth) && isflagclkinfo) ||
+	((isopgetclkfreq || isopgetcap || isopgetver) && isflagclkinfo) ||
+	(isopgettlbsize && isflagmmucmds) ||
+	(isopgetcachesize && isflagcachecmds) ||
+	(isopgetcoreid && isflagsysinfo) ||
+	(isopcacherst && isflagcachecmds) ||
+	(isopgettlb && isflagmmucmds) ||
 	(isopsetflags && isflagsetflags) ||
 	(isophalt && isflaghalt)));
 
@@ -722,8 +716,8 @@ wire dtlbwe = (
 	`endif
 	(miscrdyandsequencerreadyandgprrdy12 &&
 	!(itlbreadenable_ || dtlbreadenable_) && (
-	(isopsettlb && (inkernelmode || isflagsettlb) && (gprdata1 & 'b110)) ||
-	(isopclrtlb && (inkernelmode || isflagclrtlb) && !(({dtlbtag[dtlbwayhitidx], dtlbset, dtlbasid[dtlbwayhitidx]} ^ gprdata2) & gprdata1)))));
+	(isopsettlb && (inkernelmode || isflagmmucmds) && (gprdata1 & 'b110)) ||
+	(isopclrtlb && (inkernelmode || isflagmmucmds) && !(({dtlbtag[dtlbwayhitidx], dtlbset, dtlbasid[dtlbwayhitidx]} ^ gprdata2) & gprdata1)))));
 
 reg [CLOG2TLBWAYCOUNT -1 : 0] itlbwayhitidx; // ### Nets declared as reg so as to be useable by verilog within the always block.
 reg [CLOG2TLBWAYCOUNT -1 : 0] itlbwaywriteidx; // Register used to hold itlb-way index to write next.
@@ -753,8 +747,8 @@ wire itlbwe = (
 	`endif
 	(miscrdyandsequencerreadyandgprrdy12 &&
 	!(itlbreadenable_ || dtlbreadenable_) && (
-	(isopsettlb && (inkernelmode || isflagsettlb) && (gprdata1 & 'b1)) ||
-	(isopclrtlb && (inkernelmode || isflagclrtlb) && !(({itlbtag[itlbwayhitidx], itlbset, itlbasid[itlbwayhitidx]} ^ gprdata2) & gprdata1)))));
+	(isopsettlb && (inkernelmode || isflagmmucmds) && (gprdata1 & 'b1)) ||
+	(isopclrtlb && (inkernelmode || isflagmmucmds) && !(({itlbtag[itlbwayhitidx], itlbset, itlbasid[itlbwayhitidx]} ^ gprdata2) & gprdata1)))));
 
 // Net used to write itlb and dtlb.
 wire[TLBENTRYBITSZ -1 : 0] tlbwritedata = (
@@ -1911,9 +1905,9 @@ reg[ARCHBITSZ -1 : 0] opgetsysregresult;
 
 wire opgetsysregdone = (miscrdyandsequencerreadyandgprrdy1 && isopgetsysreg && (
 	inkernelmode ||
-	((isoptype4 || isoptype5) && isflaggetclkcyclecnt) ||
-	(isoptype6 && isflaggettlbsize) ||
-	(isoptype7 && isflaggetcachesize)));
+	((isoptype4 || isoptype5) && isflagclkinfo) ||
+	(isoptype6 && isflagmmucmds) ||
+	(isoptype7 && isflagcachecmds)));
 
 // ---------- Registers and nets used by opgetsysreg1 ----------
 
@@ -1948,13 +1942,13 @@ wire opgetsysreg1done = (miscrdyandsequencerreadyandgprrdy1 && isopgetsysreg1 &&
 			`endif
 			`endif
 	)))) && (inkernelmode ||
-	(isoptype0 && isflaggetcoreid) ||
-	((isoptype1 || isoptype4 || isoptype5) && isflaggetclkfreq) ||
-	(isoptype2 && isflaggetcachesize) ||
-	(isoptype3 && isflaggettlb)));
+	((isoptype0 || isoptype4 || isoptype5) && isflagsysinfo) ||
+	(isoptype1 && isflagclkinfo) ||
+	(isoptype2 && isflagcachecmds) ||
+	(isoptype3 && isflagmmucmds)));
 
 wire isopgettlb_or_isopclrtlb_found = (miscrdyandsequencerreadyandgprrdy12 && (
-	(isopgettlb && (inkernelmode || isflaggettlb)) || (isopclrtlb && (inkernelmode || isflagclrtlb))));
+	(isopgettlb && (inkernelmode || isflagmmucmds)) || (isopclrtlb && (inkernelmode || isflagmmucmds))));
 reg isopgettlb_or_isopclrtlb_found_sampled;
 assign isopgettlb_or_isopclrtlb_found_posedge = (!isopgettlb_or_isopclrtlb_found_sampled && isopgettlb_or_isopclrtlb_found);
 

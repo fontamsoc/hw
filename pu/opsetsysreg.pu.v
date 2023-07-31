@@ -16,7 +16,7 @@ always @ (posedge clk_i) begin
 		if (isoptype0) ksysopfaulthdlr <= gprdata1[ARCHBITSZ-1:1];
 		else if (isoptype1) ksl <= gprdata1;
 		`ifdef PUMMU
-		else if (isoptype4 && (inkernelmode || isflagsetasid)) begin
+		else if (isoptype4 && (inkernelmode || isflagmmucmds)) begin
 			asid <= gprdata1[13-1:0];
 			`ifdef PUHPTW
 			hptwpgd <= gpr13val;
