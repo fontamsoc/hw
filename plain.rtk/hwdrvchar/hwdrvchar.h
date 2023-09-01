@@ -35,7 +35,8 @@ static void hwdrvchar_init (hwdrvchar *dev, unsigned long baudrate) {
 	do __asm__ __volatile__ (
 		"ldst %0, %1"
 		: "+r" (bufferusage)
-		: "r" (addr));
+		: "r" (addr)
+		: "memory");
 		while (bufferusage); // Wait for the transmit buffer to be empty.
 	// Command HWDRVCHAR_CMDSETSPEED == 2 to retrieve
 	// the clock frequency used by the UART device.
@@ -45,7 +46,8 @@ static void hwdrvchar_init (hwdrvchar *dev, unsigned long baudrate) {
 	__asm__ __volatile__ (
 		"ldst %0, %1"
 		: "+r" (dev->clkfreq)
-		: "r" (addr));
+		: "r" (addr)
+		: "memory");
 	// Command HWDRVCHAR_CMDSETSPEED == 2 to set
 	// the speed to use when sending and receiving bytes.
 	// The encoding of a command and its argument
@@ -54,7 +56,8 @@ static void hwdrvchar_init (hwdrvchar *dev, unsigned long baudrate) {
 	__asm__ __volatile__ (
 		"ldst %0, %1"
 		: "+r" (baudrate)
-		: "r" (addr));
+		: "r" (addr)
+		: "memory");
 	// Command HWDRVCHAR_CMDSETINTERRUPT == 1 to retrieve
 	// the size in bytes of the UART transmit
 	// and receive buffer.
@@ -64,7 +67,8 @@ static void hwdrvchar_init (hwdrvchar *dev, unsigned long baudrate) {
 	__asm__ __volatile__ (
 		"ldst %0, %1"
 		: "+r" (dev->bufsz)
-		: "r" (addr));
+		: "r" (addr)
+		: "memory");
 }
 
 // Return the count of bytes that can be read
@@ -78,7 +82,8 @@ static inline unsigned long hwdrvchar_readable (hwdrvchar *dev) {
 	__asm__ __volatile__ (
 		"ldst %0, %1"
 		: "+r" (bufferusage)
-		: "r" (dev->addr));
+		: "r" (dev->addr)
+		: "memory");
 	return bufferusage;
 }
 
@@ -117,7 +122,8 @@ static inline unsigned long hwdrvchar_writable (hwdrvchar *dev) {
 	__asm__ __volatile__ (
 		"ldst %0, %1"
 		: "+r" (bufferusage)
-		: "r" (dev->addr));
+		: "r" (dev->addr)
+		: "memory");
 	return (dev->bufsz - bufferusage);
 }
 
@@ -158,7 +164,8 @@ static inline void hwdrvchar_interrupt (hwdrvchar *dev, unsigned long threshold)
 	__asm__ __volatile__ (
 		"ldst %0, %1"
 		: "+r" (bufferusage)
-		: "r" (dev->addr));
+		: "r" (dev->addr)
+		: "memory");
 }
 
 #endif /* HWDRVCHAR_H */
