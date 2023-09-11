@@ -8,6 +8,7 @@ always @ (posedge clk_i) begin
 		ksl <= KERNELSPACESTART;
 		flags <= ('h2000 /* disTimerIntr */);
 		`ifdef PUMMU
+		asid <= 0;
 		`ifdef PUHPTW
 		hptwpgd <= 0;
 		`endif
@@ -17,7 +18,7 @@ always @ (posedge clk_i) begin
 		else if (isoptype1) ksl <= gprdata1;
 		`ifdef PUMMU
 		else if (isoptype4 && (inkernelmode || isflagmmucmds)) begin
-			asid <= gprdata1[13-1:0];
+			asid <= gprdata1[14-1:0];
 			`ifdef PUHPTW
 			hptwpgd <= gpr13val;
 			`endif

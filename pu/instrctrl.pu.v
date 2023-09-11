@@ -93,7 +93,7 @@ always @ (posedge clk_i) begin
 			`endif
 			) begin
 
-			if (itlbfault && !instrbufrst_posedge) begin
+			if (itlbfault && !instrbufrst_posedge && !inkernelmode_kmodepaging) begin
 				// Setting instrfetchfaulted will stall instrfetch until the sequencer clears it.
 				instrfetchfaulted_a <= ~instrfetchfaulted_b;
 

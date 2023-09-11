@@ -62,9 +62,7 @@ always @* begin
 								`endif
 								) begin
 
-								if (opldfault) begin
-									// Note that I get in this state only when in usermode
-									// because pagefault occurs only when in usermode.
+								if (opldfault && !inkernelmode_kmodepaging) begin
 									sequencerstate = SEQINTR;
 								end else begin
 									sequencerstate = SEQEXEC;
@@ -85,9 +83,7 @@ always @* begin
 								`endif
 								) begin
 
-								if (opstfault) begin
-									// Note that I get in this state only when in usermode
-									// because pagefault occurs only when in usermode.
+								if (opstfault && !inkernelmode_kmodepaging) begin
 									sequencerstate = SEQINTR;
 								end else begin
 									sequencerstate = SEQEXEC;
@@ -108,11 +104,8 @@ always @* begin
 								`endif
 								) begin
 
-								if (opldstfault) begin
-									// Note that I get in this state only when in usermode
-									// because pagefault occurs only when in usermode.
+								if (opldstfault && !inkernelmode_kmodepaging) begin
 									sequencerstate = SEQINTR;
-
 								end else if (instrbufdato0[2]) begin
 									sequencerstate = SEQHCALL;
 								end else begin
@@ -306,6 +299,14 @@ always @ (posedge clk_i) begin
 		end
 
 		SEQEXEC: begin
+
+			`ifdef PUMMU
+			rst_o <= (inkernelmode_kmodepaging && (
+				itlbfault ||
+				(!oplicounter && isopld && opldfault) ||
+				(!oplicounter && isopst && opstfault) ||
+				(!oplicounter && isopldst && opldstfault))) ? 1 : rst_o;
+			`endif
 
 			dohalt <= ((!oplicounter && isophalt) ? 1 : dohalt);
 

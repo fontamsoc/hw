@@ -410,9 +410,14 @@ wire isopld;
 wire isopst;
 wire isopldst;
 
+wire inkernelmode_kmodepaging;
+
 `ifdef PUMMU
 
 wire inuserspace;
+wire kmodepaging;
+
+assign inkernelmode_kmodepaging = (inkernelmode && kmodepaging);
 
 `ifdef PUHPTW
 
@@ -431,8 +436,8 @@ wire hptwistate_eq_HPTWSTATEPTE0 = (hptwistate == HPTWSTATEPTE0);
 wire hptwistate_eq_HPTWSTATEPTE1 = (hptwistate == HPTWSTATEPTE1);
 wire hptwistate_eq_HPTWSTATEDONE = (hptwistate == HPTWSTATEDONE);
 wire hptwitlbwe = (dcachemasterrdy && !instrbufrst_posedge &&
-	dcachemasterdato[5] && (inuserspace ? dcachemasterdato[4] : 1'b1) &&
-		dcachemasterdato[0]                                       &&
+	dcachemasterdato[5] &&
+	(((!inkernelmode_kmodepaging && inuserspace) ? dcachemasterdato[4] : 1'b1) && dcachemasterdato[0]) &&
 	hptwistate_eq_HPTWSTATEPTE1);
 wire[10 -1 : 0] hptwipgdoffset = instrfetchnextaddr[ADDRBITSZ -1 : ADDRBITSZ -10];
 wire[ARCHBITSZ -1 : 0] hptwpgd_plus_hptwipgdoffset = (hptwpgd + {hptwipgdoffset, {CLOG2ARCHBITSZBY8{1'b0}}});
@@ -448,11 +453,12 @@ wire hptwdstate_eq_HPTWSTATEPTE0 = (hptwdstate == HPTWSTATEPTE0);
 wire hptwdstate_eq_HPTWSTATEPTE1 = (hptwdstate == HPTWSTATEPTE1);
 wire hptwdstate_eq_HPTWSTATEDONE = (hptwdstate == HPTWSTATEDONE);
 wire hptwdtlbwe = (dcachemasterrdy &&
-	dcachemasterdato[5] && (inuserspace ? dcachemasterdato[4] : 1'b1) && (
-		isopgettlb                                                ||
-		(isopld     && dcachemasterdato[2])                       ||
-		(isopst     && dcachemasterdato[1])                       ||
-		(isopldst   && (|dcachemasterdato[2:1])))                 &&
+	dcachemasterdato[5] &&
+	(((!inkernelmode_kmodepaging && inuserspace) ? dcachemasterdato[4] : 1'b1) && (
+		isopgettlb                                ||
+		(isopld    && dcachemasterdato[2])        ||
+		(isopst    && dcachemasterdato[1])        ||
+		(isopldst  && (|dcachemasterdato[2:1])))) &&
 	hptwdstate_eq_HPTWSTATEPTE1);
 wire[10 -1 : 0] hptwdpgdoffset = gprdata2[ARCHBITSZ -1 : ARCHBITSZ -10];
 wire[ARCHBITSZ -1 : 0] hptwpgd_plus_hptwdpgdoffset = (hptwpgd + {hptwdpgdoffset, {CLOG2ARCHBITSZBY8{1'b0}}});
@@ -470,6 +476,11 @@ localparam HPTWMEMSTATEDATA  = 2;
 reg[2 -1 : 0] hptwmemstate; // ### declared as reg so as to be usable by verilog within the always block.
 
 `endif
+
+`else
+
+assign inkernelmode_kmodepaging = 0;
+
 `endif
 
 // ---------- Registers and nets used for sequencing and decoding ----------
@@ -673,7 +684,7 @@ wire doutofrange;
 
 `ifdef PUMMU
 
-reg[(1+12) -1 : 0] asid;
+reg[(1+1+12) -1 : 0] asid;
 
 localparam CLOG2TLBSETCOUNT = clog2(TLBSETCOUNT);
 localparam PAGENUMBITSZMINUSCLOG2TLBSETCOUNT = (PAGENUMBITSZ -CLOG2TLBSETCOUNT);
@@ -684,6 +695,7 @@ localparam TLBENTRYBITSZ = (12 +5 +PAGENUMBITSZ +PAGENUMBITSZMINUSCLOG2TLBSETCOU
 // |asid: 12|user: 1|cached: 1|readable: 1|writable: 1|executable: 1|ppn: PAGENUMBITSZ|vpn: PAGENUMBITSZMINUSCLOG2TLBSETCOUNT|
 
 assign inuserspace = asid[12];
+assign kmodepaging = asid[13];
 
 reg [CLOG2TLBWAYCOUNT -1 : 0] dtlbwayhitidx; // ### Nets declared as reg so as to be useable by verilog within the always block.
 reg [CLOG2TLBWAYCOUNT -1 : 0] dtlbwaywriteidx; // Register used to hold dtlb-way index to write next.
@@ -703,7 +715,9 @@ wire dtlbnotuser [TLBWAYCOUNT -1 : 0];
 wire[12 -1 : 0] dtlbasid [TLBWAYCOUNT -1 : 0];
 wire[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0] dvpn = gprdata2[ARCHBITSZ -1 : (12 +CLOG2TLBSETCOUNT)];
 wire dtlbmiss_ [TLBWAYCOUNT -1 : 0];
-wire dtlben = (!dohalt && inusermode && (inuserspace || doutofrange));
+wire dtlben = (!dohalt && (
+	(inusermode && (inuserspace || doutofrange)) ||
+	(inkernelmode_kmodepaging && doutofrange)));
 reg dtlbwritten;
 reg[CLOG2TLBSETCOUNT -1 : 0] dtlbsetprev;
 wire dtlbreadenable_ = (isopgettlb_or_isopclrtlb_found_posedge || dtlbwritten || (dtlben && dtlbset != dtlbsetprev));
@@ -736,7 +750,9 @@ wire itlbnotuser [TLBWAYCOUNT -1 : 0];
 wire[12 -1 : 0] itlbasid [TLBWAYCOUNT -1 : 0];
 wire[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0] ivpn = instrfetchnextaddr[ADDRBITSZ -1 : (ADDRWITHINPAGEBITSZ +CLOG2TLBSETCOUNT)];
 wire itlbmiss_ [TLBWAYCOUNT -1 : 0];
-assign itlben = (!dohalt && inusermode && (inuserspace || ioutofrange));
+assign itlben = (!dohalt && (
+	(inusermode && (inuserspace || ioutofrange)) ||
+	(inkernelmode_kmodepaging && ioutofrange)));
 reg itlbwritten;
 reg[CLOG2TLBSETCOUNT -1 : 0] itlbsetprev;
 assign itlbreadenable_ = (isopgettlb_or_isopclrtlb_found_posedge || itlbwritten || (itlben && itlbset != itlbsetprev));
@@ -849,7 +865,10 @@ assign itlbcached[gen_tlb_idx] = itlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TL
 assign itlbuser[gen_tlb_idx] = itlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +4];
 assign itlbnotuser[gen_tlb_idx] = ~itlbuser[gen_tlb_idx];
 assign itlbasid[gen_tlb_idx] = itlbentry[gen_tlb_idx][(PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +5) +12 -1 : PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +5];
-assign itlbmiss_[gen_tlb_idx] = ((inuserspace && itlbnotuser[gen_tlb_idx]) || (asid[12 -1 : 0] != itlbasid[gen_tlb_idx]) || (ivpn != itlbtag[gen_tlb_idx]));
+assign itlbmiss_[gen_tlb_idx] = (
+	(!inkernelmode_kmodepaging && inuserspace && itlbnotuser[gen_tlb_idx]) ||
+	(asid[12 -1 : 0] != itlbasid[gen_tlb_idx]) ||
+	(ivpn != itlbtag[gen_tlb_idx]));
 
 assign dtlbtag[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0];
 assign dtlbppn[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ -1 : PAGENUMBITSZMINUSCLOG2TLBSETCOUNT];
@@ -862,7 +881,10 @@ assign dtlbcached[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TL
 assign dtlbuser[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +4];
 assign dtlbnotuser[gen_tlb_idx] = ~dtlbuser[gen_tlb_idx];
 assign dtlbasid[gen_tlb_idx] = dtlbentry[gen_tlb_idx][(PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +5) +12 -1 : PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +5];
-assign dtlbmiss_[gen_tlb_idx] = ((inuserspace && dtlbnotuser[gen_tlb_idx]) || (asid[12 -1 : 0] != dtlbasid[gen_tlb_idx]) || (dvpn != dtlbtag[gen_tlb_idx]));
+assign dtlbmiss_[gen_tlb_idx] = (
+	(!inkernelmode_kmodepaging && inuserspace && dtlbnotuser[gen_tlb_idx]) ||
+	(asid[12 -1 : 0] != dtlbasid[gen_tlb_idx]) ||
+	(dvpn != dtlbtag[gen_tlb_idx]));
 
 end endgenerate
 
@@ -2159,7 +2181,7 @@ pi1_dcache #(
 	,.cenable_i (
 		`ifdef PUMMU
 		`ifdef PUHPTW
-		(hptwmemstate != HPTWMEMSTATENONE) ||
+		(hptwmemstate == HPTWMEMSTATENONE) &&
 		`endif
 		`endif
 		(dtlben ? dtlbcached[dtlbwayhitidx] : !doutofrange))
