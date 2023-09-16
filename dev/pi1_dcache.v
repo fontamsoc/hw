@@ -109,11 +109,11 @@ localparam PIRWOP = 2'b11;
 
 reg m_pi1_rdy_o_;
 
-wire cachemiss;
+wire PIRDOP_cachemiss;
 
 reg conly_r;
 
-assign m_pi1_rdy_o = (conly_r || (m_pi1_rdy_o_ && !cachemiss));
+assign m_pi1_rdy_o = (conly_r || (m_pi1_rdy_o_ && !PIRDOP_cachemiss));
 
 wire bufnearfull;
 wire buffull;
@@ -210,10 +210,10 @@ reg [2 -1 : 0] m_pi1_op_i_hold;
 // same cachewayhitidx must be used.
 wire usesampled;
 
-assign cachemiss = ((m_pi1_op_i_hold == PIRDOP) && !cachehit);
+assign PIRDOP_cachemiss = ((m_pi1_op_i_hold == PIRDOP) && !cachehit);
 
 // Net set to 1 to make a request to retrieve data from slv.
-wire slvreadrqst = ((cachemiss || (m_pi1_op_i_hold == PIRWOP)) && !conly_r);
+wire slvreadrqst = ((PIRDOP_cachemiss || (m_pi1_op_i_hold == PIRWOP)) && !conly_r);
 
 // Register set to 1 when reading data from slv.
 reg slvreading;
@@ -248,22 +248,21 @@ reg [(ARCHBITSZ/8) -1 : 0] m_pi1_sel_i_hold;
 
 reg cenable_i_hold;
 
-// Set high to force reading all ARCHBITSZ bits when PIRDOP cachemiss occurs.
-// Note that cachemiss occurs only for PIRDOP.
-wire cenable_i_and_cachemiss = (FETCHALLONMISS && cenable_i_hold && cachemiss);
+// Set high to force reading all ARCHBITSZ bits when PIRDOP_cachemiss occurs.
+wire cenable_i_and_PIRDOP_cachemiss = (FETCHALLONMISS && cenable_i_hold && PIRDOP_cachemiss);
 
 wire [(ARCHBITSZ/8) -1 : 0] _m_pi1_sel_i_hold =
-	(cenable_i_and_cachemiss ? {(ARCHBITSZ/8){1'b1}} : m_pi1_sel_i_hold[(ARCHBITSZ/8) -1 : 0]);
+	(cenable_i_and_PIRDOP_cachemiss ? {(ARCHBITSZ/8){1'b1}} : m_pi1_sel_i_hold[(ARCHBITSZ/8) -1 : 0]);
 
 assign s_pi1_op_o   = {slvreadrdy, slvwriterdy};
 assign s_pi1_addr_o = ((slvreadrdy || (bufread_rst && !bufread_done && bufnearempty)) ? m_pi1_addr_i_hold : addrbufdato);
 assign s_pi1_data_o = (((slvwriterdy && slvreadrdy) || (bufread_rst && !bufread_done && bufnearempty)) ? m_pi1_data_i_hold : databufdato);
 assign s_pi1_sel_o  = ((slvreadrdy || (bufread_rst && !bufread_done && bufnearempty)) ? _m_pi1_sel_i_hold : bytselbufdato);
 
-reg was_cenable_i_and_cachemiss;
+reg was_cenable_i_and_PIRDOP_cachemiss;
 always @ (posedge clk_i) begin
 	if (s_pi1_rdy_i)
-		was_cenable_i_and_cachemiss <= cenable_i_and_cachemiss;
+		was_cenable_i_and_PIRDOP_cachemiss <= cenable_i_and_PIRDOP_cachemiss;
 end
 
 // Bitsize of a cache tag.
@@ -275,7 +274,7 @@ wire m_pi1_is_not_noop = (m_pi1_op_i != PINOOP && m_pi1_rdy_o);
 
 wire cacherdy = ((cacheactive && (!m_pi1_is_not_noop || cenable_i) && !crst_i) || conly_r);
 
-wire cacheen = (cacherdy && (m_pi1_is_not_noop || cachemiss));
+wire cacheen = (cacherdy && (m_pi1_is_not_noop || PIRDOP_cachemiss));
 
 reg cacherdy_hold;
 
@@ -332,7 +331,7 @@ reg [CLOG2CACHEWAYCOUNT -1 : 0] cachetagwayhitidx_sampled;
 
 wire [ARCHBITSZ -1 : 0] cachedato [CACHEWAYCOUNT -1 : 0];
 
-wire [ARCHBITSZ -1 : 0] _cachedatibitsel = (was_cenable_i_and_cachemiss ? {ARCHBITSZ{1'b1}} : cachedatibitsel);
+wire [ARCHBITSZ -1 : 0] _cachedatibitsel = (was_cenable_i_and_PIRDOP_cachemiss ? {ARCHBITSZ{1'b1}} : cachedatibitsel);
 
 reg [ARCHBITSZ -1 : 0] cachedati_sampled;
 
@@ -423,7 +422,7 @@ bram #(
 	,.en0_i   (cacheen)
 	,.en1_i   (1'b1)
 	,.we1_i   (cachewe && (usesampled ? (cachetagwayhitidx_sampled == gencache_idx) : (cachetagwayhit ? (cachetagwayhitidx == gencache_idx) : (cachewaywriteidx == gencache_idx))))
-	,.addr0_i (cachemiss ? m_pi1_addr_i_hold : m_pi1_addr_i)
+	,.addr0_i (PIRDOP_cachemiss ? m_pi1_addr_i_hold : m_pi1_addr_i)
 	,.addr1_i (m_pi1_addr_i_hold)
 	,.i1      (m_pi1_addr_i_hold[ADDRBITSZ -1 : CLOG2CACHESETCOUNT])
 	,.o0      (cachetago[gencache_idx])
@@ -444,7 +443,7 @@ bram #(
 	,.en0_i   (cacheen)
 	,.en1_i   (1'b1)
 	,.we1_i   (cachewe && (usesampled ? (cachetagwayhitidx_sampled == gencache_idx) : (cachetagwayhit ? (cachetagwayhitidx == gencache_idx) : (cachewaywriteidx == gencache_idx))))
-	,.addr0_i (cachemiss ? m_pi1_addr_i_hold : m_pi1_addr_i)
+	,.addr0_i (PIRDOP_cachemiss ? m_pi1_addr_i_hold : m_pi1_addr_i)
 	,.addr1_i (m_pi1_addr_i_hold)
 	,.i1      (cachedati)
 	,.o0      (cachedato[gencache_idx])
@@ -463,7 +462,7 @@ bram #(
 	,.en0_i   (cacheen)
 	,.en1_i   (1'b1)
 	,.we1_i   (cacheoff || (cachewe && (usesampled ? (cachetagwayhitidx_sampled == gencache_idx) : (cachetagwayhit ? (cachetagwayhitidx == gencache_idx) : (cachewaywriteidx == gencache_idx)))))
-	,.addr0_i (cachemiss ? m_pi1_addr_i_hold : m_pi1_addr_i)
+	,.addr0_i (PIRDOP_cachemiss ? m_pi1_addr_i_hold : m_pi1_addr_i)
 	,.addr1_i (cacheoff ? cacherstidx : m_pi1_addr_i_hold)
 	,.i1      (cacheoff ? {ARCHBITSZ{1'b0}} : (cachedatabitseli & /* used to invalidate any cachehit entry when cmiss_i was high */((cmiss_i_hold && cachetagwayhit) ? ~cachedatibitsel : {ARCHBITSZ{1'b1}})))
 	,.o0      (cachedatabitselo[gencache_idx])
@@ -541,7 +540,7 @@ always @ (posedge clk_i) begin
 			m_pi1_rdy_o_ <= 0;
 	end else if (conly_r) begin
 	end else if (m_pi1_op_i == PIRDOP) begin
-		m_pi1_rdy_o_ <= 1; // m_pi1_rdy_o becomes 0 if a cachemiss occurs.
+		m_pi1_rdy_o_ <= 1; // m_pi1_rdy_o becomes 0 if a PIRDOP_cachemiss occurs.
 		cmiss_i_hold <= cmiss_i;
 	end else if (m_pi1_op_i == PIWROP) begin
 		// m_pi1_rdy_o becomes 0 if the data to write in slv will make its buffer full.
