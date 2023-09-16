@@ -6,7 +6,8 @@
 // crst_i: Reset cache without cancelling on-going slave memory operation.
 // cenable_i: Disable the cache for next memory operation currently
 // 	on m_pi1_op_i when m_pi1_rdy_o is high.
-// cmiss_i: When cenable_i true, always cachemiss to force slave memory operation.
+// cmiss_i: When cenable_i true, cachemiss to force slave memory operation,
+// 	and invalidate any cachehit entry.
 // conly_i: Cache becomes a bram if high on the next clock active edge.
 // 	crst_i and cenable_i have no effects.
 // 	master memory operations do not become slave memory operations.
@@ -280,7 +281,10 @@ reg cacherdy_hold;
 
 reg cachewe_;
 
-wire cachewe = (slvreadrqstdone ? (cacherdy_hold && !slvreadwriterqst) : cachewe_);
+reg cmiss_i_hold;
+
+wire cachewe = ((slvreadrqstdone ? (cacherdy_hold && !slvreadwriterqst) : cachewe_) &&
+	/* used to invalidate any cachehit entry when cmiss_i was high */(!cmiss_i_hold || cachetagwayhit));
 
 wire [CACHETAGBITSIZE -1 : 0] cachetago [CACHEWAYCOUNT -1 : 0];
 
@@ -364,8 +368,6 @@ reg [ARCHBITSZ -1 : 0] cachedatabitseli_sampled;
 
 wire [ARCHBITSZ -1 : 0] cachedatabitseli =
 	((cachetagwayhit ? (usesampled ? cachedatabitseli_sampled : cachedatabitselo[cachetagwayhitidx]) : {ARCHBITSZ{1'b0}}) | _cachedatibitsel);
-
-reg cmiss_i_hold;
 
 // ### Net declared as reg so as to be useable
 // ### by verilog within the always block.
@@ -463,7 +465,7 @@ bram #(
 	,.we1_i   (cacheoff || (cachewe && (usesampled ? (cachetagwayhitidx_sampled == gencache_idx) : (cachetagwayhit ? (cachetagwayhitidx == gencache_idx) : (cachewaywriteidx == gencache_idx)))))
 	,.addr0_i (cachemiss ? m_pi1_addr_i_hold : m_pi1_addr_i)
 	,.addr1_i (cacheoff ? cacherstidx : m_pi1_addr_i_hold)
-	,.i1      (cacheoff ? {ARCHBITSZ{1'b0}} : cachedatabitseli)
+	,.i1      (cacheoff ? {ARCHBITSZ{1'b0}} : (cachedatabitseli & /* used to invalidate any cachehit entry when cmiss_i was high */((cmiss_i_hold && cachetagwayhit) ? ~cachedatibitsel : {ARCHBITSZ{1'b1}})))
 	,.o0      (cachedatabitselo[gencache_idx])
 	,.o1      ()
 );
@@ -541,13 +543,13 @@ always @ (posedge clk_i) begin
 	end else if (m_pi1_op_i == PIRDOP) begin
 		m_pi1_rdy_o_ <= 1; // m_pi1_rdy_o becomes 0 if a cachemiss occurs.
 		cmiss_i_hold <= cmiss_i;
-		// Because this cache implements writethrough policy,
-		// setting cmiss_i_hold makes sense only for PIRDOP.
 	end else if (m_pi1_op_i == PIWROP) begin
 		// m_pi1_rdy_o becomes 0 if the data to write in slv will make its buffer full.
 		m_pi1_rdy_o_ <= !bufnearfull;
+		cmiss_i_hold <= cmiss_i;
 	end else if (m_pi1_op_i == PIRWOP) begin
 		m_pi1_rdy_o_ <= 0;
+		cmiss_i_hold <= cmiss_i;
 	end
 
 	if (rst_i || slvreadrqstdone)
