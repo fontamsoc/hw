@@ -590,10 +590,9 @@ pi1_dcache #(
 
 	,.clk_i (pi1r_clk_w)
 
-	,.crst_i    (ram_rst_w || devtbl_rst2_w)
-	,.cenable_i (1'b1)
-	,.cmiss_i   (1'b0)
-	,.conly_i   (ram_rst_w)
+	,.crst_i  (ram_rst_w || devtbl_rst2_w)
+	,.cmiss_i (1'b0)
+	,.conly_i (ram_rst_w)
 
 	,.m_pi1_op_i   (dcache_m_op_w)
 	,.m_pi1_addr_i (dcache_m_addr_w)
