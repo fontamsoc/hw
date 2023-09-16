@@ -2186,7 +2186,7 @@ pi1_dcache #(
 		`endif
 		(dtlben ? dtlbcached[dtlbwayhitidx] : !doutofrange))
 
-	,.cmiss_i (miscrdyandsequencerreadyandgprrdy12 && isoploadorstorevolatile /* volatile load/store */)
+	,.cmiss_i (miscrdyandsequencerreadyandgprrdy12 && (isopldst || isoploadorstorevolatile))
 
 	,.conly_i (1'b0)
 
