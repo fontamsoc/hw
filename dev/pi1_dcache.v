@@ -272,9 +272,9 @@ reg cacheactive; // The data cache is active when the value of this register is 
 
 wire m_pi1_is_not_noop = (m_pi1_op_i != PINOOP && m_pi1_rdy_o);
 
-wire cacherdy = ((cacheactive && (!m_pi1_is_not_noop || cenable_i) && !crst_i) || conly_r);
+wire cacherdy = ((cacheactive && cenable_i && !crst_i) || conly_r);
 
-wire cacheen = (cacherdy && (m_pi1_is_not_noop || PIRDOP_cachemiss));
+wire cacheen = (cacherdy && m_pi1_is_not_noop);
 
 reg cacherdy_hold;
 
@@ -422,7 +422,7 @@ bram #(
 	,.en0_i   (cacheen)
 	,.en1_i   (1'b1)
 	,.we1_i   (cachewe && (usesampled ? (cachetagwayhitidx_sampled == gencache_idx) : (cachetagwayhit ? (cachetagwayhitidx == gencache_idx) : (cachewaywriteidx == gencache_idx))))
-	,.addr0_i (PIRDOP_cachemiss ? m_pi1_addr_i_hold : m_pi1_addr_i)
+	,.addr0_i (m_pi1_addr_i)
 	,.addr1_i (m_pi1_addr_i_hold)
 	,.i1      (m_pi1_addr_i_hold[ADDRBITSZ -1 : CLOG2CACHESETCOUNT])
 	,.o0      (cachetago[gencache_idx])
@@ -443,7 +443,7 @@ bram #(
 	,.en0_i   (cacheen)
 	,.en1_i   (1'b1)
 	,.we1_i   (cachewe && (usesampled ? (cachetagwayhitidx_sampled == gencache_idx) : (cachetagwayhit ? (cachetagwayhitidx == gencache_idx) : (cachewaywriteidx == gencache_idx))))
-	,.addr0_i (PIRDOP_cachemiss ? m_pi1_addr_i_hold : m_pi1_addr_i)
+	,.addr0_i (m_pi1_addr_i)
 	,.addr1_i (m_pi1_addr_i_hold)
 	,.i1      (cachedati)
 	,.o0      (cachedato[gencache_idx])
@@ -462,7 +462,7 @@ bram #(
 	,.en0_i   (cacheen)
 	,.en1_i   (1'b1)
 	,.we1_i   (cacheoff || (cachewe && (usesampled ? (cachetagwayhitidx_sampled == gencache_idx) : (cachetagwayhit ? (cachetagwayhitidx == gencache_idx) : (cachewaywriteidx == gencache_idx)))))
-	,.addr0_i (PIRDOP_cachemiss ? m_pi1_addr_i_hold : m_pi1_addr_i)
+	,.addr0_i (m_pi1_addr_i)
 	,.addr1_i (cacheoff ? cacherstidx : m_pi1_addr_i_hold)
 	,.i1      (cacheoff ? {ARCHBITSZ{1'b0}} : (cachedatabitseli & /* used to invalidate any cachehit entry when cmiss_i was high */((cmiss_i_hold && cachetagwayhit) ? ~cachedatibitsel : {ARCHBITSZ{1'b1}})))
 	,.o0      (cachedatabitselo[gencache_idx])
