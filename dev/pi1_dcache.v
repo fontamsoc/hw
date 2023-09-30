@@ -4,9 +4,13 @@
 // TODO: Documentation:
 // rst_i: Reset cache cancelling on-going slave memory operation.
 // crst_i: Reset cache without cancelling on-going slave memory operation.
-// cmiss_i: cachemiss to force slave memory operation, and invalidate any cachehit entry.
+// cenable_i: Disable the cache for next memory operation currently
+// 	on m_pi1_op_i when m_pi1_rdy_o is high.
+// cmiss_i: When cenable_i true, cachemiss to force slave memory operation,
+// 	and invalidate any cachehit entry.
 // conly_i: Cache becomes a bram if high on the next clock active edge.
-// 	Master memory operations do not become slave memory operations.
+// 	crst_i and cenable_i have no effects.
+// 	master memory operations do not become slave memory operations.
 // 	Cache resumes normal operation if low on the next clock active edge,
 // 	and (rst_i || crst_i) is high.
 // TODO: Documentation:
@@ -30,6 +34,8 @@ module pi1_dcache (
 	,clk_i
 
 	,crst_i
+
+	,cenable_i
 
 	,cmiss_i
 
@@ -75,6 +81,8 @@ input wire rst_i;
 input wire clk_i;
 
 input wire crst_i;
+
+input wire cenable_i;
 
 input wire cmiss_i;
 
@@ -236,21 +244,23 @@ reg [ARCHBITSZ -1 : 0] m_pi1_data_i_hold;
 // Register used to hold the value of the input "m_pi1_sel_i".
 reg [(ARCHBITSZ/8) -1 : 0] m_pi1_sel_i_hold;
 
+reg cenable_i_hold;
+
 // Set high to force reading all ARCHBITSZ bits when PIRDOP_cachemiss occurs.
-wire FETCHALLONMISS_and_PIRDOP_cachemiss = (FETCHALLONMISS && PIRDOP_cachemiss);
+wire cenable_i_and_PIRDOP_cachemiss = (FETCHALLONMISS && cenable_i_hold && PIRDOP_cachemiss);
 
 wire [(ARCHBITSZ/8) -1 : 0] _m_pi1_sel_i_hold =
-	(FETCHALLONMISS_and_PIRDOP_cachemiss ? {(ARCHBITSZ/8){1'b1}} : m_pi1_sel_i_hold[(ARCHBITSZ/8) -1 : 0]);
+	(cenable_i_and_PIRDOP_cachemiss ? {(ARCHBITSZ/8){1'b1}} : m_pi1_sel_i_hold[(ARCHBITSZ/8) -1 : 0]);
 
 assign s_pi1_op_o   = {slvreadrdy, slvwriterdy};
 assign s_pi1_addr_o = ((slvreadrdy || (bufread_rst && !bufread_done && bufnearempty)) ? m_pi1_addr_i_hold : addrbufdato);
 assign s_pi1_data_o = (((slvwriterdy && slvreadrdy) || (bufread_rst && !bufread_done && bufnearempty)) ? m_pi1_data_i_hold : databufdato);
 assign s_pi1_sel_o  = ((slvreadrdy || (bufread_rst && !bufread_done && bufnearempty)) ? _m_pi1_sel_i_hold : bytselbufdato);
 
-reg was_FETCHALLONMISS_and_PIRDOP_cachemiss;
+reg was_cenable_i_and_PIRDOP_cachemiss;
 always @ (posedge clk_i) begin
 	if (s_pi1_rdy_i)
-		was_FETCHALLONMISS_and_PIRDOP_cachemiss <= FETCHALLONMISS_and_PIRDOP_cachemiss;
+		was_cenable_i_and_PIRDOP_cachemiss <= cenable_i_and_PIRDOP_cachemiss;
 end
 
 // Bitsize of a cache tag.
@@ -260,7 +270,7 @@ reg cacheactive; // The data cache is active when the value of this register is 
 
 wire m_pi1_is_not_noop = (m_pi1_op_i != PINOOP && m_pi1_rdy_o);
 
-wire cacherdy = ((cacheactive && !m_pi1_is_not_noop && !crst_i) || conly_r);
+wire cacherdy = ((cacheactive && (!m_pi1_is_not_noop || cenable_i) && !crst_i) || conly_r);
 
 wire cacheen = (cacherdy && (m_pi1_is_not_noop || PIRDOP_cachemiss));
 
@@ -317,7 +327,7 @@ reg [CLOG2CACHEWAYCOUNT -1 : 0] cachetagwayhitidx_sampled;
 
 wire [ARCHBITSZ -1 : 0] cachedato [CACHEWAYCOUNT -1 : 0];
 
-wire [ARCHBITSZ -1 : 0] _cachedatibitsel = (was_FETCHALLONMISS_and_PIRDOP_cachemiss ? {ARCHBITSZ{1'b1}} : cachedatibitsel);
+wire [ARCHBITSZ -1 : 0] _cachedatibitsel = (was_cenable_i_and_PIRDOP_cachemiss ? {ARCHBITSZ{1'b1}} : cachedatibitsel);
 
 reg [ARCHBITSZ -1 : 0] cachedati_sampled;
 
@@ -460,6 +470,7 @@ always @ (posedge clk_i) begin
 	if (rst_i)
 		m_pi1_op_i_hold <= PINOOP;
 	else if (m_pi1_rdy_o) begin
+		cenable_i_hold <= cenable_i;
 		m_pi1_op_i_hold <= m_pi1_op_i;
 		m_pi1_addr_i_hold <= m_pi1_addr_i;
 		m_pi1_data_i_hold <= m_pi1_data_i;

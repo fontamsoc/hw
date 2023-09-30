@@ -2504,14 +2504,15 @@ pi1_dcache #(
 
 	,.crst_i (rst_i || (miscrdy && sequencerready && isopdcacherst))
 
-	,.cmiss_i (
+	,.cenable_i (
 		`ifdef PUMMU
 		`ifdef PUHPTW
-		(hptwmemstate != HPTWMEMSTATENONE) ||
+		(hptwmemstate == HPTWMEMSTATENONE) &&
 		`endif
 		`endif
-		(dtlben ? ~dtlbcached[dtlbwayhitidx] : doutofrange) ||
-		(miscrdyandsequencerreadyandgprrdy12 && (isopldst || isoploadorstorevolatile)))
+		(dtlben ? dtlbcached[dtlbwayhitidx] : !doutofrange))
+
+	,.cmiss_i (miscrdyandsequencerreadyandgprrdy12 && (isopldst || isoploadorstorevolatile))
 
 	,.conly_i (1'b0)
 
