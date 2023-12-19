@@ -585,6 +585,7 @@ wire isopfloat = (instrbufdato0[7:3] == OPFLOAT);
 wire isopalu1 = (instrbufdato0[7:3] == OPALU1);
 wire isopalu2 = (instrbufdato0[7:3] == OPALU2);
 wire isopj = (instrbufdato0[7:3] == OPJ);
+wire isopjl = (isopj && isoptype2);
 wire isopswitchctx = (instrbufdato0[7:3] == OPSWITCHCTX);
 wire isopsysret = (isopswitchctx && isoptype0);
 wire isophalt = (isopswitchctx && isoptype3);
@@ -1463,6 +1464,7 @@ wire sc2isopalu0 = (sc2instrbufdato0[7:3] == OPALU0);
 wire sc2isopalu1 = (sc2instrbufdato0[7:3] == OPALU1);
 wire sc2isopalu2 = (sc2instrbufdato0[7:3] == OPALU2);
 wire sc2isopj = (sc2instrbufdato0[7:3] == OPJ);
+wire sc2isopjl = (sc2isopj && sc2isoptype2);
 wire sc2isopmuldiv = (sc2instrbufdato0[7:3] == OPMULDIV);
 
 wire sc2isopjtrue = (sc2isopj && (sc2isoptype2 || (|sc2gprdata1 == sc2instrbufdato0[0])));
@@ -1610,7 +1612,8 @@ reg[CLOG2GPRCNTPERCTX -1 : 0] opligpr;
 // ### by verilog within the always block.
 reg[ARCHBITSZ -1 : 0] opaluresult;
 
-wire opaludone = (miscrdyandsequencerreadyandgprrdy12 && (isopalu0 || isopalu1 || isopalu2));
+wire opaludone = (miscrdyandsequencerreadyandgprrdy12 &&
+	(isopalu0 || isopalu1 || isopalu2 || isopjl));
 
 `ifdef PUSC2
 
@@ -1618,7 +1621,8 @@ wire opaludone = (miscrdyandsequencerreadyandgprrdy12 && (isopalu0 || isopalu1 |
 // ### by verilog within the always block.
 reg[ARCHBITSZ -1 : 0] sc2opaluresult;
 
-wire sc2opaludone = (sc2rdyandgprrdy12 && (sc2isopalu0 || sc2isopalu1 || sc2isopalu2));
+wire sc2opaludone = (sc2rdyandgprrdy12 &&
+	(sc2isopalu0 || sc2isopalu1 || sc2isopalu2 || sc2isopjl));
 
 `endif
 
@@ -1883,16 +1887,6 @@ assign opfdivresult = 0;
 assign opfdivgpr = 0;
 assign opfdivdone = 0;
 end endgenerate
-
-`endif
-
-// ---------- Nets used by opjl ----------
-
-wire opjldone = (miscrdyandsequencerreadyandgprrdy12 && isopj && isoptype2);
-
-`ifdef PUSC2
-
-wire sc2opjldone = (sc2rdyandgprrdy12 && sc2isopj && sc2isoptype2);
 
 `endif
 

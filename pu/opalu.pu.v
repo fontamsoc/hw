@@ -22,7 +22,7 @@ always @* begin
 		6:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, gprdata1 < gprdata2};
 		default: opaluresult = {{(ARCHBITSZ-1){1'b0}}, gprdata1 <= gprdata2};
 		endcase
-	end else /*if (isopalu2)*/ begin
+	end else if (isopalu2) begin
 		// Implement sll, srl, sra, and, or, xor, not, cpy.
 		case (instrbufdato0[2:0])
 		0:       opaluresult = gprdata1 << gprdata2[CLOG2ARCHBITSZ-1:0];
@@ -34,6 +34,8 @@ always @* begin
 		6:       opaluresult = ~gprdata2;
 		default: opaluresult = gprdata2;
 		endcase
+	end else /*if (isopjl)*/ begin
+		opaluresult = {ipnxt, 1'b0};
 	end
 end
 `ifdef PUSC2
@@ -56,7 +58,7 @@ always @* begin
 		6:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 < sc2gprdata2};
 		default: sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 <= sc2gprdata2};
 		endcase
-	end else /*if sc2isopalu2)*/ begin
+	end else if (sc2isopalu2) begin
 		case (sc2instrbufdato0[2:0])
 		0:       sc2opaluresult = sc2gprdata1 << sc2gprdata2[CLOG2ARCHBITSZ-1:0];
 		1:       sc2opaluresult = sc2gprdata1 >> sc2gprdata2[CLOG2ARCHBITSZ-1:0];
@@ -67,6 +69,8 @@ always @* begin
 		6:       sc2opaluresult = ~sc2gprdata2;
 		default: sc2opaluresult = sc2gprdata2;
 		endcase
+	end else /*if (sc2isopjl)*/ begin
+		sc2opaluresult = {sc2ipnxt, 1'b0};
 	end
 end
 `endif

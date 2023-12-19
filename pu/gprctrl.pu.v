@@ -67,10 +67,6 @@ always @* begin
 		gprdata = opdspmulresult;
 		gprwe   = 1;
 	`endif
-	end else if (opjldone) begin
-		gpridx  = gpridx1;
-		gprdata = {ipnxt, 1'b0};
-		gprwe   = 1;
 	end else if (opgetsysregdone) begin
 		gpridx  = gpridx1;
 		gprdata = opgetsysregresult;
@@ -171,9 +167,5 @@ always @* begin
 		sc2gprwe   = 1;
 	end
 	`endif
-	if (sc2opjldone) begin
-		sc2gprdata = {sc2ipnxt, 1'b0};
-		sc2gprwe   = 1;
-	end
 end
 `endif
