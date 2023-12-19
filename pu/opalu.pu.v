@@ -2,78 +2,72 @@
 // (c) William Fonkou Tambe
 
 always @* begin
-	// Implement sgt, sgte, sgtu, sgteu.
-	case (instrbufdato0[2:0])
-	0:       opalu0result = {{(ARCHBITSZ-1){1'b0}}, $signed(gprdata1) > $signed(gprdata2)};
-	1:       opalu0result = {{(ARCHBITSZ-1){1'b0}}, $signed(gprdata1) >= $signed(gprdata2)};
-	2:       opalu0result = {{(ARCHBITSZ-1){1'b0}}, gprdata1 > gprdata2};
-	default: opalu0result = {{(ARCHBITSZ-1){1'b0}}, gprdata1 >= gprdata2};
-	endcase
+	if (isopalu0) begin
+		// Implement sgt, sgte, sgtu, sgteu.
+		case (instrbufdato0[2:0])
+		0:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(gprdata1) > $signed(gprdata2)};
+		1:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(gprdata1) >= $signed(gprdata2)};
+		2:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, gprdata1 > gprdata2};
+		default: opaluresult = {{(ARCHBITSZ-1){1'b0}}, gprdata1 >= gprdata2};
+		endcase
+	end else if (isopalu1) begin
+		// Implement add, sub, seq, sne, slt, slte, sltu, slteu.
+		case (instrbufdato0[2:0])
+		0:       opaluresult = gprdata1 + gprdata2;
+		1:       opaluresult = gprdata1 - gprdata2;
+		2:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, gprdata1 == gprdata2};
+		3:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, gprdata1 != gprdata2};
+		4:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(gprdata1) < $signed(gprdata2)};
+		5:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(gprdata1) <= $signed(gprdata2)};
+		6:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, gprdata1 < gprdata2};
+		default: opaluresult = {{(ARCHBITSZ-1){1'b0}}, gprdata1 <= gprdata2};
+		endcase
+	end else /*if (isopalu2)*/ begin
+		// Implement sll, srl, sra, and, or, xor, not, cpy.
+		case (instrbufdato0[2:0])
+		0:       opaluresult = gprdata1 << gprdata2[CLOG2ARCHBITSZ-1:0];
+		1:       opaluresult = gprdata1 >> gprdata2[CLOG2ARCHBITSZ-1:0];
+		2:       opaluresult = $signed(gprdata1) >>> gprdata2[CLOG2ARCHBITSZ-1:0];
+		3:       opaluresult = gprdata1 & gprdata2;
+		4:       opaluresult = gprdata1 | gprdata2;
+		5:       opaluresult = gprdata1 ^ gprdata2;
+		6:       opaluresult = ~gprdata2;
+		default: opaluresult = gprdata2;
+		endcase
+	end
 end
 `ifdef PUSC2
 always @* begin
-	case (sc2instrbufdato0[2:0])
-	0:       sc2opalu0result = {{(ARCHBITSZ-1){1'b0}}, $signed(sc2gprdata1) > $signed(sc2gprdata2)};
-	1:       sc2opalu0result = {{(ARCHBITSZ-1){1'b0}}, $signed(sc2gprdata1) >= $signed(sc2gprdata2)};
-	2:       sc2opalu0result = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 > sc2gprdata2};
-	default: sc2opalu0result = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 >= sc2gprdata2};
-	endcase
-end
-`endif
-
-always @* begin
-	// Implement add, sub, seq, sne, slt, slte, sltu, slteu.
-	case (instrbufdato0[2:0])
-	0:       opalu1result = gprdata1 + gprdata2;
-	1:       opalu1result = gprdata1 - gprdata2;
-	2:       opalu1result = {{(ARCHBITSZ-1){1'b0}}, gprdata1 == gprdata2};
-	3:       opalu1result = {{(ARCHBITSZ-1){1'b0}}, gprdata1 != gprdata2};
-	4:       opalu1result = {{(ARCHBITSZ-1){1'b0}}, $signed(gprdata1) < $signed(gprdata2)};
-	5:       opalu1result = {{(ARCHBITSZ-1){1'b0}}, $signed(gprdata1) <= $signed(gprdata2)};
-	6:       opalu1result = {{(ARCHBITSZ-1){1'b0}}, gprdata1 < gprdata2};
-	default: opalu1result = {{(ARCHBITSZ-1){1'b0}}, gprdata1 <= gprdata2};
-	endcase
-end
-`ifdef PUSC2
-always @* begin
-	case (sc2instrbufdato0[2:0])
-	0:       sc2opalu1result = sc2gprdata1 + sc2gprdata2;
-	1:       sc2opalu1result = sc2gprdata1 - sc2gprdata2;
-	2:       sc2opalu1result = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 == sc2gprdata2};
-	3:       sc2opalu1result = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 != sc2gprdata2};
-	4:       sc2opalu1result = {{(ARCHBITSZ-1){1'b0}}, $signed(sc2gprdata1) < $signed(sc2gprdata2)};
-	5:       sc2opalu1result = {{(ARCHBITSZ-1){1'b0}}, $signed(sc2gprdata1) <= $signed(sc2gprdata2)};
-	6:       sc2opalu1result = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 < sc2gprdata2};
-	default: sc2opalu1result = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 <= sc2gprdata2};
-	endcase
-end
-`endif
-
-always @* begin
-	// Implement sll, srl, sra, and, or, xor, not, cpy.
-	case (instrbufdato0[2:0])
-	0:       opalu2result = gprdata1 << gprdata2[CLOG2ARCHBITSZ-1:0];
-	1:       opalu2result = gprdata1 >> gprdata2[CLOG2ARCHBITSZ-1:0];
-	2:       opalu2result = $signed(gprdata1) >>> gprdata2[CLOG2ARCHBITSZ-1:0];
-	3:       opalu2result = gprdata1 & gprdata2;
-	4:       opalu2result = gprdata1 | gprdata2;
-	5:       opalu2result = gprdata1 ^ gprdata2;
-	6:       opalu2result = ~gprdata2;
-	default: opalu2result = gprdata2;
-	endcase
-end
-`ifdef PUSC2
-always @* begin
-	case (sc2instrbufdato0[2:0])
-	0:       sc2opalu2result = sc2gprdata1 << sc2gprdata2[CLOG2ARCHBITSZ-1:0];
-	1:       sc2opalu2result = sc2gprdata1 >> sc2gprdata2[CLOG2ARCHBITSZ-1:0];
-	2:       sc2opalu2result = $signed(sc2gprdata1) >>> sc2gprdata2[CLOG2ARCHBITSZ-1:0];
-	3:       sc2opalu2result = sc2gprdata1 & sc2gprdata2;
-	4:       sc2opalu2result = sc2gprdata1 | sc2gprdata2;
-	5:       sc2opalu2result = sc2gprdata1 ^ sc2gprdata2;
-	6:       sc2opalu2result = ~sc2gprdata2;
-	default: sc2opalu2result = sc2gprdata2;
-	endcase
+	if (sc2isopalu0) begin
+		case (sc2instrbufdato0[2:0])
+		0:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(sc2gprdata1) > $signed(sc2gprdata2)};
+		1:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(sc2gprdata1) >= $signed(sc2gprdata2)};
+		2:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 > sc2gprdata2};
+		default: sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 >= sc2gprdata2};
+		endcase
+	end else if (sc2isopalu1) begin
+		case (sc2instrbufdato0[2:0])
+		0:       sc2opaluresult = sc2gprdata1 + sc2gprdata2;
+		1:       sc2opaluresult = sc2gprdata1 - sc2gprdata2;
+		2:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 == sc2gprdata2};
+		3:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 != sc2gprdata2};
+		4:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(sc2gprdata1) < $signed(sc2gprdata2)};
+		5:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(sc2gprdata1) <= $signed(sc2gprdata2)};
+		6:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 < sc2gprdata2};
+		default: sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 <= sc2gprdata2};
+		endcase
+	end else /*if sc2isopalu2)*/ begin
+		case (sc2instrbufdato0[2:0])
+		0:       sc2opaluresult = sc2gprdata1 << sc2gprdata2[CLOG2ARCHBITSZ-1:0];
+		1:       sc2opaluresult = sc2gprdata1 >> sc2gprdata2[CLOG2ARCHBITSZ-1:0];
+		2:       sc2opaluresult = $signed(sc2gprdata1) >>> sc2gprdata2[CLOG2ARCHBITSZ-1:0];
+		3:       sc2opaluresult = sc2gprdata1 & sc2gprdata2;
+		4:       sc2opaluresult = sc2gprdata1 | sc2gprdata2;
+		5:       sc2opaluresult = sc2gprdata1 ^ sc2gprdata2;
+		6:       sc2opaluresult = ~sc2gprdata2;
+		default: sc2opaluresult = sc2gprdata2;
+		endcase
+	end
 end
 `endif
 

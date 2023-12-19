@@ -1608,41 +1608,17 @@ reg[CLOG2GPRCNTPERCTX -1 : 0] opligpr;
 
 // ### Nets declared as reg so as to be useable
 // ### by verilog within the always block.
-reg[ARCHBITSZ -1 : 0] opalu0result;
+reg[ARCHBITSZ -1 : 0] opaluresult;
 
-wire opalu0done = (miscrdyandsequencerreadyandgprrdy12 && isopalu0);
-
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
-reg[ARCHBITSZ -1 : 0] opalu1result;
-
-wire opalu1done = (miscrdyandsequencerreadyandgprrdy12 && isopalu1);
-
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
-reg[ARCHBITSZ -1 : 0] opalu2result;
-
-wire opalu2done = (miscrdyandsequencerreadyandgprrdy12 && isopalu2);
+wire opaludone = (miscrdyandsequencerreadyandgprrdy12 && (isopalu0 || isopalu1 || isopalu2));
 
 `ifdef PUSC2
 
 // ### Nets declared as reg so as to be useable
 // ### by verilog within the always block.
-reg[ARCHBITSZ -1 : 0] sc2opalu0result;
+reg[ARCHBITSZ -1 : 0] sc2opaluresult;
 
-wire sc2opalu0done = (sc2rdyandgprrdy12 && sc2isopalu0);
-
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
-reg[ARCHBITSZ -1 : 0] sc2opalu1result;
-
-wire sc2opalu1done = (sc2rdyandgprrdy12 && sc2isopalu1);
-
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
-reg[ARCHBITSZ -1 : 0] sc2opalu2result;
-
-wire sc2opalu2done = (sc2rdyandgprrdy12 && sc2isopalu2);
+wire sc2opaludone = (sc2rdyandgprrdy12 && (sc2isopalu0 || sc2isopalu1 || sc2isopalu2));
 
 `endif
 

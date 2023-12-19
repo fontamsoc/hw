@@ -51,17 +51,9 @@ always @* begin
 			`endif
 			`endif
 			1'b1);
-	end else if (opalu0done) begin
+	end else if (opaludone) begin
 		gpridx  = gpridx1;
-		gprdata = opalu0result;
-		gprwe   = 1;
-	end else if (opalu1done) begin
-		gpridx  = gpridx1;
-		gprdata = opalu1result;
-		gprwe   = 1;
-	end else if (opalu2done) begin
-		gpridx  = gpridx1;
-		gprdata = opalu2result;
+		gprdata = opaluresult;
 		gprwe   = (
 			`ifdef PUSC2
 			`ifdef PUSC2SKIPSC1CPY
@@ -169,16 +161,8 @@ always @* begin
 		sc2gprdata = sc2opli8result;
 		sc2gprwe   = 1;
 	end
-	if (sc2opalu0done) begin
-		sc2gprdata = sc2opalu0result;
-		sc2gprwe   = 1;
-	end
-	if (sc2opalu1done) begin
-		sc2gprdata = sc2opalu1result;
-		sc2gprwe   = 1;
-	end
-	if (sc2opalu2done) begin
-		sc2gprdata = sc2opalu2result;
+	if (sc2opaludone) begin
+		sc2gprdata = sc2opaluresult;
 		sc2gprwe   = 1;
 	end
 	`ifdef PUDSPMUL
