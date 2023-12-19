@@ -61,12 +61,6 @@ always @* begin
 			`endif
 			`endif
 			1'b1);
-	`ifdef PUDSPMUL
-	end else if (opdspmuldone) begin
-		gpridx  = gpridx1;
-		gprdata = opdspmulresult;
-		gprwe   = 1;
-	`endif
 	end else if (opgetsysregdone) begin
 		gpridx  = gpridx1;
 		gprdata = opgetsysregresult;
@@ -161,11 +155,5 @@ always @* begin
 		sc2gprdata = sc2opaluresult;
 		sc2gprwe   = 1;
 	end
-	`ifdef PUDSPMUL
-	if (sc2opdspmuldone) begin
-		sc2gprdata = sc2opdspmulresult;
-		sc2gprwe   = 1;
-	end
-	`endif
 end
 `endif

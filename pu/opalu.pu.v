@@ -34,6 +34,16 @@ always @* begin
 		6:       opaluresult = ~gprdata2;
 		default: opaluresult = gprdata2;
 		endcase
+	`ifdef PUDSPMUL
+	end else if (isopmuldiv /* instead of isopimul for fewer logic */) begin
+		// Implement mulu, mulhu, mul, mulh.
+		case (instrbufdato0[2:0])
+		0:       opaluresult = opdspmulresult_unsigned[ARCHBITSZ-1:0];
+		1:       opaluresult = opdspmulresult_unsigned[(ARCHBITSZ*2)-1:ARCHBITSZ];
+		2:       opaluresult = opdspmulresult_signed[ARCHBITSZ-1:0];
+		default: opaluresult = opdspmulresult_signed[(ARCHBITSZ*2)-1:ARCHBITSZ];
+		endcase
+	`endif
 	end else /*if (isopjl)*/ begin
 		opaluresult = {ipnxt, 1'b0};
 	end
@@ -69,30 +79,17 @@ always @* begin
 		6:       sc2opaluresult = ~sc2gprdata2;
 		default: sc2opaluresult = sc2gprdata2;
 		endcase
+	`ifdef PUDSPMUL
+	end else if (sc2isopmuldiv /* instead of sc2isopdspmul for fewer logic */) begin
+		case (sc2instrbufdato0[2:0])
+		0:       sc2opaluresult = sc2opdspmulresult_unsigned[ARCHBITSZ-1:0];
+		1:       sc2opaluresult = sc2opdspmulresult_unsigned[(ARCHBITSZ*2)-1:ARCHBITSZ];
+		2:       sc2opaluresult = sc2opdspmulresult_signed[ARCHBITSZ-1:0];
+		default: sc2opaluresult = sc2opdspmulresult_signed[(ARCHBITSZ*2)-1:ARCHBITSZ];
+		endcase
+	`endif
 	end else /*if (sc2isopjl)*/ begin
 		sc2opaluresult = {sc2ipnxt, 1'b0};
 	end
 end
-`endif
-
-`ifdef PUDSPMUL
-always @* begin
-	// Implement mulu, mulhu, mul, mulh.
-	case (instrbufdato0[2:0])
-	0:       opdspmulresult = opdspmulresult_unsigned[ARCHBITSZ-1:0];
-	1:       opdspmulresult = opdspmulresult_unsigned[(ARCHBITSZ*2)-1:ARCHBITSZ];
-	2:       opdspmulresult = opdspmulresult_signed[ARCHBITSZ-1:0];
-	default: opdspmulresult = opdspmulresult_signed[(ARCHBITSZ*2)-1:ARCHBITSZ];
-	endcase
-end
-`ifdef PUSC2
-always @* begin
-	case (sc2instrbufdato0[2:0])
-	0:       sc2opdspmulresult = sc2opdspmulresult_unsigned[ARCHBITSZ-1:0];
-	1:       sc2opdspmulresult = sc2opdspmulresult_unsigned[(ARCHBITSZ*2)-1:ARCHBITSZ];
-	2:       sc2opdspmulresult = sc2opdspmulresult_signed[ARCHBITSZ-1:0];
-	default: sc2opdspmulresult = sc2opdspmulresult_signed[(ARCHBITSZ*2)-1:ARCHBITSZ];
-	endcase
-end
-`endif
 `endif

@@ -1613,7 +1613,11 @@ reg[CLOG2GPRCNTPERCTX -1 : 0] opligpr;
 reg[ARCHBITSZ -1 : 0] opaluresult;
 
 wire opaludone = (miscrdyandsequencerreadyandgprrdy12 &&
-	(isopalu0 || isopalu1 || isopalu2 || isopjl));
+	(isopalu0 || isopalu1 || isopalu2
+	`ifdef PUDSPMUL
+	|| isopimul
+	`endif
+	|| isopjl));
 
 `ifdef PUSC2
 
@@ -1622,7 +1626,11 @@ wire opaludone = (miscrdyandsequencerreadyandgprrdy12 &&
 reg[ARCHBITSZ -1 : 0] sc2opaluresult;
 
 wire sc2opaludone = (sc2rdyandgprrdy12 &&
-	(sc2isopalu0 || sc2isopalu1 || sc2isopalu2 || sc2isopjl));
+	(sc2isopalu0 || sc2isopalu1 || sc2isopalu2
+	`ifdef PUDSPMUL
+	|| sc2isopdspmul
+	`endif
+	|| sc2isopjl));
 
 `endif
 
@@ -1675,22 +1683,11 @@ opimul #(
 wire [(ARCHBITSZ*2) -1 : 0] opdspmulresult_unsigned = (gprdata1 * gprdata2);
 wire [(ARCHBITSZ*2) -1 : 0] opdspmulresult_signed   = ($signed(gprdata1) * $signed(gprdata2));
 
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
-reg [ARCHBITSZ -1 : 0] opdspmulresult;
-
-wire opdspmuldone = (miscrdyandsequencerreadyandgprrdy12 && isopimul);
-
 `ifdef PUSC2
 wire [(ARCHBITSZ*2) -1 : 0] sc2opdspmulresult_unsigned = (sc2gprdata1 * sc2gprdata2);
 wire [(ARCHBITSZ*2) -1 : 0] sc2opdspmulresult_signed   = ($signed(sc2gprdata1) * $signed(sc2gprdata2));
-
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
-reg [ARCHBITSZ -1 : 0] sc2opdspmulresult;
-
-wire sc2opdspmuldone = (sc2rdyandgprrdy12 && sc2isopdspmul);
 `endif
+
 `endif
 
 // ---------- Registers and nets used by opidiv ----------
