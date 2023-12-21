@@ -312,27 +312,13 @@ assign halted_o = (inhalt && !isflagdisextintr);
 
 `include "./opcodes.pu.v"
 `include "./netsandregs.pu.v"
-`include "./memctrl.pu.v"
-`include "./opalu.pu.v"
-`include "./opgetsysreg.pu.v"
-`ifdef PUMMU
-`include "./mmu.pu.v"
-`ifdef PUHPTW
-`include "./hptw.pu.v"
-`endif
-`endif
+`include "./sequencer.pu.v"
 `include "./instrctrl.pu.v"
-`include "./opld.pu.v"
-`include "./opst.pu.v"
-`include "./opldst.pu.v"
-`include "./timers.pu.v"
-`include "./opli.pu.v"
-`include "./opsetsysreg.pu.v"
+`include "./memctrl.pu.v"
+`include "./gprctrl.pu.v"
 `ifdef PUDBG
 `include "./dbg.pu.v"
 `endif
-`include "./sequencer.pu.v"
-`include "./gprctrl.pu.v"
 
 `ifdef SIMULATION_pc_o
 integer fd;
