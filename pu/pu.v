@@ -312,7 +312,7 @@ assign halted_o = (inhalt && !isflagdisextintr);
 
 `include "./opcodes.pu.v"
 `include "./netsandregs.pu.v"
-`include "./dcache.pu.v"
+`include "./memctrl.pu.v"
 `include "./opalu.pu.v"
 `include "./opgetsysreg.pu.v"
 `ifdef PUMMU
@@ -332,7 +332,6 @@ assign halted_o = (inhalt && !isflagdisextintr);
 `include "./dbg.pu.v"
 `endif
 `include "./sequencer.pu.v"
-`include "./memctrl.pu.v"
 `include "./gprctrl.pu.v"
 
 `ifdef SIMULATION_pc_o
