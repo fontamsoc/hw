@@ -47,7 +47,21 @@ reg dohalt;
 reg[ARCHBITSZ -1 : 0] timer;
 wire timertriggered = !(|timer);
 
+always @ (posedge clk_i) begin
+	if (miscrdyandsequencerreadyandgprrdy1 && isopsettimer && (inkernelmode || isflagsettimer))
+		timer <= gprdata1;
+	else if (!(&timer) && timer)
+		timer <= timer - 1'b1;
+end
+
 reg[(ARCHBITSZ*2) -1 : 0] clkcyclecnt;
+
+always @ (posedge clk_i) begin
+	if (rst_i)
+		clkcyclecnt <= 0;
+	else
+		clkcyclecnt <= clkcyclecnt + 1'b1;
+end
 
 // ---------- Registers and nets used for instruction buffering ----------
 
@@ -474,6 +488,62 @@ localparam HPTWMEMSTATEINSTR = 1;
 localparam HPTWMEMSTATEDATA  = 2;
 
 reg[2 -1 : 0] hptwmemstate; // ### declared as reg so as to be usable by verilog within the always block.
+
+always @ (posedge clk_i) begin
+
+	if (rst_i || instrbufrst_posedge) begin
+
+		hptwistate <= HPTWSTATEPGD0;
+		hptwidone <= 0;
+
+	end else if (hptwidone) begin
+
+		if (!itlbwritten) begin
+			hptwidone <= 1'b0;
+			hptwistate <= HPTWSTATEPGD0;
+		end
+
+	end else if (dcachemasterrdy && (hptwmemstate == HPTWMEMSTATEINSTR || hptwistate_eq_HPTWSTATEPGD1 || hptwistate_eq_HPTWSTATEPTE1)) begin
+
+		if (hptwistate_eq_HPTWSTATEPGD1) begin
+			if (dcachemasterdato[5])
+				hptwipte <= {dcachemasterdato[ARCHBITSZ-1:12], 12'b0};
+			else
+				hptwidone <= 1'b1;
+		end else if (hptwistate_eq_HPTWSTATEPTE1)
+			hptwidone <= 1'b1;
+
+		hptwistate <= hptwistate + 1'b1;
+	end
+end
+
+always @ (posedge clk_i) begin
+
+	if (rst_i) begin
+
+		hptwdstate <= HPTWSTATEPGD0;
+		hptwddone <= 0;
+
+	end else if (hptwddone) begin
+
+		if (!dtlbwritten) begin
+			hptwddone <= 1'b0;
+			hptwdstate <= HPTWSTATEPGD0;
+		end
+
+	end else if (dcachemasterrdy && (hptwmemstate == HPTWMEMSTATEDATA || hptwdstate_eq_HPTWSTATEPGD1 || hptwdstate_eq_HPTWSTATEPTE1)) begin
+
+		if (hptwdstate_eq_HPTWSTATEPGD1) begin
+			if (dcachemasterdato[5])
+				hptwdpte <= {dcachemasterdato[ARCHBITSZ-1:12], 12'b0};
+			else
+				hptwddone <= 1'b1;
+		end else if (hptwdstate_eq_HPTWSTATEPTE1)
+			hptwddone <= 1'b1;
+
+		hptwdstate <= hptwdstate + 1'b1;
+	end
+end
 
 `endif
 
@@ -908,6 +978,25 @@ end
 
 // Net used by opld opst opldst and the sequencer.
 wire[PAGENUMBITSZ -1 : 0] dppn = (dtlben ? dtlbppn[dtlbwayhitidx] : gprdata2[ARCHBITSZ-1:12]);
+
+always @ (posedge clk_i)
+	itlbwritten <= (rst_i || itlbwe);
+
+always @ (posedge clk_i) begin
+	if (itlbreadenable)
+		itlbsetprev <= itlbset;
+end
+
+always @ (posedge clk_i)
+	dtlbwritten <= (rst_i || dtlbwe);
+
+always @ (posedge clk_i) begin
+	if (dtlbreadenable)
+		dtlbsetprev <= dtlbset;
+end
+
+always @ (posedge clk_i)
+	isopgettlb_or_isopclrtlb_found_sampled <= isopgettlb_or_isopclrtlb_found;
 
 `else
 
@@ -1606,6 +1695,54 @@ wire [ARCHBITSZ -1 : 0] opliresult = (
 // the context GPRs to which the result will be stored.
 reg[CLOG2GPRCNTPERCTX -1 : 0] opligpr;
 
+always @ (posedge clk_i) begin
+
+	if (rst_i) begin
+		// Reset logic.
+
+		oplicounter <= 0;
+
+		oplioffset <= 0;
+
+	end else if (sequencerready && oplicounter) begin
+
+		oplilsb <= {oplilsb[((ARCHBITSZ-16)-1):(16*(0))], {instrbufdato1, instrbufdato0}};
+
+		oplicounter <= (oplicounter - 1'b1);
+
+		if (oplicountereq1)
+			oplioffset <= 0;
+		else
+			oplioffset <= (oplioffset + 1'b1);
+
+	end else if (sequencerready_ && !instrbufnotempty && instrfetchfaulted) begin
+
+		oplicounter <= 0;
+
+		oplioffset <= 0;
+
+	end else if (miscrdyandsequencerreadyandgprrdy1 && (isopimm || isopinc)) begin
+
+		wasopinc <= isopinc;
+		wasoprli <= isoprli;
+
+		opligprdata1 <= gprdata1;
+
+		oplitype <= instrbufdato0[1:0];
+
+		opligpr <= instrbufdato1[7:4];
+
+		if      (ARCHBITSZ == 16)
+			oplicounter <= instrbufdato0[0];
+		else if (ARCHBITSZ == 32)
+			oplicounter <= instrbufdato0[1:0];
+		else if (ARCHBITSZ == 64)
+			oplicounter <= ((instrbufdato0[1:0] == 2'b11) ? 3'd4 : {1'b0, instrbufdato0[1:0]});
+
+		oplioffset <= 1;
+	end
+end
+
 // ---------- Nets used by opalu ----------
 
 // ### Nets declared as reg so as to be useable
@@ -1632,6 +1769,123 @@ wire sc2opaludone = (sc2rdyandgprrdy12 &&
 	`endif
 	|| sc2isopjl));
 
+`endif
+
+`ifdef PUDSPMUL
+wire [(ARCHBITSZ*2) -1 : 0] opdspmulresult_unsigned = (gprdata1 * gprdata2);
+wire [(ARCHBITSZ*2) -1 : 0] opdspmulresult_signed   = ($signed(gprdata1) * $signed(gprdata2));
+`ifdef PUSC2
+wire [(ARCHBITSZ*2) -1 : 0] sc2opdspmulresult_unsigned = (sc2gprdata1 * sc2gprdata2);
+wire [(ARCHBITSZ*2) -1 : 0] sc2opdspmulresult_signed   = ($signed(sc2gprdata1) * $signed(sc2gprdata2));
+`endif
+`endif
+
+always @* begin
+
+	opaluresult = {ipnxt, 1'b0}; // isopjl.
+
+	if (isopalu0) begin
+		// Implement sgt, sgte, sgtu, sgteu.
+		case (instrbufdato0[2:0])
+		0:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(gprdata1) > $signed(gprdata2)};
+		1:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(gprdata1) >= $signed(gprdata2)};
+		2:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, gprdata1 > gprdata2};
+		default: opaluresult = {{(ARCHBITSZ-1){1'b0}}, gprdata1 >= gprdata2};
+		endcase
+	end
+
+	if (isopalu1) begin
+		// Implement add, sub, seq, sne, slt, slte, sltu, slteu.
+		case (instrbufdato0[2:0])
+		0:       opaluresult = gprdata1 + gprdata2;
+		1:       opaluresult = gprdata1 - gprdata2;
+		2:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, gprdata1 == gprdata2};
+		3:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, gprdata1 != gprdata2};
+		4:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(gprdata1) < $signed(gprdata2)};
+		5:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(gprdata1) <= $signed(gprdata2)};
+		6:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, gprdata1 < gprdata2};
+		default: opaluresult = {{(ARCHBITSZ-1){1'b0}}, gprdata1 <= gprdata2};
+		endcase
+	end
+
+	if (isopalu2) begin
+		// Implement sll, srl, sra, and, or, xor, not, cpy.
+		case (instrbufdato0[2:0])
+		0:       opaluresult = gprdata1 << gprdata2[CLOG2ARCHBITSZ-1:0];
+		1:       opaluresult = gprdata1 >> gprdata2[CLOG2ARCHBITSZ-1:0];
+		2:       opaluresult = $signed(gprdata1) >>> gprdata2[CLOG2ARCHBITSZ-1:0];
+		3:       opaluresult = gprdata1 & gprdata2;
+		4:       opaluresult = gprdata1 | gprdata2;
+		5:       opaluresult = gprdata1 ^ gprdata2;
+		6:       opaluresult = ~gprdata2;
+		default: opaluresult = gprdata2;
+		endcase
+	end
+
+	`ifdef PUDSPMUL
+	if (isopmuldiv /* instead of isopimul for fewer logic */) begin
+		// Implement mulu, mulhu, mul, mulh.
+		case (instrbufdato0[2:0])
+		0:       opaluresult = opdspmulresult_unsigned[ARCHBITSZ-1:0];
+		1:       opaluresult = opdspmulresult_unsigned[(ARCHBITSZ*2)-1:ARCHBITSZ];
+		2:       opaluresult = opdspmulresult_signed[ARCHBITSZ-1:0];
+		default: opaluresult = opdspmulresult_signed[(ARCHBITSZ*2)-1:ARCHBITSZ];
+		endcase
+	end
+	`endif
+end
+
+`ifdef PUSC2
+always @* begin
+
+	sc2opaluresult = {sc2ipnxt, 1'b0}; // sc2isopjl.
+
+	if (sc2isopalu0) begin
+		case (sc2instrbufdato0[2:0])
+		0:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(sc2gprdata1) > $signed(sc2gprdata2)};
+		1:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(sc2gprdata1) >= $signed(sc2gprdata2)};
+		2:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 > sc2gprdata2};
+		default: sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 >= sc2gprdata2};
+		endcase
+	end
+
+	if (sc2isopalu1) begin
+		case (sc2instrbufdato0[2:0])
+		0:       sc2opaluresult = sc2gprdata1 + sc2gprdata2;
+		1:       sc2opaluresult = sc2gprdata1 - sc2gprdata2;
+		2:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 == sc2gprdata2};
+		3:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 != sc2gprdata2};
+		4:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(sc2gprdata1) < $signed(sc2gprdata2)};
+		5:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(sc2gprdata1) <= $signed(sc2gprdata2)};
+		6:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 < sc2gprdata2};
+		default: sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 <= sc2gprdata2};
+		endcase
+	end
+
+	if (sc2isopalu2) begin
+		case (sc2instrbufdato0[2:0])
+		0:       sc2opaluresult = sc2gprdata1 << sc2gprdata2[CLOG2ARCHBITSZ-1:0];
+		1:       sc2opaluresult = sc2gprdata1 >> sc2gprdata2[CLOG2ARCHBITSZ-1:0];
+		2:       sc2opaluresult = $signed(sc2gprdata1) >>> sc2gprdata2[CLOG2ARCHBITSZ-1:0];
+		3:       sc2opaluresult = sc2gprdata1 & sc2gprdata2;
+		4:       sc2opaluresult = sc2gprdata1 | sc2gprdata2;
+		5:       sc2opaluresult = sc2gprdata1 ^ sc2gprdata2;
+		6:       sc2opaluresult = ~sc2gprdata2;
+		default: sc2opaluresult = sc2gprdata2;
+		endcase
+	end
+
+	`ifdef PUDSPMUL
+	if (sc2isopmuldiv /* instead of sc2isopdspmul for fewer logic */) begin
+		case (sc2instrbufdato0[2:0])
+		0:       sc2opaluresult = sc2opdspmulresult_unsigned[ARCHBITSZ-1:0];
+		1:       sc2opaluresult = sc2opdspmulresult_unsigned[(ARCHBITSZ*2)-1:ARCHBITSZ];
+		2:       sc2opaluresult = sc2opdspmulresult_signed[ARCHBITSZ-1:0];
+		default: sc2opaluresult = sc2opdspmulresult_signed[(ARCHBITSZ*2)-1:ARCHBITSZ];
+		endcase
+	end
+	`endif
+end
 `endif
 
 // ---------- Registers and nets used by opimul ----------
@@ -1677,16 +1931,6 @@ opimul #(
 	,.gprid_o (opimulgpr)
 	,.ordy_o  (opimuldone)
 );
-
-`else
-
-wire [(ARCHBITSZ*2) -1 : 0] opdspmulresult_unsigned = (gprdata1 * gprdata2);
-wire [(ARCHBITSZ*2) -1 : 0] opdspmulresult_signed   = ($signed(gprdata1) * $signed(gprdata2));
-
-`ifdef PUSC2
-wire [(ARCHBITSZ*2) -1 : 0] sc2opdspmulresult_unsigned = (sc2gprdata1 * sc2gprdata2);
-wire [(ARCHBITSZ*2) -1 : 0] sc2opdspmulresult_signed   = ($signed(sc2gprdata1) * $signed(sc2gprdata2));
-`endif
 
 `endif
 
@@ -1898,6 +2142,21 @@ wire opgetsysregdone = (miscrdyandsequencerreadyandgprrdy1 && isopgetsysreg && (
 	(isoptype6 && isflagmmucmds) ||
 	(isoptype7 && isflagcachecmds)));
 
+always @* begin
+	// Implement getsysopcode, getuip, getfaultaddr, getfaultreason,
+	// getclkcyclecnt, getclkcyclecnth, gettlbsize, geticachesize.
+	case (instrbufdato0[2:0])
+	0:       opgetsysregresult = {{(ARCHBITSZ-16){1'b0}}, sysopcode};
+	1:       opgetsysregresult = {uip, 1'b0};
+	2:       opgetsysregresult = faultaddr;
+	3:       opgetsysregresult = {{(ARCHBITSZ-3){1'b0}}, faultreason};
+	4:       opgetsysregresult = clkcyclecnt[ARCHBITSZ -1 : 0];
+	5:       opgetsysregresult = clkcyclecnt[(ARCHBITSZ*2) -1 : ARCHBITSZ];
+	6:       opgetsysregresult = TLBSETCOUNT;
+	default: opgetsysregresult = (ICACHESETCOUNT << CLOG2XARCHBITSZBY8DIFF);
+	endcase
+end
+
 // ---------- Registers and nets used by opgetsysreg1 ----------
 
 // ### Nets declared as reg so as to be useable
@@ -1941,6 +2200,35 @@ wire isopgettlb_or_isopclrtlb_found = (miscrdyandsequencerreadyandgprrdy12 && (
 reg isopgettlb_or_isopclrtlb_found_sampled;
 assign isopgettlb_or_isopclrtlb_found_posedge = (!isopgettlb_or_isopclrtlb_found_sampled && isopgettlb_or_isopclrtlb_found);
 
+always @* begin
+	// Implement getcoreid, getclkfreq, getdcachesize, gettlb, getcap, getver.
+	case (instrbufdato0[2:0])
+	0:       opgetsysreg1result = id_i;
+	1:       opgetsysreg1result = CLKFREQ;
+	`ifdef PUDCACHE
+	2:       opgetsysreg1result = (DCACHESETCOUNT << CLOG2XARCHBITSZBY8DIFF);
+	`endif
+	`ifdef PUMMU
+	3:       opgetsysreg1result = opgettlbresult;
+	`endif
+	4:       opgetsysreg1result = // 16bits value returned to take PU16 into account.
+		{{14{1'b0}}
+		`ifdef PUMMU
+		`ifdef PUHPTW
+		, 1'b1
+		`else
+		, 1'b0
+		`endif
+		, 1'b1
+		`else
+		, 2'b00
+		`endif
+		};
+	5:       opgetsysreg1result = VERSION; // 16bits value returned to take PU16 into account.
+	default: opgetsysreg1result = 0;
+	endcase
+end
+
 // ---------- Nets used by opsetgpr ----------
 
 wire[CLOG2GPRCNTTOTAL -1 : 0] opsetgprdstidx = {instrbufdato0[1], instrbufdato1[7:4]};
@@ -1954,6 +2242,36 @@ wire opsetgprrdy1;
 wire opsetgprrdy2;
 
 wire opsetgprdone = (miscrdy && sequencerready && opsetgprrdy1 && opsetgprrdy2 && isopsetgpr && inkernelmode);
+
+// ---------- Nets used by opsetsysreg ----------
+
+always @ (posedge clk_i) begin
+	// Implement setksysopfaulthdlr, setksl, setasid, setuip, setflags.
+	if (rst_i) begin
+		ksysopfaulthdlr <= {(ARCHBITSZ-1){1'b0}};
+		ksl <= KERNELSPACESTART;
+		flags <= ('h2000 /* disTimerIntr */);
+		`ifdef PUMMU
+		asid <= 0;
+		`ifdef PUHPTW
+		hptwpgd <= 0;
+		`endif
+		`endif
+	end else if (miscrdyandsequencerreadyandgprrdy1 && isopsetsysreg) begin
+		if (isoptype0) ksysopfaulthdlr <= gprdata1[ARCHBITSZ-1:1];
+		else if (isoptype1) ksl <= gprdata1;
+		`ifdef PUMMU
+		else if (isoptype4 && (inkernelmode || isflagmmucmds)) begin
+			asid <= gprdata1[14-1:0];
+			`ifdef PUHPTW
+			hptwpgd <= gpr13val;
+			`endif
+		end
+		`endif
+		//else if (isoptype5); // setuip implemented by the sequencer.
+		else if (isoptype6 && (inkernelmode || isflagsetflags)) flags <= gprdata1[16-1:0];
+	end
+end
 
 // ---------- General purpose registers ----------
 
@@ -2043,6 +2361,47 @@ wire opldrdy = (isopld && opldrdy_
 	`endif
 	&& !opldfault);
 
+always @ (posedge clk_i) begin
+
+	if (rst_i) begin
+		// Reset logic.
+
+		opldmemrqst <= 0;
+		oplddone <= 0;
+
+	end else if (gprctrlstate == GPRCTRLSTATEOPLD) begin
+
+		oplddone <= 0;
+
+	end else begin
+
+		if (opldmemrqst) begin
+
+			if (dcachemasterrdy) begin
+
+				opldresult <= dcachemasterdato_result;
+
+				// Signal that the value of the register opldresult can be stored in the gpr.
+				oplddone <= 1;
+
+				opldmemrqst <= 0;
+			end
+
+		end else if (miscrdyandsequencerreadyandgprrdy12 && dtlb_rdy && isopld && dcachemasterrdy && !opldfault
+			`ifdef PUMMU
+			`ifdef PUHPTW
+			&& opldfault__hptwddone
+			`endif
+			`endif
+			) begin
+
+			opldmemrqst <= 1;
+
+			opldgpr <= gpridx1;
+		end
+	end
+end
+
 // ---------- Registers and nets used by opst ----------
 
 `ifdef PUMMU
@@ -2063,6 +2422,20 @@ wire opstrdy = (isopst && opstrdy_
 	`endif
 	`endif
 	&& !opstfault);
+/*
+always @ (posedge clk_i) begin
+	if (miscrdyandsequencerreadyandgprrdy12 && isopst && dtlb_rdy && (dcachemasterrdy || opstfault)
+		`ifdef PUMMU
+		`ifdef PUHPTW
+		&& opstfault__hptwddone
+		`endif
+		`endif
+		) begin
+		if (!opstfault) begin
+		end
+	end
+end
+*/
 
 // ---------- Registers and nets used by opldst ----------
 
@@ -2094,6 +2467,47 @@ wire opldstrdy = (isopldst && opldstrdy_
 	`endif
 	`endif
 	&& (!opldstfault && !instrbufdato0[2]));
+
+always @ (posedge clk_i) begin
+
+	if (rst_i) begin
+		// Reset logic.
+
+		opldstmemrqst <= 0;
+		opldstdone <= 0;
+
+	end else if (gprctrlstate == GPRCTRLSTATEOPLDST) begin
+
+		opldstdone <= 0;
+
+	end else begin
+
+		if (opldstmemrqst) begin
+
+			if (dcachemasterrdy) begin
+
+				opldstresult <= dcachemasterdato_result;
+
+				// Signal that the value of the register opldstresult can be stored in the gpr.
+				opldstdone <= 1;
+
+				opldstmemrqst <= 0;
+			end
+
+		end else if (miscrdyandsequencerreadyandgprrdy12 && dtlb_rdy && isopldst && dcachemasterrdy && !opldstfault && !instrbufdato0[2]
+			`ifdef PUMMU
+			`ifdef PUHPTW
+			&& opldstfault__hptwddone
+			`endif
+			`endif
+			) begin
+
+			opldstmemrqst <= 1;
+
+			opldstgpr <= gpridx1;
+		end
+	end
+end
 
 // ---------- Registers and nets used for data caching ----------
 
