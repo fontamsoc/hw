@@ -90,9 +90,7 @@ fifo #(
 	,.full_o (probebufferfull)
 );
 
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
-reg [8 -1 : 0] uartbufferdatain;
+reg [8 -1 : 0] uartbufferdatain; // ### comb-block-reg.
 
 wire uart_tx_full;
 

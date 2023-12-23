@@ -49,9 +49,7 @@ input wire stb_i;
 input wire [(((ARCHBITSZ*2)+CLOG2GPRCNT)+IDIVTYPEBITSZ) -1 : 0] data_i;
 
 // Net set to the result of the division.
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
-output reg [ARCHBITSZ -1 : 0] data_o;
+output reg [ARCHBITSZ -1 : 0] data_o; // ### comb-block-reg.
 
 // Net set to the id of the gpr to which the result is to be stored.
 output wire [CLOG2GPRCNT -1 : 0] gprid_o;

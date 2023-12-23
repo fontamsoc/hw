@@ -198,9 +198,7 @@ always @ (posedge clk_i) begin
 		bufread_done <= 0;
 end
 
-// ### Net declared as reg so as to be useable
-// ### by verilog within the always block.
-reg cachehit;
+reg cachehit; // ### comb-block-reg.
 
 // Register used to hold the value of the input "m_pi1_op_i".
 reg [2 -1 : 0] m_pi1_op_i_hold;
@@ -323,10 +321,8 @@ end endgenerate
 // Register used to hold cache-way index to write next.
 reg [CLOG2CACHEWAYCOUNT -1 : 0] cachewaywriteidx;
 
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
-reg                             cachetagwayhit;
-reg [CLOG2CACHEWAYCOUNT -1 : 0] cachetagwayhitidx;
+reg                             cachetagwayhit; // ### comb-block-reg.
+reg [CLOG2CACHEWAYCOUNT -1 : 0] cachetagwayhitidx; // ### comb-block-reg.
 reg [CLOG2CACHEWAYCOUNT -1 : 0] cachetagwayhitidx_sampled;
 
 wire [ARCHBITSZ -1 : 0] cachedato [CACHEWAYCOUNT -1 : 0];
@@ -349,9 +345,7 @@ assign usesampled = (cachewe_sampled && (m_pi1_addr_i_hold == m_pi1_addr_i_hold_
 
 reg [ARCHBITSZ -1 : 0] s_pi1_data_i_hold;
 
-// ### Net declared as reg so as to be useable
-// ### by verilog within the always block.
-reg [CLOG2CACHEWAYCOUNT -1 : 0] cachewayhitidx;
+reg [CLOG2CACHEWAYCOUNT -1 : 0] cachewayhitidx; // ### comb-block-reg.
 
 assign m_pi1_data_o = (m_pi1_op_i_hold == PIRDOP) ?
 	(usesampled ? cachedati_sampled : cachedato[cachewayhitidx]) : s_pi1_data_i_hold;
@@ -368,9 +362,7 @@ reg [ARCHBITSZ -1 : 0] cachedatabitseli_sampled;
 wire [ARCHBITSZ -1 : 0] cachedatabitseli =
 	((cachetagwayhit ? (usesampled ? cachedatabitseli_sampled : cachedatabitselo[cachetagwayhitidx]) : {ARCHBITSZ{1'b0}}) | _cachedatibitsel);
 
-// ### Net declared as reg so as to be useable
-// ### by verilog within the always block.
-reg [CACHEWAYCOUNT -1 : 0] cachetaghit;
+reg cachetaghit [CACHEWAYCOUNT -1 : 0]; // ### comb-block-reg.
 integer gencachetag_idx;
 always @* begin
 	cachehit = 0;

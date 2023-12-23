@@ -245,11 +245,11 @@ input wire clk_faddfsub_i;
 input wire clk_fmul_i;
 input wire clk_fdiv_i;
 
-output reg[2 -1 : 0] pi1_op_o; // ### declared as reg so as to be usable by verilog within the always block.
-output reg[XADDRBITSZ -1 : 0] pi1_addr_o; // ### declared as reg so as to be usable by verilog within the always block.
-output reg[XARCHBITSZ -1 : 0] pi1_data_o; // ### declared as reg so as to be usable by verilog within the always block.
+output reg[2 -1 : 0] pi1_op_o; // ### comb-block-reg.
+output reg[XADDRBITSZ -1 : 0] pi1_addr_o; // ### comb-block-reg.
+output reg[XARCHBITSZ -1 : 0] pi1_data_o; // ### comb-block-reg.
 input wire[XARCHBITSZ -1 : 0] pi1_data_i;
-output reg[(XARCHBITSZ/8) -1 : 0] pi1_sel_o; // ### declared as reg so as to be usable by verilog within the always block.
+output reg[(XARCHBITSZ/8) -1 : 0] pi1_sel_o; // ### comb-block-reg.
 input wire pi1_rdy_i;
 
 input wire intrqst_i;
