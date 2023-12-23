@@ -135,8 +135,8 @@ input  wire            brkonrst_i;
 input  wire            dbg_rx_rcvd_i;
 input  wire [8 -1 : 0] dbg_rx_data_i;
 output wire            dbg_rx_rdy_o;
-output reg             dbg_tx_stb_o;  // ### declared as reg so as to be usable by verilog within the always block.
-output reg  [8 -1 : 0] dbg_tx_data_o; // ### declared as reg so as to be usable by verilog within the always block.
+output reg             dbg_tx_stb_o;  // ### comb-block-reg.
+output reg  [8 -1 : 0] dbg_tx_data_o; // ### comb-block-reg.
 input  wire            dbg_tx_rdy_i;
 `endif
 

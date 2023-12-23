@@ -7,8 +7,8 @@
 
 module isesim;
 
-reg rst_w; // ### Wire declared as reg so as to be useable within initial block.
-reg clk_w; // ### Wire declared as reg so as to be useable within initial block.
+reg rst_w; // ### comb-block-reg.
+reg clk_w; // ### comb-block-reg.
 
 sim sim (
 	 .rst_i (rst_w)

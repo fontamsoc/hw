@@ -50,9 +50,7 @@ input wire stb_i;
 input wire [(((ARCHBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] data_i;
 
 // Net set to the result of the multiplication.
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
-output reg [ARCHBITSZ -1 : 0] data_o;
+output reg [ARCHBITSZ -1 : 0] data_o; // ### comb-block-reg.
 
 // Net set to the id of the gpr to which the result is to be stored.
 output wire [CLOG2GPRCNT -1 : 0] gprid_o;
@@ -65,9 +63,7 @@ wire [(ARCHBITSZ*2) -1 : 0] cumulatornegated = -cumulator;
 
 // Net used by the multiplication; compute the multiplier
 // times 0, 1, 2 or 3 based on cumulator[1:0].
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
-reg [(ARCHBITSZ+2) -1 : 0] mulx;
+reg [(ARCHBITSZ+2) -1 : 0] mulx; // ### comb-block-reg.
 
 // Reg set to the right operand value of the multiplication, which is the multiplier.
 reg [ARCHBITSZ -1 : 0] rval;

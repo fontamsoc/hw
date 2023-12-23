@@ -261,8 +261,7 @@ always @ (posedge clk_i) begin
 		masteridx <= 0;
 end
 
-// ### Nets declared as reg so as to be useable by verilog within the always block.
-reg [ARCHBITSZ -1 : 0] addrspace [SLAVECOUNT -1 : 0];
+reg [ARCHBITSZ -1 : 0] addrspace [SLAVECOUNT -1 : 0]; // ### comb-block-reg.
 
 integer genaddrspace0;
 integer genaddrspace1;
@@ -280,8 +279,7 @@ always @* begin
 	end
 end
 
-// ### Net declared as reg so as to be useable by verilog within the always block.
-reg [CLOG2SLAVECOUNT -1 : 0] slaveidx;
+reg [CLOG2SLAVECOUNT -1 : 0] slaveidx; // ### comb-block-reg.
 
 wire [ARCHBITSZ -1 : 0] slavemapszslaveidx = slavemapsz[slaveidx];
 

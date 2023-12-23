@@ -287,7 +287,7 @@ localparam STATUSERROR    = 3;
 wire phy_tx_pop_w, phy_rx_push_w;
 
 wire [8 -1 : 0] phy_rx_data_w;
-reg  [8 -1 : 0] phy_tx_data_w; // ### Net declared as reg so as to be useable by verilog within the always block.
+reg  [8 -1 : 0] phy_tx_data_w; // ### comb-block-reg.
 
 reg phy_cmd = 0;
 
@@ -644,7 +644,7 @@ dram #(
 	,.o1      (cache1dato)
 );
 
-reg [2 -1 : 0] status; // ### Net declared as reg so as to be useable by verilog within the always block.
+reg [2 -1 : 0] status; // ### comb-block-reg.
 
 always @* begin
 	if (rst_i)
@@ -658,7 +658,7 @@ always @* begin
 end
 
 reg [(256/*XARCHBITSZ*//8) -1 : 0] pi1b_sel_i_hold = 0;
-// ### Net declared as reg so as to be useable by verilog within the always block.
+// ### comb-block-reg.
 reg [XARCHBITSZ -1 : 0] sel_w; // Net set to a bitmask used to modify only a portion of the indexed memory.
 always @* begin
 	if (XARCHBITSZ == 16)

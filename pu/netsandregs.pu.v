@@ -404,13 +404,13 @@ wire dbg_tx_rdy_i_negedge = (!dbg_tx_rdy_i && dbg_tx_rdy_i_sampled);
 wire[ARCHBITSZ -1 : 0] gprdata1;
 wire[ARCHBITSZ -1 : 0] gprdata2;
 
-reg[2 -1 : 0] dcachemasterop; // ### declared as reg so as to be usable by verilog within the always block.
-reg[ADDRBITSZ -1 : 0] dcachemasteraddr; // ### declared as reg so as to be usable by verilog within the always block.
+reg[2 -1 : 0] dcachemasterop; // ### comb-block-reg.
+reg[ADDRBITSZ -1 : 0] dcachemasteraddr; // ### comb-block-reg.
 wire[ARCHBITSZ -1 : 0] dcachemasterdato;
 wire[ARCHBITSZ -1 : 0] dcachemasterdato_result;
-reg[ARCHBITSZ -1 : 0] dcachemasterdati; // ### declared as reg so as to be usable by verilog within the always block.
-reg[(ARCHBITSZ/8) -1 : 0] dcachemastersel_; // ### declared as reg so as to be usable by verilog within the always block.
-reg[(ARCHBITSZ/8) -1 : 0] dcachemastersel; // ### declared as reg so as to be usable by verilog within the always block.
+reg[ARCHBITSZ -1 : 0] dcachemasterdati; // ### comb-block-reg.
+reg[(ARCHBITSZ/8) -1 : 0] dcachemastersel_; // ### comb-block-reg.
+reg[(ARCHBITSZ/8) -1 : 0] dcachemastersel; // ### comb-block-reg.
 reg[(ARCHBITSZ/8) -1 : 0] dcachemastersel_saved;
 wire dcachemasterrdy;
 
@@ -487,7 +487,7 @@ localparam HPTWMEMSTATENONE  = 0;
 localparam HPTWMEMSTATEINSTR = 1;
 localparam HPTWMEMSTATEDATA  = 2;
 
-reg[2 -1 : 0] hptwmemstate; // ### declared as reg so as to be usable by verilog within the always block.
+reg[2 -1 : 0] hptwmemstate; // ### comb-block-reg.
 
 always @ (posedge clk_i) begin
 
@@ -564,8 +564,6 @@ wire[CLOG2GPRCNTTOTAL -1 : 0] gpridx2 = {inusermode, instrbufdato1[3:0]};
 wire gprrdy1;
 wire gprrdy2;
 
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
 localparam GPRCTRLSTATEDONE       = 0;
 localparam GPRCTRLSTATEOPLD       = 1;
 localparam GPRCTRLSTATEOPLDST     = 2;
@@ -574,13 +572,13 @@ localparam GPRCTRLSTATEOPIDIV     = 4;
 localparam GPRCTRLSTATEOPFADDFSUB = 5;
 localparam GPRCTRLSTATEOPFMUL     = 6;
 localparam GPRCTRLSTATEOPFDIV     = 7;
-reg[3 -1 : 0] gprctrlstate;
-reg[CLOG2GPRCNTTOTAL -1 : 0] gpridx;
-reg[ARCHBITSZ -1 : 0] gprdata;
-reg gprwe;
-reg[CLOG2GPRCNTTOTAL -1 : 0] gprrdyidx;
-reg gprrdyval;
-reg gprrdywe;
+reg[3 -1 : 0] gprctrlstate; // ### comb-block-reg.
+reg[CLOG2GPRCNTTOTAL -1 : 0] gpridx; // ### comb-block-reg.
+reg[ARCHBITSZ -1 : 0] gprdata; // ### comb-block-reg.
+reg gprwe; // ### comb-block-reg.
+reg[CLOG2GPRCNTTOTAL -1 : 0] gprrdyidx; // ### comb-block-reg.
+reg gprrdyval; // ### comb-block-reg.
+reg gprrdywe; // ### comb-block-reg.
 
 wire [ARCHBITSZ -1 : 0] gpr13val;
 
@@ -592,8 +590,7 @@ localparam SEQSTALL1  = 3'd4;
 localparam SEQHCALL   = 3'd5;
 localparam SEQHALT    = 3'd6;
 localparam SEQSRET    = 3'd7;
-// ### Net declared as reg so as to be useable by verilog within the always block.
-reg [3 -1 : 0] sequencerstate;
+reg [3 -1 : 0] sequencerstate; // ### comb-block-reg.
 
 wire isflagdistimerintr;
 wire isflagdisextintr;
@@ -768,7 +765,7 @@ localparam TLBENTRYBITSZ = (12 +5 +PAGENUMBITSZ +PAGENUMBITSZMINUSCLOG2TLBSETCOU
 assign inuserspace = asid[12];
 assign kmodepaging = asid[13];
 
-reg [CLOG2TLBWAYCOUNT -1 : 0] dtlbwayhitidx; // ### Nets declared as reg so as to be useable by verilog within the always block.
+reg [CLOG2TLBWAYCOUNT -1 : 0] dtlbwayhitidx; // ### comb-block-reg.
 reg [CLOG2TLBWAYCOUNT -1 : 0] dtlbwaywriteidx; // Register used to hold dtlb-way index to write next.
 // Nets implementing checking the tlb for data loading/storing.
 wire[CLOG2TLBSETCOUNT -1 : 0] dtlbset = gprdata2[(CLOG2TLBSETCOUNT +12) -1 : 12];
@@ -804,7 +801,7 @@ wire dtlbwe = (
 	(isopsettlb && (inkernelmode || isflagmmucmds) && (gprdata1 & 'b110)) ||
 	(isopclrtlb && (inkernelmode || isflagmmucmds) && !(({dtlbtag[dtlbwayhitidx], dtlbset, dtlbasid[dtlbwayhitidx]} ^ gprdata2) & gprdata1)))));
 
-reg [CLOG2TLBWAYCOUNT -1 : 0] itlbwayhitidx; // ### Nets declared as reg so as to be useable by verilog within the always block.
+reg [CLOG2TLBWAYCOUNT -1 : 0] itlbwayhitidx; // ### comb-block-reg.
 reg [CLOG2TLBWAYCOUNT -1 : 0] itlbwaywriteidx; // Register used to hold itlb-way index to write next.
 // Nets implementing checking the tlb for instruction fetching.
 wire[CLOG2TLBSETCOUNT -1 : 0] itlbset = (tlbbsy ? dtlbset :
@@ -846,7 +843,7 @@ wire[TLBENTRYBITSZ -1 : 0] tlbwritedata = (
 	`endif
 	             {TLBENTRYBITSZ{1'b0}});
 
-reg itlbmiss; // ### Nets declared as reg so as to be useable by verilog within the always block.
+reg itlbmiss; // ### comb-block-reg.
 integer gen_itlbhit_idx;
 always @* begin
 	itlbmiss = 1;
@@ -859,7 +856,7 @@ always @* begin
 	end
 end
 
-reg dtlbmiss; // ### Nets declared as reg so as to be useable by verilog within the always block.
+reg dtlbmiss; // ### comb-block-reg.
 integer gen_dtlbhit_idx;
 always @* begin
 	dtlbmiss = 1;
@@ -1050,7 +1047,7 @@ wire dtlb_rdy = (!dtlbreadenable);
 
 // ---------- Net used to detect unaligned data memory access ----------
 
-reg alignfault; // ### declared as reg so as to be usable by verilog within the always block.
+reg alignfault; // ### comb-block-reg.
 always @* begin
 	alignfault = 0;
 	if          (ARCHBITSZ == 16) begin
@@ -1098,10 +1095,8 @@ wire [ICACHETAGBITSIZE -1 : 0] icachetago [ICACHEWAYCOUNT -1 : 0];
 
 wire [ICACHEWAYCOUNT -1 : 0] icachevalido;
 
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
-reg [CLOG2ICACHEWAYCOUNT -1 : 0] icachewayhitidx;
-reg icachehit_;
+reg [CLOG2ICACHEWAYCOUNT -1 : 0] icachewayhitidx; // ### comb-block-reg.
+reg icachehit_; // ### comb-block-reg.
 integer gen_icachehit_idx;
 always @* begin
 	icachehit_ = 0;
@@ -1569,11 +1564,9 @@ wire [ARCHBITSZ -1 : 0] sc2gprdata2;
 wire sc2gprrdy1;
 wire sc2gprrdy2;
 
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
-reg [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx;
-reg [ARCHBITSZ -1 : 0] sc2gprdata;
-reg sc2gprwe;
+reg [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx; // ### comb-block-reg.
+reg [ARCHBITSZ -1 : 0] sc2gprdata; // ### comb-block-reg.
+reg sc2gprwe; // ### comb-block-reg.
 
 wire sc2usegpr2 = (
 	`ifdef PUDSPMUL
@@ -1745,9 +1738,7 @@ end
 
 // ---------- Nets used by opalu ----------
 
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
-reg[ARCHBITSZ -1 : 0] opaluresult;
+reg[ARCHBITSZ -1 : 0] opaluresult; // ### comb-block-reg.
 
 wire opaludone = (miscrdyandsequencerreadyandgprrdy12 &&
 	(isopalu0 || isopalu1 || isopalu2
@@ -1758,9 +1749,7 @@ wire opaludone = (miscrdyandsequencerreadyandgprrdy12 &&
 
 `ifdef PUSC2
 
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
-reg[ARCHBITSZ -1 : 0] sc2opaluresult;
+reg[ARCHBITSZ -1 : 0] sc2opaluresult; // ### comb-block-reg.
 
 wire sc2opaludone = (sc2rdyandgprrdy12 &&
 	(sc2isopalu0 || sc2isopalu1 || sc2isopalu2
@@ -2133,8 +2122,7 @@ end endgenerate
 
 // ---------- Nets used by opgetsysreg ----------
 
-// ### Nets declared as reg so as to be useable by verilog within the always block.
-reg[ARCHBITSZ -1 : 0] opgetsysregresult;
+reg[ARCHBITSZ -1 : 0] opgetsysregresult; // ### comb-block-reg.
 
 wire opgetsysregdone = (miscrdyandsequencerreadyandgprrdy1 && isopgetsysreg && (
 	inkernelmode ||
@@ -2159,9 +2147,7 @@ end
 
 // ---------- Registers and nets used by opgetsysreg1 ----------
 
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
-reg[ARCHBITSZ -1 : 0] opgetsysreg1result;
+reg[ARCHBITSZ -1 : 0] opgetsysreg1result; // ### comb-block-reg.
 
 `ifdef PUMMU
 `ifdef PUHPTW

@@ -20,10 +20,8 @@ parameter GUARDBITSZ = 3;
 
 input wire [EXPBITSZ                 -1 : 0] exp_i;
 input wire [(MANTBITSZ+2)+GUARDBITSZ -1 : 0] mant_i;
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
-output reg [EXPBITSZ                 -1 : 0] exp_o;
-output reg [(MANTBITSZ+2)+GUARDBITSZ -1 : 0] mant_o;
+output reg [EXPBITSZ                 -1 : 0] exp_o; // ### comb-block-reg.
+output reg [(MANTBITSZ+2)+GUARDBITSZ -1 : 0] mant_o; // ### comb-block-reg.
 
 // ###: Only support MANTBITSZ == 23.
 generate if (MANTBITSZ == 23) begin :gennormalizer
@@ -145,8 +143,6 @@ input wire [(MANTBITSZ+1) -1 : 0] arg1_mant_i;
 input wire [EXPBITSZ      -1 : 0] arg1_exp_i;
 input wire                        arg1_sign_i;
 
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
 output reg [(MANTBITSZ+2) -1 : 0] rslt_mant_o;
 output reg [EXPBITSZ      -1 : 0] rslt_exp_o;
 output reg                        rslt_sign_o;

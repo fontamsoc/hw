@@ -19,10 +19,8 @@ parameter MANTBITSZ = 23;
 
 input wire [(EXPBITSZ+1)      -1 : 0] exp_i;
 input wire [((MANTBITSZ+1)*2) -1 : 0] mant_i;
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
-output reg [(EXPBITSZ+1)      -1 : 0] exp_o;
-output reg [((MANTBITSZ+1)*2) -1 : 0] mant_o;
+output reg [(EXPBITSZ+1)      -1 : 0] exp_o; // ### comb-block-reg.
+output reg [((MANTBITSZ+1)*2) -1 : 0] mant_o; // ### comb-block-reg.
 
 // ###: Only support MANTBITSZ == 23.
 generate if (MANTBITSZ == 23) begin :gennormalizer
@@ -152,9 +150,7 @@ output reg rdy_o;
 
 // Net used by the multiplication; compute the multiplier
 // times 0, 1, 2 or 3 based on rslt_o[1:0].
-// ### Nets declared as reg so as to be useable
-// ### by verilog within the always block.
-reg [(BITSZ+2) -1 : 0] mulx;
+reg [(BITSZ+2) -1 : 0] mulx; // ### comb-block-reg.
 
 // ### Used so that verilog simulation would work.
 wire [(BITSZ+2) -1 : 0] rsltarg = (mulx + rslt_o[(BITSZ*2)-1:BITSZ]);
