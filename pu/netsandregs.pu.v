@@ -573,12 +573,12 @@ localparam GPRCTRLSTATEOPFADDFSUB = 5;
 localparam GPRCTRLSTATEOPFMUL     = 6;
 localparam GPRCTRLSTATEOPFDIV     = 7;
 reg[3 -1 : 0] gprctrlstate; // ### comb-block-reg.
-reg[CLOG2GPRCNTTOTAL -1 : 0] gpridx; // ### comb-block-reg.
-reg[ARCHBITSZ -1 : 0] gprdata; // ### comb-block-reg.
-reg gprwe; // ### comb-block-reg.
-reg[CLOG2GPRCNTTOTAL -1 : 0] gprrdyidx; // ### comb-block-reg.
-reg gprrdyval; // ### comb-block-reg.
-reg gprrdywe; // ### comb-block-reg.
+reg[CLOG2GPRCNTTOTAL -1 : 0] gpridx;
+reg[ARCHBITSZ -1 : 0] gprdata;
+reg gprwe;
+reg[CLOG2GPRCNTTOTAL -1 : 0] gprrdyidx;
+reg gprrdyval;
+reg gprrdywe;
 
 wire [ARCHBITSZ -1 : 0] gpr13val;
 
@@ -1564,9 +1564,9 @@ wire [ARCHBITSZ -1 : 0] sc2gprdata2;
 wire sc2gprrdy1;
 wire sc2gprrdy2;
 
-reg [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx; // ### comb-block-reg.
-reg [ARCHBITSZ -1 : 0] sc2gprdata; // ### comb-block-reg.
-reg sc2gprwe; // ### comb-block-reg.
+reg [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx;
+reg [ARCHBITSZ -1 : 0] sc2gprdata;
+reg sc2gprwe;
 
 wire sc2usegpr2 = (
 	`ifdef PUDSPMUL
@@ -2264,57 +2264,67 @@ end
 reg [ARCHBITSZ -1 : 0] gpr [GPRCNTTOTAL -1 : 0];
 
 `ifdef PUDBG
-assign dbggprdata     = gpr[{inusermode, dbg_rx_data_i[3:0]}];
+wire [CLOG2GPRCNTTOTAL -1 : 0] dbggpridx = {inusermode, dbg_rx_data_i[3:0]};
+assign dbggprdata =
+	`ifdef PUSC2
+	(sc2gprwe && dbggpridx == sc2gpridx) ? sc2gprdata :
+	`endif
+	(gprwe && dbggpridx == gpridx) ? gprdata : gpr[dbggpridx];
 `endif
-assign gprdata1       = gpr[gpridx1];
-assign gprdata2       = gpr[gpridx2];
-assign opsetgprresult = gpr[opsetgprsrcidx];
-assign gpr13val       = gpr[{inusermode, 4'd13}];
+assign gprdata1 =
+	`ifdef PUSC2
+	(sc2gprwe && gpridx1 == sc2gpridx) ? sc2gprdata :
+	`endif
+	(gprwe && gpridx1 == gpridx) ? gprdata : gpr[gpridx1];
+assign gprdata2 =
+	`ifdef PUSC2
+	(sc2gprwe && gpridx2 == sc2gpridx) ? sc2gprdata :
+	`endif
+	(gprwe && gpridx2 == gpridx) ? gprdata : gpr[gpridx2];
+assign opsetgprresult =
+	`ifdef PUSC2
+	(sc2gprwe && opsetgprsrcidx == sc2gpridx) ? sc2gprdata :
+	`endif
+	(gprwe && opsetgprsrcidx == gpridx) ? gprdata : gpr[opsetgprsrcidx];
+
+wire [CLOG2GPRCNTTOTAL -1 : 0] gpr13idx = {inusermode, 4'd13};
+assign gpr13val =
+	`ifdef PUSC2
+	(sc2gprwe && gpr13idx == sc2gpridx) ? sc2gprdata :
+	`endif
+	(gprwe && gpr13idx == gpridx) ? gprdata : gpr[gpr13idx];
+
 `ifdef PUSC2
-assign sc2gprdata1    = (
+assign sc2gprdata1 = (
 	`ifdef PUSC2SKIPSC1LI8
 	(sc2skipsc1li8 /* includes (gpridx1 == sc2gpridx1) */) ? opli8result :
 	`endif
 	`ifdef PUSC2SKIPSC1CPY
 	(sc2skipsc1cpy /* includes (gpridx1 == sc2gpridx1) */) ? gprdata2 :
 	`endif
-	gpr[sc2gpridx1]);
-assign sc2gprdata2    = (
+	(sc2gprwe && sc2gpridx1 == sc2gpridx) ? sc2gprdata :
+	(gprwe && sc2gpridx1 == gpridx) ? gprdata : gpr[sc2gpridx1]);
+assign sc2gprdata2 = (
 	`ifdef PUSC2SKIPSC1LI8
 	(sc2skipsc1li8 && gpridx1 == sc2gpridx2) ? opli8result :
 	`endif
 	`ifdef PUSC2SKIPSC1CPY
 	(sc2skipsc1cpy && gpridx1 == sc2gpridx2) ? gprdata2 :
 	`endif
-	gpr[sc2gpridx2]);
+	(sc2gprwe && sc2gpridx2 == sc2gpridx) ? sc2gprdata :
+	(gprwe && sc2gpridx2 == gpridx) ? gprdata : gpr[sc2gpridx2]);
 `endif
-
-always @ (posedge clk_i) begin
-	if (gprwe)
-		gpr[gpridx] <= gprdata;
-	`ifdef PUSC2
-	if (sc2gprwe)
-		gpr[sc2gpridx] <= sc2gprdata;
-	`endif
-end
 
 reg [GPRCNTTOTAL -1 : 0] gprrdy;
 
-assign gprrdy1 = gprrdy[gpridx1];
-assign gprrdy2 = gprrdy[gpridx2];
-assign opsetgprrdy1 = gprrdy[opsetgprdstidx];
-assign opsetgprrdy2 = gprrdy[opsetgprsrcidx];
+assign gprrdy1 = (gprrdywe && gpridx1 == gprrdyidx) ? gprrdyval : gprrdy[gpridx1];
+assign gprrdy2 = (gprrdywe && gpridx2 == gprrdyidx) ? gprrdyval : gprrdy[gpridx2];
+assign opsetgprrdy1 = (gprrdywe && opsetgprdstidx == gprrdyidx) ? gprrdyval : gprrdy[opsetgprdstidx];
+assign opsetgprrdy2 = (gprrdywe && opsetgprsrcidx == gprrdyidx) ? gprrdyval : gprrdy[opsetgprsrcidx];
 `ifdef PUSC2
-assign sc2gprrdy1 = gprrdy[sc2gpridx1];
-assign sc2gprrdy2 = gprrdy[sc2gpridx2];
+assign sc2gprrdy1 = (gprrdywe && sc2gpridx1 == gprrdyidx) ? gprrdyval : gprrdy[sc2gpridx1];
+assign sc2gprrdy2 = (gprrdywe && sc2gpridx2 == gprrdyidx) ? gprrdyval : gprrdy[sc2gpridx2];
 `endif
-
-always @ (posedge clk_i) begin
-	if (rst_i)
-		gprrdy <= {GPRCNTTOTAL{1'b1}};
-	else if (gprrdywe)
-		gprrdy[gprrdyidx] <= gprrdyval;
-end
 
 // ---------- Registers and nets used by opld ----------
 
