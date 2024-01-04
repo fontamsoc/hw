@@ -314,8 +314,8 @@ assign halted_o = (inhalt && !isflagdisextintr);
 `include "./netsandregs.pu.v"
 `include "./sequencer.pu.v"
 `include "./instrctrl.pu.v"
-`include "./memctrl.pu.v"
 `include "./gprctrl.pu.v"
+`include "./memctrl.pu.v"
 `ifdef PUDBG
 `include "./dbg.pu.v"
 `endif
