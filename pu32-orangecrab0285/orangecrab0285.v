@@ -18,7 +18,7 @@
 `define PUFADDFSUBCLK
 `define PUFMULCLK
 `define PUFDIVCLK
-`define PUDSPMUL
+`define PUIMULDSP
 `define PUFADDFSUB
 `define PUFMUL
 `define PUDSPFMUL
