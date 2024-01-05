@@ -139,9 +139,7 @@ always @* begin
 								`ifdef PUFDIV
 								(isopfdiv && !opfdiv_rdy_w) ||
 								`endif
-								`ifndef PUDSPMUL
 								(isopimul && !opimul_rdy_w) ||
-								`endif
 								(isopidiv && !opidiv_rdy_w)
 								) begin
 								// Stall.

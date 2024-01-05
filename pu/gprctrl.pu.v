@@ -36,10 +36,8 @@ always @* begin
 		gprctrlstate = GPRCTRLSTATEOPLD;
 	end else if (opldstdone) begin
 		gprctrlstate = GPRCTRLSTATEOPLDST;
-	`ifndef PUDSPMUL
 	end else if (opimuldone) begin
 		gprctrlstate = GPRCTRLSTATEOPIMUL;
-	`endif
 	end else if (opidivdone) begin
 		gprctrlstate = GPRCTRLSTATEOPIDIV;
 	`ifdef PUFADDFSUB
@@ -154,7 +152,6 @@ always @ (posedge clk_i) begin
 		gprrdyidx <= opldstgpr;
 		gprrdyval <= 1;
 		gprrdywe <= 1;
-	`ifndef PUDSPMUL
 	end else if (opimuldone) begin
 		gpridx <= opimulgpr;
 		gprdata <= opimulresult;
@@ -162,7 +159,6 @@ always @ (posedge clk_i) begin
 		gprrdyidx <= opimulgpr;
 		gprrdyval <= 1;
 		gprrdywe <= 1;
-	`endif
 	end else if (opidivdone) begin
 		gpridx <= opidivgpr;
 		gprdata <= opidivresult;
