@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-// The non-PUDSPMUL implementation of the multiplication is documented at the end of this file.
+// The non-PUIMULDSP implementation of the multiplication is documented at the end of this file.
 
-`ifdef PUDSPMUL
+`ifdef PUIMULDSP
 
 module imul (
 
@@ -267,7 +267,7 @@ end
 
 endmodule
 
-`endif /* PUDSPMUL */
+`endif /* PUIMULDSP */
 
 // clk_imul_i frequency must be clk_i frequency times a power-of-2.
 module opimul (

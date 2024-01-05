@@ -11,7 +11,7 @@
 
 `include "lib/perint/pi1r.v"
 
-`define PUDSPMUL
+`define PUIMULDSP
 `include "pu/cpu.v"
 
 `include "dev/uart_sim.v"

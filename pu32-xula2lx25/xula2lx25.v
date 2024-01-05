@@ -15,7 +15,7 @@
 `define PUHPTW
 `define PUIMULCLK
 `define PUIDIVCLK
-`define PUDSPMUL
+`define PUIMULDSP
 `define PUDCACHE
 `include "pu/cpu.v"
 
