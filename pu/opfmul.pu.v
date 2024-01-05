@@ -109,7 +109,7 @@ end endgenerate
 
 endmodule
 
-`ifndef PUDSPFMUL
+`ifndef PUFMULDSP
 // Written from opimul.pu.v .
 // BITSZ must be an even constant.
 // arg0_i and arg1_i must remain constant throughout the computation.
@@ -272,7 +272,7 @@ end
 
 reg norm_rdy_n;
 
-`ifdef PUDSPFMUL
+`ifdef PUFMULDSP
 reg [((MANTBITSZ+1)*2) -1 : 0] rslt_mant_w_;
 always @ (posedge clk_i) begin
 	rslt_mant_w_ <= (arg0_mant_i * arg1_mant_i);

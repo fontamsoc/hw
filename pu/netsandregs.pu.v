@@ -1982,7 +1982,7 @@ wire [ARCHBITSZ -1 : 0]        opfmulresult;
 wire [CLOG2GPRCNTTOTAL -1 : 0] opfmulgpr;
 wire                           opfmuldone;
 
-`ifdef PUDSPFMUL
+`ifdef PUFMULDSP
 localparam OPFMULCNT = ((FMULCNT != 2 && FMULCNT != 4) ? 1 : FMULCNT);
 `else
 localparam OPFMULCNT = ((FMULCNT != 2 && FMULCNT != 4 && FMULCNT != 8) ? 1 : FMULCNT);

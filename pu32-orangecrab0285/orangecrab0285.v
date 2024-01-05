@@ -21,7 +21,7 @@
 `define PUIMULDSP
 `define PUFADDFSUB
 `define PUFMUL
-`define PUDSPFMUL
+`define PUFMULDSP
 `define PUFDIV
 `define PUDCACHE
 `define PUCOUNT 1 /* 2 max */
