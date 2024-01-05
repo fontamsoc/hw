@@ -1,9 +1,96 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-// The implementation of the multiplication is documented at the end of this file.
+// The non-PUDSPMUL implementation of the multiplication is documented at the end of this file.
 
-`ifndef PUDSPMUL
+`ifdef PUDSPMUL
+
+module imul (
+
+	 rst_i
+
+	,clk_i
+
+	,stb_i
+
+	,data_i
+	,data_o
+	,gprid_o
+
+	,rdy_o
+);
+
+`include "lib/clog2.v"
+
+parameter ARCHBITSZ = 16;
+parameter GPRCNT    = 32;
+
+localparam CLOG2ARCHBITSZ = clog2(ARCHBITSZ);
+localparam CLOG2GPRCNT    = clog2(GPRCNT);
+
+// Significance of each bit in the field within
+// data_i storing the type of multiplication to perform.
+// [1]: 0/1 means unsigned/signed computation.
+// [0]: 0/1 means ARCHBITSZ lsb/msb of result.
+localparam IMULTYPEBITSZ = 2;
+localparam IMULMSBRSLT   = ((ARCHBITSZ*2)+CLOG2GPRCNT);
+localparam IMULSIGNED    = ((ARCHBITSZ*2)+CLOG2GPRCNT+1);
+
+input wire rst_i;
+
+input wire clk_i;
+
+input wire stb_i;
+
+// bits[(((ARCHBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ)-1:((ARCHBITSZ*2)+CLOG2GPRCNT)]
+// store the type of multiplication to perform,
+// bits[((ARCHBITSZ*2)+CLOG2GPRCNT)-1:ARCHBITSZ*2]
+// store the id of the register to which the result will be saved,
+// bits[(ARCHBITSZ*2)-1:ARCHBITSZ] and bits[ARCHBITSZ-1:0]
+// respectively store the first and second operand values.
+input wire [(((ARCHBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] data_i;
+
+// Reg set to the result of the multiplication.
+output reg [ARCHBITSZ -1 : 0] data_o;
+
+// Reg set to the id of the gpr to which the result is to be stored.
+output reg [CLOG2GPRCNT -1 : 0] gprid_o;
+
+output wire rdy_o = 1'b1;
+
+wire [(ARCHBITSZ*2) -1 : 0] rslt_unsigned =
+	(data_i[(ARCHBITSZ*2)-1:ARCHBITSZ] * data_i[ARCHBITSZ-1:0]);
+wire [(ARCHBITSZ*2) -1 : 0] rslt_signed =
+	($signed(data_i[(ARCHBITSZ*2)-1:ARCHBITSZ]) * $signed(data_i[ARCHBITSZ-1:0]));
+
+always @ (posedge clk_i) begin
+
+	if (stb_i) begin
+
+		gprid_o <= data_i[((ARCHBITSZ*2)+CLOG2GPRCNT)-1:ARCHBITSZ*2];
+
+		// When data_i[IMULMSBRSLT] == 0, the ARCHBITSZ lsb are used as result.
+		// When data_i[IMULMSBRSLT] == 1, the ARCHBITSZ msb are used as result.
+		// When data_i[IMULSIGNED] == 0, an unsigned multiplication was done.
+		// When data_i[IMULSIGNED] == 1, a signed multiplication was done.
+		if (data_i[IMULMSBRSLT]) begin
+			if (data_i[IMULSIGNED])
+				data_o <= rslt_signed[(ARCHBITSZ*2)-1:ARCHBITSZ];
+			else
+				data_o <= rslt_unsigned[(ARCHBITSZ*2)-1:ARCHBITSZ];
+
+		end else begin
+			// When only the ARCHBITSZ lsb of the multiplication are used,
+			// there is no difference between a signed and unsigned multiplication.
+			data_o <= rslt_unsigned[ARCHBITSZ-1:0];
+		end
+	end
+end
+
+endmodule
+
+`else
+
 module imul (
 
 	 rst_i
@@ -180,6 +267,8 @@ end
 
 endmodule
 
+`endif /* PUDSPMUL */
+
 // clk_imul_i frequency must be clk_i frequency times a power-of-2.
 module opimul (
 
@@ -263,13 +352,13 @@ assign rdy_o = ((usage < INSTCNT) && rdy_w[_wridx]);
 assign ordy_o = ((usage != 0) && rdy_w[_rdidx]);
 
 `ifdef PUIMULCLK
-reg                                                       stb_r    = 0;
-reg  [(((ARCHBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] data_r   = 0;
-reg  [(CLOG2INSTCNT +1) -1 : 0]                           _wridx_r = 0;
+reg                                                       _stb_i  = 0;
+reg  [(((ARCHBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] _data_i = 0;
+reg  [(CLOG2INSTCNT +1) -1 : 0]                           __wridx = 0;
 `else
-wire                                                      stb_r  = stb_i;
-wire [(((ARCHBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] data_r = data_i;
-wire [(CLOG2INSTCNT +1) -1 : 0]                           _wridx_r = _wridx;
+wire                                                      _stb_i  = stb_i;
+wire [(((ARCHBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] _data_i = data_i;
+wire [(CLOG2INSTCNT +1) -1 : 0]                           __wridx = _wridx;
 `endif
 
 always @ (posedge clk_i) begin
@@ -293,9 +382,9 @@ always @ (posedge clk_i) begin
 	// sigmal rdy_o posegde must happen at least (freq(clk_imul_i)/freq(clk_i))
 	// clk_imul_i cycles after its negedge; which is guarateed by the fact that
 	// imul computation takes at least that many clk_imul_i cycles.
-	stb_r  <= stb_i;
-	data_r <= data_i;
-	_wridx_r <= _wridx;
+	_stb_i  <= stb_i;
+	_data_i <= data_i;
+	__wridx <= _wridx;
 end
 `endif
 
@@ -316,9 +405,9 @@ imul #(
 	,.clk_i (clk_i)
 	`endif
 
-	,.stb_i (stb_r && (_wridx_r[CLOG2INSTCNT -1 : 0] == gen_imul_idx))
+	,.stb_i (_stb_i && (__wridx[CLOG2INSTCNT -1 : 0] == gen_imul_idx))
 
-	,.data_i  (data_r)
+	,.data_i  (_data_i)
 	,.data_o  (data_w[gen_imul_idx])
 	,.gprid_o (gprid_w[gen_imul_idx])
 
@@ -327,7 +416,6 @@ imul #(
 end endgenerate
 
 endmodule
-`endif
 
 // Implementation of the multiplication.
 //

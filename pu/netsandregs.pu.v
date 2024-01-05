@@ -1549,11 +1549,8 @@ wire sc2isopalu1 = (sc2instrbufdato0[7:3] == OPALU1);
 wire sc2isopalu2 = (sc2instrbufdato0[7:3] == OPALU2);
 wire sc2isopj = (sc2instrbufdato0[7:3] == OPJ);
 wire sc2isopjl = (sc2isopj && sc2isoptype2);
-wire sc2isopmuldiv = (sc2instrbufdato0[7:3] == OPMULDIV);
 
 wire sc2isopjtrue = (sc2isopj && (sc2isoptype2 || (|sc2gprdata1 == sc2instrbufdato0[0])));
-
-wire sc2isopdspmul = (sc2isopmuldiv && !sc2instrbufdato0[2]);
 
 wire [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx1 = {inusermode, sc2instrbufdato1[7:4]};
 wire [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx2 = {inusermode, sc2instrbufdato1[3:0]};
@@ -1568,11 +1565,7 @@ reg [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx;
 reg [ARCHBITSZ -1 : 0] sc2gprdata;
 reg sc2gprwe;
 
-wire sc2usegpr2 = (
-	`ifdef PUDSPMUL
-	sc2isopdspmul ||
-	`endif
-	sc2isopalu0 || sc2isopalu1 || sc2isopalu2 || sc2isopj);
+wire sc2usegpr2 = (sc2isopalu0 || sc2isopalu1 || sc2isopalu2 || sc2isopj);
 wire sc2usegpr1 = ( // ### sc2usegpr1 is to be true for all SC2 operations.
 	sc2usegpr2 || sc2isopli8 || sc2isopinc8 || sc2isoprli8);
 wire sc2ops = sc2usegpr1; // Operations accepted by SC2.
@@ -1741,32 +1734,15 @@ end
 reg[ARCHBITSZ -1 : 0] opaluresult; // ### comb-block-reg.
 
 wire opaludone = (miscrdyandsequencerreadyandgprrdy12 &&
-	(isopalu0 || isopalu1 || isopalu2
-	`ifdef PUDSPMUL
-	|| isopimul
-	`endif
-	|| isopjl));
+	(isopalu0 || isopalu1 || isopalu2 || isopjl));
 
 `ifdef PUSC2
 
 reg[ARCHBITSZ -1 : 0] sc2opaluresult; // ### comb-block-reg.
 
 wire sc2opaludone = (sc2rdyandgprrdy12 &&
-	(sc2isopalu0 || sc2isopalu1 || sc2isopalu2
-	`ifdef PUDSPMUL
-	|| sc2isopdspmul
-	`endif
-	|| sc2isopjl));
+	(sc2isopalu0 || sc2isopalu1 || sc2isopalu2 || sc2isopjl));
 
-`endif
-
-`ifdef PUDSPMUL
-wire [(ARCHBITSZ*2) -1 : 0] opdspmulresult_unsigned = (gprdata1 * gprdata2);
-wire [(ARCHBITSZ*2) -1 : 0] opdspmulresult_signed   = ($signed(gprdata1) * $signed(gprdata2));
-`ifdef PUSC2
-wire [(ARCHBITSZ*2) -1 : 0] sc2opdspmulresult_unsigned = (sc2gprdata1 * sc2gprdata2);
-wire [(ARCHBITSZ*2) -1 : 0] sc2opdspmulresult_signed   = ($signed(sc2gprdata1) * $signed(sc2gprdata2));
-`endif
 `endif
 
 always @* begin
@@ -1810,18 +1786,6 @@ always @* begin
 		default: opaluresult = gprdata2;
 		endcase
 	end
-
-	`ifdef PUDSPMUL
-	if (isopmuldiv /* instead of isopimul for fewer logic */) begin
-		// Implement mulu, mulhu, mul, mulh.
-		case (instrbufdato0[2:0])
-		0:       opaluresult = opdspmulresult_unsigned[ARCHBITSZ-1:0];
-		1:       opaluresult = opdspmulresult_unsigned[(ARCHBITSZ*2)-1:ARCHBITSZ];
-		2:       opaluresult = opdspmulresult_signed[ARCHBITSZ-1:0];
-		default: opaluresult = opdspmulresult_signed[(ARCHBITSZ*2)-1:ARCHBITSZ];
-		endcase
-	end
-	`endif
 end
 
 `ifdef PUSC2
@@ -1863,23 +1827,10 @@ always @* begin
 		default: sc2opaluresult = sc2gprdata2;
 		endcase
 	end
-
-	`ifdef PUDSPMUL
-	if (sc2isopmuldiv /* instead of sc2isopdspmul for fewer logic */) begin
-		case (sc2instrbufdato0[2:0])
-		0:       sc2opaluresult = sc2opdspmulresult_unsigned[ARCHBITSZ-1:0];
-		1:       sc2opaluresult = sc2opdspmulresult_unsigned[(ARCHBITSZ*2)-1:ARCHBITSZ];
-		2:       sc2opaluresult = sc2opdspmulresult_signed[ARCHBITSZ-1:0];
-		default: sc2opaluresult = sc2opdspmulresult_signed[(ARCHBITSZ*2)-1:ARCHBITSZ];
-		endcase
-	end
-	`endif
 end
 `endif
 
 // ---------- Registers and nets used by opimul ----------
-
-`ifndef PUDSPMUL
 
 // Significance of each bit in the field within
 // opimul_data_w storing the type of multiplication to perform.
@@ -1920,8 +1871,6 @@ opimul #(
 	,.gprid_o (opimulgpr)
 	,.ordy_o  (opimuldone)
 );
-
-`endif
 
 // ---------- Registers and nets used by opidiv ----------
 
@@ -2608,7 +2557,5 @@ wire multicycleoprdy = (miscrdyandsequencerreadyandgprrdy12 &&
 	`ifdef PUFDIV
 	(isopfdiv && opfdiv_rdy_w) ||
 	`endif
-	`ifndef PUDSPMUL
 	(isopimul && opimul_rdy_w) ||
-	`endif
 	(isopidiv && opidiv_rdy_w) ));
