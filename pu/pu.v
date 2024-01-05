@@ -51,7 +51,7 @@
 // FMULCNT
 // 	Number of units making up the fmul pipeline.
 // 	It must be non-null, a power-of-2 less-than-or-equal
-// 	to 4 (ifdef PUDSPFMUL) or 8.
+// 	to 4 (ifdef PUFMULDSP) or 8.
 //
 // FDIVCNT
 // 	Number of units making up the fdiv pipeline.
