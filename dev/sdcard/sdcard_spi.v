@@ -92,7 +92,6 @@
 //
 // clk_phy_i
 // 	Clock signal used by the PHY.
-// 	### For now, it must be the same as clk_i until FIFOs are used with the PHY.
 //
 // sclk_o
 // di_o
@@ -131,8 +130,6 @@
 `else
 `include "./sdcard_spi_phy.v"
 `endif
-
-`include "lib/perint/pi1b.v"
 
 module sdcard_spi (
 
@@ -202,51 +199,18 @@ output wire cs_o;
 input  wire [2 -1 : 0]             pi1_op_i;
 input  wire [ADDRBITSZ -1 : 0]     pi1_addr_i;
 input  wire [ARCHBITSZ -1 : 0]     pi1_data_i;
-output wire [ARCHBITSZ -1 : 0]     pi1_data_o;
+output reg  [ARCHBITSZ -1 : 0]     pi1_data_o;
 input  wire [(ARCHBITSZ/8) -1 : 0] pi1_sel_i;  /* not used */
 output wire                        pi1_rdy_o;
 output wire [ARCHBITSZ -1 : 0]     pi1_mapsz_o;
 
-output reg  intrqst_o = 0;
+output reg  intrqst_o;
 input  wire intrdy_i;
 
+assign pi1_rdy_o = 1'b1;
 assign pi1_mapsz_o = PHYBLKSZ;
 
 localparam CLOG2PHYBLKSZ = clog2(PHYBLKSZ);
-
-wire [2 -1 : 0]             pi1b_op_i;
-wire [ADDRBITSZ -1 : 0]     pi1b_addr_i;
-reg  [ARCHBITSZ -1 : 0]     pi1b_data_o = {ARCHBITSZ{1'b0}};
-wire [ARCHBITSZ -1 : 0]     pi1b_data_i;
-wire [(ARCHBITSZ/8) -1 : 0] pi1b_sel_i;
-wire                        pi1b_rdy_o;
-
-pi1b #(
-
-	.ARCHBITSZ (ARCHBITSZ)
-
-) pi1b (
-
-	 .rst_i (rst_i)
-
-	,.clk_i (clk_i)
-
-	,.m_op_i (pi1_op_i)
-	,.m_addr_i (pi1_addr_i)
-	,.m_data_i (pi1_data_i)
-	,.m_data_o (pi1_data_o)
-	,.m_sel_i (pi1_sel_i)
-	,.m_rdy_o (pi1_rdy_o)
-
-	,.s_op_o (pi1b_op_i)
-	,.s_addr_o (pi1b_addr_i)
-	,.s_data_o (pi1b_data_i)
-	,.s_data_i (pi1b_data_o)
-	,.s_sel_o (pi1b_sel_i)
-	,.s_rdy_i (pi1b_rdy_o)
-);
-
-assign pi1b_rdy_o = 1;
 
 localparam PINOOP = 2'b00;
 localparam PIWROP = 2'b01;
@@ -266,31 +230,31 @@ localparam STATUSREADY    = 1;
 localparam STATUSBUSY     = 2;
 localparam STATUSERROR    = 3;
 
-wire phy_tx_pop_w, phy_rx_push_w;
+wire phy_tx_pop_o, phy_rx_push_o;
 
-wire [8 -1 : 0] phy_rx_data_w;
-reg  [8 -1 : 0] phy_tx_data_w; // ### comb-block-reg.
+wire [8 -1 : 0] phy_rx_data_o;
+reg  [8 -1 : 0] phy_tx_data_i; // ### comb-block-reg.
 
-reg phy_cmd = 0;
+reg phy_cmd_data_i;
 
-reg [ADDRBITSZ -1 : 0] phy_cmdaddr = 0;
+reg [ADDRBITSZ -1 : 0] phy_cmd_addr_i;
 
-wire [ADDRBITSZ -1 : 0] phy_blkcnt_w;
+wire [ADDRBITSZ -1 : 0] phy_blkcnt_o;
 
-wire phy_err_w;
+wire phy_err_o;
 
 // A phy reset is done when "rst_i" is high or when
 // CMDRESET is issued with its argument non-null.
 // Since "rst_i" is also used to report whether
 // the device is under power, a controller reset
 // will be done as soon as the device is powered-on.
-wire phy_rst_w = (rst_i | (pi1b_op_i == PIRWOP && pi1b_addr_i == CMDRESET && pi1b_data_i && !phy_err_w));
+wire phy_rst_w = (rst_i | (pi1_op_i == PIRWOP && pi1_addr_i == CMDRESET && pi1_data_i && !phy_err_o));
 
-reg phy_cmd_pending = 0;
+reg phy_cmd_empty_i;
 
-wire phy_cmd_pop_w;
+wire phy_cmd_pop_o;
 
-wire phy_bsy = (phy_cmd_pending || !phy_cmd_pop_w);
+wire phy_bsy_w = (phy_cmd_empty_i || !phy_cmd_pop_o);
 
 `ifdef SIMULATION
 sdcard_sim_phy
@@ -320,149 +284,160 @@ sdcard_spi_phy
 	,.cs_o   (cs_o)
 `endif
 
-	,.cmd_pop_o      (phy_cmd_pop_w)
-	,.cmd_data_i     (phy_cmd)
-	,.cmd_addr_i     (phy_cmdaddr)
-	,.cmd_empty_i    (!phy_cmd_pending)
+	,.cmd_pop_o   (phy_cmd_pop_o)
+	,.cmd_data_i  (phy_cmd_data_i)
+	,.cmd_addr_i  (phy_cmd_addr_i)
+	,.cmd_empty_i (!phy_cmd_empty_i)
 
-	,.rx_push_o (phy_rx_push_w)
-	,.rx_data_o (phy_rx_data_w)
+	,.rx_push_o (phy_rx_push_o)
+	,.rx_data_o (phy_rx_data_o)
 	,.rx_full_i (/* not needed */)
 
-	,.tx_pop_o   (phy_tx_pop_w)
-	,.tx_data_i  (phy_tx_data_w)
+	,.tx_pop_o   (phy_tx_pop_o)
+	,.tx_data_i  (phy_tx_data_i)
 	,.tx_empty_i (/* not needed */)
 
-	,.blkcnt_o (phy_blkcnt_w)
+	,.blkcnt_o (phy_blkcnt_o)
 
-	,.err_o (phy_err_w)
+	,.err_o (phy_err_o)
 );
 
-wire pi1_op_is_rdop = (pi1b_op_i == PIRDOP || (pi1b_op_i == PIRWOP && pi1b_addr_i >= CMD_CNT));
-wire pi1_op_is_wrop = (pi1b_op_i == PIWROP || (pi1b_op_i == PIRWOP && pi1b_addr_i >= CMD_CNT));
+wire pi1_op_is_rdop = (pi1_op_i == PIRDOP || (pi1_op_i == PIRWOP && pi1_addr_i >= CMD_CNT));
+wire pi1_op_is_wrop = (pi1_op_i == PIWROP || (pi1_op_i == PIRWOP && pi1_addr_i >= CMD_CNT));
 
 // When the value of this register is 1, "phy" has
 // access to cache1 otherwise it has access to cache0.
 // The cache not being accessed by "phy" is accessed
 // by the memory interface.
-reg cacheselect = 0;
+reg cachesel;
 
 // Register keeping track of the cache byte location the PHY will access next.
-reg [CLOG2PHYBLKSZ -1 : 0] cachephyaddr = 0;
+reg [CLOG2PHYBLKSZ -1 : 0] cachephyaddr;
 
 // Nets set to the index within the respective cache. Each cache element is ARCHBITSZ bits.
 wire [(CLOG2PHYBLKSZ-CLOG2ARCHBITSZBY8) -1 : 0] cache0addr =
-	cacheselect ? pi1b_addr_i : cachephyaddr[CLOG2PHYBLKSZ -1 : CLOG2ARCHBITSZBY8];
+	cachesel ? pi1_addr_i : cachephyaddr[CLOG2PHYBLKSZ -1 : CLOG2ARCHBITSZBY8];
 wire [(CLOG2PHYBLKSZ-CLOG2ARCHBITSZBY8) -1 : 0] cache1addr =
-	cacheselect ? cachephyaddr[CLOG2PHYBLKSZ -1 : CLOG2ARCHBITSZBY8] : pi1b_addr_i;
+	cachesel ? cachephyaddr[CLOG2PHYBLKSZ -1 : CLOG2ARCHBITSZBY8] : pi1_addr_i;
 
-localparam ARCHBITSZMAX = 64;
+wire [ARCHBITSZ -1 : 0] cache0dato;
+wire [ARCHBITSZ -1 : 0] cache1dato;
 
-wire [ARCHBITSZMAX -1 : 0] cache0dato;
-wire [ARCHBITSZMAX -1 : 0] cache1dato;
-
-wire [ARCHBITSZMAX -1 : 0] cachephydata = cacheselect ? cache1dato : cache0dato;
+wire [ARCHBITSZ -1 : 0] cachephydata = cachesel ? cache1dato : cache0dato;
 
 // Net set to the value from the PHY to store in the cache.
-wire [ARCHBITSZMAX -1 : 0] phy_rx_data_w_byteselected =
-	(ARCHBITSZ == 16) ? (
-		(cachephyaddr[0] == 0) ? {cachephydata[15:8], phy_rx_data_w} :
-					 {phy_rx_data_w, cachephydata[7:0]}) :
-	(ARCHBITSZ == 32) ? (
-		(cachephyaddr[1:0] == 0) ? {cachephydata[31:8], phy_rx_data_w} :
-		(cachephyaddr[1:0] == 1) ? {cachephydata[31:16], phy_rx_data_w, cachephydata[7:0]} :
-		(cachephyaddr[1:0] == 2) ? {cachephydata[31:24], phy_rx_data_w, cachephydata[15:0]} :
-					   {phy_rx_data_w, cachephydata[23:0]}) : (
-		(cachephyaddr[2:0] == 0) ? {cachephydata[63:8], phy_rx_data_w} :
-		(cachephyaddr[2:0] == 1) ? {cachephydata[63:16], phy_rx_data_w, cachephydata[7:0]} :
-		(cachephyaddr[2:0] == 2) ? {cachephydata[63:24], phy_rx_data_w, cachephydata[15:0]} :
-		(cachephyaddr[2:0] == 3) ? {cachephydata[63:32], phy_rx_data_w, cachephydata[23:0]} :
-		(cachephyaddr[2:0] == 4) ? {cachephydata[63:40], phy_rx_data_w, cachephydata[31:0]} :
-		(cachephyaddr[2:0] == 5) ? {cachephydata[63:48], phy_rx_data_w, cachephydata[39:0]} :
-		(cachephyaddr[2:0] == 6) ? {cachephydata[63:56], phy_rx_data_w, cachephydata[47:0]} :
-					   {phy_rx_data_w, cachephydata[55:0]});
+reg [ARCHBITSZ -1 : 0] phy_rx_data_o_byteselected; // ### comb-always-block-reg.
+generate if (ARCHBITSZ == 16) begin
+	always @* begin
+		phy_rx_data_o_byteselected =
+			(cachephyaddr[0] == 0) ? {cachephydata[15:8], phy_rx_data_o} :
+			                         {phy_rx_data_o, cachephydata[7:0]};
+	end
+end endgenerate
+generate if (ARCHBITSZ == 32) begin
+	always @* begin
+		phy_rx_data_o_byteselected =
+			(cachephyaddr[1:0] == 0) ? {cachephydata[31:8], phy_rx_data_o} :
+			(cachephyaddr[1:0] == 1) ? {cachephydata[31:16], phy_rx_data_o, cachephydata[7:0]} :
+			(cachephyaddr[1:0] == 2) ? {cachephydata[31:24], phy_rx_data_o, cachephydata[15:0]} :
+			                           {phy_rx_data_o, cachephydata[23:0]};
+	end
+end endgenerate
+generate if (ARCHBITSZ == 64) begin
+	always @* begin
+		phy_rx_data_o_byteselected =
+			(cachephyaddr[2:0] == 0) ? {cachephydata[63:8], phy_rx_data_o} :
+			(cachephyaddr[2:0] == 1) ? {cachephydata[63:16], phy_rx_data_o, cachephydata[7:0]} :
+			(cachephyaddr[2:0] == 2) ? {cachephydata[63:24], phy_rx_data_o, cachephydata[15:0]} :
+			(cachephyaddr[2:0] == 3) ? {cachephydata[63:32], phy_rx_data_o, cachephydata[23:0]} :
+			(cachephyaddr[2:0] == 4) ? {cachephydata[63:40], phy_rx_data_o, cachephydata[31:0]} :
+			(cachephyaddr[2:0] == 5) ? {cachephydata[63:48], phy_rx_data_o, cachephydata[39:0]} :
+			(cachephyaddr[2:0] == 6) ? {cachephydata[63:56], phy_rx_data_o, cachephydata[47:0]} :
+			                           {phy_rx_data_o, cachephydata[55:0]};
+	end
+end endgenerate
 
 // Nets set to the value to write in the respective cache.
-wire [ARCHBITSZ -1 : 0] cache0dati = cacheselect ? pi1b_data_i : phy_rx_data_w_byteselected[ARCHBITSZ -1 : 0];
-wire [ARCHBITSZ -1 : 0] cache1dati = cacheselect ? phy_rx_data_w_byteselected[ARCHBITSZ -1 : 0] : pi1b_data_i;
+wire [ARCHBITSZ -1 : 0] cache0dati = cachesel ? pi1_data_i : phy_rx_data_o_byteselected[ARCHBITSZ -1 : 0];
+wire [ARCHBITSZ -1 : 0] cache1dati = cachesel ? phy_rx_data_o_byteselected[ARCHBITSZ -1 : 0] : pi1_data_i;
 
-// phy_tx_data_w is set to the value read from the respective cache.
-always @* begin
-	if (ARCHBITSZ == 16) begin
+// phy_tx_data_i is set to the value read from the respective cache.
+generate if (ARCHBITSZ == 16) begin
+	always @* begin
 		if (cachephyaddr[0] == 0)
-			phy_tx_data_w = cacheselect ? cache1dato[7:0] : cache0dato[7:0];
+			phy_tx_data_i = cachesel ? cache1dato[7:0] : cache0dato[7:0];
 		else
-			phy_tx_data_w = cacheselect ? cache1dato[15:8] : cache0dato[15:8];
-	end else if (ARCHBITSZ == 32) begin
-		if (cachephyaddr[1:0] == 0)
-			phy_tx_data_w = cacheselect ? cache1dato[7:0] : cache0dato[7:0];
-		else if (cachephyaddr[1:0] == 1)
-			phy_tx_data_w = cacheselect ? cache1dato[15:8] : cache0dato[15:8];
-		else if (cachephyaddr[1:0] == 2)
-			phy_tx_data_w = cacheselect ? cache1dato[23:16] : cache0dato[23:16];
-		else
-			phy_tx_data_w = cacheselect ? cache1dato[31:24] : cache0dato[31:24];
-	end else begin
-		if (cachephyaddr[2:0] == 0)
-			phy_tx_data_w = cacheselect ? cache1dato[7:0] : cache0dato[7:0];
-		else if (cachephyaddr[2:0] == 1)
-			phy_tx_data_w = cacheselect ? cache1dato[15:8] : cache0dato[15:8];
-		else if (cachephyaddr[2:0] == 2)
-			phy_tx_data_w = cacheselect ? cache1dato[23:16] : cache0dato[23:16];
-		else if (cachephyaddr[2:0] == 3)
-			phy_tx_data_w = cacheselect ? cache1dato[31:24] : cache0dato[31:24];
-		else if (cachephyaddr[2:0] == 4)
-			phy_tx_data_w = cacheselect ? cache1dato[39:32] : cache0dato[39:32];
-		else if (cachephyaddr[2:0] == 5)
-			phy_tx_data_w = cacheselect ? cache1dato[47:40] : cache0dato[47:40];
-		else if (cachephyaddr[2:0] == 6)
-			phy_tx_data_w = cacheselect ? cache1dato[55:48] : cache0dato[55:48];
-		else
-			phy_tx_data_w = cacheselect ? cache1dato[63:56] : cache0dato[63:56];
+			phy_tx_data_i = cachesel ? cache1dato[15:8] : cache0dato[15:8];
 	end
-end
+end endgenerate
+generate if (ARCHBITSZ == 32) begin
+	always @* begin
+		if (cachephyaddr[1:0] == 0)
+			phy_tx_data_i = cachesel ? cache1dato[7:0] : cache0dato[7:0];
+		else if (cachephyaddr[1:0] == 1)
+			phy_tx_data_i = cachesel ? cache1dato[15:8] : cache0dato[15:8];
+		else if (cachephyaddr[1:0] == 2)
+			phy_tx_data_i = cachesel ? cache1dato[23:16] : cache0dato[23:16];
+		else
+			phy_tx_data_i = cachesel ? cache1dato[31:24] : cache0dato[31:24];
+	end
+end endgenerate
+generate if (ARCHBITSZ == 64) begin
+	always @* begin
+		if (cachephyaddr[2:0] == 0)
+			phy_tx_data_i = cachesel ? cache1dato[7:0] : cache0dato[7:0];
+		else if (cachephyaddr[2:0] == 1)
+			phy_tx_data_i = cachesel ? cache1dato[15:8] : cache0dato[15:8];
+		else if (cachephyaddr[2:0] == 2)
+			phy_tx_data_i = cachesel ? cache1dato[23:16] : cache0dato[23:16];
+		else if (cachephyaddr[2:0] == 3)
+			phy_tx_data_i = cachesel ? cache1dato[31:24] : cache0dato[31:24];
+		else if (cachephyaddr[2:0] == 4)
+			phy_tx_data_i = cachesel ? cache1dato[39:32] : cache0dato[39:32];
+		else if (cachephyaddr[2:0] == 5)
+			phy_tx_data_i = cachesel ? cache1dato[47:40] : cache0dato[47:40];
+		else if (cachephyaddr[2:0] == 6)
+			phy_tx_data_i = cachesel ? cache1dato[55:48] : cache0dato[55:48];
+		else
+			phy_tx_data_i = cachesel ? cache1dato[63:56] : cache0dato[63:56];
+	end
+end endgenerate
 
 // Register used to detect a falling edge of "intrdy_i".
-reg  intrdy_i_sampled = 0;
+reg  intrdy_i_sampled;
 wire intrdy_i_negedge = (!intrdy_i && intrdy_i_sampled);
 
-// Register used to detect a rising edge of "phy_err_w".
-reg  phy_err_w_sampled = 0;
-wire phy_err_w_posedge = (phy_err_w && !phy_err_w_sampled);
+// Register used to detect a rising edge of "phy_err_o".
+reg  phy_err_o_sampled;
+wire phy_err_o_posedge = (phy_err_o && !phy_err_o_sampled);
 
-// Register used to detect a falling edge of "phy_bsy".
-reg  phy_bsy_sampled = 0;
-wire phy_bsy_negedge = (!phy_bsy && phy_bsy_sampled);
+// Register used to detect a falling edge of "phy_bsy_w".
+reg  phy_bsy_w_sampled;
+wire phy_bsy_w_negedge = (!phy_bsy_w && phy_bsy_w_sampled);
 
 // Nets set to 1 when a read/write request is done to their respective cache.
-wire cache0read  = cacheselect ? pi1_op_is_rdop : phy_tx_pop_w;
-wire cache1read  = cacheselect ? phy_tx_pop_w : pi1_op_is_rdop;
-wire cache0write = cacheselect ? pi1_op_is_wrop : phy_rx_push_w;
-wire cache1write = cacheselect ? phy_rx_push_w : pi1_op_is_wrop;
+wire cache0rd = cachesel ? pi1_op_is_rdop : phy_tx_pop_o;
+wire cache1rd = cachesel ? phy_tx_pop_o : pi1_op_is_rdop;
+wire cache0wr = cachesel ? pi1_op_is_wrop : phy_rx_push_o;
+wire cache1wr = cachesel ? phy_rx_push_o : pi1_op_is_wrop;
 
 dram #(
-
 	 .SZ (PHYBLKSZ/(ARCHBITSZ/8))
 	,.DW (ARCHBITSZ)
-
 ) cache0 (
-
 	 .clk1_i  (clk_i)
-	,.we1_i   (cache0write)
+	,.we1_i   (cache0wr)
 	,.addr1_i (cache0addr)
 	,.i1      (cache0dati)
 	,.o1      (cache0dato)
 );
 
 dram #(
-
 	 .SZ (PHYBLKSZ/(ARCHBITSZ/8))
 	,.DW (ARCHBITSZ)
-
 ) cache1 (
-
 	 .clk1_i  (clk_i)
-	,.we1_i   (cache1write)
+	,.we1_i   (cache1wr)
 	,.addr1_i (cache1addr)
 	,.i1      (cache1dati)
 	,.o1      (cache1dato)
@@ -473,9 +448,9 @@ reg [2 -1 : 0] status; // ### comb-block-reg.
 always @* begin
 	if (rst_i)
 		status = STATUSPOWEROFF;
-	else if (phy_err_w)
+	else if (phy_err_o)
 		status = STATUSERROR;
-	else if (phy_rst_w || phy_bsy)
+	else if (phy_rst_w || phy_bsy_w)
 		status = STATUSBUSY;
 	else
 		status = STATUSREADY;
@@ -483,54 +458,60 @@ end
 
 always @ (posedge clk_i) begin
 	// Logic to set/clear intrqst_o.
-	// A rising edge of "phy_err_w" means that an error occured
+	// A rising edge of "phy_err_o" means that an error occured
 	// while the controller was processing the previous
 	// operation, which is either initialization, read or write;
-	// a falling edge of "phy_bsy" means that the controller
+	// a falling edge of "phy_bsy_w" means that the controller
 	// has completed the previous operation, which is either
 	// initialization, read or write.
 	// Note that on poweron, it is expected that the device
 	// transition from a poweroff state through a busy state
 	// to a ready state, in order to trigger a poweron interrupt.
-	intrqst_o <= intrqst_o ? ~intrdy_i_negedge : (phy_err_w_posedge || phy_bsy_negedge);
+	if (rst_i)
+		intrqst_o <= 1'b0;
+	else if (intrqst_o)
+		intrqst_o <= !intrdy_i_negedge;
+	else
+		intrqst_o <= (phy_err_o_posedge || phy_bsy_w_negedge);
 
-	// Logic that flips the value of cacheselect when CMDSWAP is issued.
-	if (pi1b_op_i == PIRWOP && pi1b_addr_i == CMDSWAP)
-		cacheselect <= ~cacheselect;
+	// Logic that flips the value of cachesel when CMDSWAP is issued.
+	if (pi1_op_i == PIRWOP && pi1_addr_i == CMDSWAP)
+		cachesel <= ~cachesel;
 
-	// Logic that sets pi1b_data_o.
+	// Logic that sets pi1_data_o.
 	if (pi1_op_is_rdop)
-		pi1b_data_o <= cacheselect ? cache0dato : cache1dato;
-	else if (pi1b_op_i == PIRWOP) begin
-		if (pi1b_addr_i == CMDRESET)
-			pi1b_data_o <= {{30{1'b0}}, status};
-		else if (pi1b_addr_i == CMDSWAP)
-			pi1b_data_o <= PHYBLKSZ;
-		else if (pi1b_addr_i == CMDREAD || pi1b_addr_i == CMDWRITE)
-			pi1b_data_o <= phy_blkcnt_w;
+		pi1_data_o <= cachesel ? cache0dato : cache1dato;
+	else if (pi1_op_i == PIRWOP) begin
+		if (pi1_addr_i == CMDRESET)
+			pi1_data_o <= {{30{1'b0}}, status};
+		else if (pi1_addr_i == CMDSWAP)
+			pi1_data_o <= PHYBLKSZ;
+		else if (pi1_addr_i == CMDREAD || pi1_addr_i == CMDWRITE)
+			pi1_data_o <= phy_blkcnt_o;
 	end
 
 	// Logic that sets cachephyaddr.
 	// Increment cachephyaddr whenever the PHY is not busy and requesting
-	// a read/write; reset cachephyaddr to 0 whenever "phy_bsy" is low.
-	if (!phy_bsy)
+	// a read/write; reset cachephyaddr to 0 whenever "phy_bsy_w" is low.
+	if (!phy_bsy_w)
 		cachephyaddr <= 0;
-	else if (cacheselect ? (cache1read | cache1write) : (cache0read | cache0write))
+	else if (cachesel ? (cache1rd | cache1wr) : (cache0rd | cache0wr))
 		cachephyaddr <= cachephyaddr + 1'b1;
 
-	if (rst_i || (phy_cmd_pop_w && phy_cmd_pending))
-		phy_cmd_pending <= 0;
-	else if (pi1b_op_i == PIRWOP && (pi1b_addr_i == CMDREAD || pi1b_addr_i == CMDWRITE))
-		phy_cmd_pending <= 1;
+	if (rst_i || (phy_cmd_pop_o && phy_cmd_empty_i))
+		phy_cmd_empty_i <= 0;
+	else if (pi1_op_i == PIRWOP && (pi1_addr_i == CMDREAD || pi1_addr_i == CMDWRITE))
+		phy_cmd_empty_i <= 1;
 
-	if (pi1b_op_i == PIRWOP && (pi1b_addr_i == CMDREAD || pi1b_addr_i == CMDWRITE)) begin
-		phy_cmd <= (pi1b_addr_i == CMDWRITE);
-		phy_cmdaddr <= pi1b_data_i;
+	if (pi1_op_i == PIRWOP && (pi1_addr_i == CMDREAD || pi1_addr_i == CMDWRITE)) begin
+		phy_cmd_data_i <= (pi1_addr_i == CMDWRITE);
+		phy_cmd_addr_i <= pi1_data_i;
 	end
+
 	// Sampling used for edge detection.
-	intrdy_i_sampled  <= intrdy_i;
-	phy_err_w_sampled <= phy_err_w;
-	phy_bsy_sampled   <= phy_bsy;
+	intrdy_i_sampled <= intrdy_i;
+	phy_err_o_sampled <= phy_err_o;
+	phy_bsy_w_sampled <= phy_bsy_w;
 end
 
 endmodule
