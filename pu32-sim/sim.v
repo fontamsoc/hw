@@ -294,7 +294,6 @@ cpu #(
 sdcard_spi #(
 
 	 .ARCHBITSZ    (ARCHBITSZ)
-	,.XARCHBITSZ   (PI1RARCHBITSZ)
 	// "pu32.img.hex" generated using `hexdump -v -e '/1 "%02x "' /path/to/img > pu32.img.hex`
 	,.SRCFILE      ("pu32.img.hex")
 	,.SIMSTORAGESZ (81920*5)
