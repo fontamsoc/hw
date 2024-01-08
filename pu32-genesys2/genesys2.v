@@ -378,7 +378,6 @@ cpu #(
 sdcard_spi #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
-	,.XARCHBITSZ (PI1RARCHBITSZ)
 	,.CLKFREQ    (PI1RCLKFREQ)
 	,.PHYCLKFREQ (CLK4XFREQ*2/* incorrect but helps as controller will run slower */)
 
