@@ -6,10 +6,10 @@
 #define __str__(s) #s
 
 // Block device commands.
-#define BLKDEV_RESET	0
-#define BLKDEV_SWAP	1
-#define BLKDEV_READ	2
-#define BLKDEV_WRITE	3
+#define BLKDEV_RESET ((0*__SIZEOF_POINTER__)+512)
+#define BLKDEV_SWAP  ((1*__SIZEOF_POINTER__)+512)
+#define BLKDEV_READ  ((2*__SIZEOF_POINTER__)+512)
+#define BLKDEV_WRITE ((3*__SIZEOF_POINTER__)+512)
 
 __asm__ (
 	".section .text._start\n"
@@ -18,33 +18,34 @@ __asm__ (
 	".p2align 1\n"
 	"_start:\n"
 
-	"li8 %3, "__xstr__(BLKDEV_RESET)"*"__xstr__(__SIZEOF_POINTER__)"\n"
+	"li16 %3, "__xstr__(BLKDEV_RESET)"\n"
 	"rli8 %sr, 0f\n"
 
 	// Wait for controller ready.
 	"jl %rp, %sr\n" // return with %1 == 0.
 
-	"ldst %rp, %3\n" // %rp is non-null, initiating controller reset.
+	"stv %3, %3\n" // Initiate controller reset.
 	// Wait for controller reset.
 	"jl %rp, %sr\n" // return with %1 == 0.
 
 	// Load block with index in %1.
-	"li8 %2, "__xstr__(BLKDEV_READ)"*"__xstr__(__SIZEOF_POINTER__)"\n"
-	"ldst %1, %2\n" // Initiate the block loading.
+	"li16 %2, "__xstr__(BLKDEV_READ)"\n"
+	"stv %1, %2\n" // Initiate block loading.
 	// Wait for block load.
 	"jl %rp, %sr\n" // return with %1 == 0.
 
-	// Present the loaded block in the physical memory.
-	"li8 %2, "__xstr__(BLKDEV_SWAP)"*"__xstr__(__SIZEOF_POINTER__)"\n"
+	// Present loaded block in the physical memory.
+	"li16 %2, "__xstr__(BLKDEV_SWAP)"\n"
 	"ldst %2, %2\n"
-	// Block device address is 0; hence `j %1` is encoded as `jz %1, %1`
-	"jz %1, %1\n"
+	// jnz waits for ldst to complete before branching.
+	"jnz %2, %1\n"
 
 	// Function returning with %1 == 0 when device is ready.
-	"0: li8 %1, 0\n" // Set null to prevent reset when reading status.
-	"ldst %1, %3\n" // Read status.
+	"0: ldv %1, %3\n" // Read status.
 	"inc8 %1, -1\n" // Will set null if status was 1(READY).
 	"jnz %1, %sr\n"
 	"jz %1, %rp\n"
+
+	".p2align 5\n" // 256bits alignment to insure proper hexdump.
 
 	".size    _start, (. - _start)\n");

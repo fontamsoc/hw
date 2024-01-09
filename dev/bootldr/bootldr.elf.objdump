@@ -1,0 +1,37 @@
+
+bootldr.elf:     file format elf32-pu32
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+_start():
+   0:	a9 30 00 02       	li16 %3, 0x200 # 512
+   4:	e1 d6             	rli8 %sr, 22 # 0x16 # 1c <_start+0x1c>
+   6:	d2 fd             	jl %rp, %sr
+   8:	72 33             	st32v %3, %3
+   a:	d2 fd             	jl %rp, %sr
+   c:	a9 20 08 02       	li16 %2, 0x208 # 520
+  10:	72 12             	st32v %1, %2
+  12:	d2 fd             	jl %rp, %sr
+  14:	a9 20 04 02       	li16 %2, 0x204 # 516
+  18:	fa 22             	ldst32 %2, %2
+  1a:	d1 21             	jnz %2, %1
+  1c:	76 13             	ld32v %1, %3
+  1e:	9f 1f             	inc8 %1, -1 # 0xffffffff
+  20:	d1 1d             	jnz %1, %sr
+  22:	d0 1f             	jz %1, %rp
+  24:	c7 00             	nop
+  26:	c7 00             	nop
+  28:	c7 00             	nop
+  2a:	c7 00             	nop
+  2c:	c7 00             	nop
+  2e:	c7 00             	nop
+  30:	c7 00             	nop
+  32:	c7 00             	nop
+  34:	c7 00             	nop
+  36:	c7 00             	nop
+  38:	c7 00             	nop
+  3a:	c7 00             	nop
+  3c:	c7 00             	nop
+  3e:	c7 00             	nop
