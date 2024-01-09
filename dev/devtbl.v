@@ -119,7 +119,7 @@ wire [XARCHBITSZ -1 : 0] devtbl_id_w      [DEVMAPCNT -1 : 0];
 wire [XARCHBITSZ -1 : 0] devtbl_mapsz_w   [DEVMAPCNT -1 : 0];
 wire [DEVMAPCNT -1 : 0]  devtbl_useintr_w;
 
-localparam BLOCKDEVMAPSZ = 512;
+localparam BLOCKDEVMAPSZ = 1024;
 
 reg [XARCHBITSZ -1 : 0] pi1_mapsz_o_; // ### declared as reg so as to be usable by verilog within the always block.
 reg [XARCHBITSZ -1 : 0] gen_pi1_mapsz_o_idx_max; // ### declared as reg so as to be usable by verilog within the always block.

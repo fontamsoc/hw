@@ -34,6 +34,8 @@
 `define PUCOUNT 1
 `include "pu/cpu.v"
 
+`include "dev/pi1_to_wb4.v"
+
 `include "dev/sdcard/sdcard_spi.v"
 
 `include "dev/devtbl.v"
@@ -291,13 +293,48 @@ cpu #(
 	,.pc_o (pc_w_flat)
 );
 
+wire                        sdcard_wb_cyc_o;
+wire                        sdcard_wb_stb_o;
+wire                        sdcard_wb_we_o;
+wire [ARCHBITSZ -1 : 0]     sdcard_wb_addr_o;
+wire [(ARCHBITSZ/8) -1 : 0] sdcard_wb_sel_o;
+wire [ARCHBITSZ -1 : 0]     sdcard_wb_dat_o;
+wire                        sdcard_wb_bsy_i;
+wire                        sdcard_wb_ack_i;
+wire [ARCHBITSZ -1 : 0]     sdcard_wb_dat_i;
+
+pi1_to_wb4 #(
+
+	.ARCHBITSZ (ARCHBITSZ)
+
+) sdcard_wb (
+
+	 .rst_i (pi1r_rst_w)
+
+	,.clk_i (pi1r_clk_w)
+
+	,.pi1_op_i   (s_pi1r_op_w[S_PI1R_SDCARD])
+	,.pi1_addr_i (s_pi1r_addr_w[S_PI1R_SDCARD])
+	,.pi1_data_i (s_pi1r_data_w0[S_PI1R_SDCARD])
+	,.pi1_data_o (s_pi1r_data_w1[S_PI1R_SDCARD])
+	,.pi1_sel_i  (s_pi1r_sel_w[S_PI1R_SDCARD])
+	,.pi1_rdy_o  (s_pi1r_rdy_w[S_PI1R_SDCARD])
+
+	,.wb4_cyc_o   (sdcard_wb_cyc_o)
+	,.wb4_stb_o   (sdcard_wb_stb_o)
+	,.wb4_we_o    (sdcard_wb_we_o)
+	,.wb4_addr_o  (sdcard_wb_addr_o)
+	,.wb4_sel_o   (sdcard_wb_sel_o)
+	,.wb4_data_o  (sdcard_wb_dat_o)
+	,.wb4_stall_i (sdcard_wb_bsy_i)
+	,.wb4_ack_i   (sdcard_wb_ack_i)
+	,.wb4_data_i  (sdcard_wb_dat_i)
+);
+
 sdcard_spi #(
-
-	 .ARCHBITSZ    (ARCHBITSZ)
-	// "pu32.img.hex" generated using `hexdump -v -e '/1 "%02x "' /path/to/img > pu32.img.hex`
-	,.SRCFILE      ("pu32.img.hex")
+	 .ARCHBITSZ (ARCHBITSZ)
+	,.SRCFILE ("pu32.img.hex" /* `hexdump -v -e '/1 "%02x "' /path/to/img > pu32.img.hex` */)
 	,.SIMSTORAGESZ (81920*5)
-
 ) sdcard (
 
 	.rst_i (pi1r_rst_w)
@@ -305,13 +342,17 @@ sdcard_spi #(
 	,.clk_i     (pi1r_clk_w)
 	,.clk_phy_i (clk_w)
 
-	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_SDCARD])
-	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_SDCARD])
-	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_SDCARD])
-	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_SDCARD])
-	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_SDCARD])
-	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_SDCARD])
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_SDCARD])
+	,.wb_cyc_i  (sdcard_wb_cyc_o)
+	,.wb_stb_i  (sdcard_wb_stb_o)
+	,.wb_we_i   (sdcard_wb_we_o)
+	,.wb_addr_i (sdcard_wb_addr_o[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8])
+	,.wb_sel_i  (sdcard_wb_sel_o)
+	,.wb_dat_i  (sdcard_wb_dat_o)
+	,.wb_bsy_o  (sdcard_wb_bsy_i)
+	,.wb_ack_o  (sdcard_wb_ack_i)
+	,.wb_dat_o  (sdcard_wb_dat_i)
+
+	,.mmapsz_o (s_pi1r_mapsz_w[S_PI1R_SDCARD])
 
 	,.intrqst_o (intrqstsrc_w[INTCTRLSRC_SDCARD])
 	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_SDCARD])
