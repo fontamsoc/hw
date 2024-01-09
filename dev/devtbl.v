@@ -4,8 +4,6 @@
 // Device Table.
 // It maps the first RAM device at 0x1000 by adjusting its pi1_mapsz_o.
 
-`include "lib/perint/pi1b.v"
-
 `include "lib/addr.v"
 
 module devtbl (
@@ -67,52 +65,20 @@ input  wire [(XARCHBITSZ/8) -1 : 0] pi1_sel_i;
 output wire                         pi1_rdy_o;
 output reg  [XARCHBITSZ -1 : 0]     pi1_mapsz_o;
 
-wire [2 -1 : 0]              pi1b_op_i;
-wire [XADDRBITSZ -1 : 0]     pi1b_addr_i;
-wire [XARCHBITSZ -1 : 0]     pi1b_data_o;
-wire [XARCHBITSZ -1 : 0]     pi1b_data_i;
-wire [(XARCHBITSZ/8) -1 : 0] pi1b_sel_i;
-wire                         pi1b_rdy_o;
-
-pi1b #(
-
-	.ARCHBITSZ (XARCHBITSZ)
-
-) pi1b (
-
-	 .rst_i (rst_i)
-
-	,.clk_i (clk_i)
-
-	,.m_op_i (pi1_op_i)
-	,.m_addr_i (pi1_addr_i)
-	,.m_data_i (pi1_data_i)
-	,.m_data_o (pi1_data_o)
-	,.m_sel_i (pi1_sel_i)
-	,.m_rdy_o (pi1_rdy_o)
-
-	,.s_op_o (pi1b_op_i)
-	,.s_addr_o (pi1b_addr_i)
-	,.s_data_o (pi1b_data_i)
-	,.s_data_i (pi1b_data_o)
-	,.s_sel_o (pi1b_sel_i)
-	,.s_rdy_i (pi1b_rdy_o)
-);
-
-assign pi1b_rdy_o = 1;
-
 input wire [(XARCHBITSZ * DEVMAPCNT) -1 : 0] devtbl_id_flat_i;
 input wire [(XARCHBITSZ * DEVMAPCNT) -1 : 0] devtbl_mapsz_flat_i /* verilator lint_off UNOPTFLAT */;
 input wire [DEVMAPCNT -1 : 0]                devtbl_useintr_flat_i;
 
-wire [XARCHBITSZ -1 : 0] pi1b_addr_w;
+assign pi1_rdy_o = 1;
+
+wire [XARCHBITSZ -1 : 0] pi1_addr_w;
 
 addr #(
 	.ARCHBITSZ (XARCHBITSZ)
 ) addr (
-	 .addr_i (pi1b_addr_i)
-	,.sel_i  (pi1b_sel_i)
-	,.addr_o (pi1b_addr_w)
+	 .addr_i (pi1_addr_i)
+	,.sel_i  (pi1_sel_i)
+	,.addr_o (pi1_addr_w)
 );
 
 wire [XARCHBITSZ -1 : 0] devtbl_id_w      [DEVMAPCNT -1 : 0];
@@ -158,24 +124,24 @@ localparam PIRWOP = 2'b11;
 `include "version.v"
 
 // upconverter logic.
-reg [XARCHBITSZ -1 : 0] pi1b_addr_w_hold;
+reg [XARCHBITSZ -1 : 0] pi1_addr_w_hold;
 reg [XARCHBITSZ -1 : 0] data_w0;
-wire [((CLOG2XARCHBITSZBY8-CLOG2ARCHBITSZBY8)+CLOG2ARCHBITSZ):0] data_w0_shift = {pi1b_addr_w_hold[CLOG2XARCHBITSZBY8:CLOG2ARCHBITSZBY8], {CLOG2ARCHBITSZ{1'b0}}};
-assign pi1b_data_o = (data_w0 << data_w0_shift[(CLOG2XARCHBITSZBY8DIFF+CLOG2ARCHBITSZ)-1:0]);
-wire [((CLOG2XARCHBITSZBY8-CLOG2ARCHBITSZBY8)+CLOG2ARCHBITSZ):0] data_w1_shift = {pi1b_addr_w[CLOG2XARCHBITSZBY8:CLOG2ARCHBITSZBY8], {CLOG2ARCHBITSZ{1'b0}}};
-wire [XARCHBITSZ -1 : 0] data_w1 = (pi1b_data_i >> data_w1_shift[(CLOG2XARCHBITSZBY8DIFF+CLOG2ARCHBITSZ)-1:0]);
+wire [((CLOG2XARCHBITSZBY8-CLOG2ARCHBITSZBY8)+CLOG2ARCHBITSZ):0] data_w0_shift = {pi1_addr_w_hold[CLOG2XARCHBITSZBY8:CLOG2ARCHBITSZBY8], {CLOG2ARCHBITSZ{1'b0}}};
+assign pi1_data_o = (data_w0 << data_w0_shift[(CLOG2XARCHBITSZBY8DIFF+CLOG2ARCHBITSZ)-1:0]);
+wire [((CLOG2XARCHBITSZBY8-CLOG2ARCHBITSZBY8)+CLOG2ARCHBITSZ):0] data_w1_shift = {pi1_addr_w[CLOG2XARCHBITSZBY8:CLOG2ARCHBITSZBY8], {CLOG2ARCHBITSZ{1'b0}}};
+wire [XARCHBITSZ -1 : 0] data_w1 = (pi1_data_i >> data_w1_shift[(CLOG2XARCHBITSZBY8DIFF+CLOG2ARCHBITSZ)-1:0]);
 
-wire [ADDRBITSZ -2 : 0] addr_w = pi1b_addr_w[ADDRBITSZ-1:CLOG2ARCHBITSZBY8];
-wire [ADDRBITSZ -2 : 0] addrby2 = pi1b_addr_w[ADDRBITSZ-1:1+CLOG2ARCHBITSZBY8];
+wire [ADDRBITSZ -2 : 0] addr_w = pi1_addr_w[ADDRBITSZ-1:CLOG2ARCHBITSZBY8];
+wire [ADDRBITSZ -2 : 0] addrby2 = pi1_addr_w[ADDRBITSZ-1:1+CLOG2ARCHBITSZBY8];
 
 always @ (posedge clk_i) begin
 	pi1_mapsz_o <= pi1_mapsz_o_;
-	if (pi1b_rdy_o)
-		pi1b_addr_w_hold <= pi1b_addr_w;
+	if (pi1_rdy_o)
+		pi1_addr_w_hold <= pi1_addr_w;
 	if (rst_i) begin
 		rst0_o <= 0;
 		rst1_o <= 0;
-	end else if (pi1b_rdy_o && pi1b_op_i == PIRDOP) begin
+	end else if (pi1_rdy_o && pi1_op_i == PIRDOP) begin
 		if (addrby2 >= DEVMAPCNT)
 			data_w0 <= 0;
 		else if (addr_w[0] == 0) // Return DevID.
@@ -185,7 +151,7 @@ always @ (posedge clk_i) begin
 				(addrby2 == 0) ? BLOCKDEVMAPSZ :
 				(addrby2 == 1) ? pi1_mapsz_o : devtbl_mapsz_w[addrby2])>>1,
 				devtbl_useintr_w[addrby2]};
-	end else if (pi1b_rdy_o && pi1b_op_i == PIRWOP) begin
+	end else if (pi1_rdy_o && pi1_op_i == PIRWOP) begin
 		if (addr_w == 0) begin // INFO.
 			if (data_w1 == 0)
 				data_w0 <= SOCVERSION;
@@ -216,7 +182,7 @@ always @ (posedge clk_i) begin
 		end else
 			data_w0 <= 0;
 	end
-	rst2_o <= (pi1b_rdy_o && pi1b_op_i == PIRWOP && addr_w == 1 && data_w1 == 3/* RRESET */);
+	rst2_o <= (pi1_rdy_o && pi1_op_i == PIRWOP && addr_w == 1 && data_w1 == 3/* RRESET */);
 end
 
 endmodule
