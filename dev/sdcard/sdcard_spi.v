@@ -3,18 +3,17 @@
 
 // SDCard peripheral.
 //
-// This device transfers data in blocks, where DevMapSz reports
-// the block size in bytes, and where the memory operations PIRDOP,
-// PIWROP respectively read/write the memory mapping with the data
-// to be transfered to/from the device.
-// Only ARCHBITSZ bits memory operations are valid.
-// The memory operation PIRWOP is used to send commands to the device,
-// and must be ARCHBITSZ bits aligned; the ARCHBITSZ bits aligned offset within
-// the memory mapping identifies the command; the value to write is the argument
-// of the command, while the value read is the return value of the command.
-// The four commands are:
-// RESET: Byte offset 0; returns current status.
-// 	A controller reset is initiated when the argument is non-null,
+// This device transfers data in blocks where the block size can be
+// computed from mmapsz_o which reports the size in bytes of the memory
+// mapping used by the device.
+// The first half of the mapping is a read/write RAM cache for the
+// data to be transfered to/from the device.
+// The second half of the mapping has read/write registers used to
+// send commands to the device.
+// Only ARCHBITSZ bits memory operations are valid throughout the mapping.
+// The registers and their offsets within the second half of the mapping are:
+// - RESET: 0*(ARCHBITSZ/8): Reading this register returns current status.
+// 	A controller reset is initiated when writing any value to this register,
 // 	and an interrupt is raised once the reset is complete.
 // 	The status value returned can be:
 // 	0: PowerOff.
@@ -23,43 +22,35 @@
 // 	3: Error.
 // 	Note that there is no reporting of timeout, as it is best implemented
 // 	in software by timing how long the device has been busy.
-// SWAP: Byte offset (ARCHBITSZ/8); implements double caching whereby the cache
-// 	associated with the mapped block presented in the physical address space
-// 	is swapped so that the controller can now have access to it and so that
-// 	its content can be stored in the device when the command WRITE is issued,
-// 	or so that it can be loaded with a block of data from the device when
-// 	the command READ is issued; after the swapping, the cache now presented
-// 	in the physical address space, and which was previously used by the controller,
-// 	can now be accessed using the memory operations PIRDOP and PIWROP.
+// - SWAP: 1*(ARCHBITSZ/8): Reading this register returns PHYBLKSZ.
+// 	Writing this register implements double caching whereby the RAM cache
+// 	presented in the first half of the memory mapping is swapped so that
+// 	the controller can now have access to it and so that its content can
+// 	be stored in the device when the command WRITE is issued, or so that
+// 	it can be loaded with a block of data from the device when the command
+// 	READ is issued; after the swapping, the RAM cache now presented in the
+// 	first half of the memory mapping, and which was previously used by the
+// 	controller, can now be accessed.
 // 	Hence, it is possible to do things such as preparing the next block
 // 	of data to store in the device while simultaneously, a block of data
 // 	is being stored in the device.
-// 	This command does not take any argument, it returns PHYBLKSZ,
-// 	and does not generate any interrupt; it must be issued when the controller
-// 	status is ready, otherwise silent faillures and undefined behaviors will occur.
-// READ: Byte offset 2*(ARCHBITSZ/8); read a block of data from the device;
-// 	the argument is the block address within the device.
-// 	The return value is the total block count of the device; the total block count
-// 	returned can be made to change between issuance of this command, allowing
-// 	the implementation of device with variable total block count.
+// 	Writing this register must be done when the controller status is ready,
+// 	otherwise silent faillures and undefined behaviors will occur.
+// - READ: 2*(ARCHBITSZ/8): Reading this register returns the total block
+// 	count of the device.
+// 	Writing this register read a block of data from the block address written.
 // 	An interrupt is raised once reading the data block from the device is complete.
-// 	This command must be issued when the controller status is ready, otherwise
-// 	silent faillures and undefined behaviors will occur.
-// WRITE: Byte offset 3*(ARCHBITSZ/8); write a block of data to the device;
-// 	the argument is the block address within the device.
-// 	The return value is the total block count of the device; the total block
-// 	count value returned can be made to change between issuance of this command,
-// 	allowing the implementation of device with variable total block count.
+// 	Writing this register must be done when the controller status is ready,
+// 	otherwise silent faillures and undefined behaviors will occur.
+// - WRITE: 3*(ARCHBITSZ/8): Reading this register returns the total block
+// 	count of the device.
+// 	Writing this register write a block of data to the block address written.
 // 	An interrupt is raised once writing the data block to the device is complete.
-// 	This command must be issued when the controller status is ready, otherwise
-// 	silent faillures and undefined behaviors will occur.
+// 	Writing this register must be done when the controller status is ready,
+// 	otherwise silent faillures and undefined behaviors will occur.
 //
-// Copying blocks between locations within this device can be done
-// simply issuing the command READ specifying the source block location,
-// followed by the command WRITE specifying the destination block location.
-//
-// The memory operation PIRWOP with an address >= 4*(ARCHBITSZ/8) does not
-// send any command to the device and behave like a regular atomic operation.
+// Copying blocks between locations within the device can be done by issuing
+// commands READ and WRITE without ever issuing the command SWAP.
 
 // Parameters:
 //
@@ -99,14 +90,19 @@
 // cs_o
 // 	SPI interface to the card.
 //
-// pi1_op_i
-// pi1_addr_i
-// pi1_data_i
-// pi1_data_o
-// pi1_sel_i
-// pi1_rdy_o
-// pi1_mapsz_o
+// wb_cyc_i
+// wb_stb_i
+// wb_we_i
+// wb_addr_i
+// wb_sel_i
+// wb_dat_i
+// wb_bsy_o
+// wb_ack_o
+// wb_dat_o
 // 	Slave memory interface.
+//
+// mmapsz_o
+// 	Memory map size in bytes.
 //
 // intrqst_o
 // 	This signal is set high to request an interrupt;
@@ -122,8 +118,6 @@
 // 	This signal become low when the interrupt request
 // 	has been acknowledged, and is used by this module
 // 	to automatically lower intrqst_o.
-
-`include "lib/ram/dram.v"
 
 `ifdef SIMULATION
 `include "./sdcard_sim_phy.v"
@@ -145,13 +139,17 @@ module sdcard_spi (
 	,cs_o
 `endif
 
-	,pi1_op_i
-	,pi1_addr_i
-	,pi1_data_i
-	,pi1_data_o
-	,pi1_sel_i  /* not used */
-	,pi1_rdy_o
-	,pi1_mapsz_o
+	,wb_cyc_i
+	,wb_stb_i
+	,wb_we_i
+	,wb_addr_i
+	,wb_sel_i
+	,wb_dat_i
+	,wb_bsy_o
+	,wb_ack_o
+	,wb_dat_o
+
+	,mmapsz_o
 
 	,intrqst_o
 	,intrdy_i
@@ -173,12 +171,7 @@ parameter SIMSTORAGESZ = 4096;
 // the next block of data to transfer is being prepared.
 // CMDSWAP is used to swap between the cache used by the controller
 // and the cache mapped in memory.
-// Note also that the value of this macro is the block size used by the controller
-// as well as the value of DevMapSz which is the size of the memory mapping
-// used by the memory interface.
-// The value of this macro must be greater than or equal to 16 to accomodate the memory
-// mapping space needed for the four commands (CMDRESET, CMDSWAP, CMDREAD, CMDWRITE);
-// and the value of this macro must be a power of 2.
+// Note also that the value of this macro is the block size used by the controller.
 localparam PHYBLKSZ = 512; // ### Must not change for SDCard.
 
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
@@ -196,39 +189,48 @@ input  wire do_i;
 output wire cs_o;
 `endif
 
-input  wire [2 -1 : 0]             pi1_op_i;
-input  wire [ADDRBITSZ -1 : 0]     pi1_addr_i;
-input  wire [ARCHBITSZ -1 : 0]     pi1_data_i;
-output reg  [ARCHBITSZ -1 : 0]     pi1_data_o;
-input  wire [(ARCHBITSZ/8) -1 : 0] pi1_sel_i;  /* not used */
-output wire                        pi1_rdy_o;
-output wire [ARCHBITSZ -1 : 0]     pi1_mapsz_o;
+input  wire                        wb_cyc_i;
+input  wire                        wb_stb_i;
+input  wire                        wb_we_i;
+input  wire [ADDRBITSZ -1 : 0]     wb_addr_i;
+input  wire [(ARCHBITSZ/8) -1 : 0] wb_sel_i;
+input  wire [ARCHBITSZ -1 : 0]     wb_dat_i;
+output wire                        wb_bsy_o;
+output reg                         wb_ack_o;
+output reg  [ARCHBITSZ -1 : 0]     wb_dat_o;
+
+output wire [ARCHBITSZ -1 : 0] mmapsz_o;
 
 output reg  intrqst_o;
 input  wire intrdy_i;
 
-assign pi1_rdy_o = 1'b1;
-assign pi1_mapsz_o = PHYBLKSZ;
+assign wb_bsy_o = 1'b0;
+
+assign mmapsz_o = PHYBLKSZ*2;
 
 localparam CLOG2PHYBLKSZ = clog2(PHYBLKSZ);
-
-localparam PINOOP = 2'b00;
-localparam PIWROP = 2'b01;
-localparam PIRDOP = 2'b10;
-localparam PIRWOP = 2'b11;
 
 // Commands.
 localparam CMDRESET = 0;
 localparam CMDSWAP  = 1;
 localparam CMDREAD  = 2;
 localparam CMDWRITE = 3;
-localparam CMD_CNT  = 4; // Number of commands.
 
 // Status.
 localparam STATUSPOWEROFF = 0;
 localparam STATUSREADY    = 1;
 localparam STATUSBUSY     = 2;
 localparam STATUSERROR    = 3;
+
+reg                    wb_stb_r;
+reg                    wb_we_r;
+reg [ADDRBITSZ -1 : 0] wb_addr_r;
+reg [ARCHBITSZ -1 : 0] wb_dat_r;
+
+wire cmd_reset = (wb_addr_r == ((CMDRESET * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8));
+wire cmd_swap  = (wb_addr_r == ((CMDSWAP  * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8));
+wire cmd_read  = (wb_addr_r == ((CMDREAD  * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8));
+wire cmd_write = (wb_addr_r == ((CMDWRITE * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8));
 
 wire phy_tx_pop_o, phy_rx_push_o;
 
@@ -245,10 +247,10 @@ wire phy_err_o;
 
 // A phy reset is done when "rst_i" is high or when
 // CMDRESET is issued with its argument non-null.
-// Since "rst_i" is also used to report whether
+// Since "rst_i" is also used to signal whether
 // the device is under power, a controller reset
 // will be done as soon as the device is powered-on.
-wire phy_rst_w = (rst_i | (pi1_op_i == PIRWOP && pi1_addr_i == CMDRESET && pi1_data_i && !phy_err_o));
+wire phy_rst_w = (rst_i || (wb_stb_r && wb_we_r && cmd_reset && !phy_err_o));
 
 reg phy_cmd_empty_i;
 
@@ -302,9 +304,6 @@ sdcard_spi_phy
 	,.err_o (phy_err_o)
 );
 
-wire pi1_op_is_rdop = (pi1_op_i == PIRDOP || (pi1_op_i == PIRWOP && pi1_addr_i >= CMD_CNT));
-wire pi1_op_is_wrop = (pi1_op_i == PIWROP || (pi1_op_i == PIRWOP && pi1_addr_i >= CMD_CNT));
-
 // When the value of this register is 1, "phy" has
 // access to cache1 otherwise it has access to cache0.
 // The cache not being accessed by "phy" is accessed
@@ -316,9 +315,9 @@ reg [CLOG2PHYBLKSZ -1 : 0] cachephyaddr;
 
 // Nets set to the index within the respective cache. Each cache element is ARCHBITSZ bits.
 wire [(CLOG2PHYBLKSZ-CLOG2ARCHBITSZBY8) -1 : 0] cache0addr =
-	cachesel ? pi1_addr_i : cachephyaddr[CLOG2PHYBLKSZ -1 : CLOG2ARCHBITSZBY8];
+	cachesel ? wb_addr_r : cachephyaddr[CLOG2PHYBLKSZ -1 : CLOG2ARCHBITSZBY8];
 wire [(CLOG2PHYBLKSZ-CLOG2ARCHBITSZBY8) -1 : 0] cache1addr =
-	cachesel ? cachephyaddr[CLOG2PHYBLKSZ -1 : CLOG2ARCHBITSZBY8] : pi1_addr_i;
+	cachesel ? cachephyaddr[CLOG2PHYBLKSZ -1 : CLOG2ARCHBITSZBY8] : wb_addr_r;
 
 wire [ARCHBITSZ -1 : 0] cache0dato;
 wire [ARCHBITSZ -1 : 0] cache1dato;
@@ -358,8 +357,8 @@ generate if (ARCHBITSZ == 64) begin
 end endgenerate
 
 // Nets set to the value to write in the respective cache.
-wire [ARCHBITSZ -1 : 0] cache0dati = cachesel ? pi1_data_i : phy_rx_data_o_byteselected[ARCHBITSZ -1 : 0];
-wire [ARCHBITSZ -1 : 0] cache1dati = cachesel ? phy_rx_data_o_byteselected[ARCHBITSZ -1 : 0] : pi1_data_i;
+wire [ARCHBITSZ -1 : 0] cache0dati = cachesel ? wb_dat_r : phy_rx_data_o_byteselected[ARCHBITSZ -1 : 0];
+wire [ARCHBITSZ -1 : 0] cache1dati = cachesel ? phy_rx_data_o_byteselected[ARCHBITSZ -1 : 0] : wb_dat_r;
 
 // phy_tx_data_i is set to the value read from the respective cache.
 generate if (ARCHBITSZ == 16) begin
@@ -404,44 +403,38 @@ generate if (ARCHBITSZ == 64) begin
 end endgenerate
 
 // Register used to detect a falling edge of "intrdy_i".
-reg  intrdy_i_sampled;
-wire intrdy_i_negedge = (!intrdy_i && intrdy_i_sampled);
+reg  intrdy_i_r;
+wire intrdy_i_negedge = (!intrdy_i && intrdy_i_r);
 
 // Register used to detect a rising edge of "phy_err_o".
-reg  phy_err_o_sampled;
-wire phy_err_o_posedge = (phy_err_o && !phy_err_o_sampled);
+reg  phy_err_o_r;
+wire phy_err_o_posedge = (phy_err_o && !phy_err_o_r);
 
 // Register used to detect a falling edge of "phy_bsy_w".
-reg  phy_bsy_w_sampled;
-wire phy_bsy_w_negedge = (!phy_bsy_w && phy_bsy_w_sampled);
+reg  phy_bsy_w_r;
+wire phy_bsy_w_negedge = (!phy_bsy_w && phy_bsy_w_r);
+
+wire cache_rdop = (wb_stb_r && !wb_we_r && wb_addr_r < (PHYBLKSZ >> CLOG2ARCHBITSZBY8));
+wire cache_wrop = (wb_stb_r && wb_we_r  && wb_addr_r < (PHYBLKSZ >> CLOG2ARCHBITSZBY8));
 
 // Nets set to 1 when a read/write request is done to their respective cache.
-wire cache0rd = cachesel ? pi1_op_is_rdop : phy_tx_pop_o;
-wire cache1rd = cachesel ? phy_tx_pop_o : pi1_op_is_rdop;
-wire cache0wr = cachesel ? pi1_op_is_wrop : phy_rx_push_o;
-wire cache1wr = cachesel ? phy_rx_push_o : pi1_op_is_wrop;
+wire cache0rd = cachesel ? cache_rdop : phy_tx_pop_o;
+wire cache1rd = cachesel ? phy_tx_pop_o : cache_rdop;
+wire cache0wr = cachesel ? cache_wrop : phy_rx_push_o;
+wire cache1wr = cachesel ? phy_rx_push_o : cache_wrop;
 
-dram #(
-	 .SZ (PHYBLKSZ/(ARCHBITSZ/8))
-	,.DW (ARCHBITSZ)
-) cache0 (
-	 .clk1_i  (clk_i)
-	,.we1_i   (cache0wr)
-	,.addr1_i (cache0addr)
-	,.i1      (cache0dati)
-	,.o1      (cache0dato)
-);
+reg [ARCHBITSZ -1 : 0] cache0 [(PHYBLKSZ/(ARCHBITSZ/8)) -1 : 0];
+reg [ARCHBITSZ -1 : 0] cache1 [(PHYBLKSZ/(ARCHBITSZ/8)) -1 : 0];
 
-dram #(
-	 .SZ (PHYBLKSZ/(ARCHBITSZ/8))
-	,.DW (ARCHBITSZ)
-) cache1 (
-	 .clk1_i  (clk_i)
-	,.we1_i   (cache1wr)
-	,.addr1_i (cache1addr)
-	,.i1      (cache1dati)
-	,.o1      (cache1dato)
-);
+assign cache0dato = cache0[cache0addr];
+assign cache1dato = cache1[cache1addr];
+
+always @ (posedge clk_i) begin
+	if (cache0wr)
+		cache0[cache0addr] <= cache0dati;
+	if (cache1wr)
+		cache1[cache1addr] <= cache1dati;
+end
 
 reg [2 -1 : 0] status; // ### comb-block-reg.
 
@@ -456,7 +449,50 @@ always @* begin
 		status = STATUSREADY;
 end
 
+wire wb_stb_r_ = (wb_cyc_i && wb_stb_i);
+
 always @ (posedge clk_i) begin
+
+	wb_stb_r <= wb_stb_r_ ;
+	if (wb_stb_r_) begin
+		wb_we_r <= wb_we_i;
+		wb_addr_r <= wb_addr_i;
+		wb_dat_r <= wb_dat_i;
+	end
+
+	// Logic that flips the value of cachesel when CMDSWAP is issued.
+	if (wb_stb_r && wb_we_r && cmd_swap)
+		cachesel <= ~cachesel;
+
+	if (rst_i || (phy_cmd_pop_o && phy_cmd_empty_i))
+		phy_cmd_empty_i <= 1'b0;
+	else if (wb_we_r && (cmd_read || cmd_write)) begin
+		phy_cmd_empty_i <= 1'b1;
+		phy_cmd_data_i <= cmd_write;
+		phy_cmd_addr_i <= wb_dat_r;
+	end
+
+	wb_ack_o <= wb_stb_r;
+
+	if (cache_rdop)
+		wb_dat_o <= cachesel ? cache0dato : cache1dato;
+	else if (wb_stb_r && !wb_we_r) begin
+		if (cmd_reset)
+			wb_dat_o <= {{30{1'b0}}, status};
+		else if (cmd_swap)
+			wb_dat_o <= PHYBLKSZ;
+		else if (cmd_read || cmd_write)
+			wb_dat_o <= phy_blkcnt_o;
+	end
+
+	// Logic that sets cachephyaddr.
+	// Increment cachephyaddr whenever the PHY is not busy and requesting
+	// a read/write; reset cachephyaddr to 0 whenever "phy_bsy_w" is low.
+	if (!phy_bsy_w)
+		cachephyaddr <= 0;
+	else if (cachesel ? (cache1rd | cache1wr) : (cache0rd | cache0wr))
+		cachephyaddr <= cachephyaddr + 1'b1;
+
 	// Logic to set/clear intrqst_o.
 	// A rising edge of "phy_err_o" means that an error occured
 	// while the controller was processing the previous
@@ -474,44 +510,10 @@ always @ (posedge clk_i) begin
 	else
 		intrqst_o <= (phy_err_o_posedge || phy_bsy_w_negedge);
 
-	// Logic that flips the value of cachesel when CMDSWAP is issued.
-	if (pi1_op_i == PIRWOP && pi1_addr_i == CMDSWAP)
-		cachesel <= ~cachesel;
-
-	// Logic that sets pi1_data_o.
-	if (pi1_op_is_rdop)
-		pi1_data_o <= cachesel ? cache0dato : cache1dato;
-	else if (pi1_op_i == PIRWOP) begin
-		if (pi1_addr_i == CMDRESET)
-			pi1_data_o <= {{30{1'b0}}, status};
-		else if (pi1_addr_i == CMDSWAP)
-			pi1_data_o <= PHYBLKSZ;
-		else if (pi1_addr_i == CMDREAD || pi1_addr_i == CMDWRITE)
-			pi1_data_o <= phy_blkcnt_o;
-	end
-
-	// Logic that sets cachephyaddr.
-	// Increment cachephyaddr whenever the PHY is not busy and requesting
-	// a read/write; reset cachephyaddr to 0 whenever "phy_bsy_w" is low.
-	if (!phy_bsy_w)
-		cachephyaddr <= 0;
-	else if (cachesel ? (cache1rd | cache1wr) : (cache0rd | cache0wr))
-		cachephyaddr <= cachephyaddr + 1'b1;
-
-	if (rst_i || (phy_cmd_pop_o && phy_cmd_empty_i))
-		phy_cmd_empty_i <= 0;
-	else if (pi1_op_i == PIRWOP && (pi1_addr_i == CMDREAD || pi1_addr_i == CMDWRITE))
-		phy_cmd_empty_i <= 1;
-
-	if (pi1_op_i == PIRWOP && (pi1_addr_i == CMDREAD || pi1_addr_i == CMDWRITE)) begin
-		phy_cmd_data_i <= (pi1_addr_i == CMDWRITE);
-		phy_cmd_addr_i <= pi1_data_i;
-	end
-
 	// Sampling used for edge detection.
-	intrdy_i_sampled <= intrdy_i;
-	phy_err_o_sampled <= phy_err_o;
-	phy_bsy_w_sampled <= phy_bsy_w;
+	intrdy_i_r <= intrdy_i;
+	phy_err_o_r <= phy_err_o;
+	phy_bsy_w_r <= phy_bsy_w;
 end
 
 endmodule

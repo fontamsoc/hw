@@ -39,7 +39,7 @@ localparam SRCFILE =
 	ARCHBITSZ == 128 ? "bootldr128.hex" :
 	ARCHBITSZ == 256 ? "bootldr256.hex" :
 	                  "";
-parameter SIZE = ((16/*instruction count*/*2)/(ARCHBITSZ/8));
+parameter SIZE = ((32/*instruction count*/*2)/(ARCHBITSZ/8));
 
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
 
