@@ -364,6 +364,44 @@ assign devtbl_useintr_w[S_PI1R_SDCARD] = 1;
 localparam RAMCACHEWAYCOUNT = 2;
 localparam RAMCACHESZ       = ((1024/(ARCHBITSZ/8))*(32/RAMCACHEWAYCOUNT)); /* In (ARCHBITSZ/8) units */
 
+wire                        devtbl_wb_cyc_o;
+wire                        devtbl_wb_stb_o;
+wire                        devtbl_wb_we_o;
+wire [ARCHBITSZ -1 : 0]     devtbl_wb_addr_o;
+wire [(ARCHBITSZ/8) -1 : 0] devtbl_wb_sel_o;
+wire [ARCHBITSZ -1 : 0]     devtbl_wb_dat_o;
+wire                        devtbl_wb_bsy_i;
+wire                        devtbl_wb_ack_i;
+wire [ARCHBITSZ -1 : 0]     devtbl_wb_dat_i;
+
+pi1_to_wb4 #(
+
+	.ARCHBITSZ (ARCHBITSZ)
+
+) devtbl_wb (
+
+	 .rst_i (pi1r_rst_w)
+
+	,.clk_i (pi1r_clk_w)
+
+	,.pi1_op_i   (s_pi1r_op_w[S_PI1R_DEVTBL])
+	,.pi1_addr_i (s_pi1r_addr_w[S_PI1R_DEVTBL])
+	,.pi1_data_i (s_pi1r_data_w0[S_PI1R_DEVTBL])
+	,.pi1_data_o (s_pi1r_data_w1[S_PI1R_DEVTBL])
+	,.pi1_sel_i  (s_pi1r_sel_w[S_PI1R_DEVTBL])
+	,.pi1_rdy_o  (s_pi1r_rdy_w[S_PI1R_DEVTBL])
+
+	,.wb4_cyc_o   (devtbl_wb_cyc_o)
+	,.wb4_stb_o   (devtbl_wb_stb_o)
+	,.wb4_we_o    (devtbl_wb_we_o)
+	,.wb4_addr_o  (devtbl_wb_addr_o)
+	,.wb4_sel_o   (devtbl_wb_sel_o)
+	,.wb4_data_o  (devtbl_wb_dat_o)
+	,.wb4_stall_i (devtbl_wb_bsy_i)
+	,.wb4_ack_i   (devtbl_wb_ack_i)
+	,.wb4_data_i  (devtbl_wb_dat_i)
+);
+
 wire devtbl_rst2_w;
 
 devtbl #(
@@ -389,13 +427,17 @@ devtbl #(
 
 	,.clk_i (pi1r_clk_w)
 
-	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_DEVTBL])
-	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_DEVTBL])
-	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_DEVTBL])
-	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_DEVTBL])
-	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_DEVTBL])
-	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_DEVTBL])
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_DEVTBL])
+	,.wb_cyc_i  (devtbl_wb_cyc_o)
+	,.wb_stb_i  (devtbl_wb_stb_o)
+	,.wb_we_i   (devtbl_wb_we_o)
+	,.wb_addr_i (devtbl_wb_addr_o[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8])
+	,.wb_sel_i  (devtbl_wb_sel_o)
+	,.wb_dat_i  (devtbl_wb_dat_o)
+	,.wb_bsy_o  (devtbl_wb_bsy_i)
+	,.wb_ack_o  (devtbl_wb_ack_i)
+	,.wb_dat_o  (devtbl_wb_dat_i)
+
+	,.mmapsz_o (s_pi1r_mapsz_w[S_PI1R_DEVTBL])
 
 	,.devtbl_id_flat_i      (devtbl_id_flat_w)
 	,.devtbl_mapsz_flat_i   (devtbl_mapsz_flat_w)
