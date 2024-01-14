@@ -2,7 +2,7 @@
 // (c) William Fonkou Tambe
 
 // Device Table.
-// It maps the first RAM device at 0x1000 by adjusting its pi1_mapsz_o.
+// It maps the first RAM device at 0x1000 by adjusting its mmapsz_o.
 
 module devtbl (
 
@@ -14,13 +14,17 @@ module devtbl (
 	,rst1_o
 	,rst2_o
 
-	,pi1_op_i
-	,pi1_addr_i
-	,pi1_data_i
-	,pi1_data_o
-	,pi1_sel_i
-	,pi1_rdy_o
-	,pi1_mapsz_o
+	,wb_cyc_i
+	,wb_stb_i
+	,wb_we_i
+	,wb_addr_i
+	,wb_sel_i
+	,wb_dat_i
+	,wb_bsy_o
+	,wb_ack_o
+	,wb_dat_o
+
+	,mmapsz_o
 
 	,devtbl_id_flat_i
 	,devtbl_mapsz_flat_i
@@ -32,7 +36,7 @@ module devtbl (
 parameter ARCHBITSZ   = 16;
 parameter RAMCACHESZ  = 2; // Size of the RAM cache in (ARCHBITSZ/8) bytes.
 parameter PRELDRADDR  = 0; // Address of pre-loader in bytes.
-parameter DEVMAPCNT   = 2; // Number of device mappings; must be <= (((4096-1024)/(ARCHBITSZ/8))-1).
+parameter DEVMAPCNT   = 3; // Number of device mappings; must be >= 3 and <= (((4096-1024)/(ARCHBITSZ/8))/2).
 parameter SOCID       = 0;
 
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
@@ -46,43 +50,48 @@ output reg rst0_o;
 output reg rst1_o;
 output reg rst2_o;
 
-reg rst2_r = 0; // Reset globally only to match behavior with RAM.
+input  wire                        wb_cyc_i;
+input  wire                        wb_stb_i;
+input  wire                        wb_we_i;
+input  wire [ADDRBITSZ -1 : 0]     wb_addr_i;
+input  wire [(ARCHBITSZ/8) -1 : 0] wb_sel_i;
+input  wire [ARCHBITSZ -1 : 0]     wb_dat_i;
+output wire                        wb_bsy_o;
+output reg                         wb_ack_o;
+output reg  [ARCHBITSZ -1 : 0]     wb_dat_o;
 
-input  wire [2 -1 : 0]             pi1_op_i;
-input  wire [ADDRBITSZ -1 : 0]     pi1_addr_i;
-input  wire [ARCHBITSZ -1 : 0]     pi1_data_i;
-output reg  [ARCHBITSZ -1 : 0]     pi1_data_o;
-input  wire [(ARCHBITSZ/8) -1 : 0] pi1_sel_i;
-output wire                        pi1_rdy_o;
-output reg  [ARCHBITSZ -1 : 0]     pi1_mapsz_o;
+output reg  [ARCHBITSZ -1 : 0] mmapsz_o;
 
 input wire [(ARCHBITSZ * DEVMAPCNT) -1 : 0] devtbl_id_flat_i;
 input wire [(ARCHBITSZ * DEVMAPCNT) -1 : 0] devtbl_mapsz_flat_i /* verilator lint_off UNOPTFLAT */;
 input wire [DEVMAPCNT -1 : 0]               devtbl_useintr_flat_i;
 
-assign pi1_rdy_o = 1;
+assign wb_bsy_o = 1'b0;
 
 wire [ARCHBITSZ -1 : 0] devtbl_id_w      [DEVMAPCNT -1 : 0];
 wire [ARCHBITSZ -1 : 0] devtbl_mapsz_w   [DEVMAPCNT -1 : 0];
 wire [DEVMAPCNT -1 : 0] devtbl_useintr_w;
 
-localparam BLOCKDEVMAPSZ = 1024;
+localparam BLKDEVMAPSZ = 1024;
 
-reg [ARCHBITSZ -1 : 0] pi1_mapsz_o_; // ### comb-block-reg.
-reg [ARCHBITSZ -1 : 0] gen_pi1_mapsz_o_idx_max; // ### comb-block-reg.
-integer gen_pi1_mapsz_o_idx;
+reg [ARCHBITSZ -1 : 0] mmapsz_o_; // ### comb-block-reg.
+reg [ARCHBITSZ -1 : 0] gen_mmapsz_o_idx_max; // ### comb-block-reg.
+integer gen_mmapsz_o_idx;
 always @* begin
-	pi1_mapsz_o_ = (4096 - BLOCKDEVMAPSZ); /* first 2 devices must be Block and DevTbl devices */
-	gen_pi1_mapsz_o_idx_max = DEVMAPCNT;
+	mmapsz_o_ = (4096 - BLKDEVMAPSZ); /* first 2 devices must be Block and DevTbl devices */
+	gen_mmapsz_o_idx_max = DEVMAPCNT;
 	for (
-		gen_pi1_mapsz_o_idx = 2;
-		gen_pi1_mapsz_o_idx < DEVMAPCNT;
-		gen_pi1_mapsz_o_idx = gen_pi1_mapsz_o_idx + 1) begin :gen_pi1_mapsz_o
-		if (devtbl_id_w[gen_pi1_mapsz_o_idx] == 1 /* stops at the first RAM device */)
-			gen_pi1_mapsz_o_idx_max = gen_pi1_mapsz_o_idx;
-		if (gen_pi1_mapsz_o_idx < gen_pi1_mapsz_o_idx_max)
-			pi1_mapsz_o_ = (pi1_mapsz_o_ - devtbl_mapsz_w[gen_pi1_mapsz_o_idx]);
+		gen_mmapsz_o_idx = 2;
+		gen_mmapsz_o_idx < DEVMAPCNT;
+		gen_mmapsz_o_idx = gen_mmapsz_o_idx + 1) begin :gen_mmapsz_o
+		if (devtbl_id_w[gen_mmapsz_o_idx] == 1 /* stops at the first RAM device */)
+			gen_mmapsz_o_idx_max = gen_mmapsz_o_idx;
+		if (gen_mmapsz_o_idx < gen_mmapsz_o_idx_max)
+			mmapsz_o_ = (mmapsz_o_ - devtbl_mapsz_w[gen_mmapsz_o_idx]);
 	end
+end
+always @ (posedge clk_i) begin
+	mmapsz_o <= mmapsz_o_;
 end
 
 genvar gen_devtbl_id_w_idx;
@@ -97,62 +106,82 @@ end endgenerate
 
 assign devtbl_useintr_w = devtbl_useintr_flat_i;
 
-localparam PINOOP = 2'b00;
-localparam PIWROP = 2'b01;
-localparam PIRDOP = 2'b10;
-localparam PIRWOP = 2'b11;
+reg                    wb_stb_r;
+reg                    wb_we_r;
+reg [ADDRBITSZ -1 : 0] wb_addr_r;
+reg [ARCHBITSZ -1 : 0] wb_dat_r;
+
+wire wb_stb_r_ = (wb_cyc_i && wb_stb_i);
+
+always @ (posedge clk_i) begin
+	wb_stb_r <= wb_stb_r_ ;
+	if (wb_stb_r_) begin
+		wb_we_r <= wb_we_i;
+		wb_addr_r <= wb_addr_i;
+		wb_dat_r <= wb_dat_i;
+	end
+	wb_ack_o <= wb_stb_r;
+end
 
 `include "version.v"
 
-wire [(ADDRBITSZ -1) -1 : 0] addrby2 = pi1_addr_i[ADDRBITSZ-1:1];
+reg rst2_r = 0; // Gets reset globally to run pre-loader only once.
+
+reg rdsel;
+
+wire [(ADDRBITSZ -1) -1 : 0] addrby2 = wb_addr_r[ADDRBITSZ-1:1];
 
 always @ (posedge clk_i) begin
-	pi1_mapsz_o <= pi1_mapsz_o_;
 	if (rst_i) begin
 		rst0_o <= 0;
 		rst1_o <= 0;
-	end else if (pi1_rdy_o && pi1_op_i == PIRDOP) begin
-		if (addrby2 >= DEVMAPCNT)
-			pi1_data_o <= 0;
-		else if (pi1_addr_i[0] == 0) // Return DevID.
-			pi1_data_o <= devtbl_id_w[addrby2];
-		else // Return DevMapSz and DevUseIntr.
-			pi1_data_o <= {(
-				(addrby2 == 0) ? BLOCKDEVMAPSZ :
-				(addrby2 == 1) ? pi1_mapsz_o : devtbl_mapsz_w[addrby2])>>1,
-				devtbl_useintr_w[addrby2]};
-	end else if (pi1_rdy_o && pi1_op_i == PIRWOP) begin
-		if (pi1_addr_i == 0) begin // INFO.
-			if (pi1_data_i == 0)
-				pi1_data_o <= SOCVERSION;
-			else if (pi1_data_i == 1)
-				pi1_data_o <= RAMCACHESZ;
-			else if (pi1_data_i == 2)
-				pi1_data_o <= {rst1_o, rst0_o};
-			else if (pi1_data_i == 3)
-				pi1_data_o <= (rst2_r ? 0 : PRELDRADDR); // After RRESET return 0 instead PRELDRADDR.
-			else if (pi1_data_i == 4)
-				pi1_data_o <= SOCID;
-			else
-				pi1_data_o <= 0;
-		end else if (pi1_addr_i == 1) begin // ACTION.
-			if (pi1_data_i == 0) begin // PWROFF.
+		rdsel <= 0;
+	end else if (wb_stb_r) begin
+		if (wb_we_r) begin // CMDS.
+			if (wb_dat_r == 0) begin // PWROFF.
 				rst0_o <= 1;
 				rst1_o <= 0;
-			end else if (pi1_data_i == 1) begin // WRESET.
+			end else if (wb_dat_r == 1) begin // WRESET.
 				rst0_o <= 0;
 				rst1_o <= 1;
-			end else if (pi1_data_i == 2) begin // CRESET.
+			end else if (wb_dat_r == 2) begin // CRESET.
 				rst0_o <= 1;
 				rst1_o <= 1;
-			end else if (pi1_data_i == 3) begin // RRESET.
+			end else if (wb_dat_r == 3) begin // RRESET.
 				rst2_r <= 1;
+			end else if (wb_dat_r == 4) begin // RDSELINFO.
+				rdsel <= 1;
+			end else /* if (wb_dat_r == 5) */ begin // RDSELDEVS.
+				rdsel <= 0;
 			end
-			pi1_data_o <= 0;
-		end else
-			pi1_data_o <= 0;
+		end else begin
+			if (rdsel) begin // INFO.
+				if (wb_addr_r == 0)
+					wb_dat_o <= SOCVERSION;
+				else if (wb_addr_r == 1)
+					wb_dat_o <= RAMCACHESZ;
+				else if (wb_addr_r == 2)
+					wb_dat_o <= {rst1_o, rst0_o};
+				else if (wb_addr_r == 3)
+					wb_dat_o <= (rst2_r ? 0 : PRELDRADDR); // After RRESET return 0 instead of PRELDRADDR.
+				else if (wb_addr_r == 4)
+					wb_dat_o <= SOCID;
+				else
+					wb_dat_o <= 0;
+			end else begin // DEVS.
+				if (addrby2 >= DEVMAPCNT)
+					wb_dat_o <= 0;
+				else if (wb_addr_r[0] == 0) // Return DevID.
+					wb_dat_o <= devtbl_id_w[addrby2];
+				else // Return DevMapSz and DevUseIntr.
+					wb_dat_o <= {(
+						(addrby2 == 0) ? BLKDEVMAPSZ :
+						(addrby2 == 1) ? mmapsz_o : devtbl_mapsz_w[addrby2])>>1,
+						devtbl_useintr_w[addrby2]};
+			end
+		end
 	end
-	rst2_o <= (pi1_rdy_o && pi1_op_i == PIRWOP && pi1_addr_i == 1 && pi1_data_i == 3/* RRESET */);
+	rst2_o <= (!rst_i && wb_stb_r && wb_we_r && wb_dat_r == 3/* RRESET */);
 end
 
 endmodule
