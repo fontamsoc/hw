@@ -29,6 +29,8 @@
 `define PUCOUNT 1 /* 8 max */
 `include "pu/cpu.v"
 
+`include "dev/pi1_to_wb4.v"
+
 `include "dev/sdcard/sdcard_spi.v"
 
 `include "dev/devtbl.v"
@@ -280,7 +282,7 @@ localparam PI1RMASTERCOUNT       = (M_PI1R_LAST + 1);
 localparam PI1RSLAVECOUNT        = (S_PI1R_INVALIDDEV + 1);
 localparam PI1RDEFAULTSLAVEINDEX = S_PI1R_INVALIDDEV;
 localparam PI1RFIRSTSLAVEADDR    = 0;
-localparam PI1RARCHBITSZ         = ((PUCOUNT > 2) ? ARCHBITSZ : LITEDRAM_ARCHBITSZ);
+localparam PI1RARCHBITSZ         = ARCHBITSZ;
 localparam CLOG2PI1RARCHBITSZBY8 = clog2(PI1RARCHBITSZ/8);
 localparam PI1RADDRBITSZ         = (PI1RARCHBITSZ-CLOG2PI1RARCHBITSZBY8);
 localparam PI1RCLKFREQ           = CLK2XFREQ;
@@ -379,6 +381,44 @@ cpu #(
 	,.id_i (0)
 );
 
+wire                        sdcard_wb_cyc_o;
+wire                        sdcard_wb_stb_o;
+wire                        sdcard_wb_we_o;
+wire [ARCHBITSZ -1 : 0]     sdcard_wb_addr_o;
+wire [(ARCHBITSZ/8) -1 : 0] sdcard_wb_sel_o;
+wire [ARCHBITSZ -1 : 0]     sdcard_wb_dat_o;
+wire                        sdcard_wb_bsy_i;
+wire                        sdcard_wb_ack_i;
+wire [ARCHBITSZ -1 : 0]     sdcard_wb_dat_i;
+
+pi1_to_wb4 #(
+
+	.ARCHBITSZ (ARCHBITSZ)
+
+) sdcard_wb (
+
+	 .rst_i (pi1r_rst_w)
+
+	,.clk_i (pi1r_clk_w)
+
+	,.pi1_op_i   (s_pi1r_op_w[S_PI1R_SDCARD])
+	,.pi1_addr_i (s_pi1r_addr_w[S_PI1R_SDCARD])
+	,.pi1_data_i (s_pi1r_data_w0[S_PI1R_SDCARD])
+	,.pi1_data_o (s_pi1r_data_w1[S_PI1R_SDCARD])
+	,.pi1_sel_i  (s_pi1r_sel_w[S_PI1R_SDCARD])
+	,.pi1_rdy_o  (s_pi1r_rdy_w[S_PI1R_SDCARD])
+
+	,.wb4_cyc_o   (sdcard_wb_cyc_o)
+	,.wb4_stb_o   (sdcard_wb_stb_o)
+	,.wb4_we_o    (sdcard_wb_we_o)
+	,.wb4_addr_o  (sdcard_wb_addr_o)
+	,.wb4_sel_o   (sdcard_wb_sel_o)
+	,.wb4_data_o  (sdcard_wb_dat_o)
+	,.wb4_stall_i (sdcard_wb_bsy_i)
+	,.wb4_ack_i   (sdcard_wb_ack_i)
+	,.wb4_data_i  (sdcard_wb_dat_i)
+);
+
 sdcard_spi #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
@@ -397,13 +437,17 @@ sdcard_spi #(
 	,.do_i   (sd_do)
 	,.cs_o   (sd_cs)
 
-	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_SDCARD])
-	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_SDCARD])
-	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_SDCARD])
-	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_SDCARD])
-	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_SDCARD])
-	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_SDCARD])
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_SDCARD])
+	,.wb_cyc_i  (sdcard_wb_cyc_o)
+	,.wb_stb_i  (sdcard_wb_stb_o)
+	,.wb_we_i   (sdcard_wb_we_o)
+	,.wb_addr_i (sdcard_wb_addr_o[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8])
+	,.wb_sel_i  (sdcard_wb_sel_o)
+	,.wb_dat_i  (sdcard_wb_dat_o)
+	,.wb_bsy_o  (sdcard_wb_bsy_i)
+	,.wb_ack_o  (sdcard_wb_ack_i)
+	,.wb_dat_o  (sdcard_wb_dat_i)
+
+	,.mmapsz_o (s_pi1r_mapsz_w[S_PI1R_SDCARD])
 
 	,.intrqst_o (intrqstsrc_w[INTCTRLSRC_SDCARD])
 	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_SDCARD])
@@ -411,6 +455,44 @@ sdcard_spi #(
 
 assign devtbl_id_w     [S_PI1R_SDCARD] = 4;
 assign devtbl_useintr_w[S_PI1R_SDCARD] = 1;
+
+wire                        devtbl_wb_cyc_o;
+wire                        devtbl_wb_stb_o;
+wire                        devtbl_wb_we_o;
+wire [ARCHBITSZ -1 : 0]     devtbl_wb_addr_o;
+wire [(ARCHBITSZ/8) -1 : 0] devtbl_wb_sel_o;
+wire [ARCHBITSZ -1 : 0]     devtbl_wb_dat_o;
+wire                        devtbl_wb_bsy_i;
+wire                        devtbl_wb_ack_i;
+wire [ARCHBITSZ -1 : 0]     devtbl_wb_dat_i;
+
+pi1_to_wb4 #(
+
+	.ARCHBITSZ (ARCHBITSZ)
+
+) devtbl_wb (
+
+	 .rst_i (pi1r_rst_w)
+
+	,.clk_i (pi1r_clk_w)
+
+	,.pi1_op_i   (s_pi1r_op_w[S_PI1R_DEVTBL])
+	,.pi1_addr_i (s_pi1r_addr_w[S_PI1R_DEVTBL])
+	,.pi1_data_i (s_pi1r_data_w0[S_PI1R_DEVTBL])
+	,.pi1_data_o (s_pi1r_data_w1[S_PI1R_DEVTBL])
+	,.pi1_sel_i  (s_pi1r_sel_w[S_PI1R_DEVTBL])
+	,.pi1_rdy_o  (s_pi1r_rdy_w[S_PI1R_DEVTBL])
+
+	,.wb4_cyc_o   (devtbl_wb_cyc_o)
+	,.wb4_stb_o   (devtbl_wb_stb_o)
+	,.wb4_we_o    (devtbl_wb_we_o)
+	,.wb4_addr_o  (devtbl_wb_addr_o)
+	,.wb4_sel_o   (devtbl_wb_sel_o)
+	,.wb4_data_o  (devtbl_wb_dat_o)
+	,.wb4_stall_i (devtbl_wb_bsy_i)
+	,.wb4_ack_i   (devtbl_wb_ack_i)
+	,.wb4_data_i  (devtbl_wb_dat_i)
+);
 
 localparam RAMCACHEWAYCOUNT = 2;
 
@@ -437,13 +519,17 @@ devtbl #(
 
 	,.clk_i (pi1r_clk_w)
 
-	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_DEVTBL])
-	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_DEVTBL])
-	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_DEVTBL])
-	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_DEVTBL])
-	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_DEVTBL])
-	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_DEVTBL])
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_DEVTBL])
+	,.wb_cyc_i  (devtbl_wb_cyc_o)
+	,.wb_stb_i  (devtbl_wb_stb_o)
+	,.wb_we_i   (devtbl_wb_we_o)
+	,.wb_addr_i (devtbl_wb_addr_o[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8])
+	,.wb_sel_i  (devtbl_wb_sel_o)
+	,.wb_dat_i  (devtbl_wb_dat_o)
+	,.wb_bsy_o  (devtbl_wb_bsy_i)
+	,.wb_ack_o  (devtbl_wb_ack_i)
+	,.wb_dat_o  (devtbl_wb_dat_i)
+
+	,.mmapsz_o (s_pi1r_mapsz_w[S_PI1R_DEVTBL])
 
 	,.devtbl_id_flat_i      (devtbl_id_flat_w)
 	,.devtbl_mapsz_flat_i   (devtbl_mapsz_flat_w)
@@ -631,32 +717,42 @@ gpio #(
 assign devtbl_id_w     [S_PI1R_GP1IO] = 6;
 assign devtbl_useintr_w[S_PI1R_GP1IO] = 1;
 
-wire [2 -1 : 0]             intctrl_op_w;
-wire [ADDRBITSZ -1 : 0]     intctrl_addr_w;
-wire [(ARCHBITSZ/8) -1 : 0] intctrl_sel_w;
-wire [ARCHBITSZ -1 : 0]     intctrl_data_w1;
-wire [ARCHBITSZ -1 : 0]     intctrl_data_w0;
-wire                        intctrl_rdy_w;
-wire [ADDRBITSZ -1 : 0]     intctrl_mapsz_w;
-pi1_downconverter #(
-	 .MARCHBITSZ (PI1RARCHBITSZ)
-	,.SARCHBITSZ (ARCHBITSZ)
-) pi1_downconverter_intctrl (
-	 .clk_i (pi1r_clk_w)
-	,.m_pi1_op_i (s_pi1r_op_w[S_PI1R_INTCTRL])
-	,.m_pi1_addr_i (s_pi1r_addr_w[S_PI1R_INTCTRL])
-	,.m_pi1_data_i (s_pi1r_data_w0[S_PI1R_INTCTRL])
-	,.m_pi1_data_o (s_pi1r_data_w1[S_PI1R_INTCTRL])
-	,.m_pi1_sel_i (s_pi1r_sel_w[S_PI1R_INTCTRL])
-	,.m_pi1_rdy_o (s_pi1r_rdy_w[S_PI1R_INTCTRL])
-	,.m_pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_INTCTRL])
-	,.s_pi1_op_o (intctrl_op_w)
-	,.s_pi1_addr_o (intctrl_addr_w)
-	,.s_pi1_data_o (intctrl_data_w1)
-	,.s_pi1_data_i (intctrl_data_w0)
-	,.s_pi1_sel_o (intctrl_sel_w)
-	,.s_pi1_rdy_i (intctrl_rdy_w)
-	,.s_pi1_mapsz_i (intctrl_mapsz_w)
+wire                        intctrl_wb_cyc_o;
+wire                        intctrl_wb_stb_o;
+wire                        intctrl_wb_we_o;
+wire [ARCHBITSZ -1 : 0]     intctrl_wb_addr_o;
+wire [(ARCHBITSZ/8) -1 : 0] intctrl_wb_sel_o;
+wire [ARCHBITSZ -1 : 0]     intctrl_wb_dat_o;
+wire                        intctrl_wb_bsy_i;
+wire                        intctrl_wb_ack_i;
+wire [ARCHBITSZ -1 : 0]     intctrl_wb_dat_i;
+
+pi1_to_wb4 #(
+
+	.ARCHBITSZ (ARCHBITSZ)
+
+) intctrl_wb (
+
+	 .rst_i (pi1r_rst_w)
+
+	,.clk_i (pi1r_clk_w)
+
+	,.pi1_op_i   (s_pi1r_op_w[S_PI1R_INTCTRL])
+	,.pi1_addr_i (s_pi1r_addr_w[S_PI1R_INTCTRL])
+	,.pi1_data_i (s_pi1r_data_w0[S_PI1R_INTCTRL])
+	,.pi1_data_o (s_pi1r_data_w1[S_PI1R_INTCTRL])
+	,.pi1_sel_i  (s_pi1r_sel_w[S_PI1R_INTCTRL])
+	,.pi1_rdy_o  (s_pi1r_rdy_w[S_PI1R_INTCTRL])
+
+	,.wb4_cyc_o   (intctrl_wb_cyc_o)
+	,.wb4_stb_o   (intctrl_wb_stb_o)
+	,.wb4_we_o    (intctrl_wb_we_o)
+	,.wb4_addr_o  (intctrl_wb_addr_o)
+	,.wb4_sel_o   (intctrl_wb_sel_o)
+	,.wb4_data_o  (intctrl_wb_dat_o)
+	,.wb4_stall_i (intctrl_wb_bsy_i)
+	,.wb4_ack_i   (intctrl_wb_ack_i)
+	,.wb4_data_i  (intctrl_wb_dat_i)
 );
 
 intctrl #(
@@ -671,13 +767,17 @@ intctrl #(
 
 	,.clk_i (pi1r_clk_w)
 
-	,.pi1_op_i    (intctrl_op_w)
-	,.pi1_addr_i  (intctrl_addr_w)
-	,.pi1_data_i  (intctrl_data_w1)
-	,.pi1_data_o  (intctrl_data_w0)
-	,.pi1_sel_i   (intctrl_sel_w)
-	,.pi1_rdy_o   (intctrl_rdy_w)
-	,.pi1_mapsz_o (intctrl_mapsz_w)
+	,.wb_cyc_i  (intctrl_wb_cyc_o)
+	,.wb_stb_i  (intctrl_wb_stb_o)
+	,.wb_we_i   (intctrl_wb_we_o)
+	,.wb_addr_i (intctrl_wb_addr_o[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8])
+	,.wb_sel_i  (intctrl_wb_sel_o)
+	,.wb_dat_i  (intctrl_wb_dat_o)
+	,.wb_bsy_o  (intctrl_wb_bsy_i)
+	,.wb_ack_o  (intctrl_wb_ack_i)
+	,.wb_dat_o  (intctrl_wb_dat_i)
+
+	,.mmapsz_o (s_pi1r_mapsz_w[S_PI1R_INTCTRL])
 
 	,.intrqstdst_o (intrqstdst_w)
 	,.intrdydst_i  (intrdydst_w)
@@ -690,32 +790,42 @@ intctrl #(
 assign devtbl_id_w     [S_PI1R_INTCTRL] = 3;
 assign devtbl_useintr_w[S_PI1R_INTCTRL] = 0;
 
-wire [2 -1 : 0]             uart_op_w;
-wire [ADDRBITSZ -1 : 0]     uart_addr_w;
-wire [(ARCHBITSZ/8) -1 : 0] uart_sel_w;
-wire [ARCHBITSZ -1 : 0]     uart_data_w1;
-wire [ARCHBITSZ -1 : 0]     uart_data_w0;
-wire                        uart_rdy_w;
-wire [ADDRBITSZ -1 : 0]     uart_mapsz_w;
-pi1_downconverter #(
-	 .MARCHBITSZ (PI1RARCHBITSZ)
-	,.SARCHBITSZ (ARCHBITSZ)
-) pi1_downconverter_uart (
-	 .clk_i (pi1r_clk_w)
-	,.m_pi1_op_i (s_pi1r_op_w[S_PI1R_UART])
-	,.m_pi1_addr_i (s_pi1r_addr_w[S_PI1R_UART])
-	,.m_pi1_data_i (s_pi1r_data_w0[S_PI1R_UART])
-	,.m_pi1_data_o (s_pi1r_data_w1[S_PI1R_UART])
-	,.m_pi1_sel_i (s_pi1r_sel_w[S_PI1R_UART])
-	,.m_pi1_rdy_o (s_pi1r_rdy_w[S_PI1R_UART])
-	,.m_pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_UART])
-	,.s_pi1_op_o (uart_op_w)
-	,.s_pi1_addr_o (uart_addr_w)
-	,.s_pi1_data_o (uart_data_w1)
-	,.s_pi1_data_i (uart_data_w0)
-	,.s_pi1_sel_o (uart_sel_w)
-	,.s_pi1_rdy_i (uart_rdy_w)
-	,.s_pi1_mapsz_i (uart_mapsz_w)
+wire                        uart_wb_cyc_o;
+wire                        uart_wb_stb_o;
+wire                        uart_wb_we_o;
+wire [ARCHBITSZ -1 : 0]     uart_wb_addr_o;
+wire [(ARCHBITSZ/8) -1 : 0] uart_wb_sel_o;
+wire [ARCHBITSZ -1 : 0]     uart_wb_dat_o;
+wire                        uart_wb_bsy_i;
+wire                        uart_wb_ack_i;
+wire [ARCHBITSZ -1 : 0]     uart_wb_dat_i;
+
+pi1_to_wb4 #(
+
+	.ARCHBITSZ (ARCHBITSZ)
+
+) uart_wb (
+
+	 .rst_i (pi1r_rst_w)
+
+	,.clk_i (pi1r_clk_w)
+
+	,.pi1_op_i   (s_pi1r_op_w[S_PI1R_UART])
+	,.pi1_addr_i (s_pi1r_addr_w[S_PI1R_UART])
+	,.pi1_data_i (s_pi1r_data_w0[S_PI1R_UART])
+	,.pi1_data_o (s_pi1r_data_w1[S_PI1R_UART])
+	,.pi1_sel_i  (s_pi1r_sel_w[S_PI1R_UART])
+	,.pi1_rdy_o  (s_pi1r_rdy_w[S_PI1R_UART])
+
+	,.wb4_cyc_o   (uart_wb_cyc_o)
+	,.wb4_stb_o   (uart_wb_stb_o)
+	,.wb4_we_o    (uart_wb_we_o)
+	,.wb4_addr_o  (uart_wb_addr_o)
+	,.wb4_sel_o   (uart_wb_sel_o)
+	,.wb4_data_o  (uart_wb_dat_o)
+	,.wb4_stall_i (uart_wb_bsy_i)
+	,.wb4_ack_i   (uart_wb_ack_i)
+	,.wb4_data_i  (uart_wb_dat_i)
 );
 
 uart_hw #(
@@ -732,13 +842,17 @@ uart_hw #(
 	,.clk_i     (pi1r_clk_w)
 	,.clk_phy_i (pi1r_clk_w)
 
-	,.pi1_op_i    (uart_op_w)
-	,.pi1_addr_i  (uart_addr_w)
-	,.pi1_data_i  (uart_data_w1)
-	,.pi1_data_o  (uart_data_w0)
-	,.pi1_sel_i   (uart_sel_w)
-	,.pi1_rdy_o   (uart_rdy_w)
-	,.pi1_mapsz_o (uart_mapsz_w)
+	,.wb_cyc_i  (uart_wb_cyc_o)
+	,.wb_stb_i  (uart_wb_stb_o)
+	,.wb_we_i   (uart_wb_we_o)
+	,.wb_addr_i (uart_wb_addr_o[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8])
+	,.wb_sel_i  (uart_wb_sel_o)
+	,.wb_dat_i  (uart_wb_dat_o)
+	,.wb_bsy_o  (uart_wb_bsy_i)
+	,.wb_ack_o  (uart_wb_ack_i)
+	,.wb_dat_o  (uart_wb_dat_i)
+
+	,.mmapsz_o (s_pi1r_mapsz_w[S_PI1R_UART])
 
 	,.intrqst_o (intrqstsrc_w[INTCTRLSRC_UART])
 	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_UART])
@@ -750,32 +864,42 @@ uart_hw #(
 assign devtbl_id_w     [S_PI1R_UART] = 5;
 assign devtbl_useintr_w[S_PI1R_UART] = 1;
 
-wire [2 -1 : 0]             uart1_op_w;
-wire [ADDRBITSZ -1 : 0]     uart1_addr_w;
-wire [(ARCHBITSZ/8) -1 : 0] uart1_sel_w;
-wire [ARCHBITSZ -1 : 0]     uart1_data_w1;
-wire [ARCHBITSZ -1 : 0]     uart1_data_w0;
-wire                        uart1_rdy_w;
-wire [ADDRBITSZ -1 : 0]     uart1_mapsz_w;
-pi1_downconverter #(
-	 .MARCHBITSZ (PI1RARCHBITSZ)
-	,.SARCHBITSZ (ARCHBITSZ)
-) pi1_downconverter_uart1 (
-	 .clk_i (pi1r_clk_w)
-	,.m_pi1_op_i (s_pi1r_op_w[S_PI1R_UART1])
-	,.m_pi1_addr_i (s_pi1r_addr_w[S_PI1R_UART1])
-	,.m_pi1_data_i (s_pi1r_data_w0[S_PI1R_UART1])
-	,.m_pi1_data_o (s_pi1r_data_w1[S_PI1R_UART1])
-	,.m_pi1_sel_i (s_pi1r_sel_w[S_PI1R_UART1])
-	,.m_pi1_rdy_o (s_pi1r_rdy_w[S_PI1R_UART1])
-	,.m_pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_UART1])
-	,.s_pi1_op_o (uart1_op_w)
-	,.s_pi1_addr_o (uart1_addr_w)
-	,.s_pi1_data_o (uart1_data_w1)
-	,.s_pi1_data_i (uart1_data_w0)
-	,.s_pi1_sel_o (uart1_sel_w)
-	,.s_pi1_rdy_i (uart1_rdy_w)
-	,.s_pi1_mapsz_i (uart1_mapsz_w)
+wire                        uart1_wb_cyc_o;
+wire                        uart1_wb_stb_o;
+wire                        uart1_wb_we_o;
+wire [ARCHBITSZ -1 : 0]     uart1_wb_addr_o;
+wire [(ARCHBITSZ/8) -1 : 0] uart1_wb_sel_o;
+wire [ARCHBITSZ -1 : 0]     uart1_wb_dat_o;
+wire                        uart1_wb_bsy_i;
+wire                        uart1_wb_ack_i;
+wire [ARCHBITSZ -1 : 0]     uart1_wb_dat_i;
+
+pi1_to_wb4 #(
+
+	.ARCHBITSZ (ARCHBITSZ)
+
+) uart1_wb (
+
+	 .rst_i (pi1r_rst_w)
+
+	,.clk_i (pi1r_clk_w)
+
+	,.pi1_op_i   (s_pi1r_op_w[S_PI1R_UART1])
+	,.pi1_addr_i (s_pi1r_addr_w[S_PI1R_UART1])
+	,.pi1_data_i (s_pi1r_data_w0[S_PI1R_UART1])
+	,.pi1_data_o (s_pi1r_data_w1[S_PI1R_UART1])
+	,.pi1_sel_i  (s_pi1r_sel_w[S_PI1R_UART1])
+	,.pi1_rdy_o  (s_pi1r_rdy_w[S_PI1R_UART1])
+
+	,.wb4_cyc_o   (uart1_wb_cyc_o)
+	,.wb4_stb_o   (uart1_wb_stb_o)
+	,.wb4_we_o    (uart1_wb_we_o)
+	,.wb4_addr_o  (uart1_wb_addr_o)
+	,.wb4_sel_o   (uart1_wb_sel_o)
+	,.wb4_data_o  (uart1_wb_dat_o)
+	,.wb4_stall_i (uart1_wb_bsy_i)
+	,.wb4_ack_i   (uart1_wb_ack_i)
+	,.wb4_data_i  (uart1_wb_dat_i)
 );
 
 uart_hw #(
@@ -792,13 +916,17 @@ uart_hw #(
 	,.clk_i     (pi1r_clk_w)
 	,.clk_phy_i (pi1r_clk_w)
 
-	,.pi1_op_i    (uart1_op_w)
-	,.pi1_addr_i  (uart1_addr_w)
-	,.pi1_data_i  (uart1_data_w1)
-	,.pi1_data_o  (uart1_data_w0)
-	,.pi1_sel_i   (uart1_sel_w)
-	,.pi1_rdy_o   (uart1_rdy_w)
-	,.pi1_mapsz_o (uart1_mapsz_w)
+	,.wb_cyc_i  (uart1_wb_cyc_o)
+	,.wb_stb_i  (uart1_wb_stb_o)
+	,.wb_we_i   (uart1_wb_we_o)
+	,.wb_addr_i (uart1_wb_addr_o[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8])
+	,.wb_sel_i  (uart1_wb_sel_o)
+	,.wb_dat_i  (uart1_wb_dat_o)
+	,.wb_bsy_o  (uart1_wb_bsy_i)
+	,.wb_ack_o  (uart1_wb_ack_i)
+	,.wb_dat_o  (uart1_wb_dat_i)
+
+	,.mmapsz_o (s_pi1r_mapsz_w[S_PI1R_UART1])
 
 	,.intrqst_o (intrqstsrc_w[INTCTRLSRC_UART1])
 	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_UART1])
