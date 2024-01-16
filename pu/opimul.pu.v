@@ -56,7 +56,9 @@ output reg [ARCHBITSZ -1 : 0] data_o;
 // Reg set to the id of the gpr to which the result is to be stored.
 output reg [CLOG2GPRCNT -1 : 0] gprid_o;
 
-output wire rdy_o = 1'b1;
+output wire rdy_o;
+
+assign rdy_o = 1'b1;
 
 wire [(ARCHBITSZ*2) -1 : 0] rslt_unsigned =
 	(data_i[(ARCHBITSZ*2)-1:ARCHBITSZ] * data_i[ARCHBITSZ-1:0]);
