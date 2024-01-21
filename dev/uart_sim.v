@@ -11,13 +11,17 @@ module uart_sim (
 
 	,clk_i
 
-	,pi1_op_i
-	,pi1_addr_i /* not used */
-	,pi1_data_i
-	,pi1_data_o
-	,pi1_sel_i  /* not used */
-	,pi1_rdy_o
-	,pi1_mapsz_o
+	,wb_cyc_i
+	,wb_stb_i
+	,wb_we_i
+	,wb_addr_i
+	,wb_sel_i
+	,wb_dat_i
+	,wb_bsy_o
+	,wb_ack_o
+	,wb_dat_o
+
+	,mmapsz_o
 
 	,intrqst_o
 	,intrdy_i
@@ -38,40 +42,87 @@ input wire rst_i;
 
 input wire clk_i;
 
-input  wire [2 -1 : 0]             pi1_op_i;
-input  wire [ADDRBITSZ -1 : 0]     pi1_addr_i; /* not used */
-input  wire [ARCHBITSZ -1 : 0]     pi1_data_i;
-output reg  [ARCHBITSZ -1 : 0]     pi1_data_o = 0;
-input  wire [(ARCHBITSZ/8) -1 : 0] pi1_sel_i;  /* not used */
-output wire                        pi1_rdy_o;
-output wire [ARCHBITSZ -1 : 0]     pi1_mapsz_o;
+input  wire                        wb_cyc_i;
+input  wire                        wb_stb_i;
+input  wire                        wb_we_i;
+input  wire [ADDRBITSZ -1 : 0]     wb_addr_i;
+input  wire [(ARCHBITSZ/8) -1 : 0] wb_sel_i;
+input  wire [ARCHBITSZ -1 : 0]     wb_dat_i;
+output wire                        wb_bsy_o;
+output reg                         wb_ack_o;
+output wire [ARCHBITSZ -1 : 0]     wb_dat_o;
+
+output wire [ARCHBITSZ -1 : 0] mmapsz_o;
 
 output wire intrqst_o;
 input  wire intrdy_i;
 
-assign pi1_rdy_o = 1;
+assign wb_bsy_o = 1'b0;
 
-// Actual mapsz is (1*(ARCHBITSZ/8)), but aligning to 64bits.
-assign pi1_mapsz_o = (((ARCHBITSZ<64)?(64/ARCHBITSZ):1)*(ARCHBITSZ/8));
+assign mmapsz_o = ((128/ARCHBITSZ)*(ARCHBITSZ/8));
 
-reg [(CLOG2BUFSZ +1) -1 : 0] rx_usage_r = 0;
+reg                    wb_stb_r;
+reg                    wb_we_r;
+reg [ADDRBITSZ -1 : 0] wb_addr_r;
+reg [ARCHBITSZ -1 : 0] wb_dat_r;
 
-reg [(ARCHBITSZ-2) -1 : 0] intrqstthresh = 0;
+wire wb_stb_r_ = (wb_cyc_i && wb_stb_i);
 
-assign intrqst_o = (|intrqstthresh && (rx_usage_r >= intrqstthresh));
+always @ (posedge clk_i) begin
+	wb_stb_r <= wb_stb_r_ ;
+	if (wb_stb_r_) begin
+		wb_we_r <= wb_we_i;
+		wb_addr_r <= wb_addr_i;
+		wb_dat_r <= wb_dat_i;
+	end
+	wb_ack_o <= wb_stb_r;
+end
 
-localparam PINOOP = 2'b00;
-localparam PIWROP = 2'b01;
-localparam PIRDOP = 2'b10;
-localparam PIRWOP = 2'b11;
+localparam CMDDEVRDY         = 0;
+localparam CMDGETBUFFERUSAGE = 1;
+localparam CMDSETINTERRUPT   = 2;
+localparam CMDSETSPEED       = 3;
+
+reg [ARCHBITSZ -1 : 0] wb_dat_o_;
+
+// Half the memory mapping is used to send/receive data,
+// while the other half is used to issue commands.
+localparam CLOG264BYARCHBITSZ = clog2(64/ARCHBITSZ);
+
+wire iscmd = (!rst_i && wb_stb_r && wb_we_r && wb_addr_r[CLOG264BYARCHBITSZ]);
+
+wire prevcmdisdevrdy = (wb_dat_o_[1:0] == CMDDEVRDY);
+
+wire prevcmddone = (iscmd && prevcmdisdevrdy);
+
+wire cmddevrdy = (iscmd && wb_dat_r[1:0] == CMDDEVRDY);
+wire cmdgetbuf = (prevcmddone && wb_dat_r[1:0] == CMDGETBUFFERUSAGE);
+wire cmdsetint = (prevcmddone && wb_dat_r[1:0] == CMDSETINTERRUPT);
+wire cmdsetspd = (prevcmddone && wb_dat_r[1:0] == CMDSETSPEED);
+
+wire devrd = (!rst_i && wb_stb_r && !wb_we_r && !wb_addr_r[CLOG264BYARCHBITSZ] && prevcmdisdevrdy);
+wire devwr = (!rst_i && wb_stb_r &&  wb_we_r && !wb_addr_r[CLOG264BYARCHBITSZ] && prevcmdisdevrdy);
+
+wire            rx_read_w = devrd;
+wire [8 -1 : 0] rx_data_w0 = "\n";
+
+reg [(CLOG2BUFSZ +1) -1 : 0] rx_usage_r;
+
+reg [(ARCHBITSZ-2) -1 : 0] intrqstthresh;
+
+assign intrqst_o = (|intrqstthresh && (rx_usage_r >= intrqstthresh) &&
+	// Raise intrqst only when the device is ready for the next command,
+	// otherwise an interrupt would cause software to send the device a new
+	// command while it is not ready, waiting indefinitely for it to be ready.
+	prevcmdisdevrdy);
 
 // Register used to detect a falling edge on "intrdy_i".
-reg  intrdysampled = 0;
+reg  intrdysampled;
 wire intrdynegedge = (!intrdy_i && intrdysampled);
 
-localparam CMDGETBUFFERUSAGE = 0;
-localparam CMDSETINTERRUPT   = 1;
-localparam CMDSETSPEED       = 2;
+reg rx_read_w_sampled;
+
+assign wb_dat_o = (rx_read_w_sampled ? rx_data_w0 : wb_dat_o_);
 
 reg [ARCHBITSZ -1 : 0] cntr = 0;
 
@@ -81,37 +132,41 @@ always @ (posedge clk_i) begin
 		// On reset, interrupt is disabled, and must be explicitely enabled.
 		// It prevents unwanted interrupt after reset.
 		intrqstthresh <= 0;
-	end else if (pi1_op_i == PIRWOP && pi1_data_i[(ARCHBITSZ-1):(ARCHBITSZ-2)] == CMDSETINTERRUPT) begin
-		//intrqstthresh <= pi1_data_i[(ARCHBITSZ-2)-1:0]; /* ### Uncomment to generate interrupts */
-	end else if (intrdynegedge)
+	end else if (cmdsetint) begin
+		//intrqstthresh <= wb_dat_r[ARCHBITSZ-1:2]; /* ### Uncomment to generate interrupts */
+	end else if (intrdynegedge) begin
 		intrqstthresh <= 0;
-
-	// Logic handling memory access operations.
-	if (rst_i);
-	else if (pi1_op_i == PIRDOP)
-		pi1_data_o <= "\n";
-	else if (pi1_op_i == PIWROP) begin
-		$write("%c", pi1_data_i[7:0]); $fflush(1);
-	end else if (pi1_op_i == PIRWOP) begin
-		// Always return BUFSZ for buffers size and
-		// return rx_usage_r for receive buffer usage.
-		// Null is returned for any other commands.
-		pi1_data_o <= (
-			pi1_data_i[(ARCHBITSZ-1):(ARCHBITSZ-2)] == CMDSETINTERRUPT ? BUFSZ :
-			pi1_data_i[(ARCHBITSZ-1):(ARCHBITSZ-2)] == CMDGETBUFFERUSAGE ?
-				(pi1_data_i[(ARCHBITSZ-2)-1:0] ? 0 : rx_usage_r) : 0);
 	end
 
-	intrdysampled <= intrdy_i; // Sampling used for edge detection.
+	if (rst_i || cmddevrdy) begin
+		wb_dat_o_ <= {ARCHBITSZ{1'b0}};
+	end else if (cmdsetint) begin
+		wb_dat_o_ <= {BUFSZ[(ARCHBITSZ-2)-1:0], wb_dat_r[1:0]};
+	end else if (cmdgetbuf) begin
+		wb_dat_o_ <= {
+			{((ARCHBITSZ-2)-(CLOG2BUFSZ+1)){1'b0}},
+			(wb_dat_r[2] ? {(CLOG2BUFSZ+1){1'b0}} : rx_usage_r),
+			wb_dat_r[1:0]};
+	end else if (cmdsetspd) begin
+		wb_dat_o_ <= {{(ARCHBITSZ-2){1'b0}}, wb_dat_r[1:0]};
+	end
 
 	if (rst_i || cntr >= 100000000) begin
 		cntr <= 0;
 		rx_usage_r <= BUFSZ;
 	end else if (rx_usage_r) begin
-		if (pi1_op_i == PIRDOP)
+		if (devrd)
 			rx_usage_r <= rx_usage_r - 1'b1;
 	end else
 		cntr <= cntr + 1'b1;
+
+	if (devwr) begin
+		$write("%c", wb_dat_r[8 -1 : 0]); $fflush(1);
+	end
+
+	rx_read_w_sampled <= rx_read_w;
+
+	intrdysampled <= intrdy_i; // Sampling used for edge detection.
 end
 
 endmodule

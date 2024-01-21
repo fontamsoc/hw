@@ -25,7 +25,7 @@ __asm__ (
 
 	".size    _start, (. - _start)\n");
 
-#define __SERIAL0_ADDR (0x0ff8 /* By convention, the first UART is located at 0x0ff8 */)
+#define __SERIAL0_ADDR (0x0ff0 /* By convention, the first UART is located at 0x0ff0 */)
 #define __SERIAL0_BAUD 115200
 
 #include <hwdrvchar/hwdrvchar.h>
