@@ -4,7 +4,7 @@ litedram.c:1048:6:read_rst_dq_delay	0	static
 litedram.c:1088:6:read_inc_dq_bitslip	0	static
 litedram.c:1094:6:read_rst_dq_bitslip	0	static
 litedram.c:508:6:sdram_leveling_action.constprop	4	static
-litedram.c:91:12:putchar.isra	4	static
+litedram.c:91:12:putchar.isra	8	static
 litedram.c:95:12:puts.isra	8	static
 litedram.c:73:30:cdelay	0	static
 litedram.c:474:12:run_test_pattern.constprop	40	static
@@ -20,6 +20,6 @@ litedram.c:315:6:sdram_mode_register_write	0	static
 litedram.c:482:6:sdram_select	0	static
 litedram.c:491:6:sdram_deselect	0	static
 litedram.c:508:6:sdram_leveling_action	4	static
-litedram.c:1100:6:sdram_read_leveling	40	static
+litedram.c:1100:6:sdram_read_leveling	48	static
 litedram.c:1316:5:sdram_leveling	4	static
 litedram.c:1368:5:main	12	static

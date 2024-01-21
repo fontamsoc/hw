@@ -1,4 +1,4 @@
-litedram.c:71:12:putchar.isra	4	static
+litedram.c:71:12:putchar.isra	8	static
 litedram.c:75:12:puts.isra	8	static
 litedram.c:55:6:cdelay	0	static
 litedram.c:68:6:serial0_init	0	static
@@ -9,4 +9,4 @@ litedram.c:129:5:sdram_get_cwl	0	static
 litedram.c:264:6:sdram_software_control_on	4	static
 litedram.c:280:6:sdram_software_control_off	4	static
 litedram.c:299:6:sdram_mode_register_write	0	static
-litedram.c:1285:5:main	24	static
+litedram.c:1285:5:main	12	static
