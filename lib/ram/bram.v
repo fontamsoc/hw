@@ -46,11 +46,11 @@ initial begin
 		$readmemh (SRCFILE, u);
 		`ifdef SIMULATION
 		$display ("%s loaded", SRCFILE);
+		`endif
 		// Initial state initialized here, otherwise
 		// block ram fails to be inferred by yosys.
 		o0 = 0;
 		o1 = 0;
-		`endif
 	end
 end
 
