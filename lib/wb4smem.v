@@ -91,21 +91,17 @@ reg [CNTRBITSZ -1 : 0] cntr = 0;
 
 assign wb4_stall_o = |cntr;
 
-reg [ARCHBITSZ -1 : 0] u[SIZE -1 : 0];
-`ifdef SIMULATION
-integer init_u_idx;
-`endif
+reg [ARCHBITSZ -1 : 0] u [SIZE -1 : 0];
+
 initial begin
-	`ifdef SIMULATION
-	for (init_u_idx = 0; init_u_idx < SIZE; init_u_idx = init_u_idx + 1)
-		u[init_u_idx] = 0;
-	`endif
 	if (SRCFILE != "") begin
 		$readmemh (SRCFILE, u);
 		`ifdef SIMULATION
 		$display ("%s loaded", SRCFILE);
-		wb4_data_o = 0;
 		`endif
+		// Initial state initialized here, otherwise
+		// block ram fails to be inferred by yosys.
+		wb4_data_o = 0;
 	end
 end
 
@@ -146,21 +142,30 @@ wire [ARCHBITSZ -1 : 0] ram_w0 = u[addr_w];
 wire [ARCHBITSZ -1 : 0] ram_w1 = ((wb4_data_i & sel_w) | (ram_w0 & ~sel_w));
 
 always @ (posedge clk_i) begin
-	if (!wb4_stall_o && wb4_cyc_i && wb4_stb_i) begin
+
+	if (wb4_cyc_i && wb4_stb_i) begin
 		if (wb4_we_i)
 			u[addr_w] <= ram_w1;
 		else
 			wb4_data_o <= ram_w0;
-		wb4_ack_o <= 1;
-	end else
-		wb4_ack_o <= 0;
+	end
 
 	if (rst_i)
 		cntr <= 0;
 	else if (cntr)
 		cntr <= cntr - 1'b1;
-	else if (wb4_stb_i)
+	else if (wb4_cyc_i && wb4_stb_i)
 		cntr <= DELAY;
+
+	if (DELAY) begin
+		if (cntr == 1)
+			wb4_ack_o <= 1;
+		else
+			wb4_ack_o <= 0;
+	end else if (wb4_cyc_i && wb4_stb_i)
+		wb4_ack_o <= 1;
+	else
+		wb4_ack_o <= 0;
 end
 
 endmodule
