@@ -43,17 +43,17 @@
 `include "dev/uart_sim.v"
 
 //`define PI1QLITEDRAM
-//`define WB4SMEM
+//`define DCACHESRAM
 `ifdef PI1QLITEDRAM
 `include "dev/pi1_dcache.v"
 `include "dev/pi1q_to_wb4.v"
 `include "dev/pi1q_to_litedram.v"
 `include "./litedram/litedram.v"
-`elsif WB4SMEM
+`elsif DCACHESRAM
 `include "dev/pi1_upconverter.v"
-`include "dev/pi1_dcache.v"
+`include "dev/dcache.v"
 `include "dev/pi1_to_wb4.v"
-`include "lib/wb4smem.v"
+`include "dev/sram.v"
 `else
 `include "dev/smem.v"
 `endif
@@ -408,7 +408,7 @@ devtbl #(
 	 `ifdef PI1QLITEDRAM
 	,.RAMCACHESZ (RAMCACHESZ)
 	,.PRELDRADDR ('h1000)
-	`elsif WB4SMEM
+	`elsif DCACHESRAM
 	,.RAMCACHESZ (RAMCACHESZ)
 	,.PRELDRADDR ('h1000)
 	`endif
@@ -661,6 +661,7 @@ assign devtbl_useintr_w[S_PI1R_UART1] = 1;
 
 // The RAM ARCHBITSZ must be >= PI1RARCHBITSZ.
 `ifdef PI1QLITEDRAM
+
 generate if (ARCHBITSZ == 32 && ARCHBITSZ == PI1RARCHBITSZ) begin :gen_litedram0
 
 assign s_pi1r_mapsz_w[S_PI1R_RAM] = ('h2000000/* 32MB */);
@@ -842,23 +843,24 @@ $display("litedram ARCHBITSZ must be 32 and equal to PI1RARCHBITSZ\n");
 $finish;
 end
 end endgenerate
-`elsif WB4SMEM
+
+`elsif DCACHESRAM
 
 localparam RAMSZ = ('h2000000/* 32MB */);
 
-localparam WB4SMEM_ARCHBITSZ = 256; // Must be >= PI1RARCHBITSZ.
+localparam SRAM_ARCHBITSZ = 256; // Must be >= PI1RARCHBITSZ.
 
-wire [2 -1 : 0]                                                dcache_m_op_w;
-wire [(WB4SMEM_ARCHBITSZ - clog2(WB4SMEM_ARCHBITSZ/8)) -1 : 0] dcache_m_addr_w;
-wire [WB4SMEM_ARCHBITSZ -1 : 0]                                dcache_m_data_w1;
-wire [WB4SMEM_ARCHBITSZ -1 : 0]                                dcache_m_data_w0;
-wire [(WB4SMEM_ARCHBITSZ/8) -1 : 0]                            dcache_m_sel_w;
-wire                                                           dcache_m_rdy_w;
+wire [2 -1 : 0]                                          dcache_m_op_w;
+wire [(SRAM_ARCHBITSZ - clog2(SRAM_ARCHBITSZ/8)) -1 : 0] dcache_m_addr_w;
+wire [SRAM_ARCHBITSZ -1 : 0]                             dcache_m_data_w1;
+wire [SRAM_ARCHBITSZ -1 : 0]                             dcache_m_data_w0;
+wire [(SRAM_ARCHBITSZ/8) -1 : 0]                         dcache_m_sel_w;
+wire                                                     dcache_m_rdy_w;
 
 pi1_upconverter #(
 
 	 .MARCHBITSZ (PI1RARCHBITSZ)
-	,.SARCHBITSZ (WB4SMEM_ARCHBITSZ)
+	,.SARCHBITSZ (SRAM_ARCHBITSZ)
 
 ) pi1_upconverter (
 
@@ -879,6 +881,44 @@ pi1_upconverter #(
 	,.s_pi1_rdy_i  (dcache_m_rdy_w)
 );
 
+wire                             dcache_m_wb_cyc_o;
+wire                             dcache_m_wb_stb_o;
+wire                             dcache_m_wb_we_o;
+wire [SRAM_ARCHBITSZ -1 : 0]     dcache_m_wb_addr_o;
+wire [(SRAM_ARCHBITSZ/8) -1 : 0] dcache_m_wb_sel_o;
+wire [SRAM_ARCHBITSZ -1 : 0]     dcache_m_wb_dat_o;
+wire                             dcache_m_wb_bsy_i;
+wire                             dcache_m_wb_ack_i;
+wire [SRAM_ARCHBITSZ -1 : 0]     dcache_m_wb_dat_i;
+
+pi1_to_wb4 #(
+
+	.ARCHBITSZ (SRAM_ARCHBITSZ)
+
+) dcache_wb (
+
+	 .rst_i (pi1r_rst_w)
+
+	,.clk_i (pi1r_clk_w)
+
+	,.pi1_op_i   (dcache_m_op_w)
+	,.pi1_addr_i (dcache_m_addr_w)
+	,.pi1_data_i (dcache_m_data_w1)
+	,.pi1_data_o (dcache_m_data_w0)
+	,.pi1_sel_i  (dcache_m_sel_w)
+	,.pi1_rdy_o  (dcache_m_rdy_w)
+
+	,.wb4_cyc_o   (dcache_m_wb_cyc_o)
+	,.wb4_stb_o   (dcache_m_wb_stb_o)
+	,.wb4_we_o    (dcache_m_wb_we_o)
+	,.wb4_addr_o  (dcache_m_wb_addr_o)
+	,.wb4_sel_o   (dcache_m_wb_sel_o)
+	,.wb4_data_o  (dcache_m_wb_dat_o)
+	,.wb4_stall_i (dcache_m_wb_bsy_i)
+	,.wb4_ack_i   (dcache_m_wb_ack_i)
+	,.wb4_data_i  (dcache_m_wb_dat_i)
+);
+
 assign s_pi1r_mapsz_w[S_PI1R_RAM] = RAMSZ;
 
 reg [RST_CNTR_BITSZ -1 : 0] ram_rst_cntr = {RST_CNTR_BITSZ{1'b1}};
@@ -889,21 +929,31 @@ end
 // Because dcache.INITFILE is used only after a global reset, resetting RAM must happen only then.
 wire ram_rst_w = (|ram_rst_cntr);
 
-wire [2 -1 : 0]                                                dcache_s_op_w;
-wire [(WB4SMEM_ARCHBITSZ - clog2(WB4SMEM_ARCHBITSZ/8)) -1 : 0] dcache_s_addr_w;
-wire [WB4SMEM_ARCHBITSZ -1 : 0]                                dcache_s_data_w1;
-wire [WB4SMEM_ARCHBITSZ -1 : 0]                                dcache_s_data_w0;
-wire [(WB4SMEM_ARCHBITSZ/8) -1 : 0]                            dcache_s_sel_w;
-wire                                                           dcache_s_rdy_w;
+reg conly_r;
+always @ (posedge pi1r_clk_w) begin
+	if (ram_rst_cntr)
+		conly_r <= 1;
+	else if (devtbl_rst2_w)
+		conly_r <= 0;
+end
 
-localparam WB4SMEM_RAMCACHESZ = (RAMCACHESZ/(WB4SMEM_ARCHBITSZ/ARCHBITSZ));
+localparam SRAM_RAMCACHESZ = (RAMCACHESZ/(SRAM_ARCHBITSZ/ARCHBITSZ));
 
-pi1_dcache #(
+wire                             wb_cyc_w;
+wire                             wb_stb_w;
+wire                             wb_we_w;
+wire [SRAM_ARCHBITSZ -1 : 0]     wb_addr_w;
+wire [(SRAM_ARCHBITSZ/8) -1 : 0] wb_sel_w;
+wire [SRAM_ARCHBITSZ -1 : 0]     wb_dat_w0;
+wire                             wb_bsy_w;
+wire                             wb_ack_w;
+wire [SRAM_ARCHBITSZ -1 : 0]     wb_dat_w1;
 
-	 .ARCHBITSZ     (WB4SMEM_ARCHBITSZ)
-	,.CACHESETCOUNT (WB4SMEM_RAMCACHESZ)
+dcache #(
+
+	 .ARCHBITSZ     (SRAM_ARCHBITSZ)
+	,.CACHESETCOUNT (SRAM_RAMCACHESZ)
 	,.CACHEWAYCOUNT (RAMCACHEWAYCOUNT)
-	,.BUFFERDEPTH   (64)
 	,.INITFILE      ("dcacheinit/dcacheinit.hex")
 
 ) dcache (
@@ -912,87 +962,55 @@ pi1_dcache #(
 
 	,.clk_i (pi1r_clk_w)
 
-	,.crst_i    (ram_rst_w || devtbl_rst2_w)
-	,.cenable_i (1'b1)
-	,.conly_i   (ram_rst_w)
+	,.crst_i  (1'b0)
+	,.conly_i (conly_r)
+	,.cmiss_i (1'b0)
 
-	,.m_pi1_op_i   (dcache_m_op_w)
-	,.m_pi1_addr_i (dcache_m_addr_w)
-	,.m_pi1_data_i (dcache_m_data_w1)
-	,.m_pi1_data_o (dcache_m_data_w0)
-	,.m_pi1_sel_i  (dcache_m_sel_w)
-	,.m_pi1_rdy_o  (dcache_m_rdy_w)
+	,.m_wb_cyc_i  (dcache_m_wb_cyc_o)
+	,.m_wb_stb_i  (dcache_m_wb_stb_o)
+	,.m_wb_we_i   (dcache_m_wb_we_o)
+	,.m_wb_addr_i (dcache_m_wb_addr_o[SRAM_ARCHBITSZ -1 : clog2(SRAM_ARCHBITSZ/8)])
+	,.m_wb_sel_i  (dcache_m_wb_sel_o)
+	,.m_wb_dat_i  (dcache_m_wb_dat_o)
+	,.m_wb_bsy_o  (dcache_m_wb_bsy_i)
+	,.m_wb_ack_o  (dcache_m_wb_ack_i)
+	,.m_wb_dat_o  (dcache_m_wb_dat_i)
 
-	,.s_pi1_op_o   (dcache_s_op_w)
-	,.s_pi1_addr_o (dcache_s_addr_w)
-	,.s_pi1_data_i (dcache_s_data_w1)
-	,.s_pi1_data_o (dcache_s_data_w0)
-	,.s_pi1_sel_o  (dcache_s_sel_w)
-	,.s_pi1_rdy_i  (dcache_s_rdy_w)
+	,.s_wb_cyc_o  (wb_cyc_w)
+	,.s_wb_stb_o  (wb_stb_w)
+	,.s_wb_we_o   (wb_we_w)
+	,.s_wb_addr_o (wb_addr_w[SRAM_ARCHBITSZ -1 : clog2(SRAM_ARCHBITSZ/8)])
+	,.s_wb_sel_o  (wb_sel_w)
+	,.s_wb_dat_o  (wb_dat_w0)
+	,.s_wb_bsy_i  (wb_bsy_w)
+	,.s_wb_ack_i  (wb_ack_w)
+	,.s_wb_dat_i  (wb_dat_w1)
 );
 
-wire                                wb4_cyc_w;
-wire                                wb4_stb_w;
-wire                                wb4_we_w;
-wire [WB4SMEM_ARCHBITSZ -1 : 0]     wb4_addr_w;
-wire [WB4SMEM_ARCHBITSZ -1 : 0]     wb4_data_w0;
-wire [(WB4SMEM_ARCHBITSZ/8) -1 : 0] wb4_sel_w;
-wire                                wb4_stall_w;
-wire                                wb4_ack_w;
-wire [WB4SMEM_ARCHBITSZ -1 : 0]     wb4_data_w1;
+sram #(
 
-pi1_to_wb4 #(
-
-	.ARCHBITSZ (WB4SMEM_ARCHBITSZ)
-
-) pi1_to_wb4 (
-
-	 .rst_i (ram_rst_w)
-
-	,.clk_i (pi1r_clk_w)
-
-	,.pi1_op_i    (dcache_s_op_w)
-	,.pi1_addr_i  (dcache_s_addr_w)
-	,.pi1_data_i  (dcache_s_data_w0)
-	,.pi1_data_o  (dcache_s_data_w1)
-	,.pi1_sel_i   (dcache_s_sel_w)
-	,.pi1_rdy_o   (dcache_s_rdy_w)
-
-	,.wb4_cyc_o   (wb4_cyc_w)
-	,.wb4_stb_o   (wb4_stb_w)
-	,.wb4_we_o    (wb4_we_w)
-	,.wb4_addr_o  (wb4_addr_w)
-	,.wb4_data_o  (wb4_data_w0)
-	,.wb4_sel_o   (wb4_sel_w)
-	,.wb4_stall_i (wb4_stall_w)
-	,.wb4_ack_i   (wb4_ack_w)
-	,.wb4_data_i  (wb4_data_w1)
-);
-
-wb4smem #(
-
-	 .ARCHBITSZ (WB4SMEM_ARCHBITSZ)
-	,.SIZE      (RAMSZ/(WB4SMEM_ARCHBITSZ/ARCHBITSZ))
+	 .ARCHBITSZ (SRAM_ARCHBITSZ)
+	,.SIZE      (RAMSZ/(SRAM_ARCHBITSZ/ARCHBITSZ))
 	,.DELAY     (0)
 
-) wb4smem (
+) sram (
 
 	 .rst_i (ram_rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
-	,.wb4_cyc_i   (wb4_cyc_w)
-	,.wb4_stb_i   (wb4_stb_w)
-	,.wb4_we_i    (wb4_we_w)
-	,.wb4_addr_i  (wb4_addr_w)
-	,.wb4_data_o  (wb4_data_w1)
-	,.wb4_sel_i   (wb4_sel_w)
-	,.wb4_stall_o (wb4_stall_w)
-	,.wb4_ack_o   (wb4_ack_w)
-	,.wb4_data_i  (wb4_data_w0)
+	,.wb_cyc_i  (wb_cyc_w)
+	,.wb_stb_i  (wb_stb_w)
+	,.wb_we_i   (wb_we_w)
+	,.wb_addr_i (wb_addr_w[SRAM_ARCHBITSZ -1 : clog2(SRAM_ARCHBITSZ/8)])
+	,.wb_sel_i  (wb_sel_w)
+	,.wb_dat_i  (wb_dat_w0)
+	,.wb_bsy_o  (wb_bsy_w)
+	,.wb_ack_o  (wb_ack_w)
+	,.wb_dat_o  (wb_dat_w1)
 );
 
-`else /* WB4SMEM */
+`else /* !DCACHESRAM */
 
 smem #(
 
@@ -1015,7 +1033,7 @@ smem #(
 	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_RAM])
 );
 
-`endif /* WB4SMEM */
+`endif /* !DCACHESRAM */
 
 assign devtbl_id_w     [S_PI1R_RAM] = 1;
 assign devtbl_useintr_w[S_PI1R_RAM] = 0;
