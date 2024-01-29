@@ -101,15 +101,15 @@ reg [2 -1 : 0] state;
 (* direct_enable = "true" *)
 wire cache_stb = (!rst_i && state == IDLE && _m_wb_stb_i);
 
-reg cache_hit; // ### comb-block-reg.
-
-wire conly_r_or_cache_hit = (conly_r || cache_hit);
-
-wire cache_we = (!rst_i && (
-	(state == TESTHIT && conly_r_or_cache_hit && m_wb_we_r) ||
-	(s_wb_cyc_o && !s_wb_we_o && s_wb_ack_i && !cmiss_r)));
+reg cache_tag_hit; // ### comb-block-reg.
 
 reg [CLOG2CACHEWAYCOUNT -1 : 0] cache_we_wayidx;
+
+wire cache_we = (!rst_i && (
+	(state == TESTHIT && (conly_r || cache_tag_hit ||
+		(!cache_drt_o[cache_we_wayidx] && !cmiss_r)) && m_wb_we_r) ||
+	(state == EVICT && s_wb_ack_i && m_wb_we_r) ||
+	(s_wb_cyc_o && !s_wb_we_o && s_wb_ack_i && !cmiss_r)));
 
 localparam CACHETAGBITSIZE = (ADDRBITSZ - CLOG2CACHESETCOUNT);
 
@@ -117,22 +117,33 @@ wire [CLOG2CACHESETCOUNT -1 : 0] cache_rdidx = m_wb_addr_i[CLOG2CACHESETCOUNT -1
 wire [CLOG2CACHESETCOUNT -1 : 0] cache_wridx = m_wb_addr_r[CLOG2CACHESETCOUNT -1 : 0];
 
 reg [CACHETAGBITSIZE -1 : 0] cache_tag_o [CACHEWAYCOUNT -1 : 0];
+reg [(ARCHBITSZ/8) -1 : 0]   cache_sel_o [CACHEWAYCOUNT -1 : 0];
 reg [ARCHBITSZ -1 : 0]       cache_dat_o [CACHEWAYCOUNT -1 : 0];
 reg                          cache_drt_o [CACHEWAYCOUNT -1 : 0];
 
-reg [CLOG2CACHEWAYCOUNT -1 : 0] cache_hit_wayidx; // ### comb-block-reg.
+reg [CLOG2CACHEWAYCOUNT -1 : 0] cache_tag_hit_wayidx; // ### comb-block-reg.
 
 wire [CACHETAGBITSIZE -1 : 0] cache_tag_i = m_wb_addr_r[ADDRBITSZ -1 : CLOG2CACHESETCOUNT];
 
-wire [ARCHBITSZ -1 : 0] _m_wb_sel_r;
-wire [ARCHBITSZ -1 : 0] m_wb_dat_r_and__m_wb_sel_r = (m_wb_dat_r & _m_wb_sel_r);
-wire [ARCHBITSZ -1 : 0] _m_wb_sel_r_n = ~_m_wb_sel_r;
-wire [ARCHBITSZ -1 : 0] cache_dat_i = ((state == TESTHIT) ?
-	(m_wb_dat_r_and__m_wb_sel_r | (cache_dat_o[cache_hit_wayidx] & _m_wb_sel_r_n)) :
-	(m_wb_we_r ? (m_wb_dat_r_and__m_wb_sel_r | (s_wb_dat_i & _m_wb_sel_r_n)) :
-	             s_wb_dat_i));
+wire [(ARCHBITSZ/8) -1 : 0] cache_sel_o_tag_hit = cache_sel_o[cache_tag_hit_wayidx];
+wire [(ARCHBITSZ/8) -1 : 0] cache_sel_i = (
+	(conly_r || cmiss_r) ? {(ARCHBITSZ/8){1'b0}} :
+	(state == TESTHIT) ? (cache_tag_hit ? (m_wb_sel_r | cache_sel_o_tag_hit) : m_wb_sel_r) :
+	(state == EVICT) ? m_wb_sel_r :
+	(state == REFILL) ? {(ARCHBITSZ/8){1'b1}} : {(ARCHBITSZ/8){1'b0}});
 
-wire cache_drt_i = (!rst_r && !conly_r && !cmiss_r && m_wb_we_r);
+wire [ARCHBITSZ -1 : 0] _m_wb_sel_r;
+wire [ARCHBITSZ -1 : 0] _m_wb_sel_r_n = ~_m_wb_sel_r;
+wire [ARCHBITSZ -1 : 0] _cache_sel_o_tag_hit;
+wire [ARCHBITSZ -1 : 0] _cache_sel_o_tag_hit_n = ~_cache_sel_o_tag_hit;
+wire [ARCHBITSZ -1 : 0] cache_dat_i = ((state == TESTHIT || state == EVICT) ?
+	((m_wb_dat_r & _m_wb_sel_r) | (cache_dat_o[cache_tag_hit_wayidx] & _m_wb_sel_r_n)) :
+	(cache_tag_hit ?
+		((cache_dat_o[cache_tag_hit_wayidx] & _cache_sel_o_tag_hit) |
+			(s_wb_dat_i & _cache_sel_o_tag_hit_n)) :
+		s_wb_dat_i));
+
+wire cache_drt_i = (!rst_r && !conly_r && !cmiss_r && (m_wb_we_r || cache_tag_hit));
 
 genvar gen_cache_idx;
 generate for (
@@ -141,6 +152,7 @@ generate for (
 	gen_cache_idx = gen_cache_idx + 1) begin :gen_cache
 
 	reg [CACHETAGBITSIZE -1 : 0] cache_tags [CACHESETCOUNT -1 : 0];
+	reg [(ARCHBITSZ/8) -1 : 0]   cache_sels [CACHESETCOUNT -1 : 0];
 	reg [ARCHBITSZ -1 : 0]       cache_dats [CACHESETCOUNT -1 : 0];
 	reg                          cache_drts [CACHESETCOUNT -1 : 0];
 
@@ -159,44 +171,50 @@ generate for (
 	always @ (posedge clk_i) begin
 		if (cache_stb) begin
 			cache_tag_o[gen_cache_idx] <= cache_tags[cache_rdidx];
+			cache_sel_o[gen_cache_idx] <= cache_sels[cache_rdidx];
 			cache_dat_o[gen_cache_idx] <= cache_dats[cache_rdidx];
 			cache_drt_o[gen_cache_idx] <= cache_drts[cache_rdidx];
 		end
 	end
 
-	wire _cache_we = (cache_we && gen_cache_idx == (cache_hit ? cache_hit_wayidx : cache_we_wayidx));
+	wire _cache_we = (cache_we &&
+		gen_cache_idx == (cache_tag_hit ? cache_tag_hit_wayidx : cache_we_wayidx));
 
 	always @ (posedge clk_i) begin
 		if (_cache_we) begin
 			cache_tags[cache_wridx] <= cache_tag_i;
 			cache_dats[cache_wridx] <= cache_dat_i;
 		end
-		if (rst_r || _cache_we)
+		if (rst_r || _cache_we) begin
+			cache_sels[cache_wridx] <= cache_sel_i;
 			cache_drts[cache_wridx] <= cache_drt_i;
+		end
 	end
 
 end endgenerate
 
 integer gen_cachehit_idx;
 always @* begin
-	cache_hit = 0;
-	cache_hit_wayidx = 0;
+	cache_tag_hit = 0;
+	cache_tag_hit_wayidx = 0;
 	for (
 		gen_cachehit_idx = 0;
 		gen_cachehit_idx < CACHEWAYCOUNT;
 		gen_cachehit_idx = gen_cachehit_idx + 1) begin
-		if (!cache_hit && !conly_r &&
+		if (!cache_tag_hit && !conly_r && cache_sel_o[gen_cachehit_idx] &&
 			m_wb_addr_r[ADDRBITSZ -1 : CLOG2CACHESETCOUNT] == cache_tag_o[gen_cachehit_idx]) begin
-			cache_hit = 1;
-			cache_hit_wayidx = gen_cachehit_idx;
+			cache_tag_hit = 1;
+			cache_tag_hit_wayidx = gen_cachehit_idx;
 		end
 	end
 end
+// There is a cachehit when there is a cache tag hit and the selected bits are in the cache.
+wire cache_hit = (cache_tag_hit && ((m_wb_sel_r & cache_sel_o_tag_hit) == m_wb_sel_r));
 
 always @ (posedge clk_i) begin
 	if (CACHEWAYCOUNT == 1 || (cache_stb && conly_i) || conly_r) begin
 		cache_we_wayidx <= 0;
-	end else if (cache_we && !cache_hit) begin
+	end else if (cache_we && !cache_tag_hit) begin
 		cache_we_wayidx <= cache_we_wayidx + 1'b1;
 	end
 end
@@ -252,26 +270,33 @@ always @ (posedge clk_i) begin
 
 	end else if (state == TESTHIT) begin
 
-		if (conly_r_or_cache_hit && !cmiss_r) begin
+		if ((conly_r || cache_hit || (cache_tag_hit && m_wb_we_r)) && !cmiss_r) begin
 
 			m_wb_bsy_o <= 0;
 			m_wb_ack_o <= 1;
 
 			if (!m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
-				m_wb_dat_o <= cache_dat_o[cache_hit_wayidx];
+				m_wb_dat_o <= cache_dat_o[cache_tag_hit_wayidx];
 
 			state <= IDLE;
 
-		end else if (cache_drt_o[cache_we_wayidx] && !cmiss_r) begin
+		end else if (cache_drt_o[cache_we_wayidx] && !cache_tag_hit && !cmiss_r) begin
 
 			s_wb_cyc_o <= 1;
 			s_wb_stb_o <= 1;
 			s_wb_we_o <= 1;
 			s_wb_addr_o <= {cache_tag_o[cache_we_wayidx], cache_wridx};
-			s_wb_sel_o <= {(ARCHBITSZ/8){1'b1}};
+			s_wb_sel_o <= cache_sel_o[cache_we_wayidx];
 			s_wb_dat_o <= cache_dat_o[cache_we_wayidx];
 
 			state <= EVICT;
+
+		end else if (m_wb_we_r && !cmiss_r) begin
+
+			m_wb_bsy_o <= 0;
+			m_wb_ack_o <= 1;
+
+			state <= IDLE;
 
 		end else begin
 
@@ -290,12 +315,25 @@ always @ (posedge clk_i) begin
 
 		if (s_wb_ack_i) begin
 
-			s_wb_stb_o <= 1;
-			s_wb_we_o <= 0;
-			s_wb_addr_o <= m_wb_addr_r;
-			s_wb_sel_o <= {(ARCHBITSZ/8){1'b1}};
+			if (m_wb_we_r) begin
 
-			state <= REFILL;
+				m_wb_bsy_o <= 0;
+				m_wb_ack_o <= 1;
+
+				s_wb_cyc_o <= 0;
+				s_wb_stb_o <= 0;
+
+				state <= IDLE;
+
+			end else begin
+
+				s_wb_stb_o <= 1;
+				s_wb_we_o <= 0;
+				s_wb_addr_o <= m_wb_addr_r;
+				s_wb_sel_o <= {(ARCHBITSZ/8){1'b1}};
+
+				state <= REFILL;
+			end
 
 		end else if (!s_wb_bsy_i)
 			s_wb_stb_o <= 0;
@@ -349,6 +387,37 @@ generate if (ARCHBITSZ == 256) begin
 		{8{m_wb_sel_r[11]}}, {8{m_wb_sel_r[10]}}, {8{m_wb_sel_r[9]}}, {8{m_wb_sel_r[8]}},
 		{8{m_wb_sel_r[7]}}, {8{m_wb_sel_r[6]}}, {8{m_wb_sel_r[5]}}, {8{m_wb_sel_r[4]}},
 		{8{m_wb_sel_r[3]}}, {8{m_wb_sel_r[2]}}, {8{m_wb_sel_r[1]}}, {8{m_wb_sel_r[0]}}};
+end endgenerate
+
+generate if (ARCHBITSZ == 16) begin
+	assign _cache_sel_o_tag_hit = {{8{cache_sel_o_tag_hit[1]}}, {8{cache_sel_o_tag_hit[0]}}};
+end endgenerate
+generate if (ARCHBITSZ == 32) begin
+	assign _cache_sel_o_tag_hit = {
+		{8{cache_sel_o_tag_hit[3]}}, {8{cache_sel_o_tag_hit[2]}}, {8{cache_sel_o_tag_hit[1]}}, {8{cache_sel_o_tag_hit[0]}}};
+end endgenerate
+generate if (ARCHBITSZ == 64) begin
+	assign _cache_sel_o_tag_hit = {
+		{8{cache_sel_o_tag_hit[7]}}, {8{cache_sel_o_tag_hit[6]}}, {8{cache_sel_o_tag_hit[5]}}, {8{cache_sel_o_tag_hit[4]}},
+		{8{cache_sel_o_tag_hit[3]}}, {8{cache_sel_o_tag_hit[2]}}, {8{cache_sel_o_tag_hit[1]}}, {8{cache_sel_o_tag_hit[0]}}};
+end endgenerate
+generate if (ARCHBITSZ == 128) begin
+	assign _cache_sel_o_tag_hit = {
+		{8{cache_sel_o_tag_hit[15]}}, {8{cache_sel_o_tag_hit[14]}}, {8{cache_sel_o_tag_hit[13]}}, {8{cache_sel_o_tag_hit[12]}},
+		{8{cache_sel_o_tag_hit[11]}}, {8{cache_sel_o_tag_hit[10]}}, {8{cache_sel_o_tag_hit[9]}}, {8{cache_sel_o_tag_hit[8]}},
+		{8{cache_sel_o_tag_hit[7]}}, {8{cache_sel_o_tag_hit[6]}}, {8{cache_sel_o_tag_hit[5]}}, {8{cache_sel_o_tag_hit[4]}},
+		{8{cache_sel_o_tag_hit[3]}}, {8{cache_sel_o_tag_hit[2]}}, {8{cache_sel_o_tag_hit[1]}}, {8{cache_sel_o_tag_hit[0]}}};
+end endgenerate
+generate if (ARCHBITSZ == 256) begin
+	assign _cache_sel_o_tag_hit = {
+		{8{cache_sel_o_tag_hit[31]}}, {8{cache_sel_o_tag_hit[30]}}, {8{cache_sel_o_tag_hit[29]}}, {8{cache_sel_o_tag_hit[28]}},
+		{8{cache_sel_o_tag_hit[27]}}, {8{cache_sel_o_tag_hit[26]}}, {8{cache_sel_o_tag_hit[25]}}, {8{cache_sel_o_tag_hit[24]}},
+		{8{cache_sel_o_tag_hit[23]}}, {8{cache_sel_o_tag_hit[22]}}, {8{cache_sel_o_tag_hit[21]}}, {8{cache_sel_o_tag_hit[20]}},
+		{8{cache_sel_o_tag_hit[19]}}, {8{cache_sel_o_tag_hit[18]}}, {8{cache_sel_o_tag_hit[17]}}, {8{cache_sel_o_tag_hit[16]}},
+		{8{cache_sel_o_tag_hit[15]}}, {8{cache_sel_o_tag_hit[14]}}, {8{cache_sel_o_tag_hit[13]}}, {8{cache_sel_o_tag_hit[12]}},
+		{8{cache_sel_o_tag_hit[11]}}, {8{cache_sel_o_tag_hit[10]}}, {8{cache_sel_o_tag_hit[9]}}, {8{cache_sel_o_tag_hit[8]}},
+		{8{cache_sel_o_tag_hit[7]}}, {8{cache_sel_o_tag_hit[6]}}, {8{cache_sel_o_tag_hit[5]}}, {8{cache_sel_o_tag_hit[4]}},
+		{8{cache_sel_o_tag_hit[3]}}, {8{cache_sel_o_tag_hit[2]}}, {8{cache_sel_o_tag_hit[1]}}, {8{cache_sel_o_tag_hit[0]}}};
 end endgenerate
 
 endmodule
