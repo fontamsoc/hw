@@ -53,20 +53,28 @@ always @ (posedge clk_i) begin
 			instrfetchmemrqst <= 0;
 
 	end else if (icachecheck && !instrbufrst) begin
-		// I check whether there is a valid cached data.
-		if (icachehit) begin
-			// I increment instrbufwriteidx to the index
-			// within the instruction buffer where the next data
-			// to fetch is to be stored.
-			instrbufwriteidx <= instrbufwriteidx + 1'b1;
+		`ifdef PUREGICACHEHIT
+		if (icachebsy) // 1 clock cycle needed to compute cachehit.
+			icachebsy <= 0;
+		else begin
+		`endif
+			// I check whether there is a valid cached data.
+			if (icachehit) begin
+				// I increment instrbufwriteidx to the index
+				// within the instruction buffer where the next data
+				// to fetch is to be stored.
+				instrbufwriteidx <= instrbufwriteidx + 1'b1;
 
-		end else begin
-			// I get here, if a hit could not be found in the cache;
-			// I proceed to fetching data.
-			instrfetchmemrqst <= 1;
+			end else begin
+				// I get here, if a hit could not be found in the cache;
+				// I proceed to fetching data.
+				instrfetchmemrqst <= 1;
+			end
+
+			icachecheck <= 0;
+		`ifdef PUREGICACHEHIT
 		end
-
-		icachecheck <= 0;
+		`endif
 
 	end else if (instrbufrst || !instrfetchfaulted) begin
 		// Empty the instruction buffer if instrbufrst is 1.
@@ -116,6 +124,9 @@ always @ (posedge clk_i) begin
 				if (icacheactive) begin
 					// Proceed to checking the instruction cache.
 					icachecheck <= 1;
+					`ifdef PUREGICACHEHIT
+					icachebsy <= 1;
+					`endif
 					// Set instrfetchmemrqst to 0 in case it was still 1.
 					instrfetchmemrqst <= 0;
 				end else begin

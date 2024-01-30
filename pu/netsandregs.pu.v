@@ -1104,17 +1104,40 @@ wire [ICACHETAGBITSIZE -1 : 0] icachetago [ICACHEWAYCOUNT -1 : 0];
 
 wire [ICACHEWAYCOUNT -1 : 0] icachevalido;
 
+`ifdef PUREGICACHEHIT
+reg [CLOG2ICACHEWAYCOUNT -1 : 0] icachewayhitidx_; // ### comb-block-reg.
+reg icachehit__; // ### comb-block-reg.
+reg [CLOG2ICACHEWAYCOUNT -1 : 0] icachewayhitidx;
+reg icachehit_;
+always @ (posedge clk_i) begin
+	icachehit_ <= icachehit__;
+	icachewayhitidx <= icachewayhitidx_;
+end
+`else
 reg [CLOG2ICACHEWAYCOUNT -1 : 0] icachewayhitidx; // ### comb-block-reg.
 reg icachehit_; // ### comb-block-reg.
+`endif
 integer gen_icachehit_idx;
 always @* begin
+	`ifdef PUREGICACHEHIT
+	icachehit__ = 0;
+	icachewayhitidx_ = 0;
+	`else
 	icachehit_ = 0;
 	icachewayhitidx = 0;
+	`endif
 	for (gen_icachehit_idx = 0; gen_icachehit_idx < ICACHEWAYCOUNT; gen_icachehit_idx = gen_icachehit_idx + 1) begin
+		`ifdef PUREGICACHEHIT
+		if (!icachehit__ && (icachevalido[gen_icachehit_idx] && (icachetag == icachetago[gen_icachehit_idx]))) begin
+			icachehit__ = 1;
+			icachewayhitidx_ = gen_icachehit_idx;
+		end
+		`else
 		if (!icachehit_ && (icachevalido[gen_icachehit_idx] && (icachetag == icachetago[gen_icachehit_idx]))) begin
 			icachehit_ = 1;
 			icachewayhitidx = gen_icachehit_idx;
 		end
+		`endif
 	end
 end
 
@@ -1203,7 +1226,9 @@ bram #(
 
 end endgenerate
 
-assign instrbufwe = ((instrfetchmemrqstdone || (icachecheck && icachehit)) && !instrbufrst);
+reg icachebsy = 0;
+
+assign instrbufwe = ((instrfetchmemrqstdone || (icachecheck && icachehit && !icachebsy)) && !instrbufrst);
 
 assign instrbufi = (instrfetchmemrqstdone ? pi1_data_i : icachedato);
 
