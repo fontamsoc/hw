@@ -746,7 +746,7 @@ wire isopgettlb_or_isopclrtlb_found_posedge;
 // ---------- Registers and nets implementing the mmu ----------
 
 wire istlbop = (isopsettlb || isopclrtlb || isopgettlb);
-wire tlbbsy = (miscrdyandsequencerreadyandgprrdy12 && istlbop);
+wire _istlbop = (miscrdyandsequencerreadyandgprrdy12 && istlbop);
 
 // Register holding KernelSpaceLimit value.
 // When in usermode and running in kernelspace,
@@ -813,7 +813,7 @@ wire dtlbwe = (
 reg [CLOG2TLBWAYCOUNT -1 : 0] itlbwayhitidx; // ### comb-block-reg.
 reg [CLOG2TLBWAYCOUNT -1 : 0] itlbwaywriteidx; // Register used to hold itlb-way index to write next.
 // Nets implementing checking the tlb for instruction fetching.
-wire[CLOG2TLBSETCOUNT -1 : 0] itlbset = (tlbbsy ? dtlbset :
+wire[CLOG2TLBSETCOUNT -1 : 0] itlbset = (_istlbop ? dtlbset :
 	instrfetchnextaddr[(CLOG2TLBSETCOUNT +ADDRWITHINPAGEBITSZ) -1 : ADDRWITHINPAGEBITSZ]);
 wire[TLBENTRYBITSZ -1 : 0] itlbentry [TLBWAYCOUNT -1 : 0];
 wire[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0] itlbtag [TLBWAYCOUNT -1 : 0];
@@ -1034,7 +1034,7 @@ localparam KERNELSPACESTART = 'h1000;
 assign ioutofrange = (instrfetchnextaddr < (KERNELSPACESTART >> CLOG2ARCHBITSZBY8) || (instrfetchnextaddr >= ksl[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8]));
 assign doutofrange = (gprdata2 < KERNELSPACESTART || gprdata2 >= ksl);
 
-wire itlb_and_instrbuf_rdy = (((!(inusermode && tlbbsy) && instrbufnotfull) || instrbufrst) && (!itlbreadenable_
+wire itlb_and_instrbuf_rdy = ((((!inusermode || !_istlbop) && instrbufnotfull) || instrbufrst) && (!itlbreadenable_
 	`ifdef PUMMU
 	`ifdef PUHPTW
 	|| (hptwidone && !itlbwritten)
