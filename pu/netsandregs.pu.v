@@ -1052,8 +1052,6 @@ wire itlbfault__hptwidone = (!itlbfault_ || !hptwpgd || (hptwidone && !itlbwritt
 wire itlbfault = 0;
 `endif
 
-wire dtlb_rdy = (!dtlbreadenable);
-
 // ---------- Net used to detect unaligned data memory access ----------
 
 reg alignfault; // ### comb-block-reg.
@@ -2140,7 +2138,7 @@ wire opgettlbfault__hptwddone = (!dtlben || !hptwpgd || (hptwddone && !dtlbwritt
 
 reg opgettlbrdy_;
 always @ (posedge clk_i) begin
-	opgettlbrdy_ <= dtlb_rdy;
+	opgettlbrdy_ <= !dtlbreadenable;
 end
 //wire opgettlbrdy = (isopgettlb && opgettlbrdy_);
 
@@ -2331,7 +2329,7 @@ reg oplddone;
 // Register set to 1 for a mem request.
 reg opldmemrqst;
 
-wire opldrdy_ = (!(opldmemrqst || oplddone) && dtlb_rdy && (!dcache_m_cyc_i || opldfault));
+wire opldrdy_ = (!(opldmemrqst || oplddone) && !dtlbreadenable && (!dcache_m_cyc_i || opldfault));
 wire opldrdy = (isopld && opldrdy_
 	`ifdef PUMMU
 	`ifdef PUHPTW
@@ -2366,7 +2364,7 @@ always @ (posedge clk_i) begin
 				opldmemrqst <= 0;
 			end
 
-		end else if (miscrdyandsequencerreadyandgprrdy12 && dtlb_rdy && isopld && !dcache_m_cyc_i && !opldfault
+		end else if (miscrdyandsequencerreadyandgprrdy12 && !dtlbreadenable && isopld && !dcache_m_cyc_i && !opldfault
 			`ifdef PUMMU
 			`ifdef PUHPTW
 			&& opldfault__hptwddone
@@ -2393,7 +2391,7 @@ wire opstfault__hptwddone = (!opstfault_ || !hptwpgd || (hptwddone && !dtlbwritt
 wire opstfault = 0;
 `endif
 
-wire opstrdy_ = (dtlb_rdy && (!dcache_m_cyc_i || opstfault));
+wire opstrdy_ = (!dtlbreadenable && (!dcache_m_cyc_i || opstfault));
 wire opstrdy = (isopst && opstrdy_
 	`ifdef PUMMU
 	`ifdef PUHPTW
@@ -2403,7 +2401,7 @@ wire opstrdy = (isopst && opstrdy_
 	&& !opstfault);
 /*
 always @ (posedge clk_i) begin
-	if (miscrdyandsequencerreadyandgprrdy12 && isopst && dtlb_rdy && (!dcache_m_cyc_i || opstfault)
+	if (miscrdyandsequencerreadyandgprrdy12 && isopst && !dtlbreadenable && (!dcache_m_cyc_i || opstfault)
 		`ifdef PUMMU
 		`ifdef PUHPTW
 		&& opstfault__hptwddone
@@ -2438,7 +2436,7 @@ reg opldstdone;
 // Register set to 1 for a mem request.
 reg opldstmemrqst;
 
-wire opldstrdy_ = (!(opldstmemrqst || opldstdone) && dtlb_rdy && (!dcache_m_cyc_i || opldstfault));
+wire opldstrdy_ = (!(opldstmemrqst || opldstdone) && !dtlbreadenable && (!dcache_m_cyc_i || opldstfault));
 wire opldstrdy = (isopldst && opldstrdy_
 	`ifdef PUMMU
 	`ifdef PUHPTW
@@ -2473,7 +2471,7 @@ always @ (posedge clk_i) begin
 				opldstmemrqst <= 0;
 			end
 
-		end else if (miscrdyandsequencerreadyandgprrdy12 && dtlb_rdy && isopldst && !dcache_m_cyc_i && !opldstfault && !instrbufdato0[2]
+		end else if (miscrdyandsequencerreadyandgprrdy12 && !dtlbreadenable && isopldst && !dcache_m_cyc_i && !opldstfault && !instrbufdato0[2]
 			`ifdef PUMMU
 			`ifdef PUHPTW
 			&& opldstfault__hptwddone
