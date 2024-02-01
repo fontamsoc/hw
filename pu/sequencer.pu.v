@@ -329,7 +329,8 @@ always @ (posedge clk_i) begin
 				`ifdef PUSC2
 				sc2exec ? sc2isopjtrue :
 				`endif
-					(!oplicounter && isopjtrue)) ?
+					// setksl also set instrbufrst to make sure that outofrange values propagate.
+					(!oplicounter && (isopjtrue || isopsetksl))) ?
 						~instrbufrst_b : instrbufrst_a);
 		end
 
