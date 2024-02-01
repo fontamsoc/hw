@@ -101,7 +101,7 @@ always @ (posedge clk_i) begin
 			`endif
 			) begin
 
-			if (itlbfault && not_itlben_or_not_itlbre && !inkernelmode_kmodepaging) begin
+			if (itlbfault && itlbrdy && !inkernelmode_kmodepaging) begin
 				// Setting instrfetchfaulted will stall instrfetch until the sequencer clears it.
 				instrfetchfaulted_a <= ~instrfetchfaulted_b;
 
@@ -113,7 +113,7 @@ always @ (posedge clk_i) begin
 				// Set instrfetchmemrqst to 0 in case it was still 1.
 				instrfetchmemrqst <= 0;
 
-			end else if (not_itlben_or_not_itlbre) begin
+			end else if (itlbrdy) begin
 				// instrfetchaddr and instrfetchppn must be updated
 				// in the same clockcycle that icachecheck or instrfetchmemrqst
 				// get set to 1, otherwise icachedato can be incorrect as
@@ -157,7 +157,7 @@ always @ (posedge clk_i) begin
 			&& itlbfault__hptwidone
 			`endif
 			`endif
-			&& not_itlben_or_not_itlbre)
+			&& itlbrdy)
 			instrbufrst_b <= instrbufrst_a; // Clearing instrbufrst must not depend on inhalt, otherwise the sequencer will lock.
 
 	end else begin

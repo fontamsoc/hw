@@ -104,7 +104,6 @@ always @ (posedge clk_i) begin
 				dcache_m_cyc_i <= 1'b1;
 				dcache_m_stb_i <= 1'b1;
 				`ifdef PUDCACHE
-				dcache_cenable_r <= 1'b0;
 				dcache_cmiss_r <= 1'b1;
 				`endif
 
@@ -116,7 +115,6 @@ always @ (posedge clk_i) begin
 				dcache_m_cyc_i <= 1'b1;
 				dcache_m_stb_i <= 1'b1;
 				`ifdef PUDCACHE
-				dcache_cenable_r <= 1'b0;
 				dcache_cmiss_r <= 1'b1;
 				`endif
 			end
@@ -146,7 +144,6 @@ always @ (posedge clk_i) begin
 					dcache_m_cyc_i <= 1'b1;
 					dcache_m_stb_i <= 1'b1;
 					`ifdef PUDCACHE
-					dcache_cenable_r <= 1'b0;
 					dcache_cmiss_r <= 1'b1;
 					`endif
 
@@ -158,7 +155,6 @@ always @ (posedge clk_i) begin
 					dcache_m_cyc_i <= 1'b1;
 					dcache_m_stb_i <= 1'b1;
 					`ifdef PUDCACHE
-					dcache_cenable_r <= 1'b0;
 					dcache_cmiss_r <= 1'b1;
 					`endif
 				end
@@ -172,7 +168,6 @@ always @ (posedge clk_i) begin
 				dcache_m_cyc_i <= 1'b1;
 				dcache_m_stb_i <= 1'b1;
 				`ifdef PUDCACHE
-				dcache_cenable_r <= dcache_cenable_r_;
 				dcache_cmiss_r <= dcache_cmiss_r_;
 				`endif
 
@@ -203,7 +198,6 @@ always @ (posedge clk_i) begin
 					dcache_m_cyc_i <= 1'b1;
 					dcache_m_stb_i <= 1'b1;
 					`ifdef PUDCACHE
-					dcache_cenable_r <= 1'b0;
 					dcache_cmiss_r <= 1'b1;
 					`endif
 
@@ -215,7 +209,6 @@ always @ (posedge clk_i) begin
 					dcache_m_cyc_i <= 1'b1;
 					dcache_m_stb_i <= 1'b1;
 					`ifdef PUDCACHE
-					dcache_cenable_r <= 1'b0;
 					dcache_cmiss_r <= 1'b1;
 					`endif
 				end
@@ -230,7 +223,6 @@ always @ (posedge clk_i) begin
 				dcache_m_cyc_i <= 1'b1;
 				dcache_m_stb_i <= 1'b1;
 				`ifdef PUDCACHE
-				dcache_cenable_r <= dcache_cenable_r_;
 				dcache_cmiss_r <= dcache_cmiss_r_;
 				`endif
 
@@ -261,7 +253,6 @@ always @ (posedge clk_i) begin
 					dcache_m_cyc_i <= 1'b1;
 					dcache_m_stb_i <= 1'b1;
 					`ifdef PUDCACHE
-					dcache_cenable_r <= 1'b0;
 					dcache_cmiss_r <= 1'b1;
 					`endif
 
@@ -273,7 +264,6 @@ always @ (posedge clk_i) begin
 					dcache_m_cyc_i <= 1'b1;
 					dcache_m_stb_i <= 1'b1;
 					`ifdef PUDCACHE
-					dcache_cenable_r <= 1'b0;
 					dcache_cmiss_r <= 1'b1;
 					`endif
 				end
@@ -288,7 +278,6 @@ always @ (posedge clk_i) begin
 				dcache_m_cyc_i <= 1'b1;
 				dcache_m_stb_i <= 1'b1;
 				`ifdef PUDCACHE
-				dcache_cenable_r <= dcache_cenable_r_;
 				dcache_cmiss_r <= dcache_cmiss_r_;
 				`endif
 
@@ -320,7 +309,6 @@ always @ (posedge clk_i) begin
 			dcache_m_cyc_i <= 1'b1;
 			dcache_m_stb_i <= 1'b1;
 			`ifdef PUDCACHE
-			dcache_cenable_r <= 1'b0;
 			dcache_cmiss_r <= 1'b1;
 			`endif
 
@@ -332,7 +320,6 @@ always @ (posedge clk_i) begin
 			dcache_m_cyc_i <= 1'b1;
 			dcache_m_stb_i <= 1'b1;
 			`ifdef PUDCACHE
-			dcache_cenable_r <= 1'b0;
 			dcache_cmiss_r <= 1'b1;
 			`endif
 		end

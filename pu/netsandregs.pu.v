@@ -289,11 +289,6 @@ wire instrbufrst = (instrbufrst_a ^ instrbufrst_b);
 reg instrbufrst_sampled;
 wire instrbufrst_posedge = (!instrbufrst_sampled && instrbufrst);
 
-wire itlben;
-wire itlbre;
-wire not_itlben_or_not_itlbre = (
-	!itlben || !itlbre/* Insures instrbufrst get reset after reading itlbentry has completed */);
-
 // ---------- Registers used by instrfetch ----------
 
 // Register holding the virtual address of the instruction data to fetch.
@@ -400,6 +395,31 @@ wire dbg_tx_rdy_i_negedge = (!dbg_tx_rdy_i && dbg_tx_rdy_i_sampled);
 
 // ---------- Registers and nets used by Hardware-Page-Table-Walker ----------
 
+wire itlbre;
+reg itlbre_r;
+always @ (posedge clk_i)
+	itlbre_r <= itlbre;
+// Insures that instruction fetching and instrbufrst get reset
+// after reading itlbentry and updating itlbmiss has completed.
+wire itlbrdy = (
+	!(instrbufrst_posedge || itlbre || itlbre_r));
+
+wire dtlbre;
+reg dtlbre_r;
+always @ (posedge clk_i)
+	dtlbre_r <= dtlbre;
+reg opld_found;
+reg opst_found;
+reg opldst_found;
+// Insures that memory access occurs after reading
+// dtlbentry and updating dtlbmiss has completed.
+wire dtlbrdy_opld = (
+	!(~opld_found || dtlbre || dtlbre_r));
+wire dtlbrdy_opst = (
+	!(~opst_found || dtlbre || dtlbre_r));
+wire dtlbrdy_opldst = (
+	!(~opldst_found || dtlbre || dtlbre_r));
+
 // These nets will respectively hold the value of the first
 // and second gpr operand of an instruction being sequenced.
 wire[ARCHBITSZ -1 : 0] gprdata1;
@@ -502,7 +522,7 @@ always @ (posedge clk_i) begin
 
 	end else if (hptwidone) begin
 
-		if (!itlbwritten) begin
+		if (!itlbwritten && !itlbre_r) begin
 			hptwidone <= 1'b0;
 			hptwistate <= HPTWSTATEPGD0;
 		end
@@ -533,7 +553,7 @@ always @ (posedge clk_i) begin
 
 	end else if (hptwddone) begin
 
-		if (!dtlbwritten) begin
+		if (!dtlbwritten && !dtlbre_r) begin
 			hptwddone <= 1'b0;
 			hptwdstate <= HPTWSTATEPGD0;
 		end
@@ -757,8 +777,10 @@ wire _istlbop = (miscrdyandsequencerreadyandgprrdy12 && istlbop);
 // the TLB is never ignored and this register is ignored.
 reg[ARCHBITSZ -1 : 0] ksl;
 
-wire ioutofrange;
-wire doutofrange;
+wire ioutofrange_;
+wire doutofrange_;
+reg ioutofrange;
+reg doutofrange;
 
 `ifdef PUMMU
 
@@ -775,7 +797,8 @@ localparam TLBENTRYBITSZ = (12 +5 +PAGENUMBITSZ +PAGENUMBITSZMINUSCLOG2TLBSETCOU
 assign inuserspace = asid[12];
 assign kmodepaging = asid[13];
 
-reg [CLOG2TLBWAYCOUNT -1 : 0] dtlbwayhitidx; // ### comb-block-reg.
+reg [CLOG2TLBWAYCOUNT -1 : 0] dtlbwayhitidx_; // ### comb-block-reg.
+reg [CLOG2TLBWAYCOUNT -1 : 0] dtlbwayhitidx;
 reg [CLOG2TLBWAYCOUNT -1 : 0] dtlbwaywriteidx; // Register used to hold dtlb-way index to write next.
 // Nets implementing checking the tlb for data loading/storing.
 wire[CLOG2TLBSETCOUNT -1 : 0] dtlbset = gprdata2[(CLOG2TLBSETCOUNT +12) -1 : 12];
@@ -792,13 +815,20 @@ wire dtlbuser [TLBWAYCOUNT -1 : 0];
 wire dtlbnotuser [TLBWAYCOUNT -1 : 0];
 wire[12 -1 : 0] dtlbasid [TLBWAYCOUNT -1 : 0];
 wire[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0] dvpn = gprdata2[ARCHBITSZ -1 : (12 +CLOG2TLBSETCOUNT)];
-wire dtlbmiss_ [TLBWAYCOUNT -1 : 0];
-wire dtlben = (!dohalt && (
+wire dtlbmiss__ [TLBWAYCOUNT -1 : 0];
+wire dtlben = (
 	(inusermode && (inuserspace || doutofrange)) ||
-	(inkernelmode_kmodepaging && doutofrange)));
+	(inkernelmode_kmodepaging && doutofrange));
 reg dtlbwritten;
 reg[CLOG2TLBSETCOUNT -1 : 0] dtlbsetprev;
-wire dtlbre = (isopgettlb_or_isopclrtlb_found_posedge || dtlbwritten || (dtlben && dtlbset != dtlbsetprev));
+reg dtlbre_;
+always @ (posedge clk_i) begin
+	dtlbre_ <= ((/* similar to dtlben */
+		(inusermode && (inuserspace || doutofrange_)) ||
+		(inkernelmode_kmodepaging && doutofrange_)) &&
+			dtlbset != dtlbsetprev);
+end
+assign dtlbre = (isopgettlb_or_isopclrtlb_found_posedge || dtlbwritten || dtlbre_);
 wire dtlbwe = (
 	`ifdef PUHPTW
 	hptwdtlbwe ||
@@ -808,7 +838,8 @@ wire dtlbwe = (
 	(isopsettlb && (inkernelmode || isflagmmucmds) && (gprdata1 & 'b110)) ||
 	(isopclrtlb && (inkernelmode || isflagmmucmds) && !(({dtlbtag[dtlbwayhitidx], dtlbset, dtlbasid[dtlbwayhitidx]} ^ gprdata2) & gprdata1)))));
 
-reg [CLOG2TLBWAYCOUNT -1 : 0] itlbwayhitidx; // ### comb-block-reg.
+reg [CLOG2TLBWAYCOUNT -1 : 0] itlbwayhitidx_; // ### comb-block-reg.
+reg [CLOG2TLBWAYCOUNT -1 : 0] itlbwayhitidx;
 reg [CLOG2TLBWAYCOUNT -1 : 0] itlbwaywriteidx; // Register used to hold itlb-way index to write next.
 // Nets implementing checking the tlb for instruction fetching.
 wire[CLOG2TLBSETCOUNT -1 : 0] itlbset = (_istlbop ? dtlbset :
@@ -824,13 +855,20 @@ wire itlbuser [TLBWAYCOUNT -1 : 0];
 wire itlbnotuser [TLBWAYCOUNT -1 : 0];
 wire[12 -1 : 0] itlbasid [TLBWAYCOUNT -1 : 0];
 wire[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0] ivpn = instrfetchnextaddr[ADDRBITSZ -1 : (ADDRWITHINPAGEBITSZ +CLOG2TLBSETCOUNT)];
-wire itlbmiss_ [TLBWAYCOUNT -1 : 0];
-assign itlben = (!dohalt && (
+wire itlbmiss__ [TLBWAYCOUNT -1 : 0];
+wire itlben = (
 	(inusermode && (inuserspace || ioutofrange)) ||
-	(inkernelmode_kmodepaging && ioutofrange)));
+	(inkernelmode_kmodepaging && ioutofrange));
 reg itlbwritten;
 reg[CLOG2TLBSETCOUNT -1 : 0] itlbsetprev;
-assign itlbre = (isopgettlb_or_isopclrtlb_found_posedge || itlbwritten || (itlben && itlbset != itlbsetprev));
+reg itlbre_;
+always @ (posedge clk_i) begin
+	itlbre_ <= ((/* similar to itlben */
+		(inusermode && (inuserspace || ioutofrange_)) ||
+		(inkernelmode_kmodepaging && ioutofrange_)) &&
+			itlbset != itlbsetprev);
+end
+assign itlbre = (isopgettlb_or_isopclrtlb_found_posedge || itlbwritten || itlbre_);
 wire itlbwe = (
 	`ifdef PUHPTW
 	hptwitlbwe ||
@@ -849,30 +887,40 @@ wire[TLBENTRYBITSZ -1 : 0] tlbwritedata = (
 	`endif
 	             {TLBENTRYBITSZ{1'b0}});
 
-reg itlbmiss; // ### comb-block-reg.
+reg itlbmiss_; // ### comb-block-reg.
+reg itlbmiss;
 integer gen_itlbhit_idx;
 always @* begin
-	itlbmiss = 1;
-	itlbwayhitidx = 0;
+	itlbmiss_ = 1;
+	itlbwayhitidx_ = 0;
 	for (gen_itlbhit_idx = 0; gen_itlbhit_idx < TLBWAYCOUNT; gen_itlbhit_idx = gen_itlbhit_idx + 1) begin
-		if (itlbmiss && !itlbmiss_[gen_itlbhit_idx]) begin
-			itlbmiss = 0;
-			itlbwayhitidx = gen_itlbhit_idx;
+		if (itlbmiss_ && !itlbmiss__[gen_itlbhit_idx]) begin
+			itlbmiss_ = 0;
+			itlbwayhitidx_ = gen_itlbhit_idx;
 		end
 	end
 end
+always @ (posedge clk_i) begin
+	itlbmiss <= itlbmiss_;
+	itlbwayhitidx <= itlbwayhitidx_;
+end
 
-reg dtlbmiss; // ### comb-block-reg.
+reg dtlbmiss_; // ### comb-block-reg.
+reg dtlbmiss;
 integer gen_dtlbhit_idx;
 always @* begin
-	dtlbmiss = 1;
-	dtlbwayhitidx = 0;
+	dtlbmiss_ = 1;
+	dtlbwayhitidx_ = 0;
 	for (gen_dtlbhit_idx = 0; gen_dtlbhit_idx < TLBWAYCOUNT; gen_dtlbhit_idx = gen_dtlbhit_idx + 1) begin
-		if (dtlbmiss && !dtlbmiss_[gen_dtlbhit_idx]) begin
-			dtlbmiss = 0;
-			dtlbwayhitidx = gen_dtlbhit_idx;
+		if (dtlbmiss_ && !dtlbmiss__[gen_dtlbhit_idx]) begin
+			dtlbmiss_ = 0;
+			dtlbwayhitidx_ = gen_dtlbhit_idx;
 		end
 	end
+end
+always @ (posedge clk_i) begin
+	dtlbmiss <= dtlbmiss_;
+	dtlbwayhitidx <= dtlbwayhitidx_;
 end
 
 always @ (posedge clk_i) begin
@@ -939,7 +987,7 @@ assign itlbcached[gen_tlb_idx] = itlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TL
 assign itlbuser[gen_tlb_idx] = itlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +4];
 assign itlbnotuser[gen_tlb_idx] = ~itlbuser[gen_tlb_idx];
 assign itlbasid[gen_tlb_idx] = itlbentry[gen_tlb_idx][(PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +5) +12 -1 : PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +5];
-assign itlbmiss_[gen_tlb_idx] = (
+assign itlbmiss__[gen_tlb_idx] = (
 	(!inkernelmode_kmodepaging && inuserspace && itlbnotuser[gen_tlb_idx]) ||
 	(asid[12 -1 : 0] != itlbasid[gen_tlb_idx]) ||
 	(ivpn != itlbtag[gen_tlb_idx]));
@@ -955,7 +1003,7 @@ assign dtlbcached[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TL
 assign dtlbuser[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +4];
 assign dtlbnotuser[gen_tlb_idx] = ~dtlbuser[gen_tlb_idx];
 assign dtlbasid[gen_tlb_idx] = dtlbentry[gen_tlb_idx][(PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +5) +12 -1 : PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +5];
-assign dtlbmiss_[gen_tlb_idx] = (
+assign dtlbmiss__[gen_tlb_idx] = (
 	(!inkernelmode_kmodepaging && inuserspace && dtlbnotuser[gen_tlb_idx]) ||
 	(asid[12 -1 : 0] != dtlbasid[gen_tlb_idx]) ||
 	(dvpn != dtlbtag[gen_tlb_idx]));
@@ -1024,14 +1072,20 @@ wire[PAGENUMBITSZ -1 : 0] dppn = gprdata2[ARCHBITSZ-1:12];
 `endif
 
 localparam KERNELSPACESTART = 'h1000;
-assign ioutofrange = (instrfetchnextaddr < (KERNELSPACESTART >> CLOG2ARCHBITSZBY8) || (instrfetchnextaddr >= ksl[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8]));
-assign doutofrange = (gprdata2 < KERNELSPACESTART || gprdata2 >= ksl);
+assign ioutofrange_ = (
+	instrfetchnextaddr < (KERNELSPACESTART >> CLOG2ARCHBITSZBY8) ||
+	(instrfetchnextaddr >= ksl[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8]));
+assign doutofrange_ = (gprdata2 < KERNELSPACESTART || gprdata2 >= ksl);
+always @ (posedge clk_i) begin
+	ioutofrange <= ioutofrange_;
+	doutofrange <= doutofrange_;
+end
 
 wire itlb_and_instrbuf_rdy = ((((!inusermode || !_istlbop) && instrbufnotfull) || instrbufrst) && (
-	not_itlben_or_not_itlbre
+	itlbrdy
 	`ifdef PUMMU
 	`ifdef PUHPTW
-	|| (hptwidone && !itlbwritten)
+	|| (hptwidone && !itlbwritten && !itlbre_r)
 	`endif
 	`endif
 	));
@@ -1040,7 +1094,7 @@ wire itlb_and_instrbuf_rdy = ((((!inusermode || !_istlbop) && instrbufnotfull) |
 wire itlbfault_ = (itlben && (itlbmiss || itlbnotexecutable[itlbwayhitidx]));
 wire itlbfault = itlbfault_;
 `ifdef PUHPTW
-wire itlbfault__hptwidone = (!itlbfault_ || !hptwpgd || (hptwidone && !itlbwritten));
+wire itlbfault__hptwidone = (!itlbfault_ || !hptwpgd || (hptwidone && !itlbwritten && !itlbre_r));
 `endif
 `else
 wire itlbfault = 0;
@@ -2312,7 +2366,7 @@ reg[ARCHBITSZ -1 : 0] opldresult;
 wire opldfault_ = (dtlben && (dtlbmiss || dtlbnotreadable[dtlbwayhitidx]));
 wire opldfault = ((inusermode && alignfault) || opldfault_);
 `ifdef PUHPTW
-wire opldfault__hptwddone = (!opldfault_ || !hptwpgd || (hptwddone && !dtlbwritten));
+wire opldfault__hptwddone = (!opldfault_ || !hptwpgd || (hptwddone && !dtlbwritten && !dtlbre_r));
 `endif
 `else
 wire opldfault = 0;
@@ -2323,7 +2377,7 @@ reg oplddone;
 // Register set to 1 for a mem request.
 reg opldmemrqst;
 
-wire opldrdy_ = (!(opldmemrqst || oplddone) && !dtlbre && (!dcache_m_cyc_i || opldfault));
+wire opldrdy_ = (!(opldmemrqst || oplddone) && dtlbrdy_opld && (!dcache_m_cyc_i || opldfault));
 wire opldrdy = (isopld && opldrdy_
 	`ifdef PUMMU
 	`ifdef PUHPTW
@@ -2358,7 +2412,7 @@ always @ (posedge clk_i) begin
 				opldmemrqst <= 0;
 			end
 
-		end else if (miscrdyandsequencerreadyandgprrdy12 && !dtlbre && isopld && !dcache_m_cyc_i && !opldfault
+		end else if (miscrdyandsequencerreadyandgprrdy12 && isopld && dtlbrdy_opld && !dcache_m_cyc_i && !opldfault
 			`ifdef PUMMU
 			`ifdef PUHPTW
 			&& opldfault__hptwddone
@@ -2373,19 +2427,35 @@ always @ (posedge clk_i) begin
 	end
 end
 
+wire opld_found_ = (miscrdyandsequencerreadyandgprrdy12 && isopld && opldrdy_
+	`ifdef PUMMU
+	`ifdef PUHPTW
+	&& opldfault__hptwddone
+	`endif
+	`endif
+	);
+always @ (posedge clk_i) begin
+	if (rst_i)
+		opld_found <= 0;
+	else if (!opld_found && miscrdyandsequencerreadyandgprrdy12 && isopld)
+		opld_found <= ~opld_found_;
+	else if (opld_found_)
+		opld_found <= 0;
+end
+
 // ---------- Registers and nets used by opst ----------
 
 `ifdef PUMMU
 wire opstfault_ = (dtlben && (dtlbmiss || dtlbnotwritable[dtlbwayhitidx]));
 wire opstfault = ((inusermode && alignfault) || opstfault_);
 `ifdef PUHPTW
-wire opstfault__hptwddone = (!opstfault_ || !hptwpgd || (hptwddone && !dtlbwritten));
+wire opstfault__hptwddone = (!opstfault_ || !hptwpgd || (hptwddone && !dtlbwritten && !dtlbre_r));
 `endif
 `else
 wire opstfault = 0;
 `endif
 
-wire opstrdy_ = (!dtlbre && (!dcache_m_cyc_i || opstfault));
+wire opstrdy_ = (dtlbrdy_opst && (!dcache_m_cyc_i || opstfault));
 wire opstrdy = (isopst && opstrdy_
 	`ifdef PUMMU
 	`ifdef PUHPTW
@@ -2395,7 +2465,7 @@ wire opstrdy = (isopst && opstrdy_
 	&& !opstfault);
 /*
 always @ (posedge clk_i) begin
-	if (miscrdyandsequencerreadyandgprrdy12 && isopst && !dtlbre && (!dcache_m_cyc_i || opstfault)
+	if (miscrdyandsequencerreadyandgprrdy12 && isopst && dtlbrdy_opst && (!dcache_m_cyc_i || opstfault)
 		`ifdef PUMMU
 		`ifdef PUHPTW
 		&& opstfault__hptwddone
@@ -2408,6 +2478,22 @@ always @ (posedge clk_i) begin
 end
 */
 
+wire opst_found_ = (miscrdyandsequencerreadyandgprrdy12 && isopst && opstrdy_
+	`ifdef PUMMU
+	`ifdef PUHPTW
+	&& opstfault__hptwddone
+	`endif
+	`endif
+	);
+always @ (posedge clk_i) begin
+	if (rst_i)
+		opst_found <= 0;
+	else if (!opst_found && miscrdyandsequencerreadyandgprrdy12 && isopst)
+		opst_found <= ~opst_found_;
+	else if (opst_found_)
+		opst_found <= 0;
+end
+
 // ---------- Registers and nets used by opldst ----------
 
 // Register that will hold the id of the gpr to which the result will be stored.
@@ -2419,7 +2505,7 @@ reg[ARCHBITSZ -1 : 0] opldstresult;
 wire opldstfault_ = (dtlben && (dtlbmiss || dtlbnotreadable[dtlbwayhitidx] || dtlbnotwritable[dtlbwayhitidx]));
 wire opldstfault = ((inusermode && alignfault) || opldstfault_);
 `ifdef PUHPTW
-wire opldstfault__hptwddone = (!opldstfault_ || !hptwpgd || (hptwddone && !dtlbwritten));
+wire opldstfault__hptwddone = (!opldstfault_ || !hptwpgd || (hptwddone && !dtlbwritten && !dtlbre_r));
 `endif
 `else
 wire opldstfault = 0;
@@ -2430,7 +2516,7 @@ reg opldstdone;
 // Register set to 1 for a mem request.
 reg opldstmemrqst;
 
-wire opldstrdy_ = (!(opldstmemrqst || opldstdone) && !dtlbre && (!dcache_m_cyc_i || opldstfault));
+wire opldstrdy_ = (!(opldstmemrqst || opldstdone) && dtlbrdy_opldst && (!dcache_m_cyc_i || opldstfault));
 wire opldstrdy = (isopldst && opldstrdy_
 	`ifdef PUMMU
 	`ifdef PUHPTW
@@ -2465,7 +2551,7 @@ always @ (posedge clk_i) begin
 				opldstmemrqst <= 0;
 			end
 
-		end else if (miscrdyandsequencerreadyandgprrdy12 && !dtlbre && isopldst && !dcache_m_cyc_i && !opldstfault && !instrbufdato0[2]
+		end else if (miscrdyandsequencerreadyandgprrdy12 && isopldst && dtlbrdy_opldst && !dcache_m_cyc_i && !opldstfault && !instrbufdato0[2]
 			`ifdef PUMMU
 			`ifdef PUHPTW
 			&& opldstfault__hptwddone
@@ -2478,6 +2564,22 @@ always @ (posedge clk_i) begin
 			opldstgpr <= gpridx1;
 		end
 	end
+end
+
+wire opldst_found_ = (miscrdyandsequencerreadyandgprrdy12 && isopldst && opldstrdy_
+	`ifdef PUMMU
+	`ifdef PUHPTW
+	&& opldstfault__hptwddone
+	`endif
+	`endif
+	);
+always @ (posedge clk_i) begin
+	if (rst_i)
+		opldst_found <= 0;
+	else if (!opldst_found && miscrdyandsequencerreadyandgprrdy12 && isopldst)
+		opldst_found <= ~opldst_found_;
+	else if (opldst_found_)
+		opldst_found <= 0;
 end
 
 // ---------- Registers and nets used for data caching ----------
@@ -2515,10 +2617,8 @@ pi1_upconverter #(
 
 `ifdef PUDCACHE
 
-wire dcache_cenable_r_ = (dtlben ? dtlbcached[dtlbwayhitidx] : !doutofrange);
 wire dcache_cmiss_r_ = miscrdyandsequencerreadyandgprrdy12 && (isopldst || isoploadorstorevolatile);
 
-reg dcache_cenable_r;
 reg dcache_cmiss_r;
 
 pi1_dcache #(
@@ -2536,7 +2636,7 @@ pi1_dcache #(
 
 	,.crst_i (rst_i || (miscrdy && sequencerready && isopdcacherst))
 
-	,.cenable_i (dcache_cenable_r)
+	,.cenable_i (dtlben ? dtlbcached[dtlbwayhitidx] : !doutofrange)
 
 	,.cmiss_i (dcache_cmiss_r)
 
