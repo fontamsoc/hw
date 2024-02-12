@@ -290,8 +290,9 @@ reg instrbufrst_sampled;
 wire instrbufrst_posedge = (!instrbufrst_sampled && instrbufrst);
 
 wire itlben;
-wire not_itlben_or_not_instrbufrst_posedge = (
-	!itlben || !instrbufrst_posedge/* Insures instrbufrst get reset after reading itlbentry has completed */);
+wire itlbre;
+wire not_itlben_or_not_itlbre = (
+	!itlben || !itlbre/* Insures instrbufrst get reset after reading itlbentry has completed */);
 
 // ---------- Registers used by instrfetch ----------
 
@@ -453,7 +454,7 @@ wire hptwistate_eq_HPTWSTATEPTE0 = (hptwistate == HPTWSTATEPTE0);
 wire hptwistate_eq_HPTWSTATEPTE1 = (hptwistate == HPTWSTATEPTE1);
 wire hptwistate_eq_HPTWSTATEDONE = (hptwistate == HPTWSTATEDONE);
 wire hptwitlbwe = (dcache_m_ack_o && /**/!dcache_m_stb_i/*TODO: to remove with Wishbone */&&
-	!instrbufrst_posedge && dcachemasterdato[5] &&
+	dcachemasterdato[5] &&
 	(((!inkernelmode_kmodepaging && inuserspace) ? dcachemasterdato[4] : 1'b1) && dcachemasterdato[0]) &&
 	hptwistate_eq_HPTWSTATEPTE1);
 wire[10 -1 : 0] hptwipgdoffset = instrfetchnextaddr[ADDRBITSZ -1 : ADDRBITSZ -10];
@@ -798,7 +799,6 @@ wire dtlben = (!dohalt && (
 reg dtlbwritten;
 reg[CLOG2TLBSETCOUNT -1 : 0] dtlbsetprev;
 wire dtlbre = (isopgettlb_or_isopclrtlb_found_posedge || dtlbwritten || (dtlben && dtlbset != dtlbsetprev));
-wire itlbre;
 wire dtlbwe = (
 	`ifdef PUHPTW
 	hptwdtlbwe ||
@@ -1027,7 +1027,8 @@ localparam KERNELSPACESTART = 'h1000;
 assign ioutofrange = (instrfetchnextaddr < (KERNELSPACESTART >> CLOG2ARCHBITSZBY8) || (instrfetchnextaddr >= ksl[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8]));
 assign doutofrange = (gprdata2 < KERNELSPACESTART || gprdata2 >= ksl);
 
-wire itlb_and_instrbuf_rdy = ((((!inusermode || !_istlbop) && instrbufnotfull) || instrbufrst) && (!itlbre
+wire itlb_and_instrbuf_rdy = ((((!inusermode || !_istlbop) && instrbufnotfull) || instrbufrst) && (
+	not_itlben_or_not_itlbre
 	`ifdef PUMMU
 	`ifdef PUHPTW
 	|| (hptwidone && !itlbwritten)
