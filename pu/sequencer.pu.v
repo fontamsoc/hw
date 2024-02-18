@@ -192,19 +192,8 @@ always @* begin
 			end else if (isopsetsysreg || isopgetsysreg || isopgetsysreg1) begin
 
 				if (gprrdy1 &&
-					(!istlbop || (!(itlbre || dtlbre
-						`ifdef PUMMU
-						`ifdef PUHPTW
-						|| hptwitlbwe // There is no need to check hptwdtlbwe as istlbop will be false.
-						`endif
-						`endif
-						) && (!isopgettlb || (opgettlbrdy_
-							`ifdef PUMMU
-							`ifdef PUHPTW
-							&& opgettlbfault__hptwddone
-							`endif
-							`endif
-					)))) && (gprrdy2 || (isopsetksysopfaulthdlr || isopsetksl || isopsetasid ||
+					(!istlbop || !(itlbre || dtlbre || itlbre_r || dtlbre_r)) &&
+					(gprrdy2 || (isopsetksysopfaulthdlr || isopsetksl || isopsetasid ||
 						isopsetuip || isopsetflags || isopsettimer ||
 						isopgetsysopcode || isopgetuip || isopgetfaultaddr ||
 						isopgetfaultreason || (isopgetclkcyclecnt || isopgetclkcyclecnth) ||

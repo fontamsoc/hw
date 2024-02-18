@@ -89,39 +89,6 @@ always @ (posedge clk_i) begin
 		end
 
 	end else if (miscrdyandsequencerreadyandgprrdy12) begin
-		`ifdef PUMMU
-		`ifdef PUHPTW
-		if (isopgettlb && opgettlbrdy_
-			&& !opgettlbfault__hptwddone) begin
-
-			hptwmemstate <= HPTWMEMSTATEDATA;
-
-			if (hptwdstate_eq_HPTWSTATEPGD0) begin
-
-				dcachemasterop   <= MEMREADOP;
-				dcachemasteraddr <= hptwpgd_plus_hptwdpgdoffset[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8];
-				dcachemastersel  <= {(ARCHBITSZ/8){1'b1}};
-				dcache_m_cyc_i <= 1'b1;
-				dcache_m_stb_i <= 1'b1;
-				`ifdef PUDCACHE
-				dcache_cmiss_r <= 1'b1;
-				`endif
-
-			end else if (hptwdstate_eq_HPTWSTATEPTE0) begin
-
-				dcachemasterop   <= MEMREADOP;
-				dcachemasteraddr <= hptwdpte_plus_hptwdpteoffset[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8];
-				dcachemastersel  <= {(ARCHBITSZ/8){1'b1}};
-				dcache_m_cyc_i <= 1'b1;
-				dcache_m_stb_i <= 1'b1;
-				`ifdef PUDCACHE
-				dcache_cmiss_r <= 1'b1;
-				`endif
-			end
-
-		end else
-		`endif
-		`endif
 		if (isopld && opldrdy_
 			&& (!opldfault // Should yield same signal as opldrdy.
 				`ifdef PUMMU

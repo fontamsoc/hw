@@ -509,7 +509,6 @@ wire hptwdstate_eq_HPTWSTATEDONE = (hptwdstate == HPTWSTATEDONE);
 wire hptwdtlbwe = (dcache_m_ack_o && /**/!dcache_m_stb_i/*TODO: to remove with Wishbone */&&
 	dcachemasterdato[5] &&
 	(((!inkernelmode_kmodepaging && inuserspace) ? dcachemasterdato[4] : 1'b1) && (
-		isopgettlb                                ||
 		(isopld    && dcachemasterdato[2])        ||
 		(isopst    && dcachemasterdato[1])        ||
 		(isopldst  && (|dcachemasterdato[2:1])))) &&
@@ -859,7 +858,7 @@ wire dtlbwe = (
 	hptwdtlbwe ||
 	`endif
 	(miscrdyandsequencerreadyandgprrdy12 &&
-	!(itlbre || dtlbre) && (
+	!(itlbre || dtlbre || itlbre_r || dtlbre_r) && (
 	(isopsettlb && (inkernelmode || isflagmmucmds) && (gprdata1 & 'b110)) ||
 	(isopclrtlb && (inkernelmode || isflagmmucmds) && !(({dtlbtag[dtlbwayhitidx], dtlbset, dtlbasid[dtlbwayhitidx]} ^ gprdata2) & gprdata1)))));
 
@@ -908,7 +907,7 @@ wire itlbwe = (
 	hptwitlbwe ||
 	`endif
 	(miscrdyandsequencerreadyandgprrdy12 &&
-	!(itlbre || dtlbre) && (
+	!(itlbre || dtlbre || itlbre_r || dtlbre_r) && (
 	(isopsettlb && (inkernelmode || isflagmmucmds) && (gprdata1 & 'b1)) ||
 	(isopclrtlb && (inkernelmode || isflagmmucmds) && !(({itlbtag[itlbwayhitidx], itlbset, itlbasid[itlbwayhitidx]} ^ gprdata2) & gprdata1)))));
 
@@ -2233,37 +2232,13 @@ end
 
 reg[ARCHBITSZ -1 : 0] opgetsysreg1result; // ### comb-block-reg.
 
-`ifdef PUMMU
-`ifdef PUHPTW
-wire opgettlbfault__hptwddone = (!dtlben || !hptwpgd || (hptwddone && !dtlbwritten));
-`endif
-`endif
-
-reg opgettlbrdy_;
-always @ (posedge clk_i) begin
-	opgettlbrdy_ <= !dtlbre;
-end
-//wire opgettlbrdy = (isopgettlb && opgettlbrdy_);
-
 wire opgetsysreg1done = (miscrdyandsequencerreadyandgprrdy1 && isopgetsysreg1 &&
-	(!(isoptype3/*isopgettlb*/) ||
-		(gprrdy2 && (!(itlbre || dtlbre
-		`ifdef PUMMU
-		`ifdef PUHPTW
-		|| hptwitlbwe // There is no need to check hptwdtlbwe as istlbop will be false.
-		`endif
-		`endif
-		) && (opgettlbrdy_
-			`ifdef PUMMU
-			`ifdef PUHPTW
-			&& opgettlbfault__hptwddone
-			`endif
-			`endif
-	)))) && (inkernelmode ||
-	((isoptype0 || isoptype4 || isoptype5) && isflagsysinfo) ||
-	(isoptype1 && isflagclkinfo) ||
-	(isoptype2 && isflagcachecmds) ||
-	(isoptype3 && isflagmmucmds)));
+	(!isoptype3/*isopgettlb*/ || (gprrdy2 && !(itlbre || dtlbre || itlbre_r || dtlbre_r))) &&
+	(inkernelmode ||
+		((isoptype0 || isoptype4 || isoptype5) && isflagsysinfo) ||
+		(isoptype1 && isflagclkinfo) ||
+		(isoptype2 && isflagcachecmds) ||
+		(isoptype3 && isflagmmucmds)));
 
 wire isopgettlb_or_isopclrtlb_found = (miscrdyandsequencerreadyandgprrdy12 && (
 	(isopgettlb && (inkernelmode || isflagmmucmds)) || (isopclrtlb && (inkernelmode || isflagmmucmds))));
