@@ -1038,21 +1038,65 @@ smem #(
 assign devtbl_id_w     [S_PI1R_RAM] = 1;
 assign devtbl_useintr_w[S_PI1R_RAM] = 0;
 
+wire                        bootldr_wb_cyc_o;
+wire                        bootldr_wb_stb_o;
+wire                        bootldr_wb_we_o;
+wire [ARCHBITSZ -1 : 0]     bootldr_wb_addr_o;
+wire [(ARCHBITSZ/8) -1 : 0] bootldr_wb_sel_o;
+wire [ARCHBITSZ -1 : 0]     bootldr_wb_dat_o;
+wire                        bootldr_wb_bsy_i;
+wire                        bootldr_wb_ack_i;
+wire [ARCHBITSZ -1 : 0]     bootldr_wb_dat_i;
+
+pi1_to_wb4 #(
+
+	.ARCHBITSZ (ARCHBITSZ)
+
+) bootldr_wb (
+
+	 .rst_i (pi1r_rst_w)
+
+	,.clk_i (pi1r_clk_w)
+
+	,.pi1_op_i   (s_pi1r_op_w[S_PI1R_BOOTLDR])
+	,.pi1_addr_i (s_pi1r_addr_w[S_PI1R_BOOTLDR])
+	,.pi1_data_i (s_pi1r_data_w0[S_PI1R_BOOTLDR])
+	,.pi1_data_o (s_pi1r_data_w1[S_PI1R_BOOTLDR])
+	,.pi1_sel_i  (s_pi1r_sel_w[S_PI1R_BOOTLDR])
+	,.pi1_rdy_o  (s_pi1r_rdy_w[S_PI1R_BOOTLDR])
+
+	,.wb4_cyc_o   (bootldr_wb_cyc_o)
+	,.wb4_stb_o   (bootldr_wb_stb_o)
+	,.wb4_we_o    (bootldr_wb_we_o)
+	,.wb4_addr_o  (bootldr_wb_addr_o)
+	,.wb4_sel_o   (bootldr_wb_sel_o)
+	,.wb4_data_o  (bootldr_wb_dat_o)
+	,.wb4_stall_i (bootldr_wb_bsy_i)
+	,.wb4_ack_i   (bootldr_wb_ack_i)
+	,.wb4_data_i  (bootldr_wb_dat_i)
+);
+
 bootldr #(
 
 	 .ARCHBITSZ (PI1RARCHBITSZ)
 
 ) bootldr (
 
-	.clk_i (pi1r_clk_w)
+	 .rst_i (pi1r_rst_w)
 
-	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_BOOTLDR])
-	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_BOOTLDR])
-	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_BOOTLDR])
-	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_BOOTLDR])
-	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_BOOTLDR])
-	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_BOOTLDR])
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_BOOTLDR])
+	,.clk_i (pi1r_clk_w)
+
+	,.wb_cyc_i  (bootldr_wb_cyc_o)
+	,.wb_stb_i  (bootldr_wb_stb_o)
+	,.wb_we_i   (bootldr_wb_we_o)
+	,.wb_addr_i (bootldr_wb_addr_o[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8])
+	,.wb_sel_i  (bootldr_wb_sel_o)
+	,.wb_dat_i  (bootldr_wb_dat_o)
+	,.wb_bsy_o  (bootldr_wb_bsy_i)
+	,.wb_ack_o  (bootldr_wb_ack_i)
+	,.wb_dat_o  (bootldr_wb_dat_i)
+
+	,.mmapsz_o (s_pi1r_mapsz_w[S_PI1R_BOOTLDR])
 );
 
 assign devtbl_id_w     [S_PI1R_BOOTLDR] = 0;
