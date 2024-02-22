@@ -6,26 +6,37 @@
 // clk_i
 // 	Clock signal.
 //
-// pi1_op_i
-// pi1_addr_i
-// pi1_data_i
-// pi1_data_o
-// pi1_sel_i
-// pi1_rdy_o
-// pi1_mapsz_o
-// 	PerInt slave memory interface.
+// wb_cyc_i
+// wb_stb_i
+// wb_we_i
+// wb_addr_i
+// wb_sel_i
+// wb_dat_i
+// wb_bsy_o
+// wb_ack_o
+// wb_dat_o
+// 	Slave memory interface.
+//
+// mmapsz_o
+// 	Memory map size in bytes.
 
 module bootldr (
 
-	clk_i
+	 rst_i
 
-	,pi1_op_i
-	,pi1_addr_i
-	,pi1_data_i /* not used */
-	,pi1_data_o
-	,pi1_sel_i /* not used */
-	,pi1_rdy_o
-	,pi1_mapsz_o
+	,clk_i
+
+	,wb_cyc_i
+	,wb_stb_i
+	,wb_we_i
+	,wb_addr_i
+	,wb_sel_i
+	,wb_dat_i
+	,wb_bsy_o
+	,wb_ack_o
+	,wb_dat_o
+
+	,mmapsz_o
 );
 
 `include "lib/clog2.v"
@@ -38,56 +49,56 @@ localparam SRCFILE =
 	ARCHBITSZ == 64 ? "bootldr64.hex" :
 	ARCHBITSZ == 128 ? "bootldr128.hex" :
 	ARCHBITSZ == 256 ? "bootldr256.hex" :
-	                  "";
-parameter SIZE = ((32/*instruction count*/*2)/(ARCHBITSZ/8));
+	                   "";
+localparam SIZE = ((32/*instruction count*/*2)/(ARCHBITSZ/8));
 
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
 
 localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
 
+input wire rst_i;
+
 input wire clk_i;
 
-input  wire [2 -1 : 0]             pi1_op_i;
-input  wire [ADDRBITSZ -1 : 0]     pi1_addr_i;
-input  wire [ARCHBITSZ -1 : 0]     pi1_data_i; /* not used */
-output reg  [ARCHBITSZ -1 : 0]     pi1_data_o;
-input  wire [(ARCHBITSZ/8) -1 : 0] pi1_sel_i; /* not used */
-output wire                        pi1_rdy_o;
-output wire [ARCHBITSZ -1 : 0]     pi1_mapsz_o;
+input  wire                        wb_cyc_i;
+input  wire                        wb_stb_i;
+input  wire                        wb_we_i;
+input  wire [ADDRBITSZ -1 : 0]     wb_addr_i;
+input  wire [(ARCHBITSZ/8) -1 : 0] wb_sel_i;
+input  wire [ARCHBITSZ -1 : 0]     wb_dat_i;
+output wire                        wb_bsy_o;
+output reg                         wb_ack_o;
+output reg  [ARCHBITSZ -1 : 0]     wb_dat_o;
 
-assign pi1_rdy_o = 1'b1;
+output wire [ARCHBITSZ -1 : 0] mmapsz_o;
 
-assign pi1_mapsz_o = (SIZE*(ARCHBITSZ/8))
+assign mmapsz_o = (SIZE*(ARCHBITSZ/8))
 	`ifdef SIMULATION
 	*2 // Double the memory mapping to catch pu prefetch
 	   // memory access that can occur beyond its size.
 	`endif
 	;
 
-localparam PINOOP = 2'b00;
-localparam PIWROP = 2'b01;
-localparam PIRDOP = 2'b10;
-localparam PIRWOP = 2'b11;
+reg [ARCHBITSZ -1 : 0] rom [0 : SIZE -1];
 
-reg [ARCHBITSZ -1 : 0] u [0 : SIZE -1];
-`ifdef SIMULATION
-integer init_u_idx;
-`endif
 initial begin
-	`ifdef SIMULATION
-	for (init_u_idx = 0; init_u_idx < SIZE; init_u_idx = init_u_idx + 1)
-		u[init_u_idx] = 0;
-	`endif
-	$readmemh (SRCFILE, u);
+	$readmemh (SRCFILE, rom);
 	`ifdef SIMULATION
 	$display ("%s loaded", SRCFILE);
-	pi1_data_o = 0;
 	`endif
+	// Initial state initialized here, otherwise
+	// block ram fails to be inferred by yosys.
+	wb_dat_o = 0;
 end
 
+wire _wb_stb_i = (wb_cyc_i && wb_stb_i);
+
 always @ (posedge clk_i) begin
-	if (pi1_rdy_o && pi1_op_i == PIRDOP)
-		pi1_data_o <= u[pi1_addr_i];
+
+	if (_wb_stb_i)
+		wb_dat_o <= rom[wb_addr_i];
+
+	wb_ack_o <= (!rst_i && _wb_stb_i);
 end
 
 endmodule
