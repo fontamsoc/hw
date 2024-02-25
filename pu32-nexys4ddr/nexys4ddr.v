@@ -597,35 +597,45 @@ pwm #(
 assign devtbl_id_w     [S_PI1R_PWM0] = 9;
 assign devtbl_useintr_w[S_PI1R_PWM0] = 0;
 
-wire [2 -1 : 0]             gpio_switches_leds_op_w;
-wire [ADDRBITSZ -1 : 0]     gpio_switches_leds_addr_w;
-wire [(ARCHBITSZ/8) -1 : 0] gpio_switches_leds_sel_w;
-wire [ARCHBITSZ -1 : 0]     gpio_switches_leds_data_w1;
-wire [ARCHBITSZ -1 : 0]     gpio_switches_leds_data_w0;
-wire                        gpio_switches_leds_rdy_w;
-wire [ADDRBITSZ -1 : 0]     gpio_switches_leds_mapsz_w;
-pi1_downconverter #(
-	 .MARCHBITSZ (PI1RARCHBITSZ)
-	,.SARCHBITSZ (ARCHBITSZ)
-) pi1_downconverter_gpio_switches_leds (
-	 .clk_i (pi1r_clk_w)
-	,.m_pi1_op_i (s_pi1r_op_w[S_PI1R_GP0IO])
-	,.m_pi1_addr_i (s_pi1r_addr_w[S_PI1R_GP0IO])
-	,.m_pi1_data_i (s_pi1r_data_w0[S_PI1R_GP0IO])
-	,.m_pi1_data_o (s_pi1r_data_w1[S_PI1R_GP0IO])
-	,.m_pi1_sel_i (s_pi1r_sel_w[S_PI1R_GP0IO])
-	,.m_pi1_rdy_o (s_pi1r_rdy_w[S_PI1R_GP0IO])
-	,.m_pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_GP0IO])
-	,.s_pi1_op_o (gpio_switches_leds_op_w)
-	,.s_pi1_addr_o (gpio_switches_leds_addr_w)
-	,.s_pi1_data_o (gpio_switches_leds_data_w1)
-	,.s_pi1_data_i (gpio_switches_leds_data_w0)
-	,.s_pi1_sel_o (gpio_switches_leds_sel_w)
-	,.s_pi1_rdy_i (gpio_switches_leds_rdy_w)
-	,.s_pi1_mapsz_i (gpio_switches_leds_mapsz_w)
+wire                        gpio_switches_leds_wb_cyc_o;
+wire                        gpio_switches_leds_wb_stb_o;
+wire                        gpio_switches_leds_wb_we_o;
+wire [ARCHBITSZ -1 : 0]     gpio_switches_leds_wb_addr_o;
+wire [(ARCHBITSZ/8) -1 : 0] gpio_switches_leds_wb_sel_o;
+wire [ARCHBITSZ -1 : 0]     gpio_switches_leds_wb_dat_o;
+wire                        gpio_switches_leds_wb_bsy_i;
+wire                        gpio_switches_leds_wb_ack_i;
+wire [ARCHBITSZ -1 : 0]     gpio_switches_leds_wb_dat_i;
+
+pi1_to_wb4 #(
+
+	.ARCHBITSZ (ARCHBITSZ)
+
+) gpio_switches_leds_wb (
+
+	 .rst_i (pi1r_rst_w)
+
+	,.clk_i (pi1r_clk_w)
+
+	,.pi1_op_i   (s_pi1r_op_w[S_PI1R_GP0IO])
+	,.pi1_addr_i (s_pi1r_addr_w[S_PI1R_GP0IO])
+	,.pi1_data_i (s_pi1r_data_w0[S_PI1R_GP0IO])
+	,.pi1_data_o (s_pi1r_data_w1[S_PI1R_GP0IO])
+	,.pi1_sel_i  (s_pi1r_sel_w[S_PI1R_GP0IO])
+	,.pi1_rdy_o  (s_pi1r_rdy_w[S_PI1R_GP0IO])
+
+	,.wb4_cyc_o   (gpio_switches_leds_wb_cyc_o)
+	,.wb4_stb_o   (gpio_switches_leds_wb_stb_o)
+	,.wb4_we_o    (gpio_switches_leds_wb_we_o)
+	,.wb4_addr_o  (gpio_switches_leds_wb_addr_o)
+	,.wb4_sel_o   (gpio_switches_leds_wb_sel_o)
+	,.wb4_data_o  (gpio_switches_leds_wb_dat_o)
+	,.wb4_stall_i (gpio_switches_leds_wb_bsy_i)
+	,.wb4_ack_i   (gpio_switches_leds_wb_ack_i)
+	,.wb4_data_i  (gpio_switches_leds_wb_dat_i)
 );
 
-wire [GP0IOCOUNT -1 : 0] gp0io_o;
+wire [GP0IOCOUNT -1 : 0] gp0_o_;
 
 gpio #(
 
@@ -639,52 +649,66 @@ gpio #(
 
 	,.clk_i (pi1r_clk_w)
 
-	,.pi1_op_i    (gpio_switches_leds_op_w)
-	,.pi1_addr_i  (gpio_switches_leds_addr_w)
-	,.pi1_data_i  (gpio_switches_leds_data_w1)
-	,.pi1_data_o  (gpio_switches_leds_data_w0)
-	,.pi1_sel_i   (gpio_switches_leds_sel_w)
-	,.pi1_rdy_o   (gpio_switches_leds_rdy_w)
-	,.pi1_mapsz_o (gpio_switches_leds_mapsz_w)
+	,.wb_cyc_i  (gpio_switches_leds_wb_cyc_o)
+	,.wb_stb_i  (gpio_switches_leds_wb_stb_o)
+	,.wb_we_i   (gpio_switches_leds_wb_we_o)
+	,.wb_addr_i (gpio_switches_leds_wb_addr_o[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8])
+	,.wb_sel_i  (gpio_switches_leds_wb_sel_o)
+	,.wb_dat_i  (gpio_switches_leds_wb_dat_o)
+	,.wb_bsy_o  (gpio_switches_leds_wb_bsy_i)
+	,.wb_ack_o  (gpio_switches_leds_wb_ack_i)
+	,.wb_dat_o  (gpio_switches_leds_wb_dat_i)
+
+	,.mmapsz_o (s_pi1r_mapsz_w[S_PI1R_GP0IO])
 
 	,.intrqst_o (intrqstsrc_w[INTCTRLSRC_GP0IO])
 	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_GP0IO])
 
 	,.i (gp0_i)
-	,.o (gp0io_o)
+	,.o (gp0_o_)
 );
 
 assign devtbl_id_w     [S_PI1R_GP0IO] = 6;
 assign devtbl_useintr_w[S_PI1R_GP0IO] = 1;
 
-assign gp0_o = (pwm0_o | gp0io_o);
+assign gp0_o = (pwm0_o | gp0_o_);
 
-wire [2 -1 : 0]             gpio_buttons_op_w;
-wire [ADDRBITSZ -1 : 0]     gpio_buttons_addr_w;
-wire [(ARCHBITSZ/8) -1 : 0] gpio_buttons_sel_w;
-wire [ARCHBITSZ -1 : 0]     gpio_buttons_data_w1;
-wire [ARCHBITSZ -1 : 0]     gpio_buttons_data_w0;
-wire                        gpio_buttons_rdy_w;
-wire [ADDRBITSZ -1 : 0]     gpio_buttons_mapsz_w;
-pi1_downconverter #(
-	 .MARCHBITSZ (PI1RARCHBITSZ)
-	,.SARCHBITSZ (ARCHBITSZ)
-) pi1_downconverter_gpio_buttons (
-	 .clk_i (pi1r_clk_w)
-	,.m_pi1_op_i (s_pi1r_op_w[S_PI1R_GP1IO])
-	,.m_pi1_addr_i (s_pi1r_addr_w[S_PI1R_GP1IO])
-	,.m_pi1_data_i (s_pi1r_data_w0[S_PI1R_GP1IO])
-	,.m_pi1_data_o (s_pi1r_data_w1[S_PI1R_GP1IO])
-	,.m_pi1_sel_i (s_pi1r_sel_w[S_PI1R_GP1IO])
-	,.m_pi1_rdy_o (s_pi1r_rdy_w[S_PI1R_GP1IO])
-	,.m_pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_GP1IO])
-	,.s_pi1_op_o (gpio_buttons_op_w)
-	,.s_pi1_addr_o (gpio_buttons_addr_w)
-	,.s_pi1_data_o (gpio_buttons_data_w1)
-	,.s_pi1_data_i (gpio_buttons_data_w0)
-	,.s_pi1_sel_o (gpio_buttons_sel_w)
-	,.s_pi1_rdy_i (gpio_buttons_rdy_w)
-	,.s_pi1_mapsz_i (gpio_buttons_mapsz_w)
+wire                        gpio_buttons_wb_cyc_o;
+wire                        gpio_buttons_wb_stb_o;
+wire                        gpio_buttons_wb_we_o;
+wire [ARCHBITSZ -1 : 0]     gpio_buttons_wb_addr_o;
+wire [(ARCHBITSZ/8) -1 : 0] gpio_buttons_wb_sel_o;
+wire [ARCHBITSZ -1 : 0]     gpio_buttons_wb_dat_o;
+wire                        gpio_buttons_wb_bsy_i;
+wire                        gpio_buttons_wb_ack_i;
+wire [ARCHBITSZ -1 : 0]     gpio_buttons_wb_dat_i;
+
+pi1_to_wb4 #(
+
+	.ARCHBITSZ (ARCHBITSZ)
+
+) gpio_buttons_wb (
+
+	 .rst_i (pi1r_rst_w)
+
+	,.clk_i (pi1r_clk_w)
+
+	,.pi1_op_i   (s_pi1r_op_w[S_PI1R_GP1IO])
+	,.pi1_addr_i (s_pi1r_addr_w[S_PI1R_GP1IO])
+	,.pi1_data_i (s_pi1r_data_w0[S_PI1R_GP1IO])
+	,.pi1_data_o (s_pi1r_data_w1[S_PI1R_GP1IO])
+	,.pi1_sel_i  (s_pi1r_sel_w[S_PI1R_GP1IO])
+	,.pi1_rdy_o  (s_pi1r_rdy_w[S_PI1R_GP1IO])
+
+	,.wb4_cyc_o   (gpio_buttons_wb_cyc_o)
+	,.wb4_stb_o   (gpio_buttons_wb_stb_o)
+	,.wb4_we_o    (gpio_buttons_wb_we_o)
+	,.wb4_addr_o  (gpio_buttons_wb_addr_o)
+	,.wb4_sel_o   (gpio_buttons_wb_sel_o)
+	,.wb4_data_o  (gpio_buttons_wb_dat_o)
+	,.wb4_stall_i (gpio_buttons_wb_bsy_i)
+	,.wb4_ack_i   (gpio_buttons_wb_ack_i)
+	,.wb4_data_i  (gpio_buttons_wb_dat_i)
 );
 
 gpio #(
@@ -699,13 +723,17 @@ gpio #(
 
 	,.clk_i (pi1r_clk_w)
 
-	,.pi1_op_i    (gpio_buttons_op_w)
-	,.pi1_addr_i  (gpio_buttons_addr_w)
-	,.pi1_data_i  (gpio_buttons_data_w1)
-	,.pi1_data_o  (gpio_buttons_data_w0)
-	,.pi1_sel_i   (gpio_buttons_sel_w)
-	,.pi1_rdy_o   (gpio_buttons_rdy_w)
-	,.pi1_mapsz_o (gpio_buttons_mapsz_w)
+	,.wb_cyc_i  (gpio_buttons_wb_cyc_o)
+	,.wb_stb_i  (gpio_buttons_wb_stb_o)
+	,.wb_we_i   (gpio_buttons_wb_we_o)
+	,.wb_addr_i (gpio_buttons_wb_addr_o[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8])
+	,.wb_sel_i  (gpio_buttons_wb_sel_o)
+	,.wb_dat_i  (gpio_buttons_wb_dat_o)
+	,.wb_bsy_o  (gpio_buttons_wb_bsy_i)
+	,.wb_ack_o  (gpio_buttons_wb_ack_i)
+	,.wb_dat_o  (gpio_buttons_wb_dat_i)
+
+	,.mmapsz_o (s_pi1r_mapsz_w[S_PI1R_GP1IO])
 
 	,.intrqst_o (intrqstsrc_w[INTCTRLSRC_GP1IO])
 	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_GP1IO])

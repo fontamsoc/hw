@@ -4,27 +4,22 @@
 // GPIO peripheral.
 
 // The device provides IOs that can be configured as either input or output.
-// The memory operation PIRDOP returns a value which is a snapshot of the IOs state.
-// Each bit in the value returned correspond to a signal within the inout [IOCOUNT] io;
-// the corresponding bits of the IOs that were configured as output are always 0.
-// The memory operation PIWROP write a value that set IOs configured as output;
-// each bit in the value written corresponds to a signal within the inout [IOCOUNT] io.
-// The memory operation PIRWOP send commands, where the value to write encodes both
-// the command and its argument as follow: |cmd: 1bits|arg: (ARCHBITSZ-1)bits|
-// while the value read is the return value of the command.
-
-// Description of commands:
+// The first half of the device memory mapping is used to read/write IOs state
+// while, the second half is used to send commands to the device.
 //
-// CMDCONFIGUREIO:
-// 	Cmd value is 0.
-// 	Arg value is a bitmap where each bit 0/1 configures
-// 	the corresponding input "i" as an input/output.
-// 	Signals of input "i" that are configured as output read low.
-// 	Return value is the IO count.
-// CMDSETDEBOUNCE:
-// 	Cmd value is 1.
-// 	Arg value set the clockcycle count used to debounce inputs.
-// 	Return value is the clock frequency in Hz used by the device.
+// Commands sent to the device expect following format
+// | cmd: 1 bit | arg: (ARCHBITSZ-1) bits | where the field "cmd" values
+// are CMDCONFIGUREIO(1'b0), CMDSETDEBOUNCE(1'b1). The result of a previously
+// sent command is retrieved from the device reading from it and has
+// the following format | cmd: 1 bit | resp: (ARCHBITSZ-1) bits |
+// where the fields "cmd" and "resp" are the command and its result.
+//
+// The description of commands is as follow:
+// CMDCONFIGUREIO: "arg" value is a bitmap where each bit 0/1 configures
+// the corresponding GPIO as an input/output.
+// "resp" in the result get set to the IO count.
+// CMDSETDEBOUNCE: "arg" value set the clockcycle count used to debounce GPIs.
+// "resp" in the result get set to the clock frequency in Hz used by the device.
 
 // Parameters:
 //
@@ -33,7 +28,7 @@
 //
 // IOCOUNT:
 // 	Number of IOs.
-// 	It must be non-null and <= ARCHBITSZ.
+// 	It must be non-null and less than ARCHBITSZ.
 
 // Ports:
 //
@@ -44,14 +39,19 @@
 // clk_i
 // 	Clock signal.
 //
-// pi1_op_i
-// pi1_addr_i
-// pi1_data_i
-// pi1_data_o
-// pi1_sel_i
-// pi1_rdy_o
-// pi1_mapsz_o
-// 	PerInt slave memory interface.
+// wb_cyc_i
+// wb_stb_i
+// wb_we_i
+// wb_addr_i
+// wb_sel_i
+// wb_dat_i
+// wb_bsy_o
+// wb_ack_o
+// wb_dat_o
+// 	Slave memory interface.
+//
+// mmapsz_o
+// 	Memory map size in bytes.
 //
 // intrqst_o
 // 	This signal is set high to request an interrupt;
@@ -69,45 +69,52 @@
 
 module gpio (
 
-	rst_i,
+	 rst_i
 
-	clk_i,
+	,clk_i
 
-	pi1_op_i,
-	pi1_addr_i, /* not used */
-	pi1_data_i,
-	pi1_data_o,
-	pi1_sel_i, /* not used */
-	pi1_rdy_o,
-	pi1_mapsz_o,
+	,wb_cyc_i
+	,wb_stb_i
+	,wb_we_i
+	,wb_addr_i
+	,wb_sel_i
+	,wb_dat_i
+	,wb_bsy_o
+	,wb_ack_o
+	,wb_dat_o
 
-	intrqst_o,
-	intrdy_i,
+	,mmapsz_o
 
-	i, o, t
+	,intrqst_o
+	,intrdy_i
+
+	,i ,o ,t
 );
 
 `include "lib/clog2.v"
 
 parameter ARCHBITSZ = 16;
-parameter CLKFREQ   = 0;
-parameter IOCOUNT   = 0;
+parameter CLKFREQ   = 1;
+parameter IOCOUNT   = 1;
 
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
-
 localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
 
 input wire rst_i;
 
 input wire clk_i;
 
-input  wire [2 -1 : 0]             pi1_op_i;
-input  wire [ADDRBITSZ -1 : 0]     pi1_addr_i; /* not used */
-input  wire [ARCHBITSZ -1 : 0]     pi1_data_i;
-output reg  [ARCHBITSZ -1 : 0]     pi1_data_o;
-input  wire [(ARCHBITSZ/8) -1 : 0] pi1_sel_i; /* not used */
-output wire                        pi1_rdy_o;
-output wire [ARCHBITSZ -1 : 0]     pi1_mapsz_o;
+input  wire                        wb_cyc_i;
+input  wire                        wb_stb_i;
+input  wire                        wb_we_i;
+input  wire [ADDRBITSZ -1 : 0]     wb_addr_i;
+input  wire [(ARCHBITSZ/8) -1 : 0] wb_sel_i;
+input  wire [ARCHBITSZ -1 : 0]     wb_dat_i;
+output wire                        wb_bsy_o;
+output reg                         wb_ack_o;
+output wire [ARCHBITSZ -1 : 0]     wb_dat_o;
+
+output wire [ARCHBITSZ -1 : 0] mmapsz_o;
 
 output wire intrqst_o;
 input  wire intrdy_i;
@@ -119,10 +126,44 @@ output reg  [IOCOUNT -1 : 0] o;
 // input "i" is an input.
 output reg  [IOCOUNT -1 : 0] t;
 
-assign pi1_rdy_o = 1;
+assign wb_bsy_o = 1'b0;
 
-// Actual mapsz is (1*(ARCHBITSZ/8)), but aligning to 64bits.
-assign pi1_mapsz_o = (((ARCHBITSZ<64)?(64/ARCHBITSZ):1)*(ARCHBITSZ/8));
+assign mmapsz_o = ((128/ARCHBITSZ)*(ARCHBITSZ/8));
+
+reg                    wb_stb_r;
+reg                    wb_we_r;
+reg [ADDRBITSZ -1 : 0] wb_addr_r;
+reg [ARCHBITSZ -1 : 0] wb_dat_r;
+
+wire wb_stb_r_ = (wb_cyc_i && wb_stb_i);
+
+always @ (posedge clk_i) begin
+	wb_stb_r <= wb_stb_r_ ;
+	if (wb_stb_r_) begin
+		wb_we_r <= wb_we_i;
+		wb_addr_r <= wb_addr_i;
+		wb_dat_r <= wb_dat_i;
+	end
+	wb_ack_o <= wb_stb_r;
+end
+
+// Commands.
+localparam CMDCONFIGUREIO = 0;
+localparam CMDSETDEBOUNCE = 1;
+
+reg [ARCHBITSZ -1 : 0] wb_dat_o_;
+
+// Half the memory mapping is used to send/receive data,
+// while the other half is used to issue commands.
+localparam CLOG264BYARCHBITSZ = clog2(64/ARCHBITSZ);
+
+wire iscmd = (!rst_i && wb_stb_r && wb_we_r && wb_addr_r[CLOG264BYARCHBITSZ]);
+
+wire cmdconfigureio = (iscmd && wb_dat_r[ARCHBITSZ-1] == CMDCONFIGUREIO);
+wire cmdsetdebounce = (iscmd && wb_dat_r[ARCHBITSZ-1] == CMDSETDEBOUNCE);
+
+wire devrd = (!rst_i && wb_stb_r && !wb_we_r && !wb_addr_r[CLOG264BYARCHBITSZ]);
+wire devwr = (!rst_i && wb_stb_r &&  wb_we_r && !wb_addr_r[CLOG264BYARCHBITSZ]);
 
 // Nets set to the debounced value of the input "i".
 wire [IOCOUNT -1 : 0] _i;
@@ -130,10 +171,10 @@ wire [IOCOUNT -1 : 0] _i;
 // Register set to the number of clock cycles used
 // to debounce the input "i" when configured as input.
 // It has the bitsize of a command argument.
-reg [(ARCHBITSZ -1) -1 : 0] debounce;
+reg [(ARCHBITSZ -1) -1 : 0] dbncrthresh;
 
-genvar genlowpass_idx;
-generate for (genlowpass_idx = 0; genlowpass_idx < IOCOUNT; genlowpass_idx = genlowpass_idx + 1) begin: genlowpass // genlowpass is just a label that verilog want to see; and it is not used anywhere.
+genvar gen_dbncr_idx;
+generate for (gen_dbncr_idx = 0; gen_dbncr_idx < IOCOUNT; gen_dbncr_idx = gen_dbncr_idx + 1) begin: gen_dbncr // gen_dbncr is just a label that verilog wants to see; and it is not used anywhere.
 dbncr  #(
 	// Bitsize of the command argument.
 	 .THRESBITSZ (ARCHBITSZ -1)
@@ -141,79 +182,68 @@ dbncr  #(
 ) dbncr (
 	 .rst_i    (rst_i)
 	,.clk_i    (clk_i)
-	,.i        (i[genlowpass_idx])
-	,.o        (_i[genlowpass_idx])
-	,.thresh_i (debounce)
+	,.i        (i[gen_dbncr_idx])
+	,.o        (_i[gen_dbncr_idx])
+	,.thresh_i (dbncrthresh)
 );
 end endgenerate
 
-// Net set to the input value.
-wire [IOCOUNT -1 : 0] ival = (_i/* & ~t*/);
+// Register used to detect a change on "_i".
+reg [IOCOUNT -1 : 0] _i_r;
 
-// Register used to detect a change on "ival".
-reg [IOCOUNT -1 : 0] ivalsampled;
-
-// Nets where each bit is 1 when a change occurred on the corresponding ival.
-wire [IOCOUNT -1 : 0] ivalchanged = (ival ^ ivalsampled);
+// Nets where each bit is 1 when a change occurred on the corresponding _i.
+wire [IOCOUNT -1 : 0] i_changed = (_i ^ _i_r);
 
 // Register for which each bit is 1 if its corresponding input "i" signal changed.
-reg [IOCOUNT -1 : 0] ivalchange;
-
-localparam PINOOP = 2'b00;
-localparam PIWROP = 2'b01;
-localparam PIRDOP = 2'b10;
-localparam PIRWOP = 2'b11;
-
-// Commands.
-localparam CMDCONFIGUREIO = 0;
-localparam CMDSETDEBOUNCE = 1;
+reg [IOCOUNT -1 : 0] i_change;
 
 // An interrupt request is made if a state change
 // occurs on an input "i" signal configured as input.
-assign intrqst_o = |ivalchange;
+assign intrqst_o = (|i_change);
 
 // Register used to detect a falling edge on "intrdy_i".
-reg intrdy_i_sampled;
-wire intrdy_i_negedge = (!intrdy_i && intrdy_i_sampled);
+reg intrdy_i_r;
+wire intrdy_i_negedge = (!intrdy_i && intrdy_i_r);
+
+reg devrd_r;
+assign wb_dat_o = (devrd_r ? _i : wb_dat_o_);
 
 always @(posedge clk_i) begin
 	// Logic that set output "t".
 	if (rst_i)
 		t <= 0;
-	else if (pi1_op_i == PIRWOP && pi1_data_i[ARCHBITSZ-1] == CMDCONFIGUREIO)
-		t <= pi1_data_i[ARCHBITSZ-2:0];
+	else if (cmdconfigureio)
+		t <= wb_dat_r[ARCHBITSZ-2:0];
+
+	if (rst_i)
+		dbncrthresh <= 0;
+	else if (cmdsetdebounce)
+		dbncrthresh <= wb_dat_r[ARCHBITSZ-2:0];
 
 	// Logic that set output "o".
 	if (rst_i)
 		o <= 0;
-	else if (pi1_op_i == PIWROP)
-		o <= pi1_data_i[ARCHBITSZ-2:0];
+	else if (devwr)
+		o <= wb_dat_r[ARCHBITSZ-2:0];
 
-	// Logic that update ivalchange.
+	// Logic that update i_change.
 	if (intrdy_i_negedge)
-		ivalchange <= 0;
+		i_change <= 0;
 	else
-		ivalchange <= (ivalchange | ivalchanged);
+		i_change <= (i_change | i_changed);
 
-	// Logic that set debounce.
-	if (pi1_op_i == PIRWOP && pi1_data_i[ARCHBITSZ-1] == CMDSETDEBOUNCE)
-		debounce <= pi1_data_i[ARCHBITSZ-2:0];
+	if (cmdconfigureio)
+		wb_dat_o_ <= {wb_dat_r[ARCHBITSZ-1], IOCOUNT[ARCHBITSZ-2:0]};
+	else if (cmdsetdebounce)
+		wb_dat_o_ <= {wb_dat_r[ARCHBITSZ-1], CLKFREQ[ARCHBITSZ-2:0]};
 
-	// Logic that set pi1_data_o.
-	if (pi1_op_i == PIRDOP) begin
-		pi1_data_o <= ival;
-	end else if (pi1_op_i == PIRWOP) begin
-		if (pi1_data_i[ARCHBITSZ-1] == CMDCONFIGUREIO)
-			pi1_data_o <= IOCOUNT;
-		else if (pi1_data_i[ARCHBITSZ-1] == CMDSETDEBOUNCE)
-			pi1_data_o <= CLKFREQ;
-	end
+	devrd_r <= devrd;
 
-	// Sampling used to detect whether ival has changed.
-	ivalsampled <= ival;
+	// Sampling used to detect whether _i has changed.
+	_i_r <= _i;
 
 	// Sampling used for intrdy_i edge detection.
-	intrdy_i_sampled <= intrdy_i;
+	intrdy_i_r <= intrdy_i;
 end
 
 endmodule
