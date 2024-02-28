@@ -43,7 +43,7 @@
 // wb_dat_o
 // 	Slave memory interface.
 //
-// mmapsz_o
+// wb_mapsz_o
 // 	Memory map size in bytes.
 //
 // intrqst_o
@@ -89,8 +89,7 @@ module usb_serial (
 	,wb_bsy_o
 	,wb_ack_o
 	,wb_dat_o
-
-	,mmapsz_o
+	,wb_mapsz_o
 
 	,intrqst_o
 	,intrdy_i
@@ -132,8 +131,7 @@ input  wire [ARCHBITSZ -1 : 0]     wb_dat_i;
 output wire                        wb_bsy_o;
 output reg                         wb_ack_o;
 output wire [ARCHBITSZ -1 : 0]     wb_dat_o;
-
-output wire [ARCHBITSZ -1 : 0] mmapsz_o;
+output wire [ARCHBITSZ -1 : 0]     wb_mapsz_o;
 
 output wire intrqst_o;
 input  wire intrdy_i;
@@ -143,7 +141,7 @@ inout wire usb_dn_io;
 
 assign wb_bsy_o = 1'b0;
 
-assign mmapsz_o = ((128/ARCHBITSZ)*(ARCHBITSZ/8));
+assign wb_mapsz_o = ((128/ARCHBITSZ)*(ARCHBITSZ/8));
 
 reg                    wb_stb_r;
 reg                    wb_we_r;

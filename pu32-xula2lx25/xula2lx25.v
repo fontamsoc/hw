@@ -23,7 +23,7 @@
 
 `include "dev/devtbl.v"
 
-`include "dev/intctrl.v"
+`include "dev/irqctrl.v"
 
 `include "dev/uart_hw.v"
 
@@ -140,7 +140,7 @@ end
 
 STARTUP_SPARTAN6 (.CLK (clk12mhz_i), .GSR (swcoldrst));
 
-localparam CLKFREQ   = 30000000 /* 30 MHz */; // Frequency of clk_w.
+localparam CLK1XFREQ = 30000000 /* 30 MHz */; // Frequency of clk_1x_w.
 localparam CLK2XFREQ = 60000000 /* 60 MHz */; // Frequency of clk_2x_w.
 
 wire pll_locked;
@@ -163,27 +163,17 @@ end
 BUFG bufg1 (.O (clk60mhz), .I (clkdiv[0]));
 BUFG bufg2 (.O (clk30mhz), .I (clkdiv[1]));
 
-wire clk_w    = clk30mhz;
+wire clk_1x_w = clk30mhz;
 wire clk_2x_w = clk60mhz;
 
 wire rst_w = (!pll_locked || devtbl_rst0_r || (|rst_cntr));
-
-localparam INTCTRLSRC_SDCARD = 0;
-localparam INTCTRLSRC_UART   = (INTCTRLSRC_SDCARD + 1);
-localparam INTCTRLSRCCOUNT   = (INTCTRLSRC_UART +1); // Number of interrupt source.
-localparam INTCTRLDSTCOUNT   = 1; // Number of interrupt destination.
-wire [INTCTRLSRCCOUNT -1 : 0] intrqstsrc_w;
-wire [INTCTRLSRCCOUNT -1 : 0] intrdysrc_w;
-wire [INTCTRLDSTCOUNT -1 : 0] intrqstdst_w;
-wire [INTCTRLDSTCOUNT -1 : 0] intrdydst_w;
-wire [INTCTRLDSTCOUNT -1 : 0] intbestdst_w;
 
 localparam M_PI1R_CPU        = 0;
 localparam M_PI1R_LAST       = M_PI1R_CPU;
 localparam S_PI1R_SDCARD     = 0;
 localparam S_PI1R_DEVTBL     = (S_PI1R_SDCARD + 1);
-localparam S_PI1R_INTCTRL    = (S_PI1R_DEVTBL + 1);
-localparam S_PI1R_UART       = (S_PI1R_INTCTRL + 1);
+localparam S_PI1R_IRQCTRL    = (S_PI1R_DEVTBL + 1);
+localparam S_PI1R_UART       = (S_PI1R_IRQCTRL + 1);
 localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
 localparam S_PI1R_BOOTLDR    = (S_PI1R_RAM + 1);
 localparam S_PI1R_INVALIDDEV = (S_PI1R_BOOTLDR + 1);
@@ -195,9 +185,9 @@ localparam PI1RFIRSTSLAVEADDR    = 0;
 localparam PI1RARCHBITSZ         = ARCHBITSZ;
 localparam CLOG2PI1RARCHBITSZBY8 = clog2(PI1RARCHBITSZ/8);
 localparam PI1RADDRBITSZ         = (PI1RARCHBITSZ-CLOG2PI1RARCHBITSZBY8);
-localparam PI1RCLKFREQ           = CLKFREQ;
+localparam PI1RCLKFREQ           = CLK1XFREQ;
 wire pi1r_rst_w = rst_w;
-wire pi1r_clk_w = clk_w;
+wire pi1r_clk_w = clk_1x_w;
 // PerInt is instantiated in a separate file to keep this file clean.
 // Masters should use the following signals to plug onto PerInt:
 // 	input  [2 -1 : 0]                 m_pi1r_op_w    [PI1RMASTERCOUNT -1 : 0];
@@ -228,6 +218,17 @@ end endgenerate
 assign devtbl_mapsz_flat_w = s_pi1r_mapsz_w_flat /* defined in "lib/perint/inst.pi1r.v" */;
 assign devtbl_useintr_flat_w = devtbl_useintr_w;
 
+localparam IRQ_SDCARD = 0;
+localparam IRQ_UART   = (IRQ_SDCARD + 1);
+
+localparam IRQCTRLSRCCOUNT = (IRQ_UART +1); // Number of interrupt source.
+localparam IRQCTRLDSTCOUNT = 1; // Number of interrupt destination.
+wire [IRQCTRLSRCCOUNT -1 : 0] intrqstsrc_w;
+wire [IRQCTRLSRCCOUNT -1 : 0] intrdysrc_w;
+wire [IRQCTRLDSTCOUNT -1 : 0] intrqstdst_w;
+wire [IRQCTRLDSTCOUNT -1 : 0] intrdydst_w;
+wire [IRQCTRLDSTCOUNT -1 : 0] intbestdst_w;
+
 localparam ICACHESZ = 32;
 localparam DCACHESZ = 4;
 localparam TLBSZ    = 128;
@@ -240,7 +241,7 @@ cpu #(
 
 	 .ARCHBITSZ      (ARCHBITSZ)
 	,.XARCHBITSZ     (PI1RARCHBITSZ)
-	,.CLKFREQ        (CLKFREQ)
+	,.CLKFREQ        (PI1RCLKFREQ)
 	,.ICACHESETCOUNT ((1024/(PI1RARCHBITSZ/8))*(ICACHESZ/ICACHEWAYCOUNT))
 	,.DCACHESETCOUNT ((1024/(PI1RARCHBITSZ/8))*(DCACHESZ/DCACHEWAYCOUNT))
 	,.TLBSETCOUNT    (TLBSZ/TLBWAYCOUNT)
@@ -304,8 +305,8 @@ sdcard_spi #(
 	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_SDCARD])
 	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_SDCARD])
 
-	,.intrqst_o (intrqstsrc_w[INTCTRLSRC_SDCARD])
-	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_SDCARD])
+	,.intrqst_o (intrqstsrc_w[IRQ_SDCARD])
+	,.intrdy_i  (intrdysrc_w[IRQ_SDCARD])
 );
 
 localparam RAMCACHEWAYCOUNT = 2;
@@ -337,33 +338,33 @@ devtbl #(
 	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_DEVTBL])
 	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_DEVTBL])
 
-	,.devtbl_id_flat_i      (devtbl_id_flat_w)
-	,.devtbl_mapsz_flat_i   (devtbl_mapsz_flat_w)
-	,.devtbl_useintr_flat_i (devtbl_useintr_flat_w)
+	,.dev_id_i     (devtbl_id_flat_w)
+	,.dev_mapsz_i  (devtbl_mapsz_flat_w)
+	,.dev_useirq_i (devtbl_useintr_flat_w)
 );
 
 assign devtbl_id_w     [S_PI1R_DEVTBL] = 7;
 assign devtbl_useintr_w[S_PI1R_DEVTBL] = 0;
 
-intctrl #(
+irqctrl #(
 
 	 .ARCHBITSZ   (ARCHBITSZ)
-	,.INTSRCCOUNT (INTCTRLSRCCOUNT)
-	,.INTDSTCOUNT (INTCTRLDSTCOUNT)
+	,.INTSRCCOUNT (IRQCTRLSRCCOUNT)
+	,.INTDSTCOUNT (IRQCTRLDSTCOUNT)
 
-) intctrl (
+) irqctrl (
 
 	 .rst_i (pi1r_rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
-	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_INTCTRL])
-	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_INTCTRL])
-	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_INTCTRL])
-	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_INTCTRL])
-	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_INTCTRL])
-	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_INTCTRL])
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_INTCTRL])
+	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_IRQCTRL])
+	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_IRQCTRL])
+	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_IRQCTRL])
+	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_IRQCTRL])
+	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_IRQCTRL])
+	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_IRQCTRL])
+	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_IRQCTRL])
 
 	,.intrqstdst_o (intrqstdst_w)
 	,.intrdydst_i  (intrdydst_w)
@@ -373,13 +374,13 @@ intctrl #(
 	,.intrdysrc_o  (intrdysrc_w)
 );
 
-assign devtbl_id_w     [S_PI1R_INTCTRL] = 3;
-assign devtbl_useintr_w[S_PI1R_INTCTRL] = 0;
+assign devtbl_id_w     [S_PI1R_IRQCTRL] = 3;
+assign devtbl_useintr_w[S_PI1R_IRQCTRL] = 0;
 
 uart_hw #(
 
 	 .ARCHBITSZ  (ARCHBITSZ)
-	,.PHYCLKFREQ (CLKFREQ)
+	,.PHYCLKFREQ (CLK1XFREQ)
 	,.BUFSZ      (2048)
 
 ) uart (
@@ -389,7 +390,7 @@ uart_hw #(
 		   all buffered data get a chance to be transmitted */)
 
 	,.clk_i     (pi1r_clk_w)
-	,.clk_phy_i (clk_w)
+	,.clk_phy_i (clk_1x_w)
 
 	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_UART])
 	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_UART])
@@ -399,8 +400,8 @@ uart_hw #(
 	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_UART])
 	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_UART])
 
-	,.intrqst_o (intrqstsrc_w[INTCTRLSRC_UART])
-	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_UART])
+	,.intrqst_o (intrqstsrc_w[IRQ_UART])
+	,.intrdy_i  (intrdysrc_w[IRQ_UART])
 
 	,.rx_i (uart_rx)
 	,.tx_o (uart_tx)
@@ -497,7 +498,7 @@ pi1_to_wb4 #(
 
 wb4sdram #(
 
-	 .SDRAM_MHZ          (CLKFREQ/1000000)
+	 .SDRAM_MHZ          (CLK1XFREQ/1000000)
 	,.SDRAM_ADDR_W       (CLOG2SDRAMROWCOUNT+CLOG2SDRAMBANKCOUNT+CLOG2SDRAMCOLUMNCOUNT)
 	,.SDRAM_COL_W        (CLOG2SDRAMCOLUMNCOUNT)
 	,.SDRAM_BANK_W       (CLOG2SDRAMBANKCOUNT)
