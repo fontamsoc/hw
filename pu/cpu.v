@@ -25,6 +25,8 @@
 `include "lib/perint/pi1b.v"
 `endif
 
+`include "dev/pi1_to_wb4.v"
+
 module cpu (
 
 	 rst_i
@@ -41,12 +43,15 @@ module cpu (
 	,clk_mem_i
 	`endif
 
-	,pi1_op_o
-	,pi1_addr_o
-	,pi1_data_o
-	,pi1_data_i
-	,pi1_sel_o
-	,pi1_rdy_i
+	,wb_cyc_o
+	,wb_stb_o
+	,wb_we_o
+	,wb_addr_o
+	,wb_sel_o
+	,wb_dat_o
+	,wb_bsy_i
+	,wb_ack_i
+	,wb_dat_i
 
 	,intrqst_i
 	,intrdy_o
@@ -114,12 +119,15 @@ input wire clk_fdiv_i;
 input wire clk_mem_i;
 `endif
 
-output wire [2 -1 : 0]              pi1_op_o;
-output wire [XADDRBITSZ -1 : 0]     pi1_addr_o;
-output wire [XARCHBITSZ -1 : 0]     pi1_data_o;
-input  wire [XARCHBITSZ -1 : 0]     pi1_data_i;
-output wire [(XARCHBITSZ/8) -1 : 0] pi1_sel_o;
-input  wire                         pi1_rdy_i;
+output wire                         wb_cyc_o;
+output wire                         wb_stb_o;
+output wire                         wb_we_o;
+output wire [XADDRBITSZ -1 : 0]     wb_addr_o;
+output wire [(XARCHBITSZ/8) -1 : 0] wb_sel_o;
+output wire [XARCHBITSZ -1 : 0]     wb_dat_o;
+input  wire                         wb_bsy_i;
+input  wire                         wb_ack_i;
+input  wire [XARCHBITSZ -1 : 0]     wb_dat_i;
 
 input  wire [PUCOUNT -1 : 0] intrqst_i;
 output wire [PUCOUNT -1 : 0] intrdy_o;
@@ -143,6 +151,46 @@ input  wire            dbg_tx_rdy_i;
 `ifdef SIMULATION
 output wire [(ARCHBITSZ * PUCOUNT) -1 : 0] pc_o;
 `endif
+
+wire [2 -1 : 0]              pi1_op_o;
+wire [XADDRBITSZ -1 : 0]     pi1_addr_o;
+wire [(XARCHBITSZ/8) -1 : 0] pi1_sel_o;
+wire [XARCHBITSZ -1 : 0]     pi1_data_o;
+wire [XARCHBITSZ -1 : 0]     pi1_data_i;
+wire                         pi1_rdy_i;
+
+wire [CLOG2XARCHBITSZBY8 -1 : 0] wb_addr_void;
+pi1_to_wb4 #(
+
+	.ARCHBITSZ (XARCHBITSZ)
+
+) cpu_wb (
+
+	 .rst_i (rst_i)
+
+	 `ifdef PUCOUNT
+	,.clk_i (clk_mem_i)
+	`else
+	,.clk_i (clk_i)
+	`endif
+
+	,.pi1_op_i   (pi1_op_o)
+	,.pi1_addr_i (pi1_addr_o)
+	,.pi1_sel_i  (pi1_sel_o)
+	,.pi1_data_i (pi1_data_o)
+	,.pi1_data_o (pi1_data_i)
+	,.pi1_rdy_o  (pi1_rdy_i)
+
+	,.wb4_cyc_o   (wb_cyc_o)
+	,.wb4_stb_o   (wb_stb_o)
+	,.wb4_we_o    (wb_we_o)
+	,.wb4_addr_o  ({wb_addr_o, wb_addr_void})
+	,.wb4_sel_o   (wb_sel_o)
+	,.wb4_data_o  (wb_dat_o)
+	,.wb4_stall_i (wb_bsy_i)
+	,.wb4_ack_i   (wb_ack_i)
+	,.wb4_data_i  (wb_dat_i)
+);
 
 `ifdef PUCOUNT
 localparam PI1QMASTERCOUNT       = PUCOUNT;

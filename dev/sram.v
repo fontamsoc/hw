@@ -38,7 +38,7 @@
 // wb_dat_o
 // 	Slave memory interface.
 //
-// mmapsz_o
+// wb_mapsz_o
 // 	Memory map size in bytes.
 
 module sram (
@@ -56,8 +56,7 @@ module sram (
 	,wb_bsy_o
 	,wb_ack_o
 	,wb_dat_o
-
-	,mmapsz_o
+	,wb_mapsz_o
 );
 
 `include "lib/clog2.v"
@@ -85,8 +84,7 @@ input  wire [ARCHBITSZ -1 : 0]     wb_dat_i;
 output wire                        wb_bsy_o;
 output reg                         wb_ack_o;
 output reg  [ARCHBITSZ -1 : 0]     wb_dat_o;
-
-output wire [ARCHBITSZ -1 : 0] mmapsz_o;
+output wire [ARCHBITSZ -1 : 0]     wb_mapsz_o;
 
 localparam CLOG2DELAY = clog2(DELAY);
 
@@ -97,7 +95,7 @@ reg [CLOG2DELAY -1 : 0] cntr = 0;
 
 assign wb_bsy_o = |cntr;
 
-assign mmapsz_o = (SIZE*(ARCHBITSZ/8));
+assign wb_mapsz_o = (SIZE*(ARCHBITSZ/8));
 
 reg [ARCHBITSZ -1 : 0] ram [SIZE -1 : 0];
 

@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
+`ifndef DEVTBL_V
+// Macro used by lib/wbpi_inst.v .
+`define DEVTBL_V
+
 // Device Table.
-// It maps the first RAM device at 0x1000 by adjusting its mmapsz_o.
+// It maps the first RAM device at 0x1000 by adjusting its wb_mapsz_o.
 
 module devtbl (
 
@@ -23,21 +27,20 @@ module devtbl (
 	,wb_bsy_o
 	,wb_ack_o
 	,wb_dat_o
+	,wb_mapsz_o
 
-	,mmapsz_o
-
-	,devtbl_id_flat_i
-	,devtbl_mapsz_flat_i
-	,devtbl_useintr_flat_i
+	,dev_id_i
+	,dev_mapsz_i
+	,dev_useirq_i
 );
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ   = 16;
-parameter RAMCACHESZ  = 2; // Size of the RAM cache in (ARCHBITSZ/8) bytes.
-parameter PRELDRADDR  = 0; // Address of pre-loader in bytes.
-parameter DEVMAPCNT   = 3; // Number of device mappings; must be >= 3 and <= (((4096-1024)/(ARCHBITSZ/8))/2).
-parameter SOCID       = 0;
+parameter ARCHBITSZ  = 16;
+parameter RAMCACHESZ = 2; // Size of the RAM cache in (ARCHBITSZ/8) bytes.
+parameter PRELDRADDR = 0; // Address of pre-loader in bytes.
+parameter DEVMAPCNT  = 3; // Number of device mappings; must be >= 3 and <= (((4096-1024)/(ARCHBITSZ/8))/2).
+parameter SOCID      = 0;
 
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
 localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
@@ -59,52 +62,52 @@ input  wire [ARCHBITSZ -1 : 0]     wb_dat_i;
 output wire                        wb_bsy_o;
 output reg                         wb_ack_o;
 output reg  [ARCHBITSZ -1 : 0]     wb_dat_o;
+output reg  [ARCHBITSZ -1 : 0]     wb_mapsz_o;
 
-output reg  [ARCHBITSZ -1 : 0] mmapsz_o;
-
-input wire [(ARCHBITSZ * DEVMAPCNT) -1 : 0] devtbl_id_flat_i;
-input wire [(ARCHBITSZ * DEVMAPCNT) -1 : 0] devtbl_mapsz_flat_i /* verilator lint_off UNOPTFLAT */;
-input wire [DEVMAPCNT -1 : 0]               devtbl_useintr_flat_i;
+input  wire [(ARCHBITSZ * DEVMAPCNT) -1 : 0] dev_id_i;
+input  wire [(ARCHBITSZ * DEVMAPCNT) -1 : 0] dev_mapsz_i /* verilator lint_off UNOPTFLAT */;
+input  wire [DEVMAPCNT -1 : 0]               dev_useirq_i;
 
 assign wb_bsy_o = 1'b0;
 
-wire [ARCHBITSZ -1 : 0] devtbl_id_w      [DEVMAPCNT -1 : 0];
-wire [ARCHBITSZ -1 : 0] devtbl_mapsz_w   [DEVMAPCNT -1 : 0];
-wire [DEVMAPCNT -1 : 0] devtbl_useintr_w;
+wire [ARCHBITSZ -1 : 0] _dev_id_i    [DEVMAPCNT -1 : 0];
+wire [ARCHBITSZ -1 : 0] _dev_mapsz_i [DEVMAPCNT -1 : 0];
 
 localparam BLKDEVMAPSZ = 1024;
 
-reg [ARCHBITSZ -1 : 0] mmapsz_o_; // ### comb-block-reg.
-reg [ARCHBITSZ -1 : 0] gen_mmapsz_o_idx_max; // ### comb-block-reg.
-integer gen_mmapsz_o_idx;
+reg [ARCHBITSZ -1 : 0] wb_mapsz_o_; // ### comb-block-reg.
+reg [ARCHBITSZ -1 : 0] gen_wb_mapsz_o_idx_max; // ### comb-block-reg.
+integer gen_wb_mapsz_o_idx;
 always @* begin
-	mmapsz_o_ = (4096 - BLKDEVMAPSZ); /* first 2 devices must be Block and DevTbl devices */
-	gen_mmapsz_o_idx_max = DEVMAPCNT;
+	wb_mapsz_o_ = (4096 - BLKDEVMAPSZ); /* first 2 devices must be Block and DevTbl devices */
+	gen_wb_mapsz_o_idx_max = DEVMAPCNT;
 	for (
-		gen_mmapsz_o_idx = 2;
-		gen_mmapsz_o_idx < DEVMAPCNT;
-		gen_mmapsz_o_idx = gen_mmapsz_o_idx + 1) begin :gen_mmapsz_o
-		if (devtbl_id_w[gen_mmapsz_o_idx] == 1 /* stops at the first RAM device */)
-			gen_mmapsz_o_idx_max = gen_mmapsz_o_idx;
-		if (gen_mmapsz_o_idx < gen_mmapsz_o_idx_max)
-			mmapsz_o_ = (mmapsz_o_ - devtbl_mapsz_w[gen_mmapsz_o_idx]);
+		gen_wb_mapsz_o_idx = 2;
+		gen_wb_mapsz_o_idx < DEVMAPCNT;
+		gen_wb_mapsz_o_idx = gen_wb_mapsz_o_idx + 1) begin :gen_wb_mapsz_o
+		if (_dev_id_i[gen_wb_mapsz_o_idx] == 1 /* stops at the first RAM device */)
+			gen_wb_mapsz_o_idx_max = gen_wb_mapsz_o_idx;
+		if (gen_wb_mapsz_o_idx < gen_wb_mapsz_o_idx_max)
+			wb_mapsz_o_ = (wb_mapsz_o_ - _dev_mapsz_i[gen_wb_mapsz_o_idx]);
 	end
 end
 always @ (posedge clk_i) begin
-	mmapsz_o <= mmapsz_o_;
+	wb_mapsz_o <= wb_mapsz_o_;
 end
 
-genvar gen_devtbl_id_w_idx;
-generate for (gen_devtbl_id_w_idx = 0; gen_devtbl_id_w_idx < DEVMAPCNT; gen_devtbl_id_w_idx = gen_devtbl_id_w_idx + 1) begin :gen_devtbl_id_w
-assign devtbl_id_w[gen_devtbl_id_w_idx] = devtbl_id_flat_i[((gen_devtbl_id_w_idx+1) * ARCHBITSZ) -1 : gen_devtbl_id_w_idx * ARCHBITSZ];
-end endgenerate
+genvar gen_dev_idx;
+generate for (
+	gen_dev_idx = 0;
+	gen_dev_idx < DEVMAPCNT;
+	gen_dev_idx = gen_dev_idx + 1) begin :gen_dev
 
-genvar gen_devtbl_mapsz_w_idx;
-generate for (gen_devtbl_mapsz_w_idx = 2; gen_devtbl_mapsz_w_idx < DEVMAPCNT; gen_devtbl_mapsz_w_idx = gen_devtbl_mapsz_w_idx + 1) begin :gen_devtbl_mapsz_w
-assign devtbl_mapsz_w[gen_devtbl_mapsz_w_idx] = devtbl_mapsz_flat_i[((gen_devtbl_mapsz_w_idx+1) * ARCHBITSZ) -1 : gen_devtbl_mapsz_w_idx * ARCHBITSZ];
-end endgenerate
+assign _dev_id_i[gen_dev_idx] =
+	dev_id_i[((gen_dev_idx+1) * ARCHBITSZ) -1 : gen_dev_idx * ARCHBITSZ];
 
-assign devtbl_useintr_w = devtbl_useintr_flat_i;
+assign _dev_mapsz_i[gen_dev_idx] =
+	dev_mapsz_i[((gen_dev_idx+1) * ARCHBITSZ) -1 : gen_dev_idx * ARCHBITSZ];
+
+end endgenerate
 
 reg                    wb_stb_r;
 reg                    wb_we_r;
@@ -171,13 +174,13 @@ always @ (posedge clk_i) begin
 			end else begin // DEVS.
 				if (addrby2 >= DEVMAPCNT)
 					wb_dat_o <= 0;
-				else if (wb_addr_r[0] == 0) // Return DevID.
-					wb_dat_o <= devtbl_id_w[addrby2];
-				else // Return DevMapSz and DevUseIntr.
+				else if (wb_addr_r[0] == 0) // Return DevId.
+					wb_dat_o <= _dev_id_i[addrby2];
+				else // Return DevMapSz and DevUseIrq.
 					wb_dat_o <= {(
 						(addrby2 == 0) ? BLKDEVMAPSZ :
-						(addrby2 == 1) ? mmapsz_o : devtbl_mapsz_w[addrby2])>>1,
-						devtbl_useintr_w[addrby2]};
+						(addrby2 == 1) ? wb_mapsz_o : _dev_mapsz_i[addrby2])>>1,
+						dev_useirq_i[addrby2]};
 			end
 		end
 	end
@@ -185,3 +188,5 @@ always @ (posedge clk_i) begin
 end
 
 endmodule
+
+`endif /* DEVTBL_V */

@@ -4,7 +4,7 @@
 // SDCard peripheral.
 //
 // This device transfers data in blocks where the block size can be
-// computed from mmapsz_o which reports the size in bytes of the memory
+// computed from wb_mapsz_o which reports the size in bytes of the memory
 // mapping used by the device.
 // The first half of the mapping is a read/write RAM cache for the
 // data to be transfered to/from the device.
@@ -101,7 +101,7 @@
 // wb_dat_o
 // 	Slave memory interface.
 //
-// mmapsz_o
+// wb_mapsz_o
 // 	Memory map size in bytes.
 //
 // intrqst_o
@@ -148,8 +148,7 @@ module sdcard_spi (
 	,wb_bsy_o
 	,wb_ack_o
 	,wb_dat_o
-
-	,mmapsz_o
+	,wb_mapsz_o
 
 	,intrqst_o
 	,intrdy_i
@@ -198,15 +197,14 @@ input  wire [ARCHBITSZ -1 : 0]     wb_dat_i;
 output wire                        wb_bsy_o;
 output reg                         wb_ack_o;
 output reg  [ARCHBITSZ -1 : 0]     wb_dat_o;
-
-output wire [ARCHBITSZ -1 : 0] mmapsz_o;
+output wire [ARCHBITSZ -1 : 0]     wb_mapsz_o;
 
 output reg  intrqst_o;
 input  wire intrdy_i;
 
 assign wb_bsy_o = 1'b0;
 
-assign mmapsz_o = PHYBLKSZ*2;
+assign wb_mapsz_o = PHYBLKSZ*2;
 
 localparam CLOG2PHYBLKSZ = clog2(PHYBLKSZ);
 
