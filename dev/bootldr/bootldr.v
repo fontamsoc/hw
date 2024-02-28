@@ -17,7 +17,7 @@
 // wb_dat_o
 // 	Slave memory interface.
 //
-// mmapsz_o
+// wb_mapsz_o
 // 	Memory map size in bytes.
 
 module bootldr (
@@ -35,8 +35,7 @@ module bootldr (
 	,wb_bsy_o
 	,wb_ack_o
 	,wb_dat_o
-
-	,mmapsz_o
+	,wb_mapsz_o
 );
 
 `include "lib/clog2.v"
@@ -69,10 +68,9 @@ input  wire [ARCHBITSZ -1 : 0]     wb_dat_i;
 output wire                        wb_bsy_o;
 output reg                         wb_ack_o;
 output reg  [ARCHBITSZ -1 : 0]     wb_dat_o;
+output wire [ARCHBITSZ -1 : 0]     wb_mapsz_o;
 
-output wire [ARCHBITSZ -1 : 0] mmapsz_o;
-
-assign mmapsz_o = (SIZE*(ARCHBITSZ/8))
+assign wb_mapsz_o = (SIZE*(ARCHBITSZ/8))
 	`ifdef SIMULATION
 	*2 // Double the memory mapping to catch pu prefetch
 	   // memory access that can occur beyond its size.

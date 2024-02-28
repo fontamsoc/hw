@@ -23,7 +23,7 @@
 
 `include "dev/devtbl.v"
 
-`include "dev/intctrl.v"
+`include "dev/irqctrl.v"
 
 `include "dev/usb_serial.v"
 
@@ -156,7 +156,7 @@ localparam CLKFREQ24MHZ = 24000000;
 localparam CLKFREQ48MHZ = 48000000;
 localparam CLKFREQ96MHZ = 96000000;
 
-localparam CLKFREQ   = CLKFREQ12MHZ; // Frequency of clk_w.
+localparam CLK1XFREQ = CLKFREQ12MHZ; // Frequency of clk_1x_w.
 localparam CLK2XFREQ = CLKFREQ24MHZ; // Frequency of clk_2x_w.
 localparam CLK4XFREQ = CLKFREQ48MHZ; // Frequency of clk_4x_w.
 localparam CLK8XFREQ = CLKFREQ96MHZ; // Frequency of clk_8x_w.
@@ -166,7 +166,7 @@ wire       pll_locked;
 ecp5pll #(
 
 	 .in_hz    (CLKFREQ48MHZ)
-	,.out0_hz  (CLKFREQ)
+	,.out0_hz  (CLK1XFREQ)
 	,.out1_hz  (CLK2XFREQ)
 	,.out2_hz  (CLK4XFREQ)
 	,.out3_hz  (CLK8XFREQ)
@@ -188,7 +188,7 @@ wire clk24mhz = pll_clk_w[1];
 wire clk48mhz = pll_clk_w[2];
 wire clk96mhz = pll_clk_w[3];
 
-wire clk_w    = clk12mhz;
+wire clk_1x_w = clk12mhz;
 wire clk_2x_w = clk24mhz;
 wire clk_4x_w = clk48mhz;
 wire clk_8x_w = clk96mhz;
@@ -215,22 +215,12 @@ end
 
 wire rst_w = (!pll_locked || devtbl_rst0_r || (|rst_cntr));
 
-localparam INTCTRLSRC_SDCARD = 0;
-localparam INTCTRLSRC_SERIAL = (INTCTRLSRC_SDCARD + 1);
-localparam INTCTRLSRCCOUNT   = (INTCTRLSRC_SERIAL +1); // Number of interrupt source.
-localparam INTCTRLDSTCOUNT   = 1; // Number of interrupt destination.
-wire [INTCTRLSRCCOUNT -1 : 0] intrqstsrc_w;
-wire [INTCTRLSRCCOUNT -1 : 0] intrdysrc_w;
-wire [INTCTRLDSTCOUNT -1 : 0] intrqstdst_w;
-wire [INTCTRLDSTCOUNT -1 : 0] intrdydst_w;
-wire [INTCTRLDSTCOUNT -1 : 0] intbestdst_w;
-
 localparam M_PI1R_CPU        = 0;
 localparam M_PI1R_LAST       = M_PI1R_CPU;
 localparam S_PI1R_SDCARD     = 0;
 localparam S_PI1R_DEVTBL     = (S_PI1R_SDCARD + 1);
-localparam S_PI1R_INTCTRL    = (S_PI1R_DEVTBL + 1);
-localparam S_PI1R_SERIAL     = (S_PI1R_INTCTRL + 1);
+localparam S_PI1R_IRQCTRL    = (S_PI1R_DEVTBL + 1);
+localparam S_PI1R_SERIAL     = (S_PI1R_IRQCTRL + 1);
 localparam S_PI1R_RAM        = (S_PI1R_SERIAL + 1);
 localparam S_PI1R_RAMCTRL    = (S_PI1R_RAM + 1);
 localparam S_PI1R_BOOTLDR    = (S_PI1R_RAMCTRL + 1);
@@ -277,6 +267,17 @@ assign devtbl_id_flat_w[((gen_devtbl_id_flat_w_idx+1) * PI1RARCHBITSZ) -1 : gen_
 end endgenerate
 assign devtbl_mapsz_flat_w = s_pi1r_mapsz_w_flat /* defined in "lib/perint/inst.pi1r.v" */;
 assign devtbl_useintr_flat_w = devtbl_useintr_w;
+
+localparam IRQ_SDCARD = 0;
+localparam IRQ_SERIAL = (IRQ_SDCARD + 1);
+
+localparam IRQCTRLSRCCOUNT = (IRQ_SERIAL +1); // Number of interrupt source.
+localparam IRQCTRLDSTCOUNT = 1; // Number of interrupt destination.
+wire [IRQCTRLSRCCOUNT -1 : 0] intrqstsrc_w;
+wire [IRQCTRLSRCCOUNT -1 : 0] intrdysrc_w;
+wire [IRQCTRLDSTCOUNT -1 : 0] intrqstdst_w;
+wire [IRQCTRLDSTCOUNT -1 : 0] intrdydst_w;
+wire [IRQCTRLDSTCOUNT -1 : 0] intbestdst_w;
 
 localparam ICACHESZ = 16;
 localparam DCACHESZ = 8;
@@ -355,8 +356,8 @@ sdcard_spi #(
 	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_SDCARD])
 	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_SDCARD])
 
-	,.intrqst_o (intrqstsrc_w[INTCTRLSRC_SDCARD])
-	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_SDCARD])
+	,.intrqst_o (intrqstsrc_w[IRQ_SDCARD])
+	,.intrdy_i  (intrdysrc_w[IRQ_SDCARD])
 );
 
 assign devtbl_id_w     [S_PI1R_SDCARD] = 4;
@@ -395,61 +396,61 @@ devtbl #(
 	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_DEVTBL])
 	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_DEVTBL])
 
-	,.devtbl_id_flat_i      (devtbl_id_flat_w)
-	,.devtbl_mapsz_flat_i   (devtbl_mapsz_flat_w)
-	,.devtbl_useintr_flat_i (devtbl_useintr_flat_w)
+	,.dev_id_i     (devtbl_id_flat_w)
+	,.dev_mapsz_i  (devtbl_mapsz_flat_w)
+	,.dev_useirq_i (devtbl_useintr_flat_w)
 );
 
 assign devtbl_id_w     [S_PI1R_DEVTBL] = 7;
 assign devtbl_useintr_w[S_PI1R_DEVTBL] = 0;
 
-wire [2 -1 : 0]             intctrl_op_w;
-wire [ADDRBITSZ -1 : 0]     intctrl_addr_w;
-wire [(ARCHBITSZ/8) -1 : 0] intctrl_sel_w;
-wire [ARCHBITSZ -1 : 0]     intctrl_data_w1;
-wire [ARCHBITSZ -1 : 0]     intctrl_data_w0;
-wire                        intctrl_rdy_w;
-wire [ADDRBITSZ -1 : 0]     intctrl_mapsz_w;
+wire [2 -1 : 0]             irqctrl_op_w;
+wire [ADDRBITSZ -1 : 0]     irqctrl_addr_w;
+wire [(ARCHBITSZ/8) -1 : 0] irqctrl_sel_w;
+wire [ARCHBITSZ -1 : 0]     irqctrl_data_w1;
+wire [ARCHBITSZ -1 : 0]     irqctrl_data_w0;
+wire                        irqctrl_rdy_w;
+wire [ADDRBITSZ -1 : 0]     irqctrl_mapsz_w;
 pi1_downconverter #(
 	 .MARCHBITSZ (PI1RARCHBITSZ)
 	,.SARCHBITSZ (ARCHBITSZ)
-) pi1_downconverter_intctrl (
+) pi1_downconverter_irqctrl (
 	 .clk_i (pi1r_clk_w)
-	,.m_pi1_op_i (s_pi1r_op_w[S_PI1R_INTCTRL])
-	,.m_pi1_addr_i (s_pi1r_addr_w[S_PI1R_INTCTRL])
-	,.m_pi1_data_i (s_pi1r_data_w0[S_PI1R_INTCTRL])
-	,.m_pi1_data_o (s_pi1r_data_w1[S_PI1R_INTCTRL])
-	,.m_pi1_sel_i (s_pi1r_sel_w[S_PI1R_INTCTRL])
-	,.m_pi1_rdy_o (s_pi1r_rdy_w[S_PI1R_INTCTRL])
-	,.m_pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_INTCTRL])
-	,.s_pi1_op_o (intctrl_op_w)
-	,.s_pi1_addr_o (intctrl_addr_w)
-	,.s_pi1_data_o (intctrl_data_w1)
-	,.s_pi1_data_i (intctrl_data_w0)
-	,.s_pi1_sel_o (intctrl_sel_w)
-	,.s_pi1_rdy_i (intctrl_rdy_w)
-	,.s_pi1_mapsz_i (intctrl_mapsz_w)
+	,.m_pi1_op_i (s_pi1r_op_w[S_PI1R_IRQCTRL])
+	,.m_pi1_addr_i (s_pi1r_addr_w[S_PI1R_IRQCTRL])
+	,.m_pi1_data_i (s_pi1r_data_w0[S_PI1R_IRQCTRL])
+	,.m_pi1_data_o (s_pi1r_data_w1[S_PI1R_IRQCTRL])
+	,.m_pi1_sel_i (s_pi1r_sel_w[S_PI1R_IRQCTRL])
+	,.m_pi1_rdy_o (s_pi1r_rdy_w[S_PI1R_IRQCTRL])
+	,.m_pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_IRQCTRL])
+	,.s_pi1_op_o (irqctrl_op_w)
+	,.s_pi1_addr_o (irqctrl_addr_w)
+	,.s_pi1_data_o (irqctrl_data_w1)
+	,.s_pi1_data_i (irqctrl_data_w0)
+	,.s_pi1_sel_o (irqctrl_sel_w)
+	,.s_pi1_rdy_i (irqctrl_rdy_w)
+	,.s_pi1_mapsz_i (irqctrl_mapsz_w)
 );
 
-intctrl #(
+irqctrl #(
 
 	 .ARCHBITSZ   (ARCHBITSZ)
-	,.INTSRCCOUNT (INTCTRLSRCCOUNT)
-	,.INTDSTCOUNT (INTCTRLDSTCOUNT)
+	,.INTSRCCOUNT (IRQCTRLSRCCOUNT)
+	,.INTDSTCOUNT (IRQCTRLDSTCOUNT)
 
-) intctrl (
+) irqctrl (
 
 	 .rst_i (pi1r_rst_w)
 
 	,.clk_i (pi1r_clk_w)
 
-	,.pi1_op_i    (intctrl_op_w)
-	,.pi1_addr_i  (intctrl_addr_w)
-	,.pi1_data_i  (intctrl_data_w1)
-	,.pi1_data_o  (intctrl_data_w0)
-	,.pi1_sel_i   (intctrl_sel_w)
-	,.pi1_rdy_o   (intctrl_rdy_w)
-	,.pi1_mapsz_o (intctrl_mapsz_w)
+	,.pi1_op_i    (irqctrl_op_w)
+	,.pi1_addr_i  (irqctrl_addr_w)
+	,.pi1_data_i  (irqctrl_data_w1)
+	,.pi1_data_o  (irqctrl_data_w0)
+	,.pi1_sel_i   (irqctrl_sel_w)
+	,.pi1_rdy_o   (irqctrl_rdy_w)
+	,.pi1_mapsz_o (irqctrl_mapsz_w)
 
 	,.intrqstdst_o (intrqstdst_w)
 	,.intrdydst_i  (intrdydst_w)
@@ -459,8 +460,8 @@ intctrl #(
 	,.intrdysrc_o  (intrdysrc_w)
 );
 
-assign devtbl_id_w     [S_PI1R_INTCTRL] = 3;
-assign devtbl_useintr_w[S_PI1R_INTCTRL] = 0;
+assign devtbl_id_w     [S_PI1R_IRQCTRL] = 3;
+assign devtbl_useintr_w[S_PI1R_IRQCTRL] = 0;
 
 wire [2 -1 : 0]             serial_op_w;
 wire [ADDRBITSZ -1 : 0]     serial_addr_w;
@@ -513,8 +514,8 @@ usb_serial #(
 	,.pi1_rdy_o   (serial_rdy_w)
 	,.pi1_mapsz_o (serial_mapsz_w)
 
-	,.intrqst_o (intrqstsrc_w[INTCTRLSRC_SERIAL])
-	,.intrdy_i  (intrdysrc_w[INTCTRLSRC_SERIAL])
+	,.intrqst_o (intrqstsrc_w[IRQ_SERIAL])
+	,.intrdy_i  (intrdysrc_w[IRQ_SERIAL])
 
 	,.usb_dp_io (usb_d_p)
 	,.usb_dn_io (usb_d_n)
