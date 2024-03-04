@@ -10,7 +10,6 @@
 // data to be transfered to/from the device.
 // The second half of the mapping has read/write registers used to
 // send commands to the device.
-// Only ARCHBITSZ bits memory operations are valid throughout the mapping.
 // The registers and their offsets within the second half of the mapping are:
 // - RESET: 0*(ARCHBITSZ/8): Reading this register returns current status.
 // 	A controller reset is initiated when writing any value to this register,
@@ -430,9 +429,51 @@ generate if (XARCHBITSZ == 256) begin
 	end
 end endgenerate
 
+reg [XARCHBITSZ -1 : 0] _wb_sel_r; // ### comb-always-block-reg.
+generate if (XARCHBITSZ == 16) begin
+	always @* begin
+		_wb_sel_r = {{8{wb_sel_r[1]}}, {8{wb_sel_r[0]}}};
+	end
+end endgenerate
+generate if (XARCHBITSZ == 32) begin
+	always @* begin
+		_wb_sel_r = {{8{wb_sel_r[3]}}, {8{wb_sel_r[2]}}, {8{wb_sel_r[1]}}, {8{wb_sel_r[0]}}};
+	end
+end endgenerate
+generate if (XARCHBITSZ == 64) begin
+	always @* begin
+		_wb_sel_r = {
+			{8{wb_sel_r[7]}}, {8{wb_sel_r[6]}}, {8{wb_sel_r[5]}}, {8{wb_sel_r[4]}},
+			{8{wb_sel_r[3]}}, {8{wb_sel_r[2]}}, {8{wb_sel_r[1]}}, {8{wb_sel_r[0]}}};
+	end
+end endgenerate
+generate if (XARCHBITSZ == 128) begin
+	always @* begin
+		_wb_sel_r = {
+			{8{wb_sel_r[15]}}, {8{wb_sel_r[14]}}, {8{wb_sel_r[13]}}, {8{wb_sel_r[12]}},
+			{8{wb_sel_r[11]}}, {8{wb_sel_r[10]}}, {8{wb_sel_r[9]}},  {8{wb_sel_r[8]}},
+			{8{wb_sel_r[7]}},  {8{wb_sel_r[6]}},  {8{wb_sel_r[5]}},  {8{wb_sel_r[4]}},
+			{8{wb_sel_r[3]}},  {8{wb_sel_r[2]}},  {8{wb_sel_r[1]}},  {8{wb_sel_r[0]}}};
+	end
+end endgenerate
+generate if (XARCHBITSZ == 256) begin
+	always @* begin
+		_wb_sel_r = {
+			{8{wb_sel_r[31]}}, {8{wb_sel_r[30]}}, {8{wb_sel_r[29]}}, {8{wb_sel_r[28]}},
+			{8{wb_sel_r[27]}}, {8{wb_sel_r[26]}}, {8{wb_sel_r[25]}}, {8{wb_sel_r[24]}},
+			{8{wb_sel_r[23]}}, {8{wb_sel_r[22]}}, {8{wb_sel_r[21]}}, {8{wb_sel_r[20]}},
+			{8{wb_sel_r[19]}}, {8{wb_sel_r[18]}}, {8{wb_sel_r[17]}}, {8{wb_sel_r[16]}},
+			{8{wb_sel_r[15]}}, {8{wb_sel_r[14]}}, {8{wb_sel_r[13]}}, {8{wb_sel_r[12]}},
+			{8{wb_sel_r[11]}}, {8{wb_sel_r[10]}}, {8{wb_sel_r[9]}},  {8{wb_sel_r[8]}},
+			{8{wb_sel_r[7]}},  {8{wb_sel_r[6]}},  {8{wb_sel_r[5]}},  {8{wb_sel_r[4]}},
+			{8{wb_sel_r[3]}},  {8{wb_sel_r[2]}},  {8{wb_sel_r[1]}},  {8{wb_sel_r[0]}}};
+	end
+end endgenerate
+
+wire [XARCHBITSZ -1 : 0] _wb_dat_r = ((wb_dat_r & _wb_sel_r) | (wb_dat_o & ~_wb_sel_r));
 // Nets set to the value to write in the respective cache.
-wire [XARCHBITSZ -1 : 0] cache0dati = cachesel ? wb_dat_r : phy_rx_data_o_byteselected[XARCHBITSZ -1 : 0];
-wire [XARCHBITSZ -1 : 0] cache1dati = cachesel ? phy_rx_data_o_byteselected[XARCHBITSZ -1 : 0] : wb_dat_r;
+wire [XARCHBITSZ -1 : 0] cache0dati = cachesel ? _wb_dat_r : phy_rx_data_o_byteselected[XARCHBITSZ -1 : 0];
+wire [XARCHBITSZ -1 : 0] cache1dati = cachesel ? phy_rx_data_o_byteselected[XARCHBITSZ -1 : 0] : _wb_dat_r;
 
 // phy_tx_data_i is set to the value read from the respective cache.
 generate if (XARCHBITSZ == 16) begin
@@ -594,12 +635,15 @@ wire phy_bsy_w_negedge = (!phy_bsy_w && phy_bsy_w_r);
 
 wire cache_rdop = (wb_stb_r && !wb_we_r && wb_addr_r < (PHYBLKSZ >> CLOG2XARCHBITSZBY8));
 wire cache_wrop = (wb_stb_r && wb_we_r  && wb_addr_r < (PHYBLKSZ >> CLOG2XARCHBITSZBY8));
+reg cache_wrop_r;
+always @ (posedge clk_i)
+	cache_wrop_r <= cache_wrop;
 
 // Nets set to 1 when a read/write request is done to their respective cache.
 wire cache0rd = cachesel ? cache_rdop : phy_tx_pop_o;
 wire cache1rd = cachesel ? phy_tx_pop_o : cache_rdop;
-wire cache0wr = cachesel ? cache_wrop : phy_rx_push_o;
-wire cache1wr = cachesel ? phy_rx_push_o : cache_wrop;
+wire cache0wr = cachesel ? cache_wrop_r : phy_rx_push_o;
+wire cache1wr = cachesel ? phy_rx_push_o : cache_wrop_r;
 
 reg [XARCHBITSZ -1 : 0] cache0 [(PHYBLKSZ/(XARCHBITSZ/8)) -1 : 0];
 reg [XARCHBITSZ -1 : 0] cache1 [(PHYBLKSZ/(XARCHBITSZ/8)) -1 : 0];
@@ -671,7 +715,7 @@ always @ (posedge clk_i) begin
 
 	wb_ack_o <= wb_stb_r;
 
-	if (cache_rdop)
+	if (cache_rdop || cache_wrop)
 		wb_dat_o <= cachesel ? cache0dato : cache1dato;
 	else if (wb_stb_r && !wb_we_r)
 		wb_dat_o <= (wb_dat_o_ << wb_dat_shift);
