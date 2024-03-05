@@ -279,6 +279,7 @@ cpu #(
 sdcard_spi #(
 
 	 .ARCHBITSZ (ARCHBITSZ)
+	,.XARCHBITSZ (WBPI_ARCHBITSZ)
 	,.SRCFILE ("pu32.img.hex" /* `hexdump -v -e '/1 "%02x "' /path/to/img > pu32.img.hex` */)
 	,.SIMSTORAGESZ (81920*5)
 

@@ -125,6 +125,8 @@
 `include "./sdcard_spi_phy.v"
 `endif
 
+`include "lib/addr.v"
+
 module sdcard_spi (
 
 	 rst_i
@@ -157,6 +159,7 @@ module sdcard_spi (
 `include "lib/clog2.v"
 
 parameter ARCHBITSZ = 16;
+parameter XARCHBITSZ = 16;
 
 parameter CLKFREQ = 1;
 parameter PHYCLKFREQ = 1;
@@ -173,8 +176,14 @@ parameter SIMSTORAGESZ = 4096;
 // Note also that the value of this macro is the block size used by the controller.
 localparam PHYBLKSZ = 512; // ### Must not change for SDCard.
 
+localparam CLOG2ARCHBITSZ = clog2(ARCHBITSZ);
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
-localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
+localparam ADDRBITSZ = (ARCHBITSZ - CLOG2ARCHBITSZBY8);
+
+localparam CLOG2XARCHBITSZBY8 = clog2(XARCHBITSZ/8);
+localparam XADDRBITSZ = (XARCHBITSZ-CLOG2XARCHBITSZBY8);
+
+localparam CLOG2XARCHBITSZBY8DIFF = (CLOG2XARCHBITSZBY8 - CLOG2ARCHBITSZBY8);
 
 input wire rst_i;
 
@@ -188,16 +197,16 @@ input  wire do_i;
 output wire cs_o;
 `endif
 
-input  wire                        wb_cyc_i;
-input  wire                        wb_stb_i;
-input  wire                        wb_we_i;
-input  wire [ADDRBITSZ -1 : 0]     wb_addr_i;
-input  wire [(ARCHBITSZ/8) -1 : 0] wb_sel_i;
-input  wire [ARCHBITSZ -1 : 0]     wb_dat_i;
-output wire                        wb_bsy_o;
-output reg                         wb_ack_o;
-output reg  [ARCHBITSZ -1 : 0]     wb_dat_o;
-output wire [ARCHBITSZ -1 : 0]     wb_mapsz_o;
+input  wire                         wb_cyc_i;
+input  wire                         wb_stb_i;
+input  wire                         wb_we_i;
+input  wire [XADDRBITSZ -1 : 0]     wb_addr_i;
+input  wire [(XARCHBITSZ/8) -1 : 0] wb_sel_i;
+input  wire [XARCHBITSZ -1 : 0]     wb_dat_i;
+output wire                         wb_bsy_o;
+output reg                          wb_ack_o;
+output reg  [XARCHBITSZ -1 : 0]     wb_dat_o;
+output wire [ARCHBITSZ -1 : 0]      wb_mapsz_o;
 
 output reg  intrqst_o;
 input  wire intrdy_i;
@@ -220,15 +229,26 @@ localparam STATUSREADY    = 1;
 localparam STATUSBUSY     = 2;
 localparam STATUSERROR    = 3;
 
-reg                    wb_stb_r;
-reg                    wb_we_r;
-reg [ADDRBITSZ -1 : 0] wb_addr_r;
-reg [ARCHBITSZ -1 : 0] wb_dat_r;
+reg                         wb_stb_r;
+reg                         wb_we_r;
+reg [XADDRBITSZ -1 : 0]     wb_addr_r;
+reg [(XARCHBITSZ/8) -1 : 0] wb_sel_r;
+reg [XARCHBITSZ -1 : 0]     wb_dat_r;
 
-wire cmd_reset = (wb_addr_r == ((CMDRESET * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8));
-wire cmd_swap  = (wb_addr_r == ((CMDSWAP  * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8));
-wire cmd_read  = (wb_addr_r == ((CMDREAD  * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8));
-wire cmd_write = (wb_addr_r == ((CMDWRITE * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8));
+wire [XARCHBITSZ -1 : 0] _wb_addr_r;
+addr #(
+	.ARCHBITSZ (XARCHBITSZ)
+) addr (
+	 .addr_i (wb_addr_r)
+	,.sel_i  (wb_sel_r)
+	,.addr_o (_wb_addr_r)
+);
+wire [ADDRBITSZ -1 : 0] addr_w = _wb_addr_r[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8];
+
+wire cmd_reset = (addr_w == ((CMDRESET * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8));
+wire cmd_swap  = (addr_w == ((CMDSWAP  * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8));
+wire cmd_read  = (addr_w == ((CMDREAD  * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8));
+wire cmd_write = (addr_w == ((CMDWRITE * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8));
 
 wire phy_tx_pop_o, phy_rx_push_o;
 
@@ -237,17 +257,15 @@ reg  [8 -1 : 0] phy_tx_data_i; // ### comb-block-reg.
 
 reg phy_cmd_data_i;
 
-reg [ADDRBITSZ -1 : 0] phy_cmd_addr_i;
+reg [XADDRBITSZ -1 : 0] phy_cmd_addr_i;
 
-wire [ADDRBITSZ -1 : 0] phy_blkcnt_o;
+wire [XADDRBITSZ -1 : 0] phy_blkcnt_o;
 
 wire phy_err_o;
 
-// A phy reset is done when "rst_i" is high or when
-// CMDRESET is issued with its argument non-null.
-// Since "rst_i" is also used to signal whether
-// the device is under power, a controller reset
-// will be done as soon as the device is powered-on.
+// A phy reset is done when "rst_i" is high or when CMDRESET is issued.
+// Since "rst_i" is also used to signal whether the device is under power,
+// a controller reset will be done as soon as the device is powered-on.
 wire phy_rst_w = (rst_i || (wb_stb_r && wb_we_r && cmd_reset && !phy_err_o));
 
 reg phy_cmd_empty_i;
@@ -311,55 +329,113 @@ reg cachesel;
 // Register keeping track of the cache byte location the PHY will access next.
 reg [CLOG2PHYBLKSZ -1 : 0] cachephyaddr;
 
-// Nets set to the index within the respective cache. Each cache element is ARCHBITSZ bits.
-wire [(CLOG2PHYBLKSZ-CLOG2ARCHBITSZBY8) -1 : 0] cache0addr =
-	cachesel ? wb_addr_r : cachephyaddr[CLOG2PHYBLKSZ -1 : CLOG2ARCHBITSZBY8];
-wire [(CLOG2PHYBLKSZ-CLOG2ARCHBITSZBY8) -1 : 0] cache1addr =
-	cachesel ? cachephyaddr[CLOG2PHYBLKSZ -1 : CLOG2ARCHBITSZBY8] : wb_addr_r;
+// Nets set to the index within the respective cache. Each cache element is XARCHBITSZ bits.
+wire [(CLOG2PHYBLKSZ-CLOG2XARCHBITSZBY8) -1 : 0] cache0addr =
+	cachesel ? wb_addr_r : cachephyaddr[CLOG2PHYBLKSZ -1 : CLOG2XARCHBITSZBY8];
+wire [(CLOG2PHYBLKSZ-CLOG2XARCHBITSZBY8) -1 : 0] cache1addr =
+	cachesel ? cachephyaddr[CLOG2PHYBLKSZ -1 : CLOG2XARCHBITSZBY8] : wb_addr_r;
 
-wire [ARCHBITSZ -1 : 0] cache0dato;
-wire [ARCHBITSZ -1 : 0] cache1dato;
+wire [XARCHBITSZ -1 : 0] cache0dato;
+wire [XARCHBITSZ -1 : 0] cache1dato;
 
-wire [ARCHBITSZ -1 : 0] cachephydata = cachesel ? cache1dato : cache0dato;
+wire [XARCHBITSZ -1 : 0] cachephydata = cachesel ? cache1dato : cache0dato;
 
 // Net set to the value from the PHY to store in the cache.
-reg [ARCHBITSZ -1 : 0] phy_rx_data_o_byteselected; // ### comb-always-block-reg.
-generate if (ARCHBITSZ == 16) begin
+reg [XARCHBITSZ -1 : 0] phy_rx_data_o_byteselected; // ### comb-always-block-reg.
+generate if (XARCHBITSZ == 16) begin
 	always @* begin
 		phy_rx_data_o_byteselected =
 			(cachephyaddr[0] == 0) ? {cachephydata[15:8], phy_rx_data_o} :
 			                         {phy_rx_data_o, cachephydata[7:0]};
 	end
 end endgenerate
-generate if (ARCHBITSZ == 32) begin
+generate if (XARCHBITSZ == 32) begin
 	always @* begin
 		phy_rx_data_o_byteselected =
-			(cachephyaddr[1:0] == 0) ? {cachephydata[31:8], phy_rx_data_o} :
+			(cachephyaddr[1:0] == 0) ? {cachephydata[31:8],  phy_rx_data_o} :
 			(cachephyaddr[1:0] == 1) ? {cachephydata[31:16], phy_rx_data_o, cachephydata[7:0]} :
 			(cachephyaddr[1:0] == 2) ? {cachephydata[31:24], phy_rx_data_o, cachephydata[15:0]} :
-			                           {phy_rx_data_o, cachephydata[23:0]};
+			                           {                     phy_rx_data_o, cachephydata[23:0]};
 	end
 end endgenerate
-generate if (ARCHBITSZ == 64) begin
+generate if (XARCHBITSZ == 64) begin
 	always @* begin
 		phy_rx_data_o_byteselected =
-			(cachephyaddr[2:0] == 0) ? {cachephydata[63:8], phy_rx_data_o} :
+			(cachephyaddr[2:0] == 0) ? {cachephydata[63:8],  phy_rx_data_o} :
 			(cachephyaddr[2:0] == 1) ? {cachephydata[63:16], phy_rx_data_o, cachephydata[7:0]} :
 			(cachephyaddr[2:0] == 2) ? {cachephydata[63:24], phy_rx_data_o, cachephydata[15:0]} :
 			(cachephyaddr[2:0] == 3) ? {cachephydata[63:32], phy_rx_data_o, cachephydata[23:0]} :
 			(cachephyaddr[2:0] == 4) ? {cachephydata[63:40], phy_rx_data_o, cachephydata[31:0]} :
 			(cachephyaddr[2:0] == 5) ? {cachephydata[63:48], phy_rx_data_o, cachephydata[39:0]} :
 			(cachephyaddr[2:0] == 6) ? {cachephydata[63:56], phy_rx_data_o, cachephydata[47:0]} :
-			                           {phy_rx_data_o, cachephydata[55:0]};
+			                           {                     phy_rx_data_o, cachephydata[55:0]};
+	end
+end endgenerate
+generate if (XARCHBITSZ == 128) begin
+	always @* begin
+		phy_rx_data_o_byteselected =
+			(cachephyaddr[3:0] == 0)  ? {cachephydata[127:8],   phy_rx_data_o} :
+			(cachephyaddr[3:0] == 1)  ? {cachephydata[127:16],  phy_rx_data_o, cachephydata[7:0]} :
+			(cachephyaddr[3:0] == 2)  ? {cachephydata[127:24],  phy_rx_data_o, cachephydata[15:0]} :
+			(cachephyaddr[3:0] == 3)  ? {cachephydata[127:32],  phy_rx_data_o, cachephydata[23:0]} :
+			(cachephyaddr[3:0] == 4)  ? {cachephydata[127:40],  phy_rx_data_o, cachephydata[31:0]} :
+			(cachephyaddr[3:0] == 5)  ? {cachephydata[127:48],  phy_rx_data_o, cachephydata[39:0]} :
+			(cachephyaddr[3:0] == 6)  ? {cachephydata[127:56],  phy_rx_data_o, cachephydata[47:0]} :
+			(cachephyaddr[3:0] == 7)  ? {cachephydata[127:64],  phy_rx_data_o, cachephydata[55:0]} :
+			(cachephyaddr[3:0] == 8)  ? {cachephydata[127:72],  phy_rx_data_o, cachephydata[63:0]} :
+			(cachephyaddr[3:0] == 9)  ? {cachephydata[127:80],  phy_rx_data_o, cachephydata[71:0]} :
+			(cachephyaddr[3:0] == 10) ? {cachephydata[127:88],  phy_rx_data_o, cachephydata[79:0]} :
+			(cachephyaddr[3:0] == 11) ? {cachephydata[127:96],  phy_rx_data_o, cachephydata[87:0]} :
+			(cachephyaddr[3:0] == 12) ? {cachephydata[127:104], phy_rx_data_o, cachephydata[95:0]} :
+			(cachephyaddr[3:0] == 13) ? {cachephydata[127:112], phy_rx_data_o, cachephydata[103:0]} :
+			(cachephyaddr[3:0] == 14) ? {cachephydata[127:120], phy_rx_data_o, cachephydata[111:0]} :
+			                            {                       phy_rx_data_o, cachephydata[119:0]};
+	end
+end endgenerate
+generate if (XARCHBITSZ == 256) begin
+	always @* begin
+		phy_rx_data_o_byteselected =
+			(cachephyaddr[4:0] == 0) ? {cachephydata[255:8],    phy_rx_data_o} :
+			(cachephyaddr[4:0] == 1) ? {cachephydata[255:16],   phy_rx_data_o, cachephydata[7:0]} :
+			(cachephyaddr[4:0] == 2) ? {cachephydata[255:24],   phy_rx_data_o, cachephydata[15:0]} :
+			(cachephyaddr[4:0] == 3) ? {cachephydata[255:32],   phy_rx_data_o, cachephydata[23:0]} :
+			(cachephyaddr[4:0] == 4) ? {cachephydata[255:40],   phy_rx_data_o, cachephydata[31:0]} :
+			(cachephyaddr[4:0] == 5) ? {cachephydata[255:48],   phy_rx_data_o, cachephydata[39:0]} :
+			(cachephyaddr[4:0] == 6) ? {cachephydata[255:56],   phy_rx_data_o, cachephydata[47:0]} :
+			(cachephyaddr[4:0] == 7) ? {cachephydata[255:64],   phy_rx_data_o, cachephydata[55:0]} :
+			(cachephyaddr[4:0] == 8) ? {cachephydata[255:72],   phy_rx_data_o, cachephydata[63:0]} :
+			(cachephyaddr[4:0] == 9) ? {cachephydata[255:80],   phy_rx_data_o, cachephydata[71:0]} :
+			(cachephyaddr[4:0] == 10) ? {cachephydata[255:88],  phy_rx_data_o, cachephydata[79:0]} :
+			(cachephyaddr[4:0] == 11) ? {cachephydata[255:96],  phy_rx_data_o, cachephydata[87:0]} :
+			(cachephyaddr[4:0] == 12) ? {cachephydata[255:104], phy_rx_data_o, cachephydata[95:0]} :
+			(cachephyaddr[4:0] == 13) ? {cachephydata[255:112], phy_rx_data_o, cachephydata[103:0]} :
+			(cachephyaddr[4:0] == 14) ? {cachephydata[255:120], phy_rx_data_o, cachephydata[111:0]} :
+			(cachephyaddr[4:0] == 15) ? {cachephydata[255:128], phy_rx_data_o, cachephydata[119:0]} :
+			(cachephyaddr[4:0] == 16) ? {cachephydata[255:136], phy_rx_data_o, cachephydata[127:0]} :
+			(cachephyaddr[4:0] == 17) ? {cachephydata[255:144], phy_rx_data_o, cachephydata[135:0]} :
+			(cachephyaddr[4:0] == 18) ? {cachephydata[255:152], phy_rx_data_o, cachephydata[143:0]} :
+			(cachephyaddr[4:0] == 19) ? {cachephydata[255:160], phy_rx_data_o, cachephydata[151:0]} :
+			(cachephyaddr[4:0] == 20) ? {cachephydata[255:168], phy_rx_data_o, cachephydata[159:0]} :
+			(cachephyaddr[4:0] == 21) ? {cachephydata[255:176], phy_rx_data_o, cachephydata[167:0]} :
+			(cachephyaddr[4:0] == 22) ? {cachephydata[255:184], phy_rx_data_o, cachephydata[175:0]} :
+			(cachephyaddr[4:0] == 23) ? {cachephydata[255:192], phy_rx_data_o, cachephydata[183:0]} :
+			(cachephyaddr[4:0] == 24) ? {cachephydata[255:200], phy_rx_data_o, cachephydata[191:0]} :
+			(cachephyaddr[4:0] == 25) ? {cachephydata[255:208], phy_rx_data_o, cachephydata[199:0]} :
+			(cachephyaddr[4:0] == 26) ? {cachephydata[255:216], phy_rx_data_o, cachephydata[207:0]} :
+			(cachephyaddr[4:0] == 27) ? {cachephydata[255:224], phy_rx_data_o, cachephydata[215:0]} :
+			(cachephyaddr[4:0] == 28) ? {cachephydata[255:232], phy_rx_data_o, cachephydata[223:0]} :
+			(cachephyaddr[4:0] == 29) ? {cachephydata[255:240], phy_rx_data_o, cachephydata[231:0]} :
+			(cachephyaddr[4:0] == 30) ? {cachephydata[255:248], phy_rx_data_o, cachephydata[239:0]} :
+			                            {                       phy_rx_data_o, cachephydata[247:0]};
 	end
 end endgenerate
 
 // Nets set to the value to write in the respective cache.
-wire [ARCHBITSZ -1 : 0] cache0dati = cachesel ? wb_dat_r : phy_rx_data_o_byteselected[ARCHBITSZ -1 : 0];
-wire [ARCHBITSZ -1 : 0] cache1dati = cachesel ? phy_rx_data_o_byteselected[ARCHBITSZ -1 : 0] : wb_dat_r;
+wire [XARCHBITSZ -1 : 0] cache0dati = cachesel ? wb_dat_r : phy_rx_data_o_byteselected[XARCHBITSZ -1 : 0];
+wire [XARCHBITSZ -1 : 0] cache1dati = cachesel ? phy_rx_data_o_byteselected[XARCHBITSZ -1 : 0] : wb_dat_r;
 
 // phy_tx_data_i is set to the value read from the respective cache.
-generate if (ARCHBITSZ == 16) begin
+generate if (XARCHBITSZ == 16) begin
 	always @* begin
 		if (cachephyaddr[0] == 0)
 			phy_tx_data_i = cachesel ? cache1dato[7:0] : cache0dato[7:0];
@@ -367,7 +443,7 @@ generate if (ARCHBITSZ == 16) begin
 			phy_tx_data_i = cachesel ? cache1dato[15:8] : cache0dato[15:8];
 	end
 end endgenerate
-generate if (ARCHBITSZ == 32) begin
+generate if (XARCHBITSZ == 32) begin
 	always @* begin
 		if (cachephyaddr[1:0] == 0)
 			phy_tx_data_i = cachesel ? cache1dato[7:0] : cache0dato[7:0];
@@ -379,7 +455,7 @@ generate if (ARCHBITSZ == 32) begin
 			phy_tx_data_i = cachesel ? cache1dato[31:24] : cache0dato[31:24];
 	end
 end endgenerate
-generate if (ARCHBITSZ == 64) begin
+generate if (XARCHBITSZ == 64) begin
 	always @* begin
 		if (cachephyaddr[2:0] == 0)
 			phy_tx_data_i = cachesel ? cache1dato[7:0] : cache0dato[7:0];
@@ -399,6 +475,110 @@ generate if (ARCHBITSZ == 64) begin
 			phy_tx_data_i = cachesel ? cache1dato[63:56] : cache0dato[63:56];
 	end
 end endgenerate
+generate if (XARCHBITSZ == 128) begin
+	always @* begin
+		if (cachephyaddr[3:0] == 0)
+			phy_tx_data_i = cachesel ? cache1dato[7:0] : cache0dato[7:0];
+		else if (cachephyaddr[3:0] == 1)
+			phy_tx_data_i = cachesel ? cache1dato[15:8] : cache0dato[15:8];
+		else if (cachephyaddr[3:0] == 2)
+			phy_tx_data_i = cachesel ? cache1dato[23:16] : cache0dato[23:16];
+		else if (cachephyaddr[3:0] == 3)
+			phy_tx_data_i = cachesel ? cache1dato[31:24] : cache0dato[31:24];
+		else if (cachephyaddr[3:0] == 4)
+			phy_tx_data_i = cachesel ? cache1dato[39:32] : cache0dato[39:32];
+		else if (cachephyaddr[3:0] == 5)
+			phy_tx_data_i = cachesel ? cache1dato[47:40] : cache0dato[47:40];
+		else if (cachephyaddr[3:0] == 6)
+			phy_tx_data_i = cachesel ? cache1dato[55:48] : cache0dato[55:48];
+		else if (cachephyaddr[3:0] == 7)
+			phy_tx_data_i = cachesel ? cache1dato[63:56] : cache0dato[63:56];
+		else if (cachephyaddr[3:0] == 8)
+			phy_tx_data_i = cachesel ? cache1dato[71:64] : cache0dato[71:64];
+		else if (cachephyaddr[3:0] == 9)
+			phy_tx_data_i = cachesel ? cache1dato[79:72] : cache0dato[79:72];
+		else if (cachephyaddr[3:0] == 10)
+			phy_tx_data_i = cachesel ? cache1dato[87:80] : cache0dato[87:80];
+		else if (cachephyaddr[3:0] == 11)
+			phy_tx_data_i = cachesel ? cache1dato[95:88] : cache0dato[95:88];
+		else if (cachephyaddr[3:0] == 12)
+			phy_tx_data_i = cachesel ? cache1dato[103:96] : cache0dato[103:96];
+		else if (cachephyaddr[3:0] == 13)
+			phy_tx_data_i = cachesel ? cache1dato[111:104] : cache0dato[111:104];
+		else if (cachephyaddr[3:0] == 14)
+			phy_tx_data_i = cachesel ? cache1dato[119:112] : cache0dato[119:112];
+		else
+			phy_tx_data_i = cachesel ? cache1dato[127:120] : cache0dato[127:120];
+	end
+end endgenerate
+generate if (XARCHBITSZ == 256) begin
+	always @* begin
+		if (cachephyaddr[4:0] == 0)
+			phy_tx_data_i = cachesel ? cache1dato[7:0] : cache0dato[7:0];
+		else if (cachephyaddr[4:0] == 1)
+			phy_tx_data_i = cachesel ? cache1dato[15:8] : cache0dato[15:8];
+		else if (cachephyaddr[4:0] == 2)
+			phy_tx_data_i = cachesel ? cache1dato[23:16] : cache0dato[23:16];
+		else if (cachephyaddr[4:0] == 3)
+			phy_tx_data_i = cachesel ? cache1dato[31:24] : cache0dato[31:24];
+		else if (cachephyaddr[4:0] == 4)
+			phy_tx_data_i = cachesel ? cache1dato[39:32] : cache0dato[39:32];
+		else if (cachephyaddr[4:0] == 5)
+			phy_tx_data_i = cachesel ? cache1dato[47:40] : cache0dato[47:40];
+		else if (cachephyaddr[4:0] == 6)
+			phy_tx_data_i = cachesel ? cache1dato[55:48] : cache0dato[55:48];
+		else if (cachephyaddr[4:0] == 7)
+			phy_tx_data_i = cachesel ? cache1dato[63:56] : cache0dato[63:56];
+		else if (cachephyaddr[4:0] == 8)
+			phy_tx_data_i = cachesel ? cache1dato[71:64] : cache0dato[71:64];
+		else if (cachephyaddr[4:0] == 9)
+			phy_tx_data_i = cachesel ? cache1dato[79:72] : cache0dato[79:72];
+		else if (cachephyaddr[4:0] == 10)
+			phy_tx_data_i = cachesel ? cache1dato[87:80] : cache0dato[87:80];
+		else if (cachephyaddr[4:0] == 11)
+			phy_tx_data_i = cachesel ? cache1dato[95:88] : cache0dato[95:88];
+		else if (cachephyaddr[4:0] == 12)
+			phy_tx_data_i = cachesel ? cache1dato[103:96] : cache0dato[103:96];
+		else if (cachephyaddr[4:0] == 13)
+			phy_tx_data_i = cachesel ? cache1dato[111:104] : cache0dato[111:104];
+		else if (cachephyaddr[4:0] == 14)
+			phy_tx_data_i = cachesel ? cache1dato[119:112] : cache0dato[119:112];
+		else if (cachephyaddr[4:0] == 15)
+			phy_tx_data_i = cachesel ? cache1dato[127:120] : cache0dato[127:120];
+		else if (cachephyaddr[4:0] == 16)
+			phy_tx_data_i = cachesel ? cache1dato[135:128] : cache0dato[135:128];
+		else if (cachephyaddr[4:0] == 17)
+			phy_tx_data_i = cachesel ? cache1dato[143:136] : cache0dato[143:136];
+		else if (cachephyaddr[4:0] == 18)
+			phy_tx_data_i = cachesel ? cache1dato[151:144] : cache0dato[151:144];
+		else if (cachephyaddr[4:0] == 19)
+			phy_tx_data_i = cachesel ? cache1dato[159:152] : cache0dato[159:152];
+		else if (cachephyaddr[4:0] == 20)
+			phy_tx_data_i = cachesel ? cache1dato[167:160] : cache0dato[167:160];
+		else if (cachephyaddr[4:0] == 21)
+			phy_tx_data_i = cachesel ? cache1dato[175:168] : cache0dato[175:168];
+		else if (cachephyaddr[4:0] == 22)
+			phy_tx_data_i = cachesel ? cache1dato[183:176] : cache0dato[183:176];
+		else if (cachephyaddr[4:0] == 23)
+			phy_tx_data_i = cachesel ? cache1dato[191:184] : cache0dato[191:184];
+		else if (cachephyaddr[4:0] == 24)
+			phy_tx_data_i = cachesel ? cache1dato[199:192] : cache0dato[199:192];
+		else if (cachephyaddr[4:0] == 25)
+			phy_tx_data_i = cachesel ? cache1dato[207:200] : cache0dato[207:200];
+		else if (cachephyaddr[4:0] == 26)
+			phy_tx_data_i = cachesel ? cache1dato[215:208] : cache0dato[215:208];
+		else if (cachephyaddr[4:0] == 27)
+			phy_tx_data_i = cachesel ? cache1dato[223:216] : cache0dato[223:216];
+		else if (cachephyaddr[4:0] == 28)
+			phy_tx_data_i = cachesel ? cache1dato[231:224] : cache0dato[231:224];
+		else if (cachephyaddr[4:0] == 29)
+			phy_tx_data_i = cachesel ? cache1dato[239:232] : cache0dato[239:232];
+		else if (cachephyaddr[4:0] == 30)
+			phy_tx_data_i = cachesel ? cache1dato[247:240] : cache0dato[247:240];
+		else
+			phy_tx_data_i = cachesel ? cache1dato[255:248] : cache0dato[255:248];
+	end
+end endgenerate
 
 // Register used to detect a falling edge of "intrdy_i".
 reg  intrdy_i_r;
@@ -412,8 +592,8 @@ wire phy_err_o_posedge = (phy_err_o && !phy_err_o_r);
 reg  phy_bsy_w_r;
 wire phy_bsy_w_negedge = (!phy_bsy_w && phy_bsy_w_r);
 
-wire cache_rdop = (wb_stb_r && !wb_we_r && wb_addr_r < (PHYBLKSZ >> CLOG2ARCHBITSZBY8));
-wire cache_wrop = (wb_stb_r && wb_we_r  && wb_addr_r < (PHYBLKSZ >> CLOG2ARCHBITSZBY8));
+wire cache_rdop = (wb_stb_r && !wb_we_r && wb_addr_r < (PHYBLKSZ >> CLOG2XARCHBITSZBY8));
+wire cache_wrop = (wb_stb_r && wb_we_r  && wb_addr_r < (PHYBLKSZ >> CLOG2XARCHBITSZBY8));
 
 // Nets set to 1 when a read/write request is done to their respective cache.
 wire cache0rd = cachesel ? cache_rdop : phy_tx_pop_o;
@@ -421,8 +601,8 @@ wire cache1rd = cachesel ? phy_tx_pop_o : cache_rdop;
 wire cache0wr = cachesel ? cache_wrop : phy_rx_push_o;
 wire cache1wr = cachesel ? phy_rx_push_o : cache_wrop;
 
-reg [ARCHBITSZ -1 : 0] cache0 [(PHYBLKSZ/(ARCHBITSZ/8)) -1 : 0];
-reg [ARCHBITSZ -1 : 0] cache1 [(PHYBLKSZ/(ARCHBITSZ/8)) -1 : 0];
+reg [XARCHBITSZ -1 : 0] cache0 [(PHYBLKSZ/(XARCHBITSZ/8)) -1 : 0];
+reg [XARCHBITSZ -1 : 0] cache1 [(PHYBLKSZ/(XARCHBITSZ/8)) -1 : 0];
 
 assign cache0dato = cache0[cache0addr];
 assign cache1dato = cache1[cache1addr];
@@ -435,7 +615,6 @@ always @ (posedge clk_i) begin
 end
 
 reg [2 -1 : 0] status; // ### comb-block-reg.
-
 always @* begin
 	if (rst_i)
 		status = STATUSPOWEROFF;
@@ -447,7 +626,26 @@ always @* begin
 		status = STATUSREADY;
 end
 
+reg [XARCHBITSZ -1 : 0] wb_dat_o_; // ### comb-block-reg.
+always @* begin
+	if (cmd_reset)
+		wb_dat_o_ = status;
+	else if (cmd_swap)
+		wb_dat_o_ = PHYBLKSZ;
+	else if (cmd_read || cmd_write)
+		wb_dat_o_ = phy_blkcnt_o;
+	else
+		wb_dat_o_ = 0;
+end
+
 wire wb_stb_r_ = (wb_cyc_i && wb_stb_i);
+
+wire [(CLOG2XARCHBITSZBY8DIFF+CLOG2ARCHBITSZ)-1:0] wb_dat_shift;
+generate if (XARCHBITSZ == ARCHBITSZ) begin
+assign wb_dat_shift = 0;
+end else begin
+assign wb_dat_shift = {_wb_addr_r[CLOG2XARCHBITSZBY8-1:CLOG2ARCHBITSZBY8], {CLOG2ARCHBITSZ{1'b0}}};
+end endgenerate
 
 always @ (posedge clk_i) begin
 
@@ -455,6 +653,7 @@ always @ (posedge clk_i) begin
 	if (wb_stb_r_) begin
 		wb_we_r <= wb_we_i;
 		wb_addr_r <= wb_addr_i;
+		wb_sel_r <= wb_sel_i;
 		wb_dat_r <= wb_dat_i;
 	end
 
@@ -467,21 +666,15 @@ always @ (posedge clk_i) begin
 	else if (wb_we_r && (cmd_read || cmd_write)) begin
 		phy_cmd_empty_i <= 1'b1;
 		phy_cmd_data_i <= cmd_write;
-		phy_cmd_addr_i <= wb_dat_r;
+		phy_cmd_addr_i <= (wb_dat_r >> wb_dat_shift);
 	end
 
 	wb_ack_o <= wb_stb_r;
 
 	if (cache_rdop)
 		wb_dat_o <= cachesel ? cache0dato : cache1dato;
-	else if (wb_stb_r && !wb_we_r) begin
-		if (cmd_reset)
-			wb_dat_o <= {{30{1'b0}}, status};
-		else if (cmd_swap)
-			wb_dat_o <= PHYBLKSZ;
-		else if (cmd_read || cmd_write)
-			wb_dat_o <= phy_blkcnt_o;
-	end
+	else if (wb_stb_r && !wb_we_r)
+		wb_dat_o <= (wb_dat_o_ << wb_dat_shift);
 
 	// Logic that sets cachephyaddr.
 	// Increment cachephyaddr whenever the PHY is not busy and requesting
