@@ -2,7 +2,6 @@
 // (c) William Fonkou Tambe
 
 #include "Vsim.h"
-#include "Vsim_sim.h"
 
 int main (int argc, char **argv) {
 	// Initialize Verilators variables
