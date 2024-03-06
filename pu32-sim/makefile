@@ -7,7 +7,7 @@ sim:
 
 .PHONY: sim_use_vcd
 sim_use_vcd:
-	make TB=sim_use_vcd TBFLAGS=--trace obj_dir/Vsim
+	make TB=sim_use_vcd TBFLAGS="--trace --trace-underscore" obj_dir/Vsim
 
 obj_dir/Vsim: sim.v ${TB}.cpp
 	cp ../dev/bootldr/bootldr*.hex .
