@@ -78,10 +78,6 @@ always @ (posedge clk_i) begin
 
 	end else if (instrbufrst || !instrfetchfaulted) begin
 		// Empty the instruction buffer if instrbufrst is 1.
-		// Note that instrbufrst is checked only within this state,
-		// and the instruction fetching is not interrupted once started;
-		// in fact there will be no loss because the fetched data will
-		// be cached for later use.
 		// Note that instrbufrst gets set whenever a branching occur,
 		// and the penalty for it, is at least 2 clock cycles during
 		// which the sequencer stalls.
