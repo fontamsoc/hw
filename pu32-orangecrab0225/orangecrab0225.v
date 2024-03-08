@@ -271,13 +271,13 @@ assign devtbl_useintr_flat_w = devtbl_useintr_w;
 localparam IRQ_SDCARD = 0;
 localparam IRQ_SERIAL = (IRQ_SDCARD + 1);
 
-localparam IRQCTRLSRCCOUNT = (IRQ_SERIAL +1); // Number of interrupt source.
-localparam IRQCTRLDSTCOUNT = 1; // Number of interrupt destination.
-wire [IRQCTRLSRCCOUNT -1 : 0] intrqstsrc_w;
-wire [IRQCTRLSRCCOUNT -1 : 0] intrdysrc_w;
-wire [IRQCTRLDSTCOUNT -1 : 0] intrqstdst_w;
-wire [IRQCTRLDSTCOUNT -1 : 0] intrdydst_w;
-wire [IRQCTRLDSTCOUNT -1 : 0] intbestdst_w;
+localparam IRQSRCCOUNT = (IRQ_SERIAL +1); // Number of interrupt source.
+localparam IRQDSTCOUNT = 1; // Number of interrupt destination.
+wire [IRQSRCCOUNT -1 : 0] irq_src_stb_w;
+wire [IRQSRCCOUNT -1 : 0] irq_src_rdy_w;
+wire [IRQDSTCOUNT -1 : 0] irq_dst_stb_w;
+wire [IRQDSTCOUNT -1 : 0] irq_dst_rdy_w;
+wire [IRQDSTCOUNT -1 : 0] irq_dst_pri_w;
 
 localparam ICACHESZ = 16;
 localparam DCACHESZ = 8;
@@ -318,9 +318,9 @@ cpu #(
 	,.pi1_sel_o  (m_pi1r_sel_w[M_PI1R_CPU])
 	,.pi1_rdy_i  (m_pi1r_rdy_w[M_PI1R_CPU])
 
-	,.intrqst_i (intrqstdst_w)
-	,.intrdy_o  (intrdydst_w)
-	,.halted_o  (intbestdst_w)
+	,.irq_stb_i (irq_dst_stb_w)
+	,.irq_rdy_o (irq_dst_rdy_w)
+	,.halted_o  (irq_dst_pri_w)
 
 	,.rstaddr_i  ((('h1000)>>1) +
 		(s_pi1r_mapsz_w[S_PI1R_RAM]>>1) +
@@ -357,8 +357,8 @@ sdcard_spi #(
 	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_SDCARD])
 	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_SDCARD])
 
-	,.intrqst_o (intrqstsrc_w[IRQ_SDCARD])
-	,.intrdy_i  (intrdysrc_w[IRQ_SDCARD])
+	,.irq_stb_o (irq_src_stb_w[IRQ_SDCARD])
+	,.irq_rdy_i (irq_src_rdy_w[IRQ_SDCARD])
 );
 
 assign devtbl_id_w     [S_PI1R_SDCARD] = 4;
@@ -436,8 +436,8 @@ pi1_downconverter #(
 irqctrl #(
 
 	 .ARCHBITSZ   (ARCHBITSZ)
-	,.INTSRCCOUNT (IRQCTRLSRCCOUNT)
-	,.INTDSTCOUNT (IRQCTRLDSTCOUNT)
+	,.IRQSRCCOUNT (IRQSRCCOUNT)
+	,.IRQDSTCOUNT (IRQDSTCOUNT)
 
 ) irqctrl (
 
@@ -453,12 +453,12 @@ irqctrl #(
 	,.pi1_rdy_o   (irqctrl_rdy_w)
 	,.pi1_mapsz_o (irqctrl_mapsz_w)
 
-	,.intrqstdst_o (intrqstdst_w)
-	,.intrdydst_i  (intrdydst_w)
-	,.intbestdst_i (intbestdst_w)
+	,.irq_dst_stb_o (irq_dst_stb_w)
+	,.irq_dst_rdy_i (irq_dst_rdy_w)
+	,.irq_dst_pri_i (irq_dst_pri_w)
 
-	,.intrqstsrc_i (intrqstsrc_w)
-	,.intrdysrc_o  (intrdysrc_w)
+	,.irq_src_stb_i (irq_src_stb_w)
+	,.irq_src_rdy_o (irq_src_rdy_w)
 );
 
 assign devtbl_id_w     [S_PI1R_IRQCTRL] = 3;
@@ -515,8 +515,8 @@ usb_serial #(
 	,.pi1_rdy_o   (serial_rdy_w)
 	,.pi1_mapsz_o (serial_mapsz_w)
 
-	,.intrqst_o (intrqstsrc_w[IRQ_SERIAL])
-	,.intrdy_i  (intrdysrc_w[IRQ_SERIAL])
+	,.irq_stb_o (irq_src_stb_w[IRQ_SERIAL])
+	,.irq_rdy_i (irq_src_rdy_w[IRQ_SERIAL])
 
 	,.usb_dp_io (usb_d_p)
 	,.usb_dn_io (usb_d_n)
