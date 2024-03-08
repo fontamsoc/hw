@@ -53,8 +53,8 @@ module cpu (
 	,wb_ack_i
 	,wb_dat_i
 
-	,intrqst_i
-	,intrdy_o
+	,irq_stb_i
+	,irq_rdy_o
 	,halted_o
 
 	,rstaddr_i
@@ -129,8 +129,8 @@ input  wire                         wb_bsy_i;
 input  wire                         wb_ack_i;
 input  wire [XARCHBITSZ -1 : 0]     wb_dat_i;
 
-input  wire [PUCOUNT -1 : 0] intrqst_i;
-output wire [PUCOUNT -1 : 0] intrdy_o;
+input  wire [PUCOUNT -1 : 0] irq_stb_i;
+output wire [PUCOUNT -1 : 0] irq_rdy_o;
 output wire [PUCOUNT -1 : 0] halted_o;
 
 input wire [(ARCHBITSZ-1) -1 : 0] rstaddr_i;
@@ -331,8 +331,8 @@ pu #(
 	,.pi1_rdy_i  (pi1b_rdy_i)
 	`endif
 
-	,.intrqst_i (intrqst_i[genpu_idx])
-	,.intrdy_o  (intrdy_o[genpu_idx])
+	,.irq_stb_i (irq_stb_i[genpu_idx])
+	,.irq_rdy_o (irq_rdy_o[genpu_idx])
 	,.halted_o  (halted_o[genpu_idx])
 
 	,.rstaddr_i (genpu_idx ? rstaddr2_i : rstaddr_i)

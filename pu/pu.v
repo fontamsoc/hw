@@ -94,19 +94,19 @@
 // 	It is to be a 32bits address for which the least significant
 // 	bit has been discarded.
 //
-// intrqst_i
-// 	When this signal is held high and the output intrdy_o is low,
+// irq_stb_i
+// 	When this signal is held high and the output irq_rdy_o is low,
 // 	the pu execute an EXTINTR context-switch.
 //
-// intrdy_o
+// irq_rdy_o
 // 	When this signal is high, the pu is in usermode with interrupt
 // 	enabled (ie: isflagdisextintr is false), and will execute
-// 	an EXTINTR context-switch if the signal intrqst_i become high.
+// 	an EXTINTR context-switch if the signal irq_stb_i become high.
 //
 // halted_o
 // 	When this signal is high, the pu is halted with interrupt
 // 	enabled (ie: isflagdisextintr is false), and will execute
-// 	an EXTINTR context-switch if the signal intrqst_i become high.
+// 	an EXTINTR context-switch if the signal irq_stb_i become high.
 //
 // id_i
 // 	Index of the pu when used in a multi-pu configuration,
@@ -176,8 +176,8 @@ module pu (
 	,pi1_sel_o
 	,pi1_rdy_i
 
-	,intrqst_i
-	,intrdy_o
+	,irq_stb_i
+	,irq_rdy_o
 	,halted_o
 
 	,rstaddr_i
@@ -252,8 +252,8 @@ input wire[XARCHBITSZ -1 : 0] pi1_data_i;
 output reg[(XARCHBITSZ/8) -1 : 0] pi1_sel_o; // ### comb-block-reg.
 input wire pi1_rdy_i;
 
-input wire intrqst_i;
-output wire intrdy_o;
+input  wire irq_stb_i;
+output wire irq_rdy_o;
 output wire halted_o;
 
 input wire[(ARCHBITSZ-1) -1 : 0] rstaddr_i;
@@ -306,7 +306,7 @@ localparam ADDRWITHINPAGEBITSZ = (12-CLOG2ARCHBITSZBY8);
 // Number of bits in a page number.
 localparam PAGENUMBITSZ = (ARCHBITSZ-12);
 
-assign intrdy_o = (inusermode && !isflagdisextintr && !dbgen);
+assign irq_rdy_o = (inusermode && !isflagdisextintr && !dbgen);
 wire inhalt = (dohalt && inusermode && !dbgen);
 assign halted_o = (inhalt && !isflagdisextintr);
 

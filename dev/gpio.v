@@ -53,14 +53,14 @@
 // wb_mapsz_o
 // 	Memory map size in bytes.
 //
-// intrqst_o
+// irq_stb_o
 // 	This signal is set high to request an interrupt;
 // 	an interrupt is raised when any of the input "i" state changes.
 //
-// intrdy_i
+// irq_rdy_i
 // 	This signal become low when the interrupt request
 // 	has been acknowledged, and is used by this module
-// 	to lower intrqst_o.
+// 	to lower irq_stb_o.
 //
 // i, o, t
 // 	GPIOs.
@@ -84,8 +84,8 @@ module gpio (
 	,wb_dat_o
 	,wb_mapsz_o
 
-	,intrqst_o
-	,intrdy_i
+	,irq_stb_o
+	,irq_rdy_i
 
 	,i ,o ,t
 );
@@ -114,8 +114,8 @@ output reg                         wb_ack_o;
 output wire [ARCHBITSZ -1 : 0]     wb_dat_o;
 output wire [ARCHBITSZ -1 : 0]     wb_mapsz_o;
 
-output wire intrqst_o;
-input  wire intrdy_i;
+output wire irq_stb_o;
+input  wire irq_rdy_i;
 
 input  wire [IOCOUNT -1 : 0] i;
 output reg  [IOCOUNT -1 : 0] o;
@@ -197,11 +197,11 @@ reg [IOCOUNT -1 : 0] i_change;
 
 // An interrupt request is made if a state change
 // occurs on an input "i" signal configured as input.
-assign intrqst_o = (|i_change);
+assign irq_stb_o = (|i_change);
 
-// Register used to detect a falling edge on "intrdy_i".
-reg intrdy_i_r;
-wire intrdy_i_negedge = (!intrdy_i && intrdy_i_r);
+// Register used to detect a falling edge on "irq_rdy_i".
+reg irq_rdy_i_r;
+wire irq_rdy_i_negedge = (!irq_rdy_i && irq_rdy_i_r);
 
 reg devrd_r;
 assign wb_dat_o = (devrd_r ? _i : wb_dat_o_);
@@ -225,7 +225,7 @@ always @(posedge clk_i) begin
 		o <= wb_dat_r[ARCHBITSZ-2:0];
 
 	// Logic that update i_change.
-	if (intrdy_i_negedge)
+	if (irq_rdy_i_negedge)
 		i_change <= 0;
 	else
 		i_change <= (i_change | i_changed);
@@ -240,8 +240,8 @@ always @(posedge clk_i) begin
 	// Sampling used to detect whether _i has changed.
 	_i_r <= _i;
 
-	// Sampling used for intrdy_i edge detection.
-	intrdy_i_r <= intrdy_i;
+	// Sampling used for irq_rdy_i edge detection.
+	irq_rdy_i_r <= irq_rdy_i;
 end
 
 endmodule

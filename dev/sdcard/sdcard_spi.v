@@ -103,7 +103,7 @@
 // wb_mapsz_o
 // 	Memory map size in bytes.
 //
-// intrqst_o
+// irq_stb_o
 // 	This signal is set high to request an interrupt;
 // 	an interrupt is raised, when either of the following
 // 	events from the controller occurs:
@@ -113,10 +113,10 @@
 // 	- Error.
 // 	- Poweroff.
 //
-// intrdy_i
+// irq_rdy_i
 // 	This signal become low when the interrupt request
 // 	has been acknowledged, and is used by this module
-// 	to automatically lower intrqst_o.
+// 	to automatically lower irq_stb_o.
 
 `ifdef SIMULATION
 `include "./sdcard_sim_phy.v"
@@ -151,8 +151,8 @@ module sdcard_spi (
 	,wb_dat_o
 	,wb_mapsz_o
 
-	,intrqst_o
-	,intrdy_i
+	,irq_stb_o
+	,irq_rdy_i
 );
 
 `include "lib/clog2.v"
@@ -207,8 +207,8 @@ output reg                          wb_ack_o;
 output reg  [XARCHBITSZ -1 : 0]     wb_dat_o;
 output wire [ARCHBITSZ -1 : 0]      wb_mapsz_o;
 
-output reg  intrqst_o;
-input  wire intrdy_i;
+output reg  irq_stb_o;
+input  wire irq_rdy_i;
 
 assign wb_bsy_o = 1'b0;
 
@@ -621,9 +621,9 @@ generate if (XARCHBITSZ == 256) begin
 	end
 end endgenerate
 
-// Register used to detect a falling edge of "intrdy_i".
-reg  intrdy_i_r;
-wire intrdy_i_negedge = (!intrdy_i && intrdy_i_r);
+// Register used to detect a falling edge of "irq_rdy_i".
+reg  irq_rdy_i_r;
+wire irq_rdy_i_negedge = (!irq_rdy_i && irq_rdy_i_r);
 
 // Register used to detect a rising edge of "phy_err_o".
 reg  phy_err_o_r;
@@ -728,7 +728,7 @@ always @ (posedge clk_i) begin
 	else if (cachesel ? (cache1rd | cache1wr) : (cache0rd | cache0wr))
 		cachephyaddr <= cachephyaddr + 1'b1;
 
-	// Logic to set/clear intrqst_o.
+	// Logic to set/clear irq_stb_o.
 	// A rising edge of "phy_err_o" means that an error occured
 	// while the controller was processing the previous
 	// operation, which is either initialization, read or write;
@@ -739,14 +739,14 @@ always @ (posedge clk_i) begin
 	// transition from a poweroff state through a busy state
 	// to a ready state, in order to trigger a poweron interrupt.
 	if (rst_i)
-		intrqst_o <= 1'b0;
-	else if (intrqst_o)
-		intrqst_o <= !intrdy_i_negedge;
+		irq_stb_o <= 1'b0;
+	else if (irq_stb_o)
+		irq_stb_o <= !irq_rdy_i_negedge;
 	else
-		intrqst_o <= (phy_err_o_posedge || phy_bsy_w_negedge);
+		irq_stb_o <= (phy_err_o_posedge || phy_bsy_w_negedge);
 
 	// Sampling used for edge detection.
-	intrdy_i_r <= intrdy_i;
+	irq_rdy_i_r <= irq_rdy_i;
 	phy_err_o_r <= phy_err_o;
 	phy_bsy_w_r <= phy_bsy_w;
 end

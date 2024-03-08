@@ -651,7 +651,7 @@ wire sequencerintrtimer = (
 	&& !dbgen);
 
 wire sequencerintrext = (
-	intrqst_i && !isflagdisextintr && inusermode && !oplicounter
+	irq_stb_i && !isflagdisextintr && inusermode && !oplicounter
 	`ifdef PUMMU
 	`ifdef PUHPTW
 	&& !hptwbsy
