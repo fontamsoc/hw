@@ -46,15 +46,15 @@
 // wb_mapsz_o
 // 	Memory map size in bytes.
 //
-// intrqst_o
+// irq_stb_o
 // 	This signal is set high to request an interrupt;
 // 	an interrupt is raised if enabled and the receive
 // 	buffer usage interrupt threshold is reached.
 //
-// intrdy_i
+// irq_rdy_i
 // 	This signal become low when the interrupt request
 // 	has been acknowledged, and is used by this module
-// 	to lower intrqst_o and disable interrupt.
+// 	to lower irq_stb_o and disable interrupt.
 //
 // usb_dp_io
 // usb_dn_io
@@ -91,8 +91,8 @@ module usb_serial (
 	,wb_dat_o
 	,wb_mapsz_o
 
-	,intrqst_o
-	,intrdy_i
+	,irq_stb_o
+	,irq_rdy_i
 
 	,usb_dp_io
 	,usb_dn_io
@@ -133,8 +133,8 @@ output reg                         wb_ack_o;
 output wire [ARCHBITSZ -1 : 0]     wb_dat_o;
 output wire [ARCHBITSZ -1 : 0]     wb_mapsz_o;
 
-output wire intrqst_o;
-input  wire intrdy_i;
+output wire irq_stb_o;
+input  wire irq_rdy_i;
 
 inout wire usb_dp_io;
 inout wire usb_dn_io;
@@ -196,15 +196,15 @@ wire [(CLOG2BUFSZ +1) -1 : 0] tx_usage_w;
 
 reg [(ARCHBITSZ-2) -1 : 0] intrqstthresh;
 
-assign intrqst_o = (|intrqstthresh && (rx_usage_w >= intrqstthresh) &&
+assign irq_stb_o = (|intrqstthresh && (rx_usage_w >= intrqstthresh) &&
 	// Raise intrqst only when the device is ready for the next command,
 	// otherwise an interrupt would cause software to send the device a new
 	// command while it is not ready, waiting indefinitely for it to be ready.
 	prevcmdisdevrdy);
 
-// Register used to detect a falling edge on "intrdy_i".
-reg  intrdysampled;
-wire intrdynegedge = (!intrdy_i && intrdysampled);
+// Register used to detect a falling edge on "irq_rdy_i".
+reg  irq_rdy_i_r;
+wire irq_rdy_i_negedge = (!irq_rdy_i && irq_rdy_i_r);
 
 reg rx_read_w_sampled;
 
@@ -218,7 +218,7 @@ always @ (posedge clk_i) begin
 		intrqstthresh <= 0;
 	end else if (cmdsetint) begin
 		intrqstthresh <= wb_dat_r[ARCHBITSZ-1:2];
-	end else if (intrdynegedge) begin
+	end else if (irq_rdy_i_negedge) begin
 		intrqstthresh <= 0;
 	end
 
@@ -237,7 +237,7 @@ always @ (posedge clk_i) begin
 
 	rx_read_w_sampled <= rx_read_w;
 
-	intrdysampled <= intrdy_i; // Sampling used for edge detection.
+	irq_rdy_i_r <= irq_rdy_i; // Sampling used for edge detection.
 end
 
 usb_serial_fifo_phy #(
