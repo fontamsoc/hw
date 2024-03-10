@@ -396,29 +396,45 @@ wire dbg_tx_rdy_i_negedge = (!dbg_tx_rdy_i && dbg_tx_rdy_i_sampled);
 // ---------- Registers and nets used by Hardware-Page-Table-Walker ----------
 
 wire itlbre;
-reg itlbre_r;
+reg itlbre_r = 0; // Initialized for if PUREGMMUOUTPUT is not defined.
+`ifdef PUREGMMUOUTPUT
 always @ (posedge clk_i)
 	itlbre_r <= itlbre;
+`endif
 // Insures that instruction fetching and instrbufrst get reset
 // after reading itlbentry and updating itlbmiss has completed.
-wire itlbrdy = (
-	!(instrbufrst_posedge || itlbre || itlbre_r));
+wire itlbrdy = !(
+	`ifdef PUREGMMUOUTPUT
+	instrbufrst_posedge ||
+	`endif
+		itlbre || itlbre_r);
 
 wire dtlbre;
-reg dtlbre_r;
+reg dtlbre_r = 0; // Initialized for if PUREGMMUOUTPUT is not defined.
+`ifdef PUREGMMUOUTPUT
 always @ (posedge clk_i)
 	dtlbre_r <= dtlbre;
+`endif
 reg opld_found;
 reg opst_found;
 reg opldst_found;
 // Insures that memory access occurs after reading
 // dtlbentry and updating dtlbmiss has completed.
-wire dtlbrdy_opld = (
-	!(~opld_found || dtlbre || dtlbre_r));
-wire dtlbrdy_opst = (
-	!(~opst_found || dtlbre || dtlbre_r));
-wire dtlbrdy_opldst = (
-	!(~opldst_found || dtlbre || dtlbre_r));
+wire dtlbrdy_opld = !(
+	`ifdef PUREGMMUOUTPUT
+	~opld_found ||
+	`endif
+		dtlbre || dtlbre_r);
+wire dtlbrdy_opst = !(
+	`ifdef PUREGMMUOUTPUT
+	~opst_found ||
+	`endif
+		dtlbre || dtlbre_r);
+wire dtlbrdy_opldst = !(
+	`ifdef PUREGMMUOUTPUT
+	~opldst_found ||
+	`endif
+		dtlbre || dtlbre_r);
 
 // These nets will respectively hold the value of the first
 // and second gpr operand of an instruction being sequenced.
@@ -822,12 +838,21 @@ wire dtlben = (
 reg dtlbwritten;
 reg[CLOG2TLBSETCOUNT -1 : 0] dtlbsetprev;
 reg dtlbre_;
+`ifdef PUREGMMUOUTPUT
 always @ (posedge clk_i) begin
 	dtlbre_ <= ((/* similar to dtlben */
 		(inusermode && (inuserspace || doutofrange_)) ||
 		(inkernelmode_kmodepaging && doutofrange_)) &&
 			dtlbset != dtlbsetprev);
 end
+`else
+always @* begin
+	dtlbre_ = ((/* similar to dtlben */
+		(inusermode && (inuserspace || doutofrange_)) ||
+		(inkernelmode_kmodepaging && doutofrange_)) &&
+			dtlbset != dtlbsetprev);
+end
+`endif
 assign dtlbre = (isopgettlb_or_isopclrtlb_found_posedge || dtlbwritten || dtlbre_);
 wire dtlbwe = (
 	`ifdef PUHPTW
@@ -862,12 +887,21 @@ wire itlben = (
 reg itlbwritten;
 reg[CLOG2TLBSETCOUNT -1 : 0] itlbsetprev;
 reg itlbre_;
+`ifdef PUREGMMUOUTPUT
 always @ (posedge clk_i) begin
 	itlbre_ <= ((/* similar to itlben */
 		(inusermode && (inuserspace || ioutofrange_)) ||
 		(inkernelmode_kmodepaging && ioutofrange_)) &&
 			itlbset != itlbsetprev);
 end
+`else
+always @* begin
+	itlbre_ = ((/* similar to itlben */
+		(inusermode && (inuserspace || ioutofrange_)) ||
+		(inkernelmode_kmodepaging && ioutofrange_)) &&
+			itlbset != itlbsetprev);
+end
+`endif
 assign itlbre = (isopgettlb_or_isopclrtlb_found_posedge || itlbwritten || itlbre_);
 wire itlbwe = (
 	`ifdef PUHPTW
@@ -900,10 +934,17 @@ always @* begin
 		end
 	end
 end
+`ifdef PUREGMMUOUTPUT
 always @ (posedge clk_i) begin
 	itlbmiss <= itlbmiss_;
 	itlbwayhitidx <= itlbwayhitidx_;
 end
+`else
+always @* begin
+	itlbmiss = itlbmiss_;
+	itlbwayhitidx = itlbwayhitidx_;
+end
+`endif
 
 reg dtlbmiss_; // ### comb-block-reg.
 reg dtlbmiss;
@@ -918,10 +959,17 @@ always @* begin
 		end
 	end
 end
+`ifdef PUREGMMUOUTPUT
 always @ (posedge clk_i) begin
 	dtlbmiss <= dtlbmiss_;
 	dtlbwayhitidx <= dtlbwayhitidx_;
 end
+`else
+always @* begin
+	dtlbmiss = dtlbmiss_;
+	dtlbwayhitidx = dtlbwayhitidx_;
+end
+`endif
 
 always @ (posedge clk_i) begin
 	if (rst_i)
@@ -1076,10 +1124,17 @@ assign ioutofrange_ = (
 	instrfetchnextaddr < (KERNELSPACESTART >> CLOG2ARCHBITSZBY8) ||
 	(instrfetchnextaddr >= ksl[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8]));
 assign doutofrange_ = (gprdata2 < KERNELSPACESTART || gprdata2 >= ksl);
+`ifdef PUREGMMUOUTPUT
 always @ (posedge clk_i) begin
 	ioutofrange <= ioutofrange_;
 	doutofrange <= doutofrange_;
 end
+`else
+always @* begin
+	ioutofrange = ioutofrange_;
+	doutofrange = doutofrange_;
+end
+`endif
 
 wire itlb_and_instrbuf_rdy = ((((!inusermode || !_istlbop) && instrbufnotfull) || instrbufrst) && (
 	itlbrdy
@@ -2617,9 +2672,19 @@ pi1_upconverter #(
 
 `ifdef PUDCACHE
 
+wire dcache_cenable_r_ = (dtlben ? dtlbcached[dtlbwayhitidx] : !doutofrange);
 wire dcache_cmiss_r_ = miscrdyandsequencerreadyandgprrdy12 && (isopldst || isoploadorstorevolatile);
 
+reg dcache_cenable_r;
 reg dcache_cmiss_r;
+
+`ifdef PUREGMMUOUTPUT
+always @*
+	dcache_cenable_r = dcache_cenable_r_;
+`else
+always @ (posedge clk_i)
+	dcache_cenable_r <= dcache_cenable_r_;
+`endif
 
 pi1_dcache #(
 
@@ -2636,7 +2701,7 @@ pi1_dcache #(
 
 	,.crst_i (rst_i || (miscrdy && sequencerready && isopdcacherst))
 
-	,.cenable_i (dtlben ? dtlbcached[dtlbwayhitidx] : !doutofrange)
+	,.cenable_i (dcache_cenable_r)
 
 	,.cmiss_i (dcache_cmiss_r)
 
