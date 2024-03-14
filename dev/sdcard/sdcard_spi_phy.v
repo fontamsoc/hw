@@ -39,19 +39,19 @@
 // cmd_data_i
 // cmd_addr_i
 // cmd_empty_i
-// 	FIFO interface to send read/write commands.
+// 	FWFT FIFO interface to send read/write commands.
 // 	cmd_addr_i is the address within the card.
 // 	cmd_data_i indicates whether read(0)/write(1).
 //
 // rx_push_o
 // rx_data_o
 // rx_full_i
-// 	FIFO interface to retrieve data from read commands.
+// 	FWFT FIFO interface to retrieve data from read commands.
 //
 // tx_pop_o
 // tx_data_i
 // tx_empty_i
-// 	FIFO interface to buffer data for write commands.
+// 	FWFT FIFO interface to buffer data for write commands.
 //
 // sclk_o
 // di_o
