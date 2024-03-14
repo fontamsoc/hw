@@ -45,6 +45,8 @@ parameter ARCHBITSZ = 16;
 parameter CACHESETCOUNT = 2;
 parameter CACHEWAYCOUNT = 1;
 
+parameter REGCACHEHIT = 0;
+
 parameter INITFILE = "";
 
 localparam CLOG2CACHESETCOUNT = clog2(CACHESETCOUNT);
@@ -101,12 +103,22 @@ reg [2 -1 : 0] state;
 (* direct_enable = "true" *)
 wire cache_stb = (!rst_i && state == IDLE && _m_wb_stb_i);
 
-reg cache_hit; // ### comb-block-reg.
+reg cache_hit_; // ### comb-block-reg.
+reg cache_hit;
+generate if (REGCACHEHIT) begin
+always @ (posedge clk_i)
+	cache_hit <= cache_hit_;
+end else begin
+always @*
+	cache_hit = cache_hit_;
+end endgenerate
+
+reg cache_bsy;
 
 wire conly_r_or_cache_hit = (conly_r || cache_hit);
 
 wire cache_we = (!rst_i && (
-	(state == TESTHIT && conly_r_or_cache_hit && m_wb_we_r) ||
+	(state == TESTHIT && !cache_bsy && conly_r_or_cache_hit && m_wb_we_r) ||
 	(s_wb_cyc_o && !s_wb_we_o && s_wb_ack_i && !cmiss_r)));
 
 reg [CLOG2CACHEWAYCOUNT -1 : 0] cache_we_wayidx;
@@ -120,7 +132,15 @@ reg [CACHETAGBITSIZE -1 : 0] cache_tag_o [CACHEWAYCOUNT -1 : 0];
 reg [ARCHBITSZ -1 : 0]       cache_dat_o [CACHEWAYCOUNT -1 : 0];
 reg                          cache_drt_o [CACHEWAYCOUNT -1 : 0];
 
-reg [CLOG2CACHEWAYCOUNT -1 : 0] cache_hit_wayidx; // ### comb-block-reg.
+reg [CLOG2CACHEWAYCOUNT -1 : 0] cache_hit_wayidx_; // ### comb-block-reg.
+reg [CLOG2CACHEWAYCOUNT -1 : 0] cache_hit_wayidx;
+generate if (REGCACHEHIT) begin
+always @ (posedge clk_i)
+	cache_hit_wayidx <= cache_hit_wayidx_;
+end else begin
+always @*
+	cache_hit_wayidx = cache_hit_wayidx_;
+end endgenerate
 
 wire [CACHETAGBITSIZE -1 : 0] cache_tag_i = m_wb_addr_r[ADDRBITSZ -1 : CLOG2CACHESETCOUNT];
 
@@ -179,16 +199,16 @@ end endgenerate
 
 integer gen_cachehit_idx;
 always @* begin
-	cache_hit = 0;
-	cache_hit_wayidx = 0;
+	cache_hit_ = 0;
+	cache_hit_wayidx_ = 0;
 	for (
 		gen_cachehit_idx = 0;
 		gen_cachehit_idx < CACHEWAYCOUNT;
 		gen_cachehit_idx = gen_cachehit_idx + 1) begin
-		if (!cache_hit && !conly_r &&
+		if (!cache_hit_ && !conly_r &&
 			m_wb_addr_r[ADDRBITSZ -1 : CLOG2CACHESETCOUNT] == cache_tag_o[gen_cachehit_idx]) begin
-			cache_hit = 1;
-			cache_hit_wayidx = gen_cachehit_idx;
+			cache_hit_ = 1;
+			cache_hit_wayidx_ = gen_cachehit_idx;
 		end
 	end
 end
@@ -242,6 +262,8 @@ always @ (posedge clk_i) begin
 			conly_r <= conly_i;
 			cmiss_r <= cmiss_i;
 
+			cache_bsy <= (REGCACHEHIT && !(conly_i || cmiss_i));
+
 			state <= TESTHIT;
 
 		end else begin
@@ -252,7 +274,9 @@ always @ (posedge clk_i) begin
 
 	end else if (state == TESTHIT) begin
 
-		if (conly_r_or_cache_hit && !cmiss_r) begin
+		if (cache_bsy) // 1 clock cycle needed to compute cache_hit.
+			cache_bsy <= 0;
+		else if (conly_r_or_cache_hit && !cmiss_r) begin
 
 			m_wb_bsy_o <= 0;
 			m_wb_ack_o <= 1;
