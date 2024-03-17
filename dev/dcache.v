@@ -277,10 +277,10 @@ always @ (posedge clk_i) begin
 
 			s_wb_cyc_o <= 1;
 			s_wb_stb_o <= 1;
-			s_wb_we_o <= (cmiss_r && m_wb_we_r);
+			s_wb_we_o <= m_wb_we_r;
 			s_wb_addr_o <= m_wb_addr_r;
 			s_wb_sel_o <= cmiss_r ? m_wb_sel_r : {(ARCHBITSZ/8){1'b1}};
-			if (cmiss_r && m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
+			if (m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
 				s_wb_dat_o <= m_wb_dat_r;
 
 			state <= REFILL;
