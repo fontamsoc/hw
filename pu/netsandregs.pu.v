@@ -299,7 +299,7 @@ wire not_itlben_or_not_instrbufrst_posedge = (
 reg[ADDRBITSZ -1 : 0] instrfetchaddr;
 
 // Net set to the next value of instrfetchaddr.
-wire[ADDRBITSZ -1 : 0] instrfetchnextaddr = instrbufrst ? ip[ADDRBITSZ:1] : (instrfetchaddr+(XARCHBITSZ/ARCHBITSZ));
+wire[ADDRBITSZ -1 : 0] instrfetchnextaddr = instrbufrst ? ip[(ARCHBITSZ-1)-1:CLOG2ARCHBITSZBY8-1] : (instrfetchaddr+(XARCHBITSZ/ARCHBITSZ));
 
 // Register holding the physical page number of the instruction to fetch.
 reg[PAGENUMBITSZ -1 : 0] instrfetchppn;
