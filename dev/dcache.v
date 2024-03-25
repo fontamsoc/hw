@@ -115,13 +115,9 @@ end endgenerate
 
 reg cache_bsy;
 
-reg [CLOG2CACHEWAYCOUNT -1 : 0] cache_we_wayidx;
-
-wire cache_we = (!rst_i && (
-	(state == TESTHIT && !cache_bsy && (conly_r || cache_tag_hit ||
-		(!cache_drt_o[cache_we_wayidx] && !cmiss_r)) && m_wb_we_r) ||
-	(state == EVICT && s_wb_ack_i && m_wb_we_r) ||
-	(s_wb_cyc_o && !s_wb_we_o && s_wb_ack_i && !cmiss_r)));
+wire cache_we = (!rst_i && !cmiss_r && (
+	(state == TESTHIT && !cache_bsy && m_wb_we_r) ||
+	(!s_wb_we_o && s_wb_ack_i)));
 
 localparam CACHETAGBITSIZE = (ADDRBITSZ - CLOG2CACHESETCOUNT);
 
@@ -143,20 +139,21 @@ always @*
 	cache_tag_hit_wayidx = cache_tag_hit_wayidx_;
 end endgenerate
 
+reg [CLOG2CACHEWAYCOUNT -1 : 0] cache_we_wayidx;
+
 wire [CACHETAGBITSIZE -1 : 0] cache_tag_i = m_wb_addr_r[ADDRBITSZ -1 : CLOG2CACHESETCOUNT];
 
 wire [(ARCHBITSZ/8) -1 : 0] cache_sel_o_tag_hit = cache_sel_o[cache_tag_hit_wayidx];
 wire [(ARCHBITSZ/8) -1 : 0] cache_sel_i = (
 	(conly_r || cmiss_r) ? {(ARCHBITSZ/8){1'b0}} :
 	(state == TESTHIT) ? (cache_tag_hit ? (m_wb_sel_r | cache_sel_o_tag_hit) : m_wb_sel_r) :
-	(state == EVICT) ? m_wb_sel_r :
 	(state == REFILL) ? {(ARCHBITSZ/8){1'b1}} : {(ARCHBITSZ/8){1'b0}});
 
 wire [ARCHBITSZ -1 : 0] _m_wb_sel_r;
 wire [ARCHBITSZ -1 : 0] _m_wb_sel_r_n = ~_m_wb_sel_r;
 wire [ARCHBITSZ -1 : 0] _cache_sel_o_tag_hit;
 wire [ARCHBITSZ -1 : 0] _cache_sel_o_tag_hit_n = ~_cache_sel_o_tag_hit;
-wire [ARCHBITSZ -1 : 0] cache_dat_i = ((state == TESTHIT || state == EVICT) ?
+wire [ARCHBITSZ -1 : 0] cache_dat_i = ((state == TESTHIT) ?
 	((m_wb_dat_r & _m_wb_sel_r) | (cache_dat_o[cache_tag_hit_wayidx] & _m_wb_sel_r_n)) :
 	(cache_tag_hit ?
 		((cache_dat_o[cache_tag_hit_wayidx] & _cache_sel_o_tag_hit) |
