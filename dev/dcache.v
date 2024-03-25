@@ -47,6 +47,8 @@ parameter CACHEWAYCOUNT = 1;
 
 parameter REGCACHEHIT = 0;
 
+parameter MAXPENDINGACK = 0; // Enables faster eviction when non-null.
+
 parameter INITFILE = "";
 
 localparam CLOG2CACHESETCOUNT = clog2(CACHESETCOUNT);
@@ -113,11 +115,38 @@ always @*
 	cache_tag_hit = cache_tag_hit_;
 end endgenerate
 
+// (MAXPENDINGACK+2) is used instead of just MAXPENDINGACK
+// otherwise parameter MAXPENDINGACK must be >= 3, where +2
+// account for the pipelining of EVICT followed by REFILL.
+reg [clog2((MAXPENDINGACK+2)+1) -1 : 0] ack_pending;
+generate if (MAXPENDINGACK) begin
+always @ (posedge clk_i) begin
+	if (rst_i)
+		ack_pending <= 0;
+	else if (s_wb_stb_o && !s_wb_bsy_i && s_wb_ack_i);
+	else if (s_wb_ack_i)
+		ack_pending <= ack_pending - 1'b1;
+	else if (s_wb_stb_o && !s_wb_bsy_i) begin
+		ack_pending <= ack_pending + 1'b1;
+	end
+end
+end
+endgenerate
+reg s_wb_cyc_o_;
+always @*
+	s_wb_cyc_o = (s_wb_cyc_o_ || (MAXPENDINGACK && ack_pending));
+reg m_wb_bsy_o_;
+always @*
+	m_wb_bsy_o = (m_wb_bsy_o_ || (MAXPENDINGACK && (ack_pending > ((MAXPENDINGACK+2)-2))));
+
+wire refill_ack = (!s_wb_we_o && s_wb_ack_i && (!MAXPENDINGACK ||
+	(!s_wb_stb_o && ack_pending == 1)));
+
 reg cache_bsy;
 
 wire cache_we = (!rst_i && (
 	(state == TESTHIT && !cache_bsy && m_wb_we_r) ||
-	(!s_wb_we_o && s_wb_ack_i)));
+	refill_ack));
 
 localparam CACHETAGBITSIZE = (ADDRBITSZ - CLOG2CACHESETCOUNT);
 
@@ -240,10 +269,10 @@ always @ (posedge clk_i) begin
 
 	if (rst_i) begin
 
-		m_wb_bsy_o <= 1;
+		m_wb_bsy_o_ <= 1;
 		m_wb_ack_o <= 0;
 
-		s_wb_cyc_o <= 0;
+		s_wb_cyc_o_ <= 0;
 		s_wb_stb_o <= 0;
 
 		m_wb_addr_r <= 0;
@@ -259,14 +288,14 @@ always @ (posedge clk_i) begin
 		if (rst_r) begin
 
 			if (m_wb_addr_r == (CACHESETCOUNT - 1)) begin
-				m_wb_bsy_o <= 0;
+				m_wb_bsy_o_ <= 0;
 				rst_r <= 0;
 			end else
 				m_wb_addr_r <= m_wb_addr_r + 1'b1;
 
 		end else if (_m_wb_stb_i) begin
 
-			m_wb_bsy_o <= 1;
+			m_wb_bsy_o_ <= 1;
 			m_wb_ack_o <= 0;
 
 			m_wb_we_r <= m_wb_we_i;
@@ -283,7 +312,7 @@ always @ (posedge clk_i) begin
 
 		end else begin
 
-			m_wb_bsy_o <= 0;
+			m_wb_bsy_o_ <= 0;
 			m_wb_ack_o <= 0;
 		end
 
@@ -293,7 +322,7 @@ always @ (posedge clk_i) begin
 			cache_bsy <= 0;
 		else if ((conly_r || cache_hit || (cache_tag_hit && m_wb_we_r)) && !cmiss_r) begin
 
-			m_wb_bsy_o <= 0;
+			m_wb_bsy_o_ <= 0;
 			m_wb_ack_o <= 1;
 
 			if (!m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
@@ -303,7 +332,7 @@ always @ (posedge clk_i) begin
 
 		end else if (cache_drt_o[cache_we_wayidx] && !cache_tag_hit && !cmiss_r) begin
 
-			s_wb_cyc_o <= 1;
+			s_wb_cyc_o_ <= 1;
 			s_wb_stb_o <= 1;
 			s_wb_we_o <= 1;
 			s_wb_addr_o <= {cache_tag_o[cache_we_wayidx], cache_wridx};
@@ -314,14 +343,14 @@ always @ (posedge clk_i) begin
 
 		end else if (m_wb_we_r && !cmiss_r) begin
 
-			m_wb_bsy_o <= 0;
+			m_wb_bsy_o_ <= 0;
 			m_wb_ack_o <= 1;
 
 			state <= IDLE;
 
 		end else begin
 
-			s_wb_cyc_o <= 1;
+			s_wb_cyc_o_ <= 1;
 			s_wb_stb_o <= 1;
 			s_wb_we_o <= m_wb_we_r;
 			s_wb_addr_o <= m_wb_addr_r;
@@ -334,14 +363,14 @@ always @ (posedge clk_i) begin
 
 	end else if (state == EVICT) begin
 
-		if (s_wb_ack_i) begin
+		if (MAXPENDINGACK ? !s_wb_bsy_i : s_wb_ack_i) begin
 
 			if (m_wb_we_r) begin
 
-				m_wb_bsy_o <= 0;
+				m_wb_bsy_o_ <= 0;
 				m_wb_ack_o <= 1;
 
-				s_wb_cyc_o <= 0;
+				s_wb_cyc_o_ <= 0;
 				s_wb_stb_o <= 0;
 
 				state <= IDLE;
@@ -356,20 +385,20 @@ always @ (posedge clk_i) begin
 				state <= REFILL;
 			end
 
-		end else if (!s_wb_bsy_i)
+		end else if (!s_wb_bsy_i && !MAXPENDINGACK)
 			s_wb_stb_o <= 0;
 
 	end else if (state == REFILL) begin
 
-		if (s_wb_ack_i) begin
+		if ((m_wb_we_r && !s_wb_bsy_i && MAXPENDINGACK) || refill_ack) begin
 
-			m_wb_bsy_o <= 0;
+			m_wb_bsy_o_ <= 0;
 			m_wb_ack_o <= 1;
 
 			if (!m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
 				m_wb_dat_o <= cache_dat_i;
 
-			s_wb_cyc_o <= 0;
+			s_wb_cyc_o_ <= 0;
 			s_wb_stb_o <= 0;
 
 			state <= IDLE;
