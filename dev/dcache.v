@@ -46,6 +46,7 @@ parameter CACHESETCOUNT = 2;
 parameter CACHEWAYCOUNT = 1;
 
 parameter REGCACHEHIT = 0;
+parameter REGDATINPUT = 0;
 
 parameter MAXPENDINGACK = 0; // Enables faster eviction when non-null.
 
@@ -102,6 +103,21 @@ localparam EVICT   = 2;
 localparam REFILL  = 3;
 reg [2 -1 : 0] state;
 
+reg                    _s_wb_ack_i;
+reg [ARCHBITSZ -1 : 0] _s_wb_dat_i;
+generate if (REGDATINPUT) begin
+	always @ (posedge clk_i) begin
+		_s_wb_ack_i <= s_wb_ack_i;
+		_s_wb_dat_i <= s_wb_dat_i;
+	end
+end else begin
+	always @* begin
+		_s_wb_ack_i = s_wb_ack_i;
+		_s_wb_dat_i = s_wb_dat_i;
+	end
+end
+endgenerate
+
 (* direct_enable = "true" *)
 wire cache_stb = (!rst_i && state == IDLE && _m_wb_stb_i);
 
@@ -123,8 +139,8 @@ generate if (MAXPENDINGACK) begin
 always @ (posedge clk_i) begin
 	if (rst_i)
 		ack_pending <= 0;
-	else if (s_wb_stb_o && !s_wb_bsy_i && s_wb_ack_i);
-	else if (s_wb_ack_i)
+	else if (s_wb_stb_o && !s_wb_bsy_i && _s_wb_ack_i);
+	else if (_s_wb_ack_i)
 		ack_pending <= ack_pending - 1'b1;
 	else if (s_wb_stb_o && !s_wb_bsy_i) begin
 		ack_pending <= ack_pending + 1'b1;
@@ -139,7 +155,7 @@ reg m_wb_bsy_o_;
 always @*
 	m_wb_bsy_o = (m_wb_bsy_o_ || (MAXPENDINGACK && (ack_pending > ((MAXPENDINGACK+2)-2))));
 
-wire refill_ack = (!s_wb_we_o && s_wb_ack_i && (!MAXPENDINGACK ||
+wire refill_ack = (!s_wb_we_o && _s_wb_ack_i && (!MAXPENDINGACK ||
 	(!s_wb_stb_o && ack_pending == 1)));
 
 reg cache_bsy;
@@ -186,8 +202,8 @@ wire [ARCHBITSZ -1 : 0] cache_dat_i = ((state == TESTHIT) ?
 	((m_wb_dat_r & _m_wb_sel_r) | (cache_dat_o[cache_tag_hit_wayidx] & _m_wb_sel_r_n)) :
 	(cache_tag_hit ?
 		((cache_dat_o[cache_tag_hit_wayidx] & _cache_sel_o_tag_hit) |
-			(s_wb_dat_i & _cache_sel_o_tag_hit_n)) :
-		s_wb_dat_i));
+			(_s_wb_dat_i & _cache_sel_o_tag_hit_n)) :
+		_s_wb_dat_i));
 
 wire cache_drt_i = (!rst_r && !conly_r && !cmiss_r && (m_wb_we_r || cache_tag_hit));
 
@@ -363,7 +379,7 @@ always @ (posedge clk_i) begin
 
 	end else if (state == EVICT) begin
 
-		if (MAXPENDINGACK ? !s_wb_bsy_i : s_wb_ack_i) begin
+		if (MAXPENDINGACK ? !s_wb_bsy_i : _s_wb_ack_i) begin
 
 			if (m_wb_we_r) begin
 
