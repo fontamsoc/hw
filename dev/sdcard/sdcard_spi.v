@@ -271,7 +271,7 @@ reg phy_cmd_empty_i;
 
 wire phy_cmd_pop_o;
 
-wire phy_bsy_w = (phy_cmd_empty_i || !phy_cmd_pop_o);
+wire phy_bsy_w = !(phy_cmd_empty_i && phy_cmd_pop_o);
 
 `ifdef SIMULATION
 sdcard_sim_phy
@@ -304,7 +304,7 @@ sdcard_spi_phy
 	,.cmd_pop_o   (phy_cmd_pop_o)
 	,.cmd_data_i  (phy_cmd_data_i)
 	,.cmd_addr_i  (phy_cmd_addr_i)
-	,.cmd_empty_i (!phy_cmd_empty_i)
+	,.cmd_empty_i (phy_cmd_empty_i)
 
 	,.rx_push_o (phy_rx_push_o)
 	,.rx_data_o (phy_rx_data_o)
@@ -705,10 +705,10 @@ always @ (posedge clk_i) begin
 	if (wb_stb_r && wb_we_r && cmd_swap)
 		cachesel <= ~cachesel;
 
-	if (rst_i || (phy_cmd_pop_o && phy_cmd_empty_i))
-		phy_cmd_empty_i <= 1'b0;
-	else if (wb_we_r && (cmd_read || cmd_write)) begin
+	if (rst_i || (phy_cmd_pop_o && !phy_cmd_empty_i))
 		phy_cmd_empty_i <= 1'b1;
+	else if (wb_we_r && (cmd_read || cmd_write)) begin
+		phy_cmd_empty_i <= 1'b0;
 		phy_cmd_data_i <= cmd_write;
 		phy_cmd_addr_i <= (wb_dat_r >> wb_dat_shift);
 	end
