@@ -245,10 +245,10 @@ addr #(
 );
 wire [ADDRBITSZ -1 : 0] addr_w = _wb_addr_r[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8];
 
-wire cmd_reset = (addr_w == ((CMDRESET * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8));
-wire cmd_swap  = (addr_w == ((CMDSWAP  * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8));
-wire cmd_read  = (addr_w == ((CMDREAD  * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8));
-wire cmd_write = (addr_w == ((CMDWRITE * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8));
+wire cmd_reset = (wb_stb_r && (addr_w == ((CMDRESET * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8)));
+wire cmd_swap  = (wb_stb_r && (addr_w == ((CMDSWAP  * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8)));
+wire cmd_read  = (wb_stb_r && (addr_w == ((CMDREAD  * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8)));
+wire cmd_write = (wb_stb_r && (addr_w == ((CMDWRITE * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8)));
 
 wire phy_tx_pop_o, phy_rx_push_o;
 
