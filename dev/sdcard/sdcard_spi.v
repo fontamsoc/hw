@@ -470,7 +470,9 @@ generate if (XARCHBITSZ == 256) begin
 	end
 end endgenerate
 
-wire [XARCHBITSZ -1 : 0] _wb_dat_r = ((wb_dat_r & _wb_sel_r) | (wb_dat_o & ~_wb_sel_r));
+wire [XARCHBITSZ -1 : 0] cachedato = (cachesel ? cache0dato : cache1dato);
+
+wire [XARCHBITSZ -1 : 0] _wb_dat_r = ((wb_dat_r & _wb_sel_r) | (cachedato & ~_wb_sel_r));
 // Nets set to the value to write in the respective cache.
 wire [XARCHBITSZ -1 : 0] cache0dati = cachesel ? _wb_dat_r : phy_rx_data_o_byteselected[XARCHBITSZ -1 : 0];
 wire [XARCHBITSZ -1 : 0] cache1dati = cachesel ? phy_rx_data_o_byteselected[XARCHBITSZ -1 : 0] : _wb_dat_r;
@@ -635,15 +637,12 @@ wire phy_bsy_w_negedge = (!phy_bsy_w && phy_bsy_w_r);
 
 wire cache_rdop = (wb_stb_r && !wb_we_r && wb_addr_r < (PHYBLKSZ >> CLOG2XARCHBITSZBY8));
 wire cache_wrop = (wb_stb_r && wb_we_r  && wb_addr_r < (PHYBLKSZ >> CLOG2XARCHBITSZBY8));
-reg cache_wrop_r;
-always @ (posedge clk_i)
-	cache_wrop_r <= cache_wrop;
 
 // Nets set to 1 when a read/write request is done to their respective cache.
 wire cache0rd = cachesel ? cache_rdop : phy_tx_pop_o;
 wire cache1rd = cachesel ? phy_tx_pop_o : cache_rdop;
-wire cache0wr = cachesel ? cache_wrop_r : phy_rx_push_o;
-wire cache1wr = cachesel ? phy_rx_push_o : cache_wrop_r;
+wire cache0wr = cachesel ? cache_wrop : phy_rx_push_o;
+wire cache1wr = cachesel ? phy_rx_push_o : cache_wrop;
 
 reg [XARCHBITSZ -1 : 0] cache0 [(PHYBLKSZ/(XARCHBITSZ/8)) -1 : 0];
 reg [XARCHBITSZ -1 : 0] cache1 [(PHYBLKSZ/(XARCHBITSZ/8)) -1 : 0];
@@ -715,8 +714,8 @@ always @ (posedge clk_i) begin
 
 	wb_ack_o <= wb_stb_r;
 
-	if (cache_rdop || cache_wrop)
-		wb_dat_o <= cachesel ? cache0dato : cache1dato;
+	if (cache_rdop)
+		wb_dat_o <= cachedato;
 	else if (wb_stb_r && !wb_we_r)
 		wb_dat_o <= (wb_dat_o_ << wb_dat_shift);
 
