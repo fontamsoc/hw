@@ -246,8 +246,10 @@ reg [(ARCHBITSZ/8) -1 : 0] m_pi1_sel_i_hold;
 
 reg cenable_i_hold;
 
+reg cmiss_i_hold;
+
 // Set high to force reading all ARCHBITSZ bits when PIRDOP_cachemiss occurs.
-wire cenable_i_and_PIRDOP_cachemiss = (FETCHALLONMISS && cenable_i_hold && PIRDOP_cachemiss);
+wire cenable_i_and_PIRDOP_cachemiss = (FETCHALLONMISS && cenable_i_hold && !cmiss_i_hold && PIRDOP_cachemiss);
 
 wire [(ARCHBITSZ/8) -1 : 0] _m_pi1_sel_i_hold =
 	(cenable_i_and_PIRDOP_cachemiss ? {(ARCHBITSZ/8){1'b1}} : m_pi1_sel_i_hold[(ARCHBITSZ/8) -1 : 0]);
@@ -277,8 +279,6 @@ wire cacheen = (cacherdy && (m_pi1_is_not_noop || PIRDOP_cachemiss));
 reg cacherdy_hold;
 
 reg cachewe_;
-
-reg cmiss_i_hold;
 
 wire cachewe = ((slvreadrqstdone ? (cacherdy_hold && !slvreadwriterqst) : cachewe_) &&
 	/* used to invalidate any cachehit entry when cmiss_i was high */(!cmiss_i_hold || cachetagwayhit));

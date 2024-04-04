@@ -2653,19 +2653,9 @@ pi1_upconverter #(
 
 `ifdef PUDCACHE
 
-wire dcache_cenable_r_ = (dtlben ? dtlbcached[dtlbwayhitidx] : !doutofrange);
-wire dcache_cmiss_r_ = miscrdyandsequencerreadyandgprrdy12 && (isopldst || isoploadorstorevolatile);
-
-reg dcache_cenable_r;
+wire dcache_cmiss_r_ = !(dtlben ? dtlbcached[dtlbwayhitidx] : !doutofrange) ||
+	(miscrdyandsequencerreadyandgprrdy12 && (isopldst || isoploadorstorevolatile));
 reg dcache_cmiss_r;
-
-`ifdef PUREGMMUOUTPUT
-always @*
-	dcache_cenable_r = dcache_cenable_r_;
-`else
-always @ (posedge clk_i)
-	dcache_cenable_r <= dcache_cenable_r_;
-`endif
 
 pi1_dcache #(
 
@@ -2682,7 +2672,7 @@ pi1_dcache #(
 
 	,.crst_i (rst_i || (miscrdy && sequencerready && isopdcacherst))
 
-	,.cenable_i (dcache_cenable_r)
+	,.cenable_i (1'b1)
 
 	,.cmiss_i (dcache_cmiss_r)
 
