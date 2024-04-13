@@ -46,8 +46,6 @@ always @ (posedge clk_i) begin
 
 		if (pi1_rdy_i)
 			instrfetchmemrqstinprogress <= 1;
-		else if (instrbufrst)
-			instrfetchmemrqstinprogress <= 0;
 
 	end else begin
 
