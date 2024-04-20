@@ -311,17 +311,27 @@ reg[ARCHBITSZ -1 : 0] instrfetchfaultaddr;
 // Register set to 1 for a mem request.
 reg instrfetchmemrqst;
 
-// Register set to 1 when the mem request is in progress.
-reg instrfetchmemrqstinprogress;
+reg [CLOG2MAXPENDINGACK -1 : 0] wb_rqst_cnt;
+reg [CLOG2MAXPENDINGACK -1 : 0] wb_rsp_cnt;
+
+reg instrfetchmemrqstseqvalid;
+reg [CLOG2MAXPENDINGACK -1 : 0] instrfetchmemrqstseq;
+reg instrfetchmemrqstabortseqvalid;
+reg [CLOG2MAXPENDINGACK -1 : 0] instrfetchmemrqstabortseq;
+
+wire instrfetchmemrqstabort = (instrfetchmemrqstabortseqvalid && wb_rsp_cnt == instrfetchmemrqstabortseq);
 
 // Net set to 1 when the mem request has completed.
-// This signal is 1 only for 1 clock cycle, and pi1_data_i
-// should be read as soon as this signal 1.
-wire instrfetchmemrqstdone = (instrfetchmemrqstinprogress && pi1_rdy_i && !instrbufrst);
+// This signal is 1 only for 1 clock cycle.
+wire instrfetchmemrqstdone_ = (wb_ack_i && instrfetchmemrqstseqvalid && wb_rsp_cnt == instrfetchmemrqstseq);
+wire instrfetchmemrqstdone = instrfetchmemrqstdone_ && !instrbufrst;
+
+reg [(CLOG2MAXPENDINGACK +1) -1 : 0] wb_pending_acks;
 
 // This net is 1 when a memory request was made,
 // but the actual memory access is pending execution.
-wire instrfetchmemaccesspending = (instrfetchmemrqst && !instrfetchmemrqstinprogress && !instrbufrst);
+wire instrfetchmemaccesspending = (instrfetchmemrqst && instrbufnotfull && !instrbufrst &&
+	!instrfetchmemrqstseqvalid && !instrfetchmemrqstabortseqvalid && wb_pending_acks != MAXPENDINGACK);
 
 // ---------- Registers and nets used by opli ----------
 
@@ -393,6 +403,64 @@ reg  dbg_tx_rdy_i_sampled;
 wire dbg_tx_rdy_i_negedge = (!dbg_tx_rdy_i && dbg_tx_rdy_i_sampled);
 `endif
 
+// ---------- Registers and nets used by data caching ----------
+
+wire                        dcache_m_cyc_i;
+reg                         dcache_m_stb_i;
+reg                         dcache_m_we_i;
+reg  [ADDRBITSZ -1 : 0]     dcache_m_addr_i;
+reg  [(ARCHBITSZ/8) -1 : 0] dcache_m_sel_i;
+reg  [ARCHBITSZ -1 : 0]     dcache_m_dat_i;
+wire                        dcache_m_bsy_o;
+wire                        dcache_m_ack_o;
+wire [ARCHBITSZ -1 : 0]     dcache_m_dat_o;
+
+reg                         dcache_m_we_i_;  // Used by opldst.
+reg  [(ARCHBITSZ/8) -1 : 0] dcache_m_sel_i_; // ### comb-block-reg.
+reg  [ARCHBITSZ -1 : 0]     dcache_m_dat_i_; // ### comb-block-reg.
+
+wire                         dcache_s_cyc_o;
+wire                         dcache_s_stb_o;
+wire                         dcache_s_we_o;
+wire [XADDRBITSZ -1 : 0]     dcache_s_addr_o;
+wire [(XARCHBITSZ/8) -1 : 0] dcache_s_sel_o;
+wire [XARCHBITSZ -1 : 0]     dcache_s_dat_o;
+
+reg [(CLOG2MAXPENDINGACK +1) -1 : 0] dcache_m_pending_acks;
+
+wire _dcache_m_bsy_o = (dcache_m_bsy_o || dcache_m_pending_acks == MAXPENDINGACK);
+
+wire _dcache_m_stb_i = (dcache_m_stb_i && !_dcache_m_bsy_o);
+
+reg [CLOG2MAXPENDINGACK -1 : 0] dcache_m_rqst_cnt;
+reg [CLOG2MAXPENDINGACK -1 : 0] dcache_m_rsp_cnt;
+
+always @ (posedge clk_i) begin
+
+	if (rst_i)
+		dcache_m_rqst_cnt <= 0;
+	else if (_dcache_m_stb_i)
+		dcache_m_rqst_cnt <= dcache_m_rqst_cnt + 1'b1;
+
+	if (rst_i)
+		dcache_m_rsp_cnt <= 0;
+	else if (dcache_m_ack_o)
+		dcache_m_rsp_cnt <= dcache_m_rsp_cnt + 1'b1;
+
+	if (rst_i)
+		dcache_m_pending_acks <= 0;
+	else if (_dcache_m_stb_i && dcache_m_ack_o);
+	else if (dcache_m_ack_o)
+		dcache_m_pending_acks <= dcache_m_pending_acks - 1'b1;
+	else if (_dcache_m_stb_i)
+		dcache_m_pending_acks <= dcache_m_pending_acks + 1'b1;
+end
+
+assign dcache_m_cyc_i = (dcache_m_stb_i || dcache_m_we_i_ || (|dcache_m_pending_acks));
+
+// Signal set to 1 when the logic setting dcache_m_stb_i is busy.
+wire __dcache_m_bsy = ((dcache_m_stb_i && _dcache_m_bsy_o) || dcache_m_we_i_);
+
 // ---------- Registers and nets used by Hardware-Page-Table-Walker ----------
 
 wire itlbre;
@@ -441,24 +509,6 @@ wire dtlbrdy_opldst = !(
 wire[ARCHBITSZ -1 : 0] gprdata1;
 wire[ARCHBITSZ -1 : 0] gprdata2;
 
-reg dcache_m_cyc_i;
-reg dcache_m_stb_i;
-
-reg[2 -1 : 0] dcachemasterop;
-reg[ADDRBITSZ -1 : 0] dcachemasteraddr;
-wire[ARCHBITSZ -1 : 0] dcachemasterdato;
-wire[ARCHBITSZ -1 : 0] dcachemasterdato_result;
-reg[ARCHBITSZ -1 : 0] dcachemasterdati_; // ### comb-block-reg.
-reg[ARCHBITSZ -1 : 0] dcachemasterdati;
-reg[(ARCHBITSZ/8) -1 : 0] dcachemastersel_; // ### comb-block-reg.
-reg[(ARCHBITSZ/8) -1 : 0] dcachemastersel;
-wire dcache_m_ack_o;
-
-wire[2 -1 : 0] dcacheslaveop;
-wire[XADDRBITSZ -1 : 0] dcacheslaveaddr;
-wire[XARCHBITSZ -1 : 0] dcacheslavedato;
-wire[(XARCHBITSZ/8) -1 : 0] dcacheslavesel;
-
 wire isopgettlb;
 wire isopld;
 wire isopst;
@@ -483,15 +533,47 @@ localparam HPTWSTATEPTE0 = 2;
 localparam HPTWSTATEPTE1 = 3;
 localparam HPTWSTATEDONE = 4;
 
+localparam HPTWMEMREQNONE  = 0;
+localparam HPTWMEMREQINSTR = 1;
+localparam HPTWMEMREQDATA  = 2;
+
+reg [2 -1 : 0] hptwmemrqst;
+
+reg [CLOG2MAXPENDINGACK -1 : 0] hptwimemrqstseq;
+reg hptwimemrqstseqvalid;
+wire hptwimemack = (dcache_m_ack_o && hptwimemrqstseqvalid && hptwimemrqstseq == dcache_m_rsp_cnt);
+
+always @ (posedge clk_i) begin
+	if (rst_i || instrbufrst_posedge || hptwimemack)
+		hptwimemrqstseqvalid <= 0;
+	else if (!hptwimemrqstseqvalid && hptwmemrqst == HPTWMEMREQINSTR && _dcache_m_stb_i) begin
+		hptwimemrqstseqvalid <= 1;
+		hptwimemrqstseq <= dcache_m_rqst_cnt;
+	end
+end
+
+reg [CLOG2MAXPENDINGACK -1 : 0] hptwdmemrqstseq;
+reg hptwdmemrqstseqvalid;
+wire hptwdmemack = (dcache_m_ack_o && hptwdmemrqstseqvalid && hptwdmemrqstseq == dcache_m_rsp_cnt);
+
+always @ (posedge clk_i) begin
+	if (rst_i || hptwdmemack)
+		hptwdmemrqstseqvalid <= 0;
+	else if (!hptwdmemrqstseqvalid && hptwmemrqst == HPTWMEMREQDATA && _dcache_m_stb_i) begin
+		hptwdmemrqstseqvalid <= 1;
+		hptwdmemrqstseq <= dcache_m_rqst_cnt;
+	end
+end
+
 reg[3 -1 : 0] hptwistate; // Must have enough bits such that it can be used with the sequencer to determine whether in use.
 wire hptwistate_eq_HPTWSTATEPGD0 = (hptwistate == HPTWSTATEPGD0);
 wire hptwistate_eq_HPTWSTATEPGD1 = (hptwistate == HPTWSTATEPGD1);
 wire hptwistate_eq_HPTWSTATEPTE0 = (hptwistate == HPTWSTATEPTE0);
 wire hptwistate_eq_HPTWSTATEPTE1 = (hptwistate == HPTWSTATEPTE1);
 wire hptwistate_eq_HPTWSTATEDONE = (hptwistate == HPTWSTATEDONE);
-wire hptwitlbwe = (dcache_m_ack_o && /**/!dcache_m_stb_i/*TODO: to remove with Wishbone */&&
-	dcachemasterdato[5] &&
-	(((!inkernelmode_kmodepaging && inuserspace) ? dcachemasterdato[4] : 1'b1) && dcachemasterdato[0]) &&
+wire hptwitlbwe = (hptwimemack && !instrbufrst_posedge &&
+	dcache_m_dat_o[5] &&
+	(((!inkernelmode_kmodepaging && inuserspace) ? dcache_m_dat_o[4] : 1'b1) && dcache_m_dat_o[0]) &&
 	hptwistate_eq_HPTWSTATEPTE1);
 wire[10 -1 : 0] hptwipgdoffset = instrfetchnextaddr[ADDRBITSZ -1 : ADDRBITSZ -10];
 wire[ARCHBITSZ -1 : 0] hptwpgd_plus_hptwipgdoffset = (hptwpgd + {hptwipgdoffset, {CLOG2ARCHBITSZBY8{1'b0}}});
@@ -506,12 +588,12 @@ wire hptwdstate_eq_HPTWSTATEPGD1 = (hptwdstate == HPTWSTATEPGD1);
 wire hptwdstate_eq_HPTWSTATEPTE0 = (hptwdstate == HPTWSTATEPTE0);
 wire hptwdstate_eq_HPTWSTATEPTE1 = (hptwdstate == HPTWSTATEPTE1);
 wire hptwdstate_eq_HPTWSTATEDONE = (hptwdstate == HPTWSTATEDONE);
-wire hptwdtlbwe = (dcache_m_ack_o && /**/!dcache_m_stb_i/*TODO: to remove with Wishbone */&&
-	dcachemasterdato[5] &&
-	(((!inkernelmode_kmodepaging && inuserspace) ? dcachemasterdato[4] : 1'b1) && (
-		(isopld    && dcachemasterdato[2])        ||
-		(isopst    && dcachemasterdato[1])        ||
-		(isopldst  && (|dcachemasterdato[2:1])))) &&
+wire hptwdtlbwe = (hptwdmemack &&
+	dcache_m_dat_o[5] &&
+	(((!inkernelmode_kmodepaging && inuserspace) ? dcache_m_dat_o[4] : 1'b1) && (
+		(isopld    && dcache_m_dat_o[2])        ||
+		(isopst    && dcache_m_dat_o[1])        ||
+		(isopldst  && (|dcache_m_dat_o[2:1])))) &&
 	hptwdstate_eq_HPTWSTATEPTE1);
 wire[10 -1 : 0] hptwdpgdoffset = gprdata2[ARCHBITSZ -1 : ARCHBITSZ -10];
 wire[ARCHBITSZ -1 : 0] hptwpgd_plus_hptwdpgdoffset = (hptwpgd + {hptwdpgdoffset, {CLOG2ARCHBITSZBY8{1'b0}}});
@@ -521,12 +603,6 @@ wire[ARCHBITSZ -1 : 0] hptwdpte_plus_hptwdpteoffset = (hptwdpte + {hptwdpteoffse
 reg hptwddone;
 
 wire hptwbsy = (!hptwistate_eq_HPTWSTATEPGD0 || !hptwdstate_eq_HPTWSTATEPGD0);
-
-localparam HPTWMEMSTATENONE  = 0;
-localparam HPTWMEMSTATEINSTR = 1;
-localparam HPTWMEMSTATEDATA  = 2;
-
-reg[2 -1 : 0] hptwmemstate; // ### comb-block-reg.
 
 always @ (posedge clk_i) begin
 
@@ -542,14 +618,13 @@ always @ (posedge clk_i) begin
 			hptwistate <= HPTWSTATEPGD0;
 		end
 
-	end else if ((dcache_m_stb_i && /* ~dcache_m_bsy_o TODO: use instead with Wishbone */ dcache_m_ack_o &&
-		hptwmemstate == HPTWMEMSTATEINSTR) ||
-		(dcache_m_ack_o && /**/!dcache_m_stb_i/*TODO: to remove with Wishbone */&&
-			(hptwistate_eq_HPTWSTATEPGD1 || hptwistate_eq_HPTWSTATEPTE1))) begin
+	end else if ((_dcache_m_stb_i && hptwmemrqst == HPTWMEMREQINSTR &&
+		(hptwistate_eq_HPTWSTATEPGD0 || hptwistate_eq_HPTWSTATEPTE0)) ||
+		(hptwimemack && (hptwistate_eq_HPTWSTATEPGD1 || hptwistate_eq_HPTWSTATEPTE1))) begin
 
 		if (hptwistate_eq_HPTWSTATEPGD1) begin
-			if (dcachemasterdato[5])
-				hptwipte <= {dcachemasterdato[ARCHBITSZ-1:12], 12'b0};
+			if (dcache_m_dat_o[5])
+				hptwipte <= {dcache_m_dat_o[ARCHBITSZ-1:12], 12'b0};
 			else
 				hptwidone <= 1'b1;
 		end else if (hptwistate_eq_HPTWSTATEPTE1)
@@ -573,14 +648,13 @@ always @ (posedge clk_i) begin
 			hptwdstate <= HPTWSTATEPGD0;
 		end
 
-	end else if ((dcache_m_stb_i && /* ~dcache_m_bsy_o TODO: use instead with Wishbone */ dcache_m_ack_o &&
-		hptwmemstate == HPTWMEMSTATEDATA) ||
-		(dcache_m_ack_o && /**/!dcache_m_stb_i/*TODO: to remove with Wishbone */&&
-			(hptwdstate_eq_HPTWSTATEPGD1 || hptwdstate_eq_HPTWSTATEPTE1))) begin
+	end else if ((_dcache_m_stb_i && hptwmemrqst == HPTWMEMREQDATA &&
+		(hptwdstate_eq_HPTWSTATEPGD0 || hptwdstate_eq_HPTWSTATEPTE0)) ||
+		(hptwdmemack && (hptwdstate_eq_HPTWSTATEPGD1 || hptwdstate_eq_HPTWSTATEPTE1))) begin
 
 		if (hptwdstate_eq_HPTWSTATEPGD1) begin
-			if (dcachemasterdato[5])
-				hptwdpte <= {dcachemasterdato[ARCHBITSZ-1:12], 12'b0};
+			if (dcache_m_dat_o[5])
+				hptwdpte <= {dcache_m_dat_o[ARCHBITSZ-1:12], 12'b0};
 			else
 				hptwddone <= 1'b1;
 		end else if (hptwdstate_eq_HPTWSTATEPTE1)
@@ -915,8 +989,8 @@ wire itlbwe = (
 wire[TLBENTRYBITSZ -1 : 0] tlbwritedata = (
 	isopsettlb ? {gprdata2[12-1:0], gprdata1[4:0], gprdata1[ARCHBITSZ-1:12], dvpn} :
 	`ifdef PUHPTW
-	hptwitlbwe ? {asid[12-1:0], dcachemasterdato[4:3], 2'b00, dcachemasterdato[0], dcachemasterdato[ARCHBITSZ-1:12], ivpn} :
-	hptwdtlbwe ? {asid[12-1:0], dcachemasterdato[4:1], 1'b0,                       dcachemasterdato[ARCHBITSZ-1:12], dvpn} :
+	hptwitlbwe ? {asid[12-1:0], dcache_m_dat_o[4:3], 2'b00, dcache_m_dat_o[0], dcache_m_dat_o[ARCHBITSZ-1:12], ivpn} :
+	hptwdtlbwe ? {asid[12-1:0], dcache_m_dat_o[4:1], 1'b0,                       dcache_m_dat_o[ARCHBITSZ-1:12], dvpn} :
 	`endif
 	             {TLBENTRYBITSZ{1'b0}});
 
@@ -1135,7 +1209,7 @@ always @* begin
 end
 `endif
 
-wire itlb_and_instrbuf_rdy = ((((!inusermode || !_istlbop) && instrbufnotfull) || instrbufrst) && (
+wire itlb_and_instrbuf_rdy = (((!inusermode || !_istlbop) || instrbufrst) && (
 	itlbrdy
 	`ifdef PUMMU
 	`ifdef PUHPTW
@@ -1305,7 +1379,7 @@ bram #(
 	,.en0_i   (!icachecheck || instrbufrst) ,.en1_i   (1'b1)
 	                                           ,.we1_i   (icachewe && (icachewaywriteidx == gen_icache_idx))
 	,.addr0_i (icachenextset)                  ,.addr1_i (icacheset)
-	                                           ,.i1      (pi1_data_i)
+	                                           ,.i1      (wb_dat_i)
 	,.o0      (icachedato_[gen_icache_idx])    ,.o1      ()
 );
 
@@ -1328,9 +1402,10 @@ end endgenerate
 
 reg icachebsy = 0;
 
-assign instrbufwe = ((instrfetchmemrqstdone || (icachecheck && icachehit && !icachebsy)) && !instrbufrst);
+assign instrbufwe = ((instrfetchmemrqstdone ||
+	(icachecheck && icachehit && !icachebsy && instrbufnotfull)) && !instrbufrst);
 
-assign instrbufi = (instrfetchmemrqstdone ? pi1_data_i : icachedato);
+assign instrbufi = (instrfetchmemrqstdone ? wb_dat_i : icachedato);
 
 `ifdef PUSC2
 // ---------- Registers and nets used for superscalar-2nd-issue ----------
@@ -2394,9 +2469,49 @@ assign sc2gprrdy2 = (gprrdywe && sc2gpridx2 == gprrdyidx) ? gprrdyval : gprrdy[s
 // ---------- Registers and nets used by opld ----------
 
 // Register that will hold the id of the gpr to which the result will be stored.
-reg[CLOG2GPRCNTTOTAL -1 : 0] opldgpr;
+reg [CLOG2GPRCNTTOTAL -1 : 0] opldgpr;
 
-reg[ARCHBITSZ -1 : 0] opldresult;
+reg [(ARCHBITSZ/8) -1 : 0] opldmemrqstsel;
+
+wire [ARCHBITSZ -1 : 0] opldresult_;
+
+// Apropriately set opldresult_ depending on opldmemrqstsel.
+generate if (ARCHBITSZ == 16) begin
+	assign opldresult_ =
+		(opldmemrqstsel == 2'b10) ? {{8{1'b0}}, dcache_m_dat_o[15:8]} :
+		(opldmemrqstsel == 2'b01) ? {{8{1'b0}}, dcache_m_dat_o[7:0]} :
+		                                        dcache_m_dat_o;
+end endgenerate
+generate if (ARCHBITSZ == 32) begin
+	assign opldresult_ =
+		(opldmemrqstsel == 4'b1100) ? {{16{1'b0}}, dcache_m_dat_o[31:16]} :
+		(opldmemrqstsel == 4'b0011) ? {{16{1'b0}}, dcache_m_dat_o[15:0]} :
+		(opldmemrqstsel == 4'b1000) ? {{24{1'b0}}, dcache_m_dat_o[31:24]} :
+		(opldmemrqstsel == 4'b0100) ? {{24{1'b0}}, dcache_m_dat_o[23:16]} :
+		(opldmemrqstsel == 4'b0010) ? {{24{1'b0}}, dcache_m_dat_o[15:8]} :
+		(opldmemrqstsel == 4'b0001) ? {{24{1'b0}}, dcache_m_dat_o[7:0]} :
+		                                           dcache_m_dat_o;
+end endgenerate
+generate if (ARCHBITSZ == 64) begin
+	assign opldresult_ =
+		(opldmemrqstsel == 8'b11110000) ? {{32{1'b0}}, dcache_m_dat_o[63:32]} :
+		(opldmemrqstsel == 8'b00001111) ? {{32{1'b0}}, dcache_m_dat_o[31:0]} :
+		(opldmemrqstsel == 8'b11000000) ? {{16{1'b0}}, dcache_m_dat_o[63:48]} :
+		(opldmemrqstsel == 8'b00110000) ? {{16{1'b0}}, dcache_m_dat_o[47:32]} :
+		(opldmemrqstsel == 8'b00001100) ? {{16{1'b0}}, dcache_m_dat_o[31:16]} :
+		(opldmemrqstsel == 8'b00000011) ? {{16{1'b0}}, dcache_m_dat_o[15:0]} :
+		(opldmemrqstsel == 8'b10000000) ? {{24{1'b0}}, dcache_m_dat_o[63:56]} :
+		(opldmemrqstsel == 8'b01000000) ? {{24{1'b0}}, dcache_m_dat_o[55:48]} :
+		(opldmemrqstsel == 8'b00100000) ? {{24{1'b0}}, dcache_m_dat_o[47:40]} :
+		(opldmemrqstsel == 8'b00010000) ? {{24{1'b0}}, dcache_m_dat_o[39:32]} :
+		(opldmemrqstsel == 8'b00001000) ? {{24{1'b0}}, dcache_m_dat_o[31:24]} :
+		(opldmemrqstsel == 8'b00000100) ? {{24{1'b0}}, dcache_m_dat_o[23:16]} :
+		(opldmemrqstsel == 8'b00000010) ? {{24{1'b0}}, dcache_m_dat_o[15:8]} :
+		(opldmemrqstsel == 8'b00000001) ? {{24{1'b0}}, dcache_m_dat_o[7:0]} :
+		                                               dcache_m_dat_o;
+end endgenerate
+
+reg [ARCHBITSZ -1 : 0] opldresult;
 
 `ifdef PUMMU
 wire opldfault_ = (dtlben && (dtlbmiss || dtlbnotreadable[dtlbwayhitidx]));
@@ -2408,12 +2523,25 @@ wire opldfault__hptwddone = (!opldfault_ || !hptwpgd || (hptwddone && !dtlbwritt
 wire opldfault = 0;
 `endif
 
+reg [CLOG2MAXPENDINGACK -1 : 0] opldmemrqstseq;
+reg opldmemrqstseqvalid;
+wire opldmemack = (dcache_m_ack_o && opldmemrqstseqvalid && opldmemrqstseq == dcache_m_rsp_cnt);
+
+always @ (posedge clk_i) begin
+	if (rst_i || opldmemack)
+		opldmemrqstseqvalid <= 0;
+	else if (!opldmemrqstseqvalid && opldmemrqst && _dcache_m_stb_i) begin
+		opldmemrqstseqvalid <= 1;
+		opldmemrqstseq <= dcache_m_rqst_cnt;
+	end
+end
+
 reg oplddone;
 
 // Register set to 1 for a mem request.
 reg opldmemrqst;
 
-wire opldrdy_ = (!(opldmemrqst || oplddone) && dtlbrdy_opld && (!dcache_m_cyc_i || opldfault));
+wire opldrdy_ = (!(opldmemrqst || oplddone) && dtlbrdy_opld && !__dcache_m_bsy);
 wire opldrdy = (isopld && opldrdy_
 	`ifdef PUMMU
 	`ifdef PUHPTW
@@ -2438,9 +2566,9 @@ always @ (posedge clk_i) begin
 
 		if (opldmemrqst) begin
 
-			if (dcache_m_ack_o/**/&&!dcache_m_stb_i/*TODO: to remove with Wishbone */) begin
+			if (opldmemack) begin
 
-				opldresult <= dcachemasterdato_result;
+				opldresult <= opldresult_;
 
 				// Signal that the value of the register opldresult can be stored in the gpr.
 				oplddone <= 1;
@@ -2448,7 +2576,7 @@ always @ (posedge clk_i) begin
 				opldmemrqst <= 0;
 			end
 
-		end else if (miscrdyandsequencerreadyandgprrdy12 && isopld && dtlbrdy_opld && !dcache_m_cyc_i && !opldfault
+		end else if (miscrdyandsequencerreadyandgprrdy12 && isopld && dtlbrdy_opld && !__dcache_m_bsy && !opldfault
 			`ifdef PUMMU
 			`ifdef PUHPTW
 			&& opldfault__hptwddone
@@ -2457,6 +2585,8 @@ always @ (posedge clk_i) begin
 			) begin
 
 			opldmemrqst <= 1;
+
+			opldmemrqstsel <= dcache_m_sel_i_;
 
 			opldgpr <= gpridx1;
 		end
@@ -2491,7 +2621,7 @@ wire opstfault__hptwddone = (!opstfault_ || !hptwpgd || (hptwddone && !dtlbwritt
 wire opstfault = 0;
 `endif
 
-wire opstrdy_ = (dtlbrdy_opst && (!dcache_m_cyc_i || opstfault));
+wire opstrdy_ = (dtlbrdy_opst && !__dcache_m_bsy);
 wire opstrdy = (isopst && opstrdy_
 	`ifdef PUMMU
 	`ifdef PUHPTW
@@ -2501,7 +2631,7 @@ wire opstrdy = (isopst && opstrdy_
 	&& !opstfault);
 /*
 always @ (posedge clk_i) begin
-	if (miscrdyandsequencerreadyandgprrdy12 && isopst && dtlbrdy_opst && (!dcache_m_cyc_i || opstfault)
+	if (miscrdyandsequencerreadyandgprrdy12 && isopst && dtlbrdy_opst && !__dcache_m_bsy && !opstfault)
 		`ifdef PUMMU
 		`ifdef PUHPTW
 		&& opstfault__hptwddone
@@ -2533,9 +2663,49 @@ end
 // ---------- Registers and nets used by opldst ----------
 
 // Register that will hold the id of the gpr to which the result will be stored.
-reg[CLOG2GPRCNTTOTAL -1 : 0] opldstgpr;
+reg [CLOG2GPRCNTTOTAL -1 : 0] opldstgpr;
 
-reg[ARCHBITSZ -1 : 0] opldstresult;
+reg [(ARCHBITSZ/8) -1 : 0] opldstmemrqstsel;
+
+wire [ARCHBITSZ -1 : 0] opldstresult_;
+
+// Apropriately set opldstresult_ depending on opldstmemrqstsel.
+generate if (ARCHBITSZ == 16) begin
+	assign opldstresult_ =
+		(opldstmemrqstsel == 2'b10) ? {{8{1'b0}}, dcache_m_dat_o[15:8]} :
+		(opldstmemrqstsel == 2'b01) ? {{8{1'b0}}, dcache_m_dat_o[7:0]} :
+		                                          dcache_m_dat_o;
+end endgenerate
+generate if (ARCHBITSZ == 32) begin
+	assign opldstresult_ =
+		(opldstmemrqstsel == 4'b1100) ? {{16{1'b0}}, dcache_m_dat_o[31:16]} :
+		(opldstmemrqstsel == 4'b0011) ? {{16{1'b0}}, dcache_m_dat_o[15:0]} :
+		(opldstmemrqstsel == 4'b1000) ? {{24{1'b0}}, dcache_m_dat_o[31:24]} :
+		(opldstmemrqstsel == 4'b0100) ? {{24{1'b0}}, dcache_m_dat_o[23:16]} :
+		(opldstmemrqstsel == 4'b0010) ? {{24{1'b0}}, dcache_m_dat_o[15:8]} :
+		(opldstmemrqstsel == 4'b0001) ? {{24{1'b0}}, dcache_m_dat_o[7:0]} :
+		                                             dcache_m_dat_o;
+end endgenerate
+generate if (ARCHBITSZ == 64) begin
+	assign opldstresult_ =
+		(opldstmemrqstsel == 8'b11110000) ? {{32{1'b0}}, dcache_m_dat_o[63:32]} :
+		(opldstmemrqstsel == 8'b00001111) ? {{32{1'b0}}, dcache_m_dat_o[31:0]} :
+		(opldstmemrqstsel == 8'b11000000) ? {{16{1'b0}}, dcache_m_dat_o[63:48]} :
+		(opldstmemrqstsel == 8'b00110000) ? {{16{1'b0}}, dcache_m_dat_o[47:32]} :
+		(opldstmemrqstsel == 8'b00001100) ? {{16{1'b0}}, dcache_m_dat_o[31:16]} :
+		(opldstmemrqstsel == 8'b00000011) ? {{16{1'b0}}, dcache_m_dat_o[15:0]} :
+		(opldstmemrqstsel == 8'b10000000) ? {{24{1'b0}}, dcache_m_dat_o[63:56]} :
+		(opldstmemrqstsel == 8'b01000000) ? {{24{1'b0}}, dcache_m_dat_o[55:48]} :
+		(opldstmemrqstsel == 8'b00100000) ? {{24{1'b0}}, dcache_m_dat_o[47:40]} :
+		(opldstmemrqstsel == 8'b00010000) ? {{24{1'b0}}, dcache_m_dat_o[39:32]} :
+		(opldstmemrqstsel == 8'b00001000) ? {{24{1'b0}}, dcache_m_dat_o[31:24]} :
+		(opldstmemrqstsel == 8'b00000100) ? {{24{1'b0}}, dcache_m_dat_o[23:16]} :
+		(opldstmemrqstsel == 8'b00000010) ? {{24{1'b0}}, dcache_m_dat_o[15:8]} :
+		(opldstmemrqstsel == 8'b00000001) ? {{24{1'b0}}, dcache_m_dat_o[7:0]} :
+		                                                 dcache_m_dat_o;
+end endgenerate
+
+reg [ARCHBITSZ -1 : 0] opldstresult;
 
 `ifdef PUMMU
 wire opldstfault_ = (dtlben && (dtlbmiss || dtlbnotreadable[dtlbwayhitidx] || dtlbnotwritable[dtlbwayhitidx]));
@@ -2547,12 +2717,25 @@ wire opldstfault__hptwddone = (!opldstfault_ || !hptwpgd || (hptwddone && !dtlbw
 wire opldstfault = 0;
 `endif
 
+reg [CLOG2MAXPENDINGACK -1 : 0] opldstmemrqstseq;
+reg opldstmemrqstseqvalid;
+wire opldstmemack = (dcache_m_ack_o && opldstmemrqstseqvalid && opldstmemrqstseq == dcache_m_rsp_cnt);
+
+always @ (posedge clk_i) begin
+	if (rst_i || opldstmemack)
+		opldstmemrqstseqvalid <= 0;
+	else if (!opldstmemrqstseqvalid && opldstmemrqst && _dcache_m_stb_i && dcache_m_we_i_) begin
+		opldstmemrqstseqvalid <= 1;
+		opldstmemrqstseq <= dcache_m_rqst_cnt;
+	end
+end
+
 reg opldstdone;
 
 // Register set to 1 for a mem request.
 reg opldstmemrqst;
 
-wire opldstrdy_ = (!(opldstmemrqst || opldstdone) && dtlbrdy_opldst && (!dcache_m_cyc_i || opldstfault));
+wire opldstrdy_ = (!(opldstmemrqst || opldstdone) && dtlbrdy_opldst && !__dcache_m_bsy);
 wire opldstrdy = (isopldst && opldstrdy_
 	`ifdef PUMMU
 	`ifdef PUHPTW
@@ -2577,9 +2760,9 @@ always @ (posedge clk_i) begin
 
 		if (opldstmemrqst) begin
 
-			if (dcache_m_ack_o /**/&&!dcache_m_stb_i/*TODO: to remove with Wishbone */) begin
+			if (opldstmemack) begin
 
-				opldstresult <= dcachemasterdato_result;
+				opldstresult <= opldstresult_;
 
 				// Signal that the value of the register opldstresult can be stored in the gpr.
 				opldstdone <= 1;
@@ -2587,7 +2770,7 @@ always @ (posedge clk_i) begin
 				opldstmemrqst <= 0;
 			end
 
-		end else if (miscrdyandsequencerreadyandgprrdy12 && isopldst && dtlbrdy_opldst && !dcache_m_cyc_i && !opldstfault && !instrbufdato0[2]
+		end else if (miscrdyandsequencerreadyandgprrdy12 && isopldst && dtlbrdy_opldst && !__dcache_m_bsy && !opldstfault && !instrbufdato0[2]
 			`ifdef PUMMU
 			`ifdef PUHPTW
 			&& opldstfault__hptwddone
@@ -2596,6 +2779,8 @@ always @ (posedge clk_i) begin
 			) begin
 
 			opldstmemrqst <= 1;
+
+			opldstmemrqstsel <= dcache_m_sel_i_;
 
 			opldstgpr <= gpridx1;
 		end
@@ -2618,38 +2803,56 @@ always @ (posedge clk_i) begin
 		opldst_found <= 0;
 end
 
-// ---------- Registers and nets used for data caching ----------
+// ---------- Registers and nets used by data caching ----------
 
-wire [2 -1 : 0]              pi1_upconverter_dcachemasterop;
-wire [XADDRBITSZ -1 : 0]     pi1_upconverter_dcachemasteraddr;
-wire [XARCHBITSZ -1 : 0]     pi1_upconverter_dcachemasterdati;
-wire [XARCHBITSZ -1 : 0]     pi1_upconverter_dcachemasterdato;
-wire [(XARCHBITSZ/8) -1 : 0] pi1_upconverter_dcachemastersel;
-wire                         pi1_upconverter_dcachemasterrdy;
+wire                         upsizr_dcache_m_cyc_i;
+wire                         upsizr_dcache_m_stb_i;
+wire                         upsizr_dcache_m_we_i;
+wire [XADDRBITSZ -1 : 0]     upsizr_dcache_m_addr_i;
+wire [(XARCHBITSZ/8) -1 : 0] upsizr_dcache_m_sel_i;
+wire [XARCHBITSZ -1 : 0]     upsizr_dcache_m_dat_i;
+wire                         upsizr_dcache_m_bsy_o;
+wire                         upsizr_dcache_m_ack_o;
+wire [XARCHBITSZ -1 : 0]     upsizr_dcache_m_dat_o;
 
-pi1_upconverter #(
+wb_upsizr #(
 
-	 .MARCHBITSZ (ARCHBITSZ)
-	,.SARCHBITSZ (XARCHBITSZ)
+	 .MARCHBITSZ    (ARCHBITSZ)
+	,.SARCHBITSZ    (XARCHBITSZ)
+	,.MAXPENDINGACK (MAXPENDINGACK)
+	,.USEFWFTFIFO   (1)
 
-) pi1_upconverter_dcache (
+) upsizr_dcache (
 
-	 .clk_i (clk_i)
+	 .rst_i (rst_i)
 
-	,.m_pi1_op_i   (dcachemasterop)
-	,.m_pi1_addr_i (dcachemasteraddr)
-	,.m_pi1_data_i (dcachemasterdati)
-	,.m_pi1_data_o (dcachemasterdato)
-	,.m_pi1_sel_i  (dcachemastersel)
-	,.m_pi1_rdy_o  (dcache_m_ack_o)
+	,.clk_i (clk_i)
 
-	,.s_pi1_op_o   (pi1_upconverter_dcachemasterop)
-	,.s_pi1_addr_o (pi1_upconverter_dcachemasteraddr)
-	,.s_pi1_data_o (pi1_upconverter_dcachemasterdati)
-	,.s_pi1_data_i (pi1_upconverter_dcachemasterdato)
-	,.s_pi1_sel_o  (pi1_upconverter_dcachemastersel)
-	,.s_pi1_rdy_i  (pi1_upconverter_dcachemasterrdy)
+	,.m_wb_cyc_i  (dcache_m_cyc_i)
+	,.m_wb_stb_i  (dcache_m_stb_i)
+	,.m_wb_we_i   (dcache_m_we_i)
+	,.m_wb_addr_i (dcache_m_addr_i)
+	,.m_wb_sel_i  (dcache_m_sel_i)
+	,.m_wb_dat_i  (dcache_m_dat_i)
+	,.m_wb_bsy_o  (dcache_m_bsy_o)
+	,.m_wb_ack_o  (dcache_m_ack_o)
+	,.m_wb_dat_o  (dcache_m_dat_o)
+
+	,.s_wb_cyc_o  (upsizr_dcache_m_cyc_i)
+	,.s_wb_stb_o  (upsizr_dcache_m_stb_i)
+	,.s_wb_we_o   (upsizr_dcache_m_we_i)
+	,.s_wb_addr_o (upsizr_dcache_m_addr_i)
+	,.s_wb_sel_o  (upsizr_dcache_m_sel_i)
+	,.s_wb_dat_o  (upsizr_dcache_m_dat_i)
+	,.s_wb_bsy_i  (upsizr_dcache_m_bsy_o)
+	,.s_wb_ack_i  (upsizr_dcache_m_ack_o)
+	,.s_wb_dat_i  (upsizr_dcache_m_dat_o)
 );
+
+wire _wb_bsy_i = (wb_bsy_i || wb_pending_acks == MAXPENDINGACK);
+
+wire dcache_s_ack_i = (wb_ack_i &&
+	(!instrfetchmemrqstseqvalid || wb_rsp_cnt != instrfetchmemrqstseq) && !instrfetchmemrqstabort);
 
 `ifdef PUDCACHE
 
@@ -2657,12 +2860,12 @@ wire dcache_cmiss_r_ = !(dtlben ? dtlbcached[dtlbwayhitidx] : !doutofrange) ||
 	(miscrdyandsequencerreadyandgprrdy12 && (isopldst || isoploadorstorevolatile));
 reg dcache_cmiss_r;
 
-pi1_dcache #(
+dcache #(
 
 	 .ARCHBITSZ     (XARCHBITSZ)
 	,.CACHESETCOUNT (DCACHESETCOUNT)
 	,.CACHEWAYCOUNT (DCACHEWAYCOUNT)
-	,.BUFFERDEPTH   (64)
+	,.MAXPENDINGACK (MAXPENDINGACK)
 
 ) dcache (
 
@@ -2670,38 +2873,42 @@ pi1_dcache #(
 
 	,.clk_i (clk_i)
 
-	,.crst_i (rst_i || (miscrdy && sequencerready && isopdcacherst))
-
-	,.cenable_i (1'b1)
-
+	,.conly_i (1'b0)
 	,.cmiss_i (dcache_cmiss_r)
 
-	,.conly_i (1'b0)
+	,.m_wb_cyc_i  (upsizr_dcache_m_cyc_i)
+	,.m_wb_stb_i  (upsizr_dcache_m_stb_i)
+	,.m_wb_we_i   (upsizr_dcache_m_we_i)
+	,.m_wb_addr_i (upsizr_dcache_m_addr_i)
+	,.m_wb_sel_i  (upsizr_dcache_m_sel_i)
+	,.m_wb_dat_i  (upsizr_dcache_m_dat_i)
+	,.m_wb_bsy_o  (upsizr_dcache_m_bsy_o)
+	,.m_wb_ack_o  (upsizr_dcache_m_ack_o)
+	,.m_wb_dat_o  (upsizr_dcache_m_dat_o)
 
-	,.m_pi1_op_i   (pi1_upconverter_dcachemasterop)
-	,.m_pi1_addr_i (pi1_upconverter_dcachemasteraddr)
-	,.m_pi1_data_i (pi1_upconverter_dcachemasterdati)
-	,.m_pi1_data_o (pi1_upconverter_dcachemasterdato)
-	,.m_pi1_sel_i  (pi1_upconverter_dcachemastersel)
-	,.m_pi1_rdy_o  (pi1_upconverter_dcachemasterrdy)
-
-	,.s_pi1_op_o   (dcacheslaveop)
-	,.s_pi1_addr_o (dcacheslaveaddr)
-	,.s_pi1_data_o (dcacheslavedato)
-	,.s_pi1_data_i (pi1_data_i)
-	,.s_pi1_sel_o  (dcacheslavesel)
-	,.s_pi1_rdy_i  (pi1_rdy_i)
+	,.s_wb_cyc_o  (dcache_s_cyc_o)
+	,.s_wb_stb_o  (dcache_s_stb_o)
+	,.s_wb_we_o   (dcache_s_we_o)
+	,.s_wb_addr_o (dcache_s_addr_o)
+	,.s_wb_sel_o  (dcache_s_sel_o)
+	,.s_wb_dat_o  (dcache_s_dat_o)
+	,.s_wb_bsy_i  (_wb_bsy_i)
+	,.s_wb_ack_i  (dcache_s_ack_i)
+	,.s_wb_dat_i  (wb_dat_i)
 );
 
 `else
 
-assign pi1_upconverter_dcachemasterrdy = pi1_rdy_i;
-assign pi1_upconverter_dcachemasterdato = pi1_data_i;
+assign dcache_s_cyc_o = upsizr_dcache_m_cyc_i;
+assign dcache_s_stb_o = upsizr_dcache_m_stb_i;
+assign dcache_s_we_o = upsizr_dcache_m_we_i;
+assign dcache_s_addr_o = upsizr_dcache_m_addr_i;
+assign dcache_s_sel_o = upsizr_dcache_m_sel_i;
+assign dcache_s_dat_o = upsizr_dcache_m_dat_i;
 
-assign dcacheslaveop = pi1_upconverter_dcachemasterop;
-assign dcacheslaveaddr = pi1_upconverter_dcachemasteraddr;
-assign dcacheslavedato = pi1_upconverter_dcachemasterdati;
-assign dcacheslavesel = pi1_upconverter_dcachemastersel;
+assign upsizr_dcache_m_bsy_o = _wb_bsy_i;
+assign upsizr_dcache_m_ack_o = dcache_s_ack_i;
+assign upsizr_dcache_m_dat_o = wb_dat_i;
 
 `endif
 

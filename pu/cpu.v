@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-// Macros:
+// Parameters:
 //
 // PUCOUNT
 // 	Number of PU making up the cpu.
-// 	When defined, it must be non-null.
-// 	When not defined, clk_mem_i is not available.
+//
+// USEMEMCLK
+// 	When non-null, clk_mem_i instead of clk_i is used
+// 	to drive the wishbone memory interface.
 
 // Ports:
 //
@@ -19,13 +21,8 @@
 
 `include "./pu.v"
 
-`ifdef PUCOUNT
-`include "lib/perint/pi1q.v"
-`else
-`include "lib/perint/pi1b.v"
-`endif
-
-`include "dev/pi1_to_wb4.v"
+`include "lib/wb_arbiter.v"
+`include "lib/wb_cdc.v"
 
 module cpu (
 
@@ -34,14 +31,12 @@ module cpu (
 	,rst_o
 
 	,clk_i
+	,clk_mem_i
 	,clk_imul_i
 	,clk_idiv_i
 	,clk_faddfsub_i
 	,clk_fmul_i
 	,clk_fdiv_i
-	`ifdef PUCOUNT
-	,clk_mem_i
-	`endif
 
 	,wb_cyc_o
 	,wb_stb_o
@@ -91,10 +86,13 @@ parameter IDIVCNT        = 2;
 parameter FADDFSUBCNT    = 1;
 parameter FMULCNT        = 1;
 parameter FDIVCNT        = 1;
+parameter MAXPENDINGACK  = 16;
 parameter VERSION        = {8'd1/*major-version*/, 8'd0/*minor-version*/};
 
 parameter ARCHBITSZ  = 16;
 parameter XARCHBITSZ = 16;
+
+parameter USEMEMCLK = 0;
 
 localparam CLOG2XARCHBITSZBY8 = clog2(XARCHBITSZ/8);
 localparam XADDRBITSZ = (XARCHBITSZ-CLOG2XARCHBITSZBY8);
@@ -110,14 +108,12 @@ input wire rst_i;
 output wire rst_o;
 
 input wire clk_i;
+input wire clk_mem_i;
 input wire clk_imul_i;
 input wire clk_idiv_i;
 input wire clk_faddfsub_i;
 input wire clk_fmul_i;
 input wire clk_fdiv_i;
-`ifdef PUCOUNT
-input wire clk_mem_i;
-`endif
 
 output wire                         wb_cyc_o;
 output wire                         wb_stb_o;
@@ -152,108 +148,116 @@ input  wire            dbg_tx_rdy_i;
 output wire [(ARCHBITSZ * PUCOUNT) -1 : 0] pc_o;
 `endif
 
-wire [2 -1 : 0]              pi1_op_o;
-wire [XADDRBITSZ -1 : 0]     pi1_addr_o;
-wire [(XARCHBITSZ/8) -1 : 0] pi1_sel_o;
-wire [XARCHBITSZ -1 : 0]     pi1_data_o;
-wire [XARCHBITSZ -1 : 0]     pi1_data_i;
-wire                         pi1_rdy_i;
+wire                         arbiter_wb_cyc_i  [PUCOUNT -1 : 0];
+wire                         arbiter_wb_stb_i  [PUCOUNT -1 : 0];
+wire                         arbiter_wb_we_i   [PUCOUNT -1 : 0];
+wire [XADDRBITSZ -1 : 0]     arbiter_wb_addr_i [PUCOUNT -1 : 0];
+wire [(XARCHBITSZ/8) -1 : 0] arbiter_wb_sel_i  [PUCOUNT -1 : 0];
+wire [XARCHBITSZ -1 : 0]     arbiter_wb_dat_i  [PUCOUNT -1 : 0];
+wire                         arbiter_wb_bsy_o  [PUCOUNT -1 : 0];
+wire                         arbiter_wb_ack_o  [PUCOUNT -1 : 0];
+wire [XARCHBITSZ -1 : 0]     arbiter_wb_dat_o  [PUCOUNT -1 : 0];
 
-wire [CLOG2XARCHBITSZBY8 -1 : 0] wb_addr_void;
-pi1_to_wb4 #(
+wire [(1 * PUCOUNT) -1 : 0]              _arbiter_wb_cyc_i;
+wire [(1 * PUCOUNT) -1 : 0]              _arbiter_wb_stb_i;
+wire [(1 * PUCOUNT) -1 : 0]              _arbiter_wb_we_i;
+wire [(XADDRBITSZ * PUCOUNT) -1 : 0]     _arbiter_wb_addr_i;
+wire [((XARCHBITSZ/8) * PUCOUNT) -1 : 0] _arbiter_wb_sel_i;
+wire [(XARCHBITSZ * PUCOUNT) -1 : 0]     _arbiter_wb_dat_i;
+wire [(1 * PUCOUNT) -1 : 0]              arbiter_wb_bsy_o_;
+wire [(1 * PUCOUNT) -1 : 0]              arbiter_wb_ack_o_;
+wire [(XARCHBITSZ * PUCOUNT) -1 : 0]     arbiter_wb_dat_o_;
 
-	.ARCHBITSZ (XARCHBITSZ)
+wire                         wb_cyc_o_;
+wire                         wb_stb_o_;
+wire                         wb_we_o_;
+wire [XADDRBITSZ -1 : 0]     wb_addr_o_;
+wire [(XARCHBITSZ/8) -1 : 0] wb_sel_o_;
+wire [XARCHBITSZ -1 : 0]     wb_dat_o_;
+wire                         _wb_bsy_i;
+wire                         _wb_ack_i;
+wire [XARCHBITSZ -1 : 0]     _wb_dat_i;
 
-) cpu_wb (
+wb_arbiter #(
 
-	 .rst_i (rst_i)
+	 .ARCHBITSZ   (XARCHBITSZ)
+	,.MASTERCOUNT (PUCOUNT)
 
-	 `ifdef PUCOUNT
-	,.clk_i (clk_mem_i)
-	`else
-	,.clk_i (clk_i)
-	`endif
-
-	,.pi1_op_i   (pi1_op_o)
-	,.pi1_addr_i (pi1_addr_o)
-	,.pi1_sel_i  (pi1_sel_o)
-	,.pi1_data_i (pi1_data_o)
-	,.pi1_data_o (pi1_data_i)
-	,.pi1_rdy_o  (pi1_rdy_i)
-
-	,.wb4_cyc_o   (wb_cyc_o)
-	,.wb4_stb_o   (wb_stb_o)
-	,.wb4_we_o    (wb_we_o)
-	,.wb4_addr_o  ({wb_addr_o, wb_addr_void})
-	,.wb4_sel_o   (wb_sel_o)
-	,.wb4_data_o  (wb_dat_o)
-	,.wb4_stall_i (wb_bsy_i)
-	,.wb4_ack_i   (wb_ack_i)
-	,.wb4_data_i  (wb_dat_i)
-);
-
-`ifdef PUCOUNT
-localparam PI1QMASTERCOUNT       = PUCOUNT;
-localparam PI1QARCHBITSZ         = XARCHBITSZ;
-localparam CLOG2PI1QARCHBITSZBY8 = clog2(PI1QARCHBITSZ/8);
-localparam PI1QADDRBITSZ         = (PI1QARCHBITSZ-CLOG2PI1QARCHBITSZBY8);
-wire pi1q_rst_w = rst_i;
-wire m_pi1q_clk_w = clk_i;
-wire s_pi1q_clk_w = clk_mem_i;
-// PerIntQ is instantiated in a separate file to keep this file clean.
-// Masters should use the following signals to plug onto PerIntQ:
-// 	input  [2 -1 : 0]                 m_pi1q_op_w    [PI1QMASTERCOUNT -1 : 0];
-// 	input  [PI1QADDRBITSZ -1 : 0]     m_pi1q_addr_w  [PI1QMASTERCOUNT -1 : 0];
-// 	input  [PI1QARCHBITSZ -1 : 0]     m_pi1q_data_w1 [PI1QMASTERCOUNT -1 : 0];
-// 	output [PI1QARCHBITSZ -1 : 0]     m_pi1q_data_w0 [PI1QMASTERCOUNT -1 : 0];
-// 	input  [(PI1QARCHBITSZ/8) -1 : 0] m_pi1q_sel_w   [PI1QMASTERCOUNT -1 : 0];
-// 	output                            m_pi1q_rdy_w   [PI1QMASTERCOUNT -1 : 0];
-// Slave should use the following signals to plug onto PerIntQ:
-// 	output [2 -1 : 0]                 s_pi1q_op_w;
-// 	output [PI1QADDRBITSZ -1 : 0]     s_pi1q_addr_w;
-// 	output [PI1QARCHBITSZ -1 : 0]     s_pi1q_data_w0;
-// 	input  [PI1QARCHBITSZ -1 : 0]     s_pi1q_data_w1;
-// 	output [(PI1QARCHBITSZ/8) -1 : 0] s_pi1q_sel_w;
-// 	input                             s_pi1q_rdy_w;
-`include "lib/perint/inst.pi1q.v"
-assign pi1_op_o       = s_pi1q_op_w;
-assign pi1_addr_o     = s_pi1q_addr_w;
-assign s_pi1q_data_w1 = pi1_data_i;
-assign pi1_data_o     = s_pi1q_data_w0;
-assign pi1_sel_o      = s_pi1q_sel_w;
-assign s_pi1q_rdy_w   = pi1_rdy_i;
-`else
-wire [2 -1 : 0]              pi1b_op_o;
-wire [XADDRBITSZ -1 : 0]     pi1b_addr_o;
-wire [XARCHBITSZ -1 : 0]     pi1b_data_o;
-wire [XARCHBITSZ -1 : 0]     pi1b_data_i;
-wire [(XARCHBITSZ/8) -1 : 0] pi1b_sel_o;
-wire                         pi1b_rdy_i;
-pi1b #(
-
-	.ARCHBITSZ (XARCHBITSZ)
-
-) pi1b (
+) wb_arbiter (
 
 	 .rst_i (rst_i)
 
 	,.clk_i (clk_i)
 
-	,.m_op_i (pi1b_op_o)
-	,.m_addr_i (pi1b_addr_o)
-	,.m_data_i (pi1b_data_o)
-	,.m_data_o (pi1b_data_i)
-	,.m_sel_i (pi1b_sel_o)
-	,.m_rdy_o (pi1b_rdy_i)
+	,.m_wb_cyc_i  (_arbiter_wb_cyc_i)
+	,.m_wb_stb_i  (_arbiter_wb_stb_i)
+	,.m_wb_we_i   (_arbiter_wb_we_i)
+	,.m_wb_addr_i (_arbiter_wb_addr_i)
+	,.m_wb_sel_i  (_arbiter_wb_sel_i)
+	,.m_wb_dat_i  (_arbiter_wb_dat_i)
+	,.m_wb_bsy_o  (arbiter_wb_bsy_o_)
+	,.m_wb_ack_o  (arbiter_wb_ack_o_)
+	,.m_wb_dat_o  (arbiter_wb_dat_o_)
 
-	,.s_op_o (pi1_op_o)
-	,.s_addr_o (pi1_addr_o)
-	,.s_data_o (pi1_data_o)
-	,.s_data_i (pi1_data_i)
-	,.s_sel_o (pi1_sel_o)
-	,.s_rdy_i (pi1_rdy_i)
+	,.s_wb_cyc_o  (wb_cyc_o_)
+	,.s_wb_stb_o  (wb_stb_o_)
+	,.s_wb_we_o   (wb_we_o_)
+	,.s_wb_addr_o (wb_addr_o_)
+	,.s_wb_sel_o  (wb_sel_o_)
+	,.s_wb_dat_o  (wb_dat_o_)
+	,.s_wb_bsy_i  (_wb_bsy_i)
+	,.s_wb_ack_i  (_wb_ack_i)
+	,.s_wb_dat_i  (_wb_dat_i)
 );
-`endif
+
+generate if (USEMEMCLK) begin :gen_wb_cdc
+
+wb_cdc #(
+
+	 .ARCHBITSZ     (XARCHBITSZ)
+	,.MAXPENDINGACK (MAXPENDINGACK)
+
+) wb_cdc (
+
+	 .rst_i (rst_i)
+
+	,.m_clk_i (clk_i)
+	,.s_clk_i (clk_mem_i)
+
+	,.m_wb_cyc_i  (wb_cyc_o_)
+	,.m_wb_stb_i  (wb_stb_o_)
+	,.m_wb_we_i   (wb_we_o_)
+	,.m_wb_addr_i (wb_addr_o_)
+	,.m_wb_sel_i  (wb_sel_o_)
+	,.m_wb_dat_i  (wb_dat_o_)
+	,.m_wb_bsy_o  (_wb_bsy_i)
+	,.m_wb_ack_o  (_wb_ack_i)
+	,.m_wb_dat_o  (_wb_dat_i)
+
+	,.s_wb_cyc_o  (wb_cyc_o)
+	,.s_wb_stb_o  (wb_stb_o)
+	,.s_wb_we_o   (wb_we_o)
+	,.s_wb_addr_o (wb_addr_o)
+	,.s_wb_sel_o  (wb_sel_o)
+	,.s_wb_dat_o  (wb_dat_o)
+	,.s_wb_bsy_i  (wb_bsy_i)
+	,.s_wb_ack_i  (wb_ack_i)
+	,.s_wb_dat_i  (wb_dat_i)
+);
+
+end else begin
+
+assign wb_cyc_o = wb_cyc_o_;
+assign wb_stb_o = wb_stb_o_;
+assign wb_we_o = wb_we_o_;
+assign wb_addr_o = wb_addr_o_;
+assign wb_sel_o = wb_sel_o_;
+assign wb_dat_o = wb_dat_o_;
+assign _wb_bsy_i = wb_bsy_i;
+assign _wb_ack_i = wb_ack_i;
+assign _wb_dat_i = wb_dat_i;
+
+end endgenerate
 
 wire [PUCOUNT -1 : 0] rst_ow;
 assign rst_o = |rst_ow;
@@ -280,10 +284,15 @@ wire [ARCHBITSZ -1 : 0] pc_w [PUCOUNT -1 : 0];
 `endif
 
 genvar genpu_idx;
-generate for (genpu_idx = 0; genpu_idx < PUCOUNT; genpu_idx = genpu_idx + 1) begin :genpu
+generate for (
+	genpu_idx = 0;
+	genpu_idx < PUCOUNT;
+	genpu_idx = genpu_idx + 1) begin :genpu
+
 `ifdef SIMULATION
 assign pc_o[((genpu_idx+1) * ARCHBITSZ) -1 : genpu_idx * ARCHBITSZ] = pc_w[genpu_idx];
 `endif
+
 pu #(
 
 	 .ARCHBITSZ      (ARCHBITSZ)
@@ -300,6 +309,7 @@ pu #(
 	,.FADDFSUBCNT    (FADDFSUBCNT)
 	,.FMULCNT        (FMULCNT)
 	,.FDIVCNT        (FDIVCNT)
+	,.MAXPENDINGACK  (MAXPENDINGACK)
 	,.VERSION        (VERSION)
 
 ) pu (
@@ -315,21 +325,15 @@ pu #(
 	,.clk_fmul_i     (clk_fmul_i)
 	,.clk_fdiv_i     (clk_fdiv_i)
 
-	`ifdef PUCOUNT
-	,.pi1_op_o   (m_pi1q_op_w[genpu_idx])
-	,.pi1_addr_o (m_pi1q_addr_w[genpu_idx])
-	,.pi1_data_o (m_pi1q_data_w1[genpu_idx])
-	,.pi1_data_i (m_pi1q_data_w0[genpu_idx])
-	,.pi1_sel_o  (m_pi1q_sel_w[genpu_idx])
-	,.pi1_rdy_i  (m_pi1q_rdy_w[genpu_idx])
-	`else
-	,.pi1_op_o   (pi1b_op_o)
-	,.pi1_addr_o (pi1b_addr_o)
-	,.pi1_data_o (pi1b_data_o)
-	,.pi1_data_i (pi1b_data_i)
-	,.pi1_sel_o  (pi1b_sel_o)
-	,.pi1_rdy_i  (pi1b_rdy_i)
-	`endif
+	,.wb_cyc_o  (arbiter_wb_cyc_i[genpu_idx])
+	,.wb_stb_o  (arbiter_wb_stb_i[genpu_idx])
+	,.wb_we_o   (arbiter_wb_we_i[genpu_idx])
+	,.wb_addr_o (arbiter_wb_addr_i[genpu_idx])
+	,.wb_sel_o  (arbiter_wb_sel_i[genpu_idx])
+	,.wb_dat_o  (arbiter_wb_dat_i[genpu_idx])
+	,.wb_bsy_i  (arbiter_wb_bsy_o[genpu_idx])
+	,.wb_ack_i  (arbiter_wb_ack_o[genpu_idx])
+	,.wb_dat_i  (arbiter_wb_dat_o[genpu_idx])
 
 	,.irq_stb_i (irq_stb_i[genpu_idx])
 	,.irq_rdy_o (irq_rdy_o[genpu_idx])
@@ -353,6 +357,21 @@ pu #(
 	,.pc_o (pc_w[genpu_idx])
 	`endif
 );
+
+assign _arbiter_wb_cyc_i[genpu_idx] = arbiter_wb_cyc_i[genpu_idx];
+assign _arbiter_wb_stb_i[genpu_idx] = arbiter_wb_stb_i[genpu_idx];
+assign _arbiter_wb_we_i[genpu_idx] = arbiter_wb_we_i[genpu_idx];
+assign _arbiter_wb_addr_i[((genpu_idx+1) * XADDRBITSZ) -1 : (genpu_idx * XADDRBITSZ)] =
+	arbiter_wb_addr_i[genpu_idx];
+assign _arbiter_wb_sel_i[((genpu_idx+1) * (XARCHBITSZ/8)) -1 : (genpu_idx * (XARCHBITSZ/8))] =
+	arbiter_wb_sel_i[genpu_idx];
+assign _arbiter_wb_dat_i[((genpu_idx+1) * XARCHBITSZ) -1 : (genpu_idx * XARCHBITSZ)] =
+	arbiter_wb_dat_i[genpu_idx];
+assign arbiter_wb_bsy_o[genpu_idx] = arbiter_wb_bsy_o_[genpu_idx];
+assign arbiter_wb_ack_o[genpu_idx] = arbiter_wb_ack_o_[genpu_idx];
+assign arbiter_wb_dat_o[genpu_idx] =
+	arbiter_wb_dat_o_[((genpu_idx+1) * XARCHBITSZ) -1 : (genpu_idx * XARCHBITSZ)];
+
 end endgenerate
 
 endmodule

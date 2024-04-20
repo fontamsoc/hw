@@ -23,7 +23,7 @@
 `define PUFMUL
 `define PUFMULDSP
 `define PUFDIV
-`define PUDCACHE
+//`define PUDCACHE
 `define PUCOUNT 1 /* 2 max */
 `include "pu/cpu.v"
 
@@ -320,14 +320,12 @@ cpu #(
 	,.rst_o (cpu_rst_ow)
 
 	,.clk_i          (clk_2x_w)
+	,.clk_mem_i      (wbpi_clk_w)
 	,.clk_imul_i     (clk_8x_w)
 	,.clk_idiv_i     (clk_8x_w)
 	,.clk_faddfsub_i (clk_4x_w)
 	,.clk_fmul_i     (clk_4x_w)
 	,.clk_fdiv_i     (clk_4x_w)
-	`ifdef PUCOUNT
-	,.clk_mem_i      (wbpi_clk_w)
-	`endif
 
 	,.wb_cyc_o  (m_wbpi_cyc_w[M_WBPI_CPU])
 	,.wb_stb_o  (m_wbpi_stb_w[M_WBPI_CPU])
@@ -616,7 +614,7 @@ wire                        ramctrl_wb_cdc_wb_we_w;
 wire [ADDRBITSZ -1 : 0]     ramctrl_wb_cdc_wb_addr_w;
 wire [(ARCHBITSZ/8) -1 : 0] ramctrl_wb_cdc_wb_sel_w;
 wire [ARCHBITSZ -1 : 0]     ramctrl_wb_cdc_wb_dato_w;
-wire                        ramctrl_wb_cdc_wb_bsy_w;
+reg                         ramctrl_wb_cdc_wb_bsy_r;
 wire                        ramctrl_wb_cdc_wb_ack_w;
 wire [ARCHBITSZ -1 : 0]     ramctrl_wb_cdc_wb_dati_w;
 
@@ -647,7 +645,7 @@ wb_cdc #(
 	,.s_wb_addr_o (ramctrl_wb_cdc_wb_addr_w)
 	,.s_wb_sel_o  (ramctrl_wb_cdc_wb_sel_w)
 	,.s_wb_dat_o  (ramctrl_wb_cdc_wb_dato_w)
-	,.s_wb_bsy_i  (1'b0)
+	,.s_wb_bsy_i  (ramctrl_wb_cdc_wb_bsy_r)
 	,.s_wb_ack_i  (ramctrl_wb_cdc_wb_ack_w)
 	,.s_wb_dat_i  (ramctrl_wb_cdc_wb_dati_w)
 );
@@ -688,7 +686,7 @@ litedram litedram (
 	,.user_port_wishbone_0_dat_r (dcache_wb_cdc_wb_dati_w)
 
 	,.wb_ctrl_cyc   (ramctrl_wb_cdc_wb_cyc_w)
-	,.wb_ctrl_stb   (ramctrl_wb_cdc_wb_stb_w)
+	,.wb_ctrl_stb   (ramctrl_wb_cdc_wb_stb_w && !ramctrl_wb_cdc_wb_bsy_r)
 	,.wb_ctrl_we    (ramctrl_wb_cdc_wb_we_w)
 	,.wb_ctrl_adr   (ramctrl_wb_cdc_wb_addr_w)
 	,.wb_ctrl_sel   (ramctrl_wb_cdc_wb_sel_w)
@@ -704,6 +702,13 @@ assign s_wbpi_mapsz_w[S_WBPI_RAM] = ('h20000000/* 512MB */);
 assign dev_id_w    [S_WBPI_RAM] = 1;
 assign dev_useirq_w[S_WBPI_RAM] = 0;
 
+// Litedram uses Wishbone classic as oppose to pipeline.
+always @ (posedge wb_clk_user_port_w) begin
+	if (wb_rst_user_port_w || ramctrl_wb_cdc_wb_ack_w)
+		ramctrl_wb_cdc_wb_bsy_r <= 0;
+	else if (ramctrl_wb_cdc_wb_cyc_w && ramctrl_wb_cdc_wb_stb_w)
+		ramctrl_wb_cdc_wb_bsy_r <= 1;
+end
 assign s_wbpi_mapsz_w[S_WBPI_RAMCTRL] = ('h10000/* 64KB */);
 
 assign dev_id_w    [S_WBPI_RAMCTRL] = 0;
