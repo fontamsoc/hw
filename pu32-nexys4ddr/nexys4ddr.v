@@ -25,7 +25,7 @@
 `define PUFMUL
 `define PUFMULDSP
 `define PUFDIV
-`define PUDCACHE
+//`define PUDCACHE
 `define PUCOUNT 1 /* 8 max */
 `include "pu/cpu.v"
 
@@ -340,14 +340,12 @@ cpu #(
 	,.rst_o (cpu_rst_ow)
 
 	,.clk_i          (clk_2x_w)
+	,.clk_mem_i      (wbpi_clk_w)
 	,.clk_imul_i     (clk_4x_w)
 	,.clk_idiv_i     (clk_4x_w)
 	,.clk_faddfsub_i (clk_4x_w)
 	,.clk_fmul_i     (clk_4x_w)
 	,.clk_fdiv_i     (clk_4x_w)
-	`ifdef PUCOUNT
-	,.clk_mem_i      (wbpi_clk_w)
-	`endif
 
 	,.wb_cyc_o  (m_wbpi_cyc_w[M_WBPI_CPU])
 	,.wb_stb_o  (m_wbpi_stb_w[M_WBPI_CPU])
@@ -688,6 +686,8 @@ dcache #(
 	,.s_wb_dat_i  (dcache_wb_dati_w)
 );
 
+reg s_wbpi_bsy_r_S_WBPI_RAMCTRL;
+
 litedram litedram (
 
 	 .rst (ram_rst_w)
@@ -726,7 +726,7 @@ litedram litedram (
 	,.user_port_wishbone_0_dat_r (dcache_wb_dati_w)
 
 	,.wb_ctrl_cyc   (s_wbpi_cyc_w[S_WBPI_RAMCTRL])
-	,.wb_ctrl_stb   (s_wbpi_stb_w[S_WBPI_RAMCTRL])
+	,.wb_ctrl_stb   (s_wbpi_stb_w[S_WBPI_RAMCTRL] && !s_wbpi_bsy_r_S_WBPI_RAMCTRL)
 	,.wb_ctrl_we    (s_wbpi_we_w[S_WBPI_RAMCTRL])
 	,.wb_ctrl_adr   (s_wbpi_addr_w[S_WBPI_RAMCTRL])
 	,.wb_ctrl_sel   (s_wbpi_sel_w[S_WBPI_RAMCTRL])
@@ -742,7 +742,14 @@ assign s_wbpi_mapsz_w[S_WBPI_RAM] = ('h8000000/* 128MB */);
 assign dev_id_w    [S_WBPI_RAM] = 1;
 assign dev_useirq_w[S_WBPI_RAM] = 0;
 
-assign s_wbpi_bsy_w[S_WBPI_RAMCTRL] = 0;
+// Litedram uses Wishbone classic as oppose to pipeline.
+always @ (posedge wb_clk_user_port_w) begin
+	if (wb_rst_user_port_w || s_wbpi_ack_w[S_WBPI_RAMCTRL])
+		s_wbpi_bsy_r_S_WBPI_RAMCTRL <= 0;
+	else if (s_wbpi_cyc_w[S_WBPI_RAMCTRL] && s_wbpi_stb_w[S_WBPI_RAMCTRL])
+		s_wbpi_bsy_r_S_WBPI_RAMCTRL <= 1;
+end
+assign s_wbpi_bsy_w[S_WBPI_RAMCTRL] = s_wbpi_bsy_r_S_WBPI_RAMCTRL;
 assign s_wbpi_mapsz_w[S_WBPI_RAMCTRL] = ('h10000/* 64KB */);
 
 assign dev_id_w    [S_WBPI_RAMCTRL] = 0;

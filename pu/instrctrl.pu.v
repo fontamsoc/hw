@@ -39,42 +39,38 @@ always @ (posedge clk_i) begin
 
 		instrfetchmemrqst <= 0;
 
-	end else if ((instrfetchmemrqst || instrfetchmemrqstinprogress) && !instrbufrst) begin
-		// Note that instrfetchmemrqstdone is 1 only for
-		// 1 clock cycle and will always be caught here.
-		if (instrfetchmemrqstdone) begin
-			// I increment instrbufwriteidx to the index
-			// within the instruction buffer where the next data
-			// to fetch is to be stored.
-			instrbufwriteidx <= instrbufwriteidx + 1'b1;
-		end
+	end else if (instrfetchmemrqst && !instrbufrst) begin
 
-		if (instrfetchmemrqstinprogress)
+		if (!dcache_s_stb_o && instrfetchmemaccesspending && !_wb_bsy_i)
 			instrfetchmemrqst <= 0;
 
 	end else if (icachecheck && !instrbufrst) begin
 		`ifdef PUREGICACHEHIT
 		if (icachebsy) // 1 clock cycle needed to compute cachehit.
 			icachebsy <= 0;
-		else begin
+		else
 		`endif
+		begin
 			// I check whether there is a valid cached data.
 			if (icachehit) begin
-				// I increment instrbufwriteidx to the index
-				// within the instruction buffer where the next data
-				// to fetch is to be stored.
-				instrbufwriteidx <= instrbufwriteidx + 1'b1;
+
+				if (instrbufnotfull) begin
+					// I increment instrbufwriteidx to the index
+					// within the instruction buffer where the next data
+					// to fetch is to be stored.
+					instrbufwriteidx <= instrbufwriteidx + 1'b1;
+
+					icachecheck <= 0;
+				end
 
 			end else begin
 				// I get here, if a hit could not be found in the cache;
 				// I proceed to fetching data.
 				instrfetchmemrqst <= 1;
-			end
 
-			icachecheck <= 0;
-		`ifdef PUREGICACHEHIT
+				icachecheck <= 0;
+			end
 		end
-		`endif
 
 	end else if (instrbufrst || !instrfetchfaulted) begin
 		// Empty the instruction buffer if instrbufrst is 1.
@@ -83,6 +79,12 @@ always @ (posedge clk_i) begin
 		// which the sequencer stalls.
 		if (instrbufrst)
 			instrbufwriteidx <= ip[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) : (CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF];
+		else if (instrfetchmemrqstdone_) begin // Note that instrfetchmemrqstdone is 1 for 1 clock cycle.
+			// I increment instrbufwriteidx to the index
+			// within the instruction buffer where the next data
+			// to fetch is to be stored.
+			instrbufwriteidx <= instrbufwriteidx + 1'b1;
+		end
 
 		// Instructions get fetched only if the pu is not halted.
 		// When the pu resumes from being halted (due to an interrupt),
@@ -109,7 +111,8 @@ always @ (posedge clk_i) begin
 				// Set instrfetchmemrqst to 0 in case it was still 1.
 				instrfetchmemrqst <= 0;
 
-			end else if (itlbrdy) begin
+			end else if (itlbrdy &&
+				(instrbufrst || instrfetchmemrqstdone_ || !instrfetchmemrqstseqvalid)) begin
 				// instrfetchaddr and instrfetchppn must be updated
 				// in the same clockcycle that icachecheck or instrfetchmemrqst
 				// get set to 1, otherwise icachedato can be incorrect as
@@ -125,7 +128,9 @@ always @ (posedge clk_i) begin
 					`endif
 					// Set instrfetchmemrqst to 0 in case it was still 1.
 					instrfetchmemrqst <= 0;
+
 				end else begin
+
 					instrfetchmemrqst <= 1;
 					// Set icachecheck to 0 in case it was still 1.
 					icachecheck <= 0;
@@ -153,7 +158,7 @@ always @ (posedge clk_i) begin
 			&& itlbfault__hptwidone
 			`endif
 			`endif
-			&& itlbrdy)
+			&& itlbrdy && instrbufrst)
 			instrbufrst_b <= instrbufrst_a; // Clearing instrbufrst must not depend on inhalt, otherwise the sequencer will lock.
 
 	end else begin

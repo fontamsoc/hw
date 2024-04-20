@@ -27,7 +27,7 @@
 `define PUFMUL
 `define PUFMULDSP
 `define PUFDIV
-`define PUDCACHE
+//`define PUDCACHE
 `define PUSC2
 `define PUSC2SKIPSC1LI8
 `define PUSC2SKIPSC1CPY
@@ -141,7 +141,7 @@ wire rst_w = (devtbl_rst0_r || (|rst_cntr));
 `ifdef PUCOUNT
 localparam PUCOUNT = `PUCOUNT;
 `else
-localparam PUCOUNT = 1;
+ localparam PUCOUNT = 1;
 `endif
 
 localparam M_WBPI_CPU        = 0;
@@ -241,16 +241,14 @@ cpu #(
 
 	,.rst_o (cpu_rst_ow)
 
-	,.clk_i (clk_1x_w)
+	,.clk_i     (clk_1x_w)
+	,.clk_mem_i (wbpi_clk_w)
 	`ifdef SIMUSECLKDIV
 	,.clk_imul_i     (clk_4x_w)
 	,.clk_idiv_i     (clk_4x_w)
 	,.clk_faddfsub_i (clk_4x_w)
 	,.clk_fmul_i     (clk_4x_w)
 	,.clk_fdiv_i     (clk_4x_w)
-	`endif
-	`ifdef PUCOUNT
-	,.clk_mem_i (wbpi_clk_w)
 	`endif
 
 	,.wb_cyc_o  (m_wbpi_cyc_w[M_WBPI_CPU])

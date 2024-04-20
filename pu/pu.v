@@ -56,6 +56,10 @@
 // FDIVCNT
 // 	Number of units making up the fdiv pipeline.
 // 	It must be non-null, a power-of-2 less-than-or-equal to 8.
+//
+// MAXPENDINGACK
+// 	TODO: Describe ...
+// 	It must be at least 2 and a power of 2.
 
 // Ports:
 //
@@ -81,13 +85,16 @@
 // 	Clock signal used by fdiv.
 // 	Its frequency must be a power-of-2 multiple of clk_i frequency.
 //
-// pi1_op_o
-// pi1_addr_o
-// pi1_data_o
-// pi1_data_i
-// pi1_sel_o
-// pi1_rdy_i
-// 	PerInt master memory interface.
+// wb_cyc_o
+// wb_stb_o
+// wb_we_o
+// wb_addr_o
+// wb_sel_o
+// wb_dat_o
+// wb_bsy_i
+// wb_ack_i
+// wb_dat_i
+// 	Wishbone master memory interface.
 //
 // rstaddr_i
 // 	Address where the pu begin executing instruction after reset.
@@ -150,10 +157,10 @@
 `include "./opfmul.pu.v"
 `include "./opfdiv.pu.v"
 
-`include "dev/pi1_upconverter.v"
+`include "lib/wb_upsizr.v"
 
 `ifdef PUDCACHE
-`include "dev/pi1_dcache.v"
+`include "dev/dcache.v"
 `endif
 
 module pu (
@@ -169,12 +176,15 @@ module pu (
 	,clk_fmul_i
 	,clk_fdiv_i
 
-	,pi1_op_o
-	,pi1_addr_o
-	,pi1_data_o
-	,pi1_data_i
-	,pi1_sel_o
-	,pi1_rdy_i
+	,wb_cyc_o
+	,wb_stb_o
+	,wb_we_o
+	,wb_addr_o
+	,wb_sel_o
+	,wb_dat_o
+	,wb_bsy_i
+	,wb_ack_i
+	,wb_dat_i
 
 	,irq_stb_i
 	,irq_rdy_o
@@ -213,6 +223,7 @@ parameter IDIVCNT        = 2;
 parameter FADDFSUBCNT    = 1;
 parameter FMULCNT        = 1;
 parameter FDIVCNT        = 1;
+parameter MAXPENDINGACK  = 16; // Default to number of GPRs for which stores could be done.
 parameter VERSION        = {8'd1/*major-version*/, 8'd0/*minor-version*/};
 
 localparam CLOG2ICACHESETCOUNT = clog2(ICACHESETCOUNT);
@@ -234,6 +245,8 @@ localparam XADDRBITSZ = (XARCHBITSZ-CLOG2XARCHBITSZBY8);
 
 localparam CLOG2XARCHBITSZBY8DIFF = (CLOG2XARCHBITSZBY8-CLOG2ARCHBITSZBY8);
 
+localparam CLOG2MAXPENDINGACK = clog2(MAXPENDINGACK);
+
 input wire rst_i;
 
 output reg rst_o;
@@ -245,12 +258,15 @@ input wire clk_faddfsub_i;
 input wire clk_fmul_i;
 input wire clk_fdiv_i;
 
-output reg[2 -1 : 0] pi1_op_o; // ### comb-block-reg.
-output reg[XADDRBITSZ -1 : 0] pi1_addr_o; // ### comb-block-reg.
-output reg[XARCHBITSZ -1 : 0] pi1_data_o; // ### comb-block-reg.
-input wire[XARCHBITSZ -1 : 0] pi1_data_i;
-output reg[(XARCHBITSZ/8) -1 : 0] pi1_sel_o; // ### comb-block-reg.
-input wire pi1_rdy_i;
+output reg                          wb_cyc_o;  // ### comb-block-reg.
+output reg                          wb_stb_o;  // ### comb-block-reg.
+output reg                          wb_we_o;   // ### comb-block-reg.
+output reg  [XADDRBITSZ -1 : 0]     wb_addr_o; // ### comb-block-reg.
+output reg  [(XARCHBITSZ/8) -1 : 0] wb_sel_o;  // ### comb-block-reg.
+output reg  [XARCHBITSZ -1 : 0]     wb_dat_o;  // ### comb-block-reg.
+input  wire                         wb_bsy_i;
+input  wire                         wb_ack_i;
+input  wire [XARCHBITSZ -1 : 0]     wb_dat_i;
 
 input  wire irq_stb_i;
 output wire irq_rdy_o;
