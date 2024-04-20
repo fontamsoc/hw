@@ -44,6 +44,7 @@ parameter ARCHBITSZ         = 16;
 parameter SLAVECOUNT        = 1;
 parameter DEFAULTSLAVEINDEX = 0;
 parameter FIRSTSLAVEADDR    = 0;
+parameter MAXPENDINGACK     = 8; // Must be non-null.
 
 localparam CLOG2SLAVECOUNT  = clog2(SLAVECOUNT);
 
@@ -75,6 +76,20 @@ input  wire [(1 * SLAVECOUNT) -1 : 0]             s_wb_ack_i;
 input  wire [(ARCHBITSZ * SLAVECOUNT) -1 : 0]     s_wb_dat_i;
 input  wire [(ARCHBITSZ * SLAVECOUNT) -1 : 0]     s_wb_mapsz_i;
 
+wire _m_wb_stb_i = (m_wb_cyc_i && m_wb_stb_i);
+
+reg [clog2(MAXPENDINGACK +1) -1 : 0] ack_pending;
+
+always @ (posedge clk_i) begin
+	if (rst_i)
+		ack_pending <= 0;
+	else if (_m_wb_stb_i && !m_wb_bsy_o && m_wb_ack_o);
+	else if (m_wb_ack_o)
+		ack_pending <= ack_pending - 1'b1;
+	else if (_m_wb_stb_i && !m_wb_bsy_o)
+		ack_pending <= ack_pending + 1'b1;
+end
+
 wire [ARCHBITSZ -1 : 0] _m_wb_addr_i;
 addr #(
 	.ARCHBITSZ (ARCHBITSZ)
@@ -100,7 +115,7 @@ wire slvidx_not_max = (slvidx < (SLAVECOUNT-1));
 
 // Determine whether slvidx needs to be recomputed.
 wire slvidx_invalid = (!addrspace_rdy || (
-	m_wb_cyc_i && m_wb_stb_i &&
+	_m_wb_stb_i &&
 	!(_m_wb_addr_i >= addrspace_slvidx_lo &&
 	  _m_wb_addr_i <= addrspace_slvidx_hi)));
 
@@ -151,7 +166,7 @@ always @ (posedge clk_i) begin
 			slvidx_rdy <= 1'b1;
 		end
 
-	end else if (slvidx_invalid) begin
+	end else if (slvidx_invalid && !ack_pending) begin
 
 		addrspace_slvidx_lo <= FIRSTSLAVEADDR;
 		addrspace_slvidx_hi <= addrspace[0];
@@ -160,7 +175,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-assign m_wb_bsy_o = (slvidx_invalid ? 1'b1 : s_wb_bsy_i[slvidx]);
+assign m_wb_bsy_o = ((slvidx_invalid ? 1'b1 : s_wb_bsy_i[slvidx]) || (ack_pending == MAXPENDINGACK));
 
 assign m_wb_ack_o = s_wb_ack_i[slvidx];
 
