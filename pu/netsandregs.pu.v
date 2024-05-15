@@ -2658,20 +2658,15 @@ wire opstrdy = (isopst && opstrdy_
 	`endif
 	&& !opstfault);
 /*
-always @ (posedge clk_i) begin
-	if (miscrdyandsequencerreadyandgprrdy12 && isopst && dtlbrdy_opst && !__dcache_m_bsy && !opstfault)
+wire opststb = (miscrdyandsequencerreadyandgprrdy12 &&
+	isopst && dtlbrdy_opst && !__dcache_m_bsy && !opstfault
 		`ifdef PUMMU
 		`ifdef PUHPTW
 		&& opstfault__hptwddone
 		`endif
 		`endif
-		) begin
-		if (!opstfault) begin
-		end
-	end
-end
+		);
 */
-
 wire opst_found_ = (miscrdyandsequencerreadyandgprrdy12 && isopst && opstrdy_
 	`ifdef PUMMU
 	`ifdef PUHPTW
@@ -2760,7 +2755,6 @@ end
 
 reg opldstdone;
 
-// Register set to 1 for a mem request.
 reg opldstmemrqst;
 
 wire opldstrdy_ = (!(opldstmemrqst || opldstdone) && dtlbrdy_opldst && !__dcache_m_bsy);
@@ -2772,44 +2766,31 @@ wire opldstrdy = (isopldst && opldstrdy_
 	`endif
 	&& (!opldstfault && !instrbufdato0[2]));
 
+wire opldststb = (miscrdyandsequencerreadyandgprrdy12 &&
+	isopldst && dtlbrdy_opldst && !__dcache_m_bsy && !opldstfault && !instrbufdato0[2]
+		`ifdef PUMMU
+		`ifdef PUHPTW
+		&& opldstfault__hptwddone
+		`endif
+		`endif
+		);
+
 always @ (posedge clk_i) begin
-
 	if (rst_i) begin
-		// Reset logic.
-
 		opldstmemrqst <= 0;
 		opldstdone <= 0;
-
 	end else if (gprctrlstate == GPRCTRLSTATEOPLDST) begin
-
 		opldstdone <= 0;
-
 	end else begin
-
 		if (opldstmemrqst) begin
-
 			if (opldstmemack) begin
-
 				opldstresult <= opldstresult_;
-
-				// Signal that the value of the register opldstresult can be stored in the gpr.
 				opldstdone <= 1;
-
 				opldstmemrqst <= 0;
 			end
-
-		end else if (miscrdyandsequencerreadyandgprrdy12 && isopldst && dtlbrdy_opldst && !__dcache_m_bsy && !opldstfault && !instrbufdato0[2]
-			`ifdef PUMMU
-			`ifdef PUHPTW
-			&& opldstfault__hptwddone
-			`endif
-			`endif
-			) begin
-
+		end else if (opldststb) begin
 			opldstmemrqst <= 1;
-
 			opldstmemrqstsel <= dcache_m_sel_i_;
-
 			opldstgpr <= gpridx1;
 		end
 	end
