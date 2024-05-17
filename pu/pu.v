@@ -150,6 +150,7 @@
 // 	high when ready to transmit through "dbg_tx_data_o".
 
 `include "lib/ram/bram.v"
+`include "lib/fifo.v"
 
 `include "./opimul.pu.v"
 `include "./opidiv.pu.v"
