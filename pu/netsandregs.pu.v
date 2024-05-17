@@ -2468,50 +2468,80 @@ assign sc2gprrdy2 = (gprrdywe && sc2gpridx2 == gprrdyidx) ? gprrdyval : gprrdy[s
 
 // ---------- Registers and nets used by opld ----------
 
-// Register that will hold the id of the gpr to which the result will be stored.
-reg [CLOG2GPRCNTTOTAL -1 : 0] opldgpr;
+wire opldrqsts_full;
 
-reg [(ARCHBITSZ/8) -1 : 0] opldmemrqstsel;
+wire opldrqsts_empty;
+reg opldrqsts_empty_r;
+always @ (posedge clk_i) begin
+	if (rst_i || opldrqsts_empty_r || opldmemack)
+		opldrqsts_empty_r <= opldrqsts_empty;
+end
 
-wire [ARCHBITSZ -1 : 0] opldresult_;
+wire [CLOG2GPRCNTTOTAL -1 : 0] opldrqsts_gpr;
 
-// Apropriately set opldresult_ depending on opldmemrqstsel.
+wire [(ARCHBITSZ/8) -1 : 0] opldrqsts_sel;
+
+wire opldrqstseqs_empty;
+reg opldrqstseqs_empty_r;
+always @ (posedge clk_i) begin
+	if (rst_i || opldrqstseqs_empty_r || opldmemack)
+		opldrqstseqs_empty_r <= opldrqstseqs_empty;
+end
+
+wire [CLOG2MAXPENDINGACK -1 : 0] opldrqstseqs_seq;
+
+wire opldrsps_empty;
+reg opldrsps_empty_r;
+always @ (posedge clk_i) begin
+	if (rst_i || opldrsps_empty_r || gprctrlstate == GPRCTRLSTATEOPLD)
+		opldrsps_empty_r <= opldrsps_empty;
+end
+
+wire [ARCHBITSZ -1 : 0] opldrsps_dat;
+
+// Apropriately set opldrsps_dat depending on opldrqsts_sel.
 generate if (ARCHBITSZ == 16) begin
-	assign opldresult_ =
-		(opldmemrqstsel == 2'b10) ? {{8{1'b0}}, dcache_m_dat_o[15:8]} :
-		(opldmemrqstsel == 2'b01) ? {{8{1'b0}}, dcache_m_dat_o[7:0]} :
-		                                        dcache_m_dat_o;
+	assign opldrsps_dat =
+		(opldrqsts_sel == 2'b10) ? {{8{1'b0}}, dcache_m_dat_o[15:8]} :
+		(opldrqsts_sel == 2'b01) ? {{8{1'b0}}, dcache_m_dat_o[7:0]} :
+		                                       dcache_m_dat_o;
 end endgenerate
 generate if (ARCHBITSZ == 32) begin
-	assign opldresult_ =
-		(opldmemrqstsel == 4'b1100) ? {{16{1'b0}}, dcache_m_dat_o[31:16]} :
-		(opldmemrqstsel == 4'b0011) ? {{16{1'b0}}, dcache_m_dat_o[15:0]} :
-		(opldmemrqstsel == 4'b1000) ? {{24{1'b0}}, dcache_m_dat_o[31:24]} :
-		(opldmemrqstsel == 4'b0100) ? {{24{1'b0}}, dcache_m_dat_o[23:16]} :
-		(opldmemrqstsel == 4'b0010) ? {{24{1'b0}}, dcache_m_dat_o[15:8]} :
-		(opldmemrqstsel == 4'b0001) ? {{24{1'b0}}, dcache_m_dat_o[7:0]} :
-		                                           dcache_m_dat_o;
+	assign opldrsps_dat =
+		(opldrqsts_sel == 4'b1100) ? {{16{1'b0}}, dcache_m_dat_o[31:16]} :
+		(opldrqsts_sel == 4'b0011) ? {{16{1'b0}}, dcache_m_dat_o[15:0]} :
+		(opldrqsts_sel == 4'b1000) ? {{24{1'b0}}, dcache_m_dat_o[31:24]} :
+		(opldrqsts_sel == 4'b0100) ? {{24{1'b0}}, dcache_m_dat_o[23:16]} :
+		(opldrqsts_sel == 4'b0010) ? {{24{1'b0}}, dcache_m_dat_o[15:8]} :
+		(opldrqsts_sel == 4'b0001) ? {{24{1'b0}}, dcache_m_dat_o[7:0]} :
+		                                          dcache_m_dat_o;
 end endgenerate
 generate if (ARCHBITSZ == 64) begin
-	assign opldresult_ =
-		(opldmemrqstsel == 8'b11110000) ? {{32{1'b0}}, dcache_m_dat_o[63:32]} :
-		(opldmemrqstsel == 8'b00001111) ? {{32{1'b0}}, dcache_m_dat_o[31:0]} :
-		(opldmemrqstsel == 8'b11000000) ? {{16{1'b0}}, dcache_m_dat_o[63:48]} :
-		(opldmemrqstsel == 8'b00110000) ? {{16{1'b0}}, dcache_m_dat_o[47:32]} :
-		(opldmemrqstsel == 8'b00001100) ? {{16{1'b0}}, dcache_m_dat_o[31:16]} :
-		(opldmemrqstsel == 8'b00000011) ? {{16{1'b0}}, dcache_m_dat_o[15:0]} :
-		(opldmemrqstsel == 8'b10000000) ? {{24{1'b0}}, dcache_m_dat_o[63:56]} :
-		(opldmemrqstsel == 8'b01000000) ? {{24{1'b0}}, dcache_m_dat_o[55:48]} :
-		(opldmemrqstsel == 8'b00100000) ? {{24{1'b0}}, dcache_m_dat_o[47:40]} :
-		(opldmemrqstsel == 8'b00010000) ? {{24{1'b0}}, dcache_m_dat_o[39:32]} :
-		(opldmemrqstsel == 8'b00001000) ? {{24{1'b0}}, dcache_m_dat_o[31:24]} :
-		(opldmemrqstsel == 8'b00000100) ? {{24{1'b0}}, dcache_m_dat_o[23:16]} :
-		(opldmemrqstsel == 8'b00000010) ? {{24{1'b0}}, dcache_m_dat_o[15:8]} :
-		(opldmemrqstsel == 8'b00000001) ? {{24{1'b0}}, dcache_m_dat_o[7:0]} :
-		                                               dcache_m_dat_o;
+	assign opldrsps_dat =
+		(opldrqsts_sel == 8'b11110000) ? {{32{1'b0}}, dcache_m_dat_o[63:32]} :
+		(opldrqsts_sel == 8'b00001111) ? {{32{1'b0}}, dcache_m_dat_o[31:0]} :
+		(opldrqsts_sel == 8'b11000000) ? {{16{1'b0}}, dcache_m_dat_o[63:48]} :
+		(opldrqsts_sel == 8'b00110000) ? {{16{1'b0}}, dcache_m_dat_o[47:32]} :
+		(opldrqsts_sel == 8'b00001100) ? {{16{1'b0}}, dcache_m_dat_o[31:16]} :
+		(opldrqsts_sel == 8'b00000011) ? {{16{1'b0}}, dcache_m_dat_o[15:0]} :
+		(opldrqsts_sel == 8'b10000000) ? {{24{1'b0}}, dcache_m_dat_o[63:56]} :
+		(opldrqsts_sel == 8'b01000000) ? {{24{1'b0}}, dcache_m_dat_o[55:48]} :
+		(opldrqsts_sel == 8'b00100000) ? {{24{1'b0}}, dcache_m_dat_o[47:40]} :
+		(opldrqsts_sel == 8'b00010000) ? {{24{1'b0}}, dcache_m_dat_o[39:32]} :
+		(opldrqsts_sel == 8'b00001000) ? {{24{1'b0}}, dcache_m_dat_o[31:24]} :
+		(opldrqsts_sel == 8'b00000100) ? {{24{1'b0}}, dcache_m_dat_o[23:16]} :
+		(opldrqsts_sel == 8'b00000010) ? {{24{1'b0}}, dcache_m_dat_o[15:8]} :
+		(opldrqsts_sel == 8'b00000001) ? {{24{1'b0}}, dcache_m_dat_o[7:0]} :
+		                                              dcache_m_dat_o;
 end endgenerate
 
-reg [ARCHBITSZ -1 : 0] opldresult;
+wire [CLOG2GPRCNTTOTAL -1 : 0] opldgpr;
+
+wire [ARCHBITSZ -1 : 0] opldresult;
+
+wire oplddone = !opldrsps_empty_r;
+
+wire opldmemack = (dcache_m_ack_o && !opldrqstseqs_empty_r && opldrqstseqs_seq == dcache_m_rsp_cnt);
 
 `ifdef PUMMU
 wire opldfault_ = (dtlben && (dtlbmiss || dtlbnotreadable[dtlbwayhitidx]));
@@ -2523,25 +2553,7 @@ wire opldfault__hptwddone = (!opldfault_ || !hptwpgd || (hptwddone && !dtlbwritt
 wire opldfault = 0;
 `endif
 
-reg [CLOG2MAXPENDINGACK -1 : 0] opldmemrqstseq;
-reg opldmemrqstseqvalid;
-wire opldmemack = (dcache_m_ack_o && opldmemrqstseqvalid && opldmemrqstseq == dcache_m_rsp_cnt);
-
-always @ (posedge clk_i) begin
-	if (rst_i || opldmemack)
-		opldmemrqstseqvalid <= 0;
-	else if (!opldmemrqstseqvalid && opldmemrqst && _dcache_m_stb_i) begin
-		opldmemrqstseqvalid <= 1;
-		opldmemrqstseq <= dcache_m_rqst_cnt;
-	end
-end
-
-reg oplddone;
-
-// Register set to 1 for a mem request.
-reg opldmemrqst;
-
-wire opldrdy_ = (!(opldmemrqst || oplddone) && dtlbrdy_opld && !__dcache_m_bsy);
+wire opldrdy_ = (!opldrqsts_full && dtlbrdy_opld && !__dcache_m_bsy);
 wire opldrdy = (isopld && opldrdy_
 	`ifdef PUMMU
 	`ifdef PUHPTW
@@ -2550,48 +2562,65 @@ wire opldrdy = (isopld && opldrdy_
 	`endif
 	&& !opldfault);
 
+wire opldstb = (miscrdyandsequencerreadyandgprrdy12 &&
+	isopld && dtlbrdy_opld && !__dcache_m_bsy && !opldfault
+		`ifdef PUMMU
+		`ifdef PUHPTW
+		&& opldfault__hptwddone
+		`endif
+		`endif
+		);
+
+reg opldstb_r;
 always @ (posedge clk_i) begin
-
-	if (rst_i) begin
-		// Reset logic.
-
-		opldmemrqst <= 0;
-		oplddone <= 0;
-
-	end else if (gprctrlstate == GPRCTRLSTATEOPLD) begin
-
-		oplddone <= 0;
-
-	end else begin
-
-		if (opldmemrqst) begin
-
-			if (opldmemack) begin
-
-				opldresult <= opldresult_;
-
-				// Signal that the value of the register opldresult can be stored in the gpr.
-				oplddone <= 1;
-
-				opldmemrqst <= 0;
-			end
-
-		end else if (miscrdyandsequencerreadyandgprrdy12 && isopld && dtlbrdy_opld && !__dcache_m_bsy && !opldfault
-			`ifdef PUMMU
-			`ifdef PUHPTW
-			&& opldfault__hptwddone
-			`endif
-			`endif
-			) begin
-
-			opldmemrqst <= 1;
-
-			opldmemrqstsel <= dcache_m_sel_i_;
-
-			opldgpr <= gpridx1;
-		end
-	end
+	if (rst_i || !opldstb_r || !_dcache_m_bsy_o)
+		opldstb_r <= opldstb;
 end
+
+fifo #(
+	 .WIDTH (CLOG2GPRCNTTOTAL + (ARCHBITSZ/8))
+	,.DEPTH (MAXPENDINGACK)
+) opldrqsts (
+	 .rst_i       (rst_i)
+	,.clk_write_i (clk_i)
+	,.write_i     (opldstb)
+	,.data_i      ({gpridx1, dcache_m_sel_i_})
+	,.full_o      (opldrqsts_full)
+	,.clk_read_i  (clk_i)
+	,.read_i      (opldrqsts_empty_r || opldmemack)
+	,.data_o      ({opldrqsts_gpr, opldrqsts_sel})
+	,.empty_o     (opldrqsts_empty)
+);
+
+// In order for opldrqstseqs_seq to be valid in time when dcache_m_ack_o is true,
+// a clock cycle is required between (cyc && stb && !bsy) cycle and corresponding ack cycle.
+fifo #(
+	 .WIDTH (CLOG2MAXPENDINGACK)
+	,.DEPTH (MAXPENDINGACK)
+) opldrqstseqs (
+	 .rst_i       (rst_i)
+	,.clk_write_i (clk_i)
+	,.write_i     (opldstb_r && _dcache_m_stb_i)
+	,.data_i      (dcache_m_rqst_cnt)
+	,.clk_read_i  (clk_i)
+	,.read_i      (opldrqstseqs_empty_r || opldmemack)
+	,.data_o      (opldrqstseqs_seq)
+	,.empty_o     (opldrqstseqs_empty)
+);
+
+fifo #(
+	 .WIDTH (CLOG2GPRCNTTOTAL + ARCHBITSZ)
+	,.DEPTH (GPRCNTTOTAL)
+) opldrsps (
+	 .rst_i       (rst_i)
+	,.clk_write_i (clk_i)
+	,.write_i     (opldmemack)
+	,.data_i      ({opldrqsts_gpr, opldrsps_dat})
+	,.clk_read_i  (clk_i)
+	,.read_i      (opldrsps_empty_r || gprctrlstate == GPRCTRLSTATEOPLD)
+	,.data_o      ({opldgpr, opldresult})
+	,.empty_o     (opldrsps_empty)
+);
 
 wire opld_found_ = (miscrdyandsequencerreadyandgprrdy12 && isopld && opldrdy_
 	`ifdef PUMMU

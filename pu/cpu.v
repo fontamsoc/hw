@@ -5,10 +5,6 @@
 //
 // PUCOUNT
 // 	Number of PU making up the cpu.
-//
-// USEMEMCLK
-// 	When non-null, clk_mem_i instead of clk_i is used
-// 	to drive the wishbone memory interface.
 
 // Ports:
 //
@@ -91,8 +87,6 @@ parameter VERSION        = {8'd1/*major-version*/, 8'd0/*minor-version*/};
 
 parameter ARCHBITSZ  = 16;
 parameter XARCHBITSZ = 16;
-
-parameter USEMEMCLK = 0;
 
 localparam CLOG2XARCHBITSZBY8 = clog2(XARCHBITSZ/8);
 localparam XADDRBITSZ = (XARCHBITSZ-CLOG2XARCHBITSZBY8);
@@ -210,8 +204,9 @@ wb_arbiter #(
 	,.s_wb_dat_i  (_wb_dat_i)
 );
 
-generate if (USEMEMCLK) begin :gen_wb_cdc
-
+// This module insert the necessary clock cycle between
+// (cyc && stb && !bsy) cycle and corresponding ack cycle,
+// needed by pu.opldrqstseqs if there is no dcache.
 wb_cdc #(
 
 	 .ARCHBITSZ     (XARCHBITSZ)
@@ -244,20 +239,6 @@ wb_cdc #(
 	,.s_wb_ack_i  (wb_ack_i)
 	,.s_wb_dat_i  (wb_dat_i)
 );
-
-end else begin
-
-assign wb_cyc_o = wb_cyc_o_;
-assign wb_stb_o = wb_stb_o_;
-assign wb_we_o = wb_we_o_;
-assign wb_addr_o = wb_addr_o_;
-assign wb_sel_o = wb_sel_o_;
-assign wb_dat_o = wb_dat_o_;
-assign _wb_bsy_i = wb_bsy_i;
-assign _wb_ack_i = wb_ack_i;
-assign _wb_dat_i = wb_dat_i;
-
-end endgenerate
 
 wire [PUCOUNT -1 : 0] rst_ow;
 assign rst_o = |rst_ow;
