@@ -78,10 +78,10 @@ input  wire                         s_wb_bsy_i;
 input  wire                         s_wb_ack_i;
 input  wire [SARCHBITSZ -1 : 0]     s_wb_dat_i;
 
-assign s_wb_cyc_o = m_wb_cyc_i;
-assign s_wb_stb_o = m_wb_stb_i;
-assign s_wb_we_o = m_wb_we_i;
 wire m_wb_bsy_o_;
+assign s_wb_cyc_o = m_wb_cyc_i;
+assign s_wb_stb_o = (m_wb_stb_i && !m_wb_bsy_o_);
+assign s_wb_we_o = m_wb_we_i;
 assign m_wb_bsy_o = (m_wb_bsy_o_ || s_wb_bsy_i);
 
 generate if (MARCHBITSZ > SARCHBITSZ) begin :gen_dnsizr
