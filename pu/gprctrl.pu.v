@@ -229,14 +229,11 @@ end
 always @ (posedge clk_i) begin
 	if (gprwe)
 		gpr[gpridx] <= gprdata;
-end
-
-`ifdef PUSC2
-always @ (posedge clk_i) begin
+	`ifdef PUSC2
 	if (sc2gprwe)
 		gpr[sc2gpridx] <= sc2gprdata;
+	`endif
 end
-`endif
 
 always @ (posedge clk_i) begin
 	if (rst_i)
