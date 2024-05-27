@@ -96,8 +96,19 @@ always @ (posedge clk_i) begin
 		dcache_m_we_i_ <= 1'b0;
 
 	end else if (dcache_m_we_i_) begin
-		// TODO: Modify to handle cldst ...
-		if (!_dcache_m_bsy_o) begin
+		if (opldst_iscond) begin
+			if (opldstdone) begin
+				if (opldst_condval == opldstresult) begin
+					dcache_m_stb_i <= 1'b1;
+					dcache_m_we_i <= 1'b1;
+					dcache_m_we_i_ <= 1'b0;
+				end else begin
+					//dcache_m_stb_i <= 1'b0; // Should already be null by now.
+					dcache_m_we_i_ <= 1'b0;
+				end
+			end else if (!_dcache_m_bsy_o)
+				dcache_m_stb_i <= 1'b0;
+		end else if (!_dcache_m_bsy_o) begin
 			dcache_m_we_i <= 1'b1;
 			dcache_m_we_i_ <= 1'b0;
 		end
@@ -221,7 +232,7 @@ always @ (posedge clk_i) begin
 			`endif
 			`endif
 		end else if (isopldst && opldstrdy_
-			&& ((!opldstfault && !instrbufdato0[2]) // Should yield same signal as opldstrdy.
+			&& (!opldstfault // Should yield same signal as opldstrdy.
 				`ifdef PUMMU
 				`ifdef PUHPTW
 				|| !opldstfault__hptwddone
@@ -261,11 +272,13 @@ always @ (posedge clk_i) begin
 					dcache_m_stb_i <= 1'b0;
 				end
 
-			end else if (!instrbufdato0[2]) begin
+			end else begin
 
 				hptwmemrqst <= HPTWMEMREQNONE;
 			`endif
 			`endif
+				opldst_iscond <= instrbufdato0[2];
+				opldst_condval <= gpr13val;
 				dcache_m_stb_i <= 1'b1;
 				dcache_m_we_i <= 1'b0;
 				dcache_m_we_i_ <= 1'b1;

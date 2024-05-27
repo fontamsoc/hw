@@ -2765,10 +2765,10 @@ wire opldstrdy = (isopldst && opldstrdy_
 	&& opldstfault__hptwddone
 	`endif
 	`endif
-	&& (!opldstfault && !instrbufdato0[2]));
+	&& !opldstfault);
 
 wire opldststb = (miscrdyandsequencerreadyandgprrdy12 &&
-	isopldst && dtlbrdy_opldst && !__dcache_m_bsy && !opldstfault && !instrbufdato0[2]
+	isopldst && dtlbrdy_opldst && !__dcache_m_bsy && !opldstfault
 		`ifdef PUMMU
 		`ifdef PUHPTW
 		&& opldstfault__hptwddone
@@ -2796,6 +2796,9 @@ always @ (posedge clk_i) begin
 		end
 	end
 end
+
+reg                    opldst_iscond;
+reg [ARCHBITSZ -1 : 0] opldst_condval;
 
 wire opldst_found_ = (miscrdyandsequencerreadyandgprrdy12 && isopldst && opldstrdy_
 	`ifdef PUMMU
