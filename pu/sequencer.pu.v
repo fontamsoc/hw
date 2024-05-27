@@ -106,8 +106,6 @@ always @* begin
 
 								if (opldstfault && !inkernelmode_kmodepaging) begin
 									sequencerstate = SEQINTR;
-								end else if (instrbufdato0[2]) begin
-									sequencerstate = SEQHCALL;
 								end else begin
 									sequencerstate = SEQEXEC;
 								end
