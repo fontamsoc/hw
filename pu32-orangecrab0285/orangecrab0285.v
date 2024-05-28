@@ -24,6 +24,9 @@
 `define PUFMULDSP
 `define PUFDIV
 //`define PUDCACHE
+`define PUSC2
+`define PUSC2SKIPSC1LI8
+`define PUSC2SKIPSC1CPY
 `define PUCOUNT 1 /* 2 max */
 `include "pu/cpu.v"
 
@@ -171,13 +174,11 @@ localparam CLK8XFREQ = CLKFREQ96MHZ; // Frequency of clk_8x_w.
 wire [3:0] pll_clk_w;
 wire       pll_locked;
 ecp5pll #(
-
 	 .in_hz    (CLKFREQ48MHZ)
 	,.out0_hz  (CLK1XFREQ)
 	,.out1_hz  (CLK2XFREQ)
 	,.out2_hz  (CLK4XFREQ)
 	,.out3_hz  (CLK8XFREQ)
-
 ) pll (
 
 	 .clk_i        (clk48mhz_i)
@@ -202,25 +203,27 @@ wire clk_8x_w = clk96mhz;
 
 //GSR GSR_INST (.GSR (~swcoldrst));
 
+wire rst_clk_w = clk_2x_w;
+
 localparam RST_CNTR_BITSZ = 16;
 
 reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
-always @ (posedge clk_4x_w) begin
-	if (!cpu_rst_ow && !swwarmrst && usr_btn_n) begin
+always @ (posedge rst_clk_w) begin
+	if (pll_locked && !cpu_rst_ow && !swwarmrst && usr_btn_n) begin
 		if (rst_cntr)
 			rst_cntr <= rst_cntr - 1'b1;
 	end else
 		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
 end
 
-always @ (posedge clk_4x_w) begin
+always @ (posedge rst_clk_w) begin
 	if (rst_p)
 		devtbl_rst0_r <= 0;
 	if (swpwroff)
 		devtbl_rst0_r <= 1;
 end
 
-wire rst_w = (!pll_locked || devtbl_rst0_r || (|rst_cntr));
+wire rst_w = (devtbl_rst0_r || (|rst_cntr));
 
 `ifdef PUCOUNT
 localparam PUCOUNT = `PUCOUNT;
@@ -243,6 +246,7 @@ localparam WBPI_MASTERCOUNT       = (M_WBPI_LAST + 1);
 localparam WBPI_SLAVECOUNT        = (S_WBPI_INVALIDDEV + 1);
 localparam WBPI_DEFAULTSLAVEINDEX = S_WBPI_INVALIDDEV;
 localparam WBPI_FIRSTSLAVEADDR    = 0;
+localparam WBPI_MAXPENDINGACK     = 16;
 localparam WBPI_DNSIZR            = 8'b00101110;
 localparam WBPI_ARCHBITSZ         = 128/* RAM ARCHBITSZ */;
 localparam WBPI_CLOG2ARCHBITSZBY8 = clog2(WBPI_ARCHBITSZ/8);
@@ -297,7 +301,6 @@ localparam DCACHEWAYCOUNT = 2;
 localparam TLBWAYCOUNT    = 1;
 
 cpu #(
-
 	 .ARCHBITSZ      (ARCHBITSZ)
 	,.XARCHBITSZ     (WBPI_ARCHBITSZ)
 	,.CLKFREQ        (CLK2XFREQ)
@@ -312,7 +315,7 @@ cpu #(
 	,.FADDFSUBCNT    (2)
 	,.FMULCNT        (2)
 	,.FDIVCNT        (4)
-
+	,.MAXPENDINGACK  (WBPI_MAXPENDINGACK)
 ) cpu (
 
 	 .rst_i (rst_w)
@@ -350,12 +353,10 @@ cpu #(
 );
 
 sdcard_spi #(
-
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.XARCHBITSZ (WBPI_ARCHBITSZ)
 	,.CLKFREQ    (WBPI_CLKFREQ)
 	,.PHYCLKFREQ (CLK8XFREQ)
-
 ) sdcard (
 
 	 .rst_i (wbpi_rst_w)
@@ -394,13 +395,11 @@ localparam RAMCACHESZ = /* In (ARCHBITSZ/8) units */
 wire devtbl_rst2_w;
 
 devtbl #(
-
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.RAMCACHESZ (RAMCACHESZ)
 	,.PRELDRADDR ('h1000)
 	,.DEVMAPCNT  (WBPI_SLAVECOUNT)
 	,.SOCID      (6)
-
 ) devtbl (
 
 	 .rst_i (wbpi_rst_w)
@@ -431,11 +430,9 @@ assign dev_id_w    [S_WBPI_DEVTBL] = 7;
 assign dev_useirq_w[S_WBPI_DEVTBL] = 0;
 
 irqctrl #(
-
 	 .ARCHBITSZ   (ARCHBITSZ)
 	,.IRQSRCCOUNT (IRQSRCCOUNT)
 	,.IRQDSTCOUNT (IRQDSTCOUNT)
-
 ) irqctrl (
 
 	 .rst_i (wbpi_rst_w)
@@ -465,11 +462,9 @@ assign dev_id_w    [S_WBPI_IRQCTRL] = 3;
 assign dev_useirq_w[S_WBPI_IRQCTRL] = 0;
 
 usb_serial #(
-
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.PHYCLKFREQ (CLKFREQ48MHZ) // Must be 48MHz or 60MHz.
 	,.BUFSZ      (4096)
-
 ) serial (
 
 	 .rst_i (!pll_locked
@@ -504,7 +499,7 @@ wire wb_rst_user_port_w;
 wire wb_clk_user_port_w;
 
 reg [RST_CNTR_BITSZ -1 : 0] ram_rst_cntr = {RST_CNTR_BITSZ{1'b1}};
-always @ (posedge clk48mhz_i) begin
+always @ (posedge rst_clk_w) begin
 	if (pll_locked && ram_rst_cntr)
 		ram_rst_cntr <= ram_rst_cntr - 1'b1;
 end
@@ -512,7 +507,7 @@ end
 wire ram_rst_w = (|ram_rst_cntr);
 
 reg conly_r;
-always @ (posedge wbpi_clk_w) begin
+always @ (posedge rst_clk_w) begin
 	if (ram_rst_w)
 		conly_r <= 1;
 	else if (devtbl_rst2_w)
@@ -530,12 +525,10 @@ wire                             dcache_wb_ack_w;
 wire [WBPI_ARCHBITSZ -1 : 0]     dcache_wb_dati_w;
 
 dcache #(
-
 	 .ARCHBITSZ     (WBPI_ARCHBITSZ)
 	,.CACHESETCOUNT (RAMCACHESZ/(WBPI_ARCHBITSZ/ARCHBITSZ))
 	,.CACHEWAYCOUNT (RAMCACHEWAYCOUNT)
 	,.INITFILE      ("litedram.hex")
-
 ) dcache (
 
 	 .rst_i (ram_rst_w)
@@ -577,9 +570,8 @@ wire                             dcache_wb_cdc_wb_ack_w;
 wire [WBPI_ARCHBITSZ -1 : 0]     dcache_wb_cdc_wb_dati_w;
 
 wb_cdc #(
-
-	.ARCHBITSZ (WBPI_ARCHBITSZ)
-
+	 .ARCHBITSZ     (WBPI_ARCHBITSZ)
+	,.MAXPENDINGACK (WBPI_MAXPENDINGACK)
 ) dcache_wb_cdc (
 
 	 .rst_i (wb_rst_user_port_w)
@@ -619,9 +611,8 @@ wire                        ramctrl_wb_cdc_wb_ack_w;
 wire [ARCHBITSZ -1 : 0]     ramctrl_wb_cdc_wb_dati_w;
 
 wb_cdc #(
-
-	.ARCHBITSZ (ARCHBITSZ)
-
+	 .ARCHBITSZ     (ARCHBITSZ)
+	,.MAXPENDINGACK (WBPI_MAXPENDINGACK)
 ) ramctrl_wb_cdc (
 
 	 .rst_i (wb_rst_user_port_w)
@@ -715,9 +706,7 @@ assign dev_id_w    [S_WBPI_RAMCTRL] = 0;
 assign dev_useirq_w[S_WBPI_RAMCTRL] = 0;
 
 bootldr #(
-
 	 .ARCHBITSZ (WBPI_ARCHBITSZ)
-
 ) bootldr (
 
 	 .rst_i (wbpi_rst_w)

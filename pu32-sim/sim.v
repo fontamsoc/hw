@@ -158,6 +158,7 @@ localparam WBPI_MASTERCOUNT       = (M_WBPI_LAST + 1);
 localparam WBPI_SLAVECOUNT        = (S_WBPI_INVALIDDEV + 1);
 localparam WBPI_DEFAULTSLAVEINDEX = S_WBPI_INVALIDDEV;
 localparam WBPI_FIRSTSLAVEADDR    = 0;
+localparam WBPI_MAXPENDINGACK     = 16;
 localparam WBPI_DNSIZR            = 7'b0001110;
 localparam WBPI_ARCHBITSZ         = ARCHBITSZ;
 localparam WBPI_CLOG2ARCHBITSZBY8 = clog2(WBPI_ARCHBITSZ/8);
@@ -212,7 +213,6 @@ localparam DCACHEWAYCOUNT = 2;
 localparam TLBWAYCOUNT    = 1;
 
 cpu #(
-
 	 .ARCHBITSZ      (ARCHBITSZ)
 	,.XARCHBITSZ     (WBPI_ARCHBITSZ)
 	,.CLKFREQ        (CLK1XFREQ)
@@ -227,7 +227,7 @@ cpu #(
 	,.FADDFSUBCNT    (2)
 	,.FMULCNT        (2)
 	,.FDIVCNT        (4)
-
+	,.MAXPENDINGACK  (WBPI_MAXPENDINGACK)
 ) cpu (
 
 	 .rst_i (rst_w)
@@ -272,12 +272,10 @@ assign pc_w[gen_pc_w_idx] = cpu.genpu[gen_pc_w_idx].pu.pc_w;
 end endgenerate
 
 sdcard_spi #(
-
 	 .ARCHBITSZ (ARCHBITSZ)
 	,.XARCHBITSZ (WBPI_ARCHBITSZ)
 	,.SRCFILE ("pu32.img.hex" /* `hexdump -v -e '/1 "%02x "' /path/to/img > pu32.img.hex` */)
 	,.SIMSTORAGESZ (81920*5)
-
 ) sdcard (
 
 	.rst_i (wbpi_rst_w)
@@ -305,13 +303,13 @@ assign dev_useirq_w[S_WBPI_SDCARD] = 1;
 
 `ifdef DCACHESRAM
 localparam RAMCACHEWAYCOUNT = 2;
-localparam RAMCACHESZ = ((1024/(WBPI_ARCHBITSZ/8))*(32/RAMCACHEWAYCOUNT)); /* In (WBPI_ARCHBITSZ/8) units */
+localparam RAMCACHESZ = /* In (WBPI_ARCHBITSZ/8) units */
+	((1024/(WBPI_ARCHBITSZ/8))*(32/RAMCACHEWAYCOUNT));
 
 wire devtbl_rst2_w;
 `endif
 
 devtbl #(
-
 	 .ARCHBITSZ  (ARCHBITSZ)
 	 `ifdef DCACHESRAM
 	,.RAMCACHESZ (RAMCACHESZ*(WBPI_ARCHBITSZ/ARCHBITSZ))
@@ -319,7 +317,6 @@ devtbl #(
 	`endif
 	,.DEVMAPCNT  (WBPI_SLAVECOUNT)
 	,.SOCID      (0)
-
 ) devtbl (
 
 	 .rst_i (wbpi_rst_w)
@@ -352,11 +349,9 @@ assign dev_id_w    [S_WBPI_DEVTBL] = 7;
 assign dev_useirq_w[S_WBPI_DEVTBL] = 0;
 
 irqctrl #(
-
 	 .ARCHBITSZ   (ARCHBITSZ)
 	,.IRQSRCCOUNT (IRQSRCCOUNT)
 	,.IRQDSTCOUNT (IRQDSTCOUNT)
-
 ) irqctrl (
 
 	 .rst_i (wbpi_rst_w)
@@ -386,10 +381,8 @@ assign dev_id_w    [S_WBPI_IRQCTRL] = 3;
 assign dev_useirq_w[S_WBPI_IRQCTRL] = 0;
 
 uart_sim #(
-
 	 .ARCHBITSZ (ARCHBITSZ)
 	,.BUFSZ     (2)
-
 ) uart (
 
 	 .rst_i (wbpi_rst_w)
@@ -451,12 +444,10 @@ localparam DCACHE_INITFILE =
 	WBPI_ARCHBITSZ == 256 ? "dcacheinit/dcacheinit256.hex" : "";
 
 dcache #(
-
 	 .ARCHBITSZ     (WBPI_ARCHBITSZ)
 	,.CACHESETCOUNT (RAMCACHESZ)
 	,.CACHEWAYCOUNT (RAMCACHEWAYCOUNT)
 	,.INITFILE      (DCACHE_INITFILE)
-
 ) dcache (
 
 	 .rst_i (ram_rst_w)
@@ -488,11 +479,9 @@ dcache #(
 );
 
 sram #(
-
 	 .ARCHBITSZ (WBPI_ARCHBITSZ)
 	,.SIZE      (RAMSZ/(WBPI_ARCHBITSZ/8))
 	,.DELAY     (0)
-
 ) sram (
 
 	 .rst_i (ram_rst_w)
@@ -514,11 +503,9 @@ sram #(
 `else /* !DCACHESRAM */
 
 sram #(
-
 	 .ARCHBITSZ (WBPI_ARCHBITSZ)
 	,.SIZE      (RAMSZ/(WBPI_ARCHBITSZ/8))
 	,.DELAY     (0)
-
 ) sram (
 
 	 .rst_i (wbpi_rst_w)
@@ -543,9 +530,7 @@ assign dev_id_w    [S_WBPI_RAM] = 1;
 assign dev_useirq_w[S_WBPI_RAM] = 0;
 
 bootldr #(
-
 	 .ARCHBITSZ (WBPI_ARCHBITSZ)
-
 ) bootldr (
 
 	 .rst_i (wbpi_rst_w)

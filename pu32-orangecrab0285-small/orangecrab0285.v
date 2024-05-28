@@ -174,7 +174,8 @@ cpu #(
 
 	 .rst_i (wbpi_rst_w)
 
-	,.clk_i (wbpi_clk_w)
+	,.clk_i     (wbpi_clk_w)
+	,.clk_mem_i (wbpi_clk_w)
 
 	,.wb_cyc_o  (m_wbpi_cyc_w[M_WBPI_CPU])
 	,.wb_stb_o  (m_wbpi_stb_w[M_WBPI_CPU])

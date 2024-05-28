@@ -98,7 +98,6 @@ localparam DCACHEWAYCOUNT = 2;
 localparam TLBWAYCOUNT    = 1;
 
 cpu #(
-
 	 .ARCHBITSZ      (ARCHBITSZ)
 	,.XARCHBITSZ     (WBPI_ARCHBITSZ)
 	,.CLKFREQ        (WBPI_CLKFREQ)
@@ -111,7 +110,6 @@ cpu #(
 	,.IMULCNT        (2)
 	,.IDIVCNT        (4)
 	,.MAXPENDINGACK  (WBPI_MAXPENDINGACK)
-
 ) cpu (
 
 	 .rst_i (wbpi_rst_w)
@@ -141,10 +139,8 @@ assign pc_w[gen_pc_w_idx] = cpu.genpu[gen_pc_w_idx].pu.pc_w;
 end endgenerate
 
 uart_sim #(
-
 	 .ARCHBITSZ (ARCHBITSZ)
 	,.BUFSZ     (2)
-
 ) uart (
 
 	 .rst_i (wbpi_rst_w)
@@ -170,11 +166,9 @@ localparam SRAM_SRCFILE =
 	WBPI_ARCHBITSZ == 256 ? "sram256.hex" : "";
 
 sram #(
-
 	 .ARCHBITSZ (WBPI_ARCHBITSZ)
 	,.SIZE      ((64/*KB*/)*(1024/(WBPI_ARCHBITSZ/8)))
 	,.SRCFILE   (SRAM_SRCFILE)
-
 ) sram (
 
 	 .rst_i (wbpi_rst_w)
