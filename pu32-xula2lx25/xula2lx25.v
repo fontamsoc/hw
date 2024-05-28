@@ -9,14 +9,16 @@
 
 `include "./pll_12_to_120_mhz.v"
 
-`include "lib/perint/pi1r.v"
+`include "lib/wb_arbiter.v"
+`include "lib/wb_mux.v"
+`include "lib/wb_dnsizr.v"
 
 `define PUMMU
 `define PUHPTW
 `define PUIMULCLK
 `define PUIDIVCLK
 `define PUIMULDSP
-`define PUDCACHE
+//`define PUDCACHE
 `include "pu/cpu.v"
 
 `include "dev/sdcard/sdcard_spi.v"
@@ -28,8 +30,7 @@
 `include "dev/uart_hw.v"
 
 // wb4sdram is 32bits only.
-`include "dev/pi1_dcache.v"
-`include "dev/pi1_to_wb4.v"
+`include "dev/dcache.v"
 `include "lib/wb4sdram.v"
 
 `include "dev/bootldr/bootldr.v"
@@ -121,25 +122,6 @@ wire swcoldrst = (devtbl_rst0_w && devtbl_rst1_w);
 wire swwarmrst = (!devtbl_rst0_w && devtbl_rst1_w);
 wire swpwroff  = (devtbl_rst0_w && !devtbl_rst1_w);
 
-localparam RST_CNTR_BITSZ = 4;
-
-reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
-always @ (posedge clk120mhz) begin
-	if (cpu_rst_ow || swwarmrst || rst_p)
-		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
-	else if (rst_cntr)
-		rst_cntr <= rst_cntr - 1'b1;
-end
-
-always @ (posedge clk120mhz) begin
-	if (rst_p)
-		devtbl_rst0_r <= 0;
-	if (swpwroff)
-		devtbl_rst0_r <= 1;
-end
-
-STARTUP_SPARTAN6 (.CLK (clk12mhz_i), .GSR (swcoldrst));
-
 localparam CLK1XFREQ = 30000000 /* 30 MHz */; // Frequency of clk_1x_w.
 localparam CLK2XFREQ = 60000000 /* 60 MHz */; // Frequency of clk_2x_w.
 
@@ -166,57 +148,75 @@ BUFG bufg2 (.O (clk30mhz), .I (clkdiv[1]));
 wire clk_1x_w = clk30mhz;
 wire clk_2x_w = clk60mhz;
 
+STARTUP_SPARTAN6 (.CLK (clk12mhz_i), .GSR (swcoldrst));
+
+localparam RST_CNTR_BITSZ = 4;
+
+reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
+always @ (posedge clk120mhz) begin
+	if (cpu_rst_ow || swwarmrst || rst_p)
+		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
+	else if (rst_cntr)
+		rst_cntr <= rst_cntr - 1'b1;
+end
+
+always @ (posedge clk120mhz) begin
+	if (rst_p)
+		devtbl_rst0_r <= 0;
+	if (swpwroff)
+		devtbl_rst0_r <= 1;
+end
+
 wire rst_w = (!pll_locked || devtbl_rst0_r || (|rst_cntr));
 
-localparam M_PI1R_CPU        = 0;
-localparam M_PI1R_LAST       = M_PI1R_CPU;
-localparam S_PI1R_SDCARD     = 0;
-localparam S_PI1R_DEVTBL     = (S_PI1R_SDCARD + 1);
-localparam S_PI1R_IRQCTRL    = (S_PI1R_DEVTBL + 1);
-localparam S_PI1R_UART       = (S_PI1R_IRQCTRL + 1);
-localparam S_PI1R_RAM        = (S_PI1R_UART + 1);
-localparam S_PI1R_BOOTLDR    = (S_PI1R_RAM + 1);
-localparam S_PI1R_INVALIDDEV = (S_PI1R_BOOTLDR + 1);
+localparam M_WBPI_CPU        = 0;
+localparam M_WBPI_LAST       = M_WBPI_CPU;
+localparam S_WBPI_SDCARD     = 0;
+localparam S_WBPI_DEVTBL     = (S_WBPI_SDCARD + 1);
+localparam S_WBPI_IRQCTRL    = (S_WBPI_DEVTBL + 1);
+localparam S_WBPI_UART       = (S_WBPI_IRQCTRL + 1);
+localparam S_WBPI_RAM        = (S_WBPI_UART + 1);
+localparam S_WBPI_BOOTLDR    = (S_WBPI_RAM + 1);
+localparam S_WBPI_INVALIDDEV = (S_WBPI_BOOTLDR + 1);
 
-localparam PI1RMASTERCOUNT       = (M_PI1R_LAST + 1);
-localparam PI1RSLAVECOUNT        = (S_PI1R_INVALIDDEV + 1);
-localparam PI1RDEFAULTSLAVEINDEX = S_PI1R_INVALIDDEV;
-localparam PI1RFIRSTSLAVEADDR    = 0;
-localparam PI1RARCHBITSZ         = ARCHBITSZ;
-localparam CLOG2PI1RARCHBITSZBY8 = clog2(PI1RARCHBITSZ/8);
-localparam PI1RADDRBITSZ         = (PI1RARCHBITSZ-CLOG2PI1RARCHBITSZBY8);
-localparam PI1RCLKFREQ           = CLK1XFREQ;
-wire pi1r_rst_w = rst_w;
-wire pi1r_clk_w = clk_1x_w;
-// PerInt is instantiated in a separate file to keep this file clean.
-// Masters should use the following signals to plug onto PerInt:
-// 	input  [2 -1 : 0]                 m_pi1r_op_w    [PI1RMASTERCOUNT -1 : 0];
-// 	input  [PI1RADDRBITSZ -1 : 0]     m_pi1r_addr_w  [PI1RMASTERCOUNT -1 : 0];
-// 	input  [PI1RARCHBITSZ -1 : 0]     m_pi1r_data_w1 [PI1RMASTERCOUNT -1 : 0];
-// 	output [PI1RARCHBITSZ -1 : 0]     m_pi1r_data_w0 [PI1RMASTERCOUNT -1 : 0];
-// 	input  [(PI1RARCHBITSZ/8) -1 : 0] m_pi1r_sel_w   [PI1RMASTERCOUNT -1 : 0];
-// 	output                            m_pi1r_rdy_w   [PI1RMASTERCOUNT -1 : 0];
-// Slaves should use the following signals to plug onto PerInt:
-// 	output [2 -1 : 0]                 s_pi1r_op_w    [PI1RSLAVECOUNT -1 : 0];
-// 	output [PI1RADDRBITSZ -1 : 0]     s_pi1r_addr_w  [PI1RSLAVECOUNT -1 : 0];
-// 	output [PI1RARCHBITSZ -1 : 0]     s_pi1r_data_w0 [PI1RSLAVECOUNT -1 : 0];
-// 	input  [PI1RARCHBITSZ -1 : 0]     s_pi1r_data_w1 [PI1RSLAVECOUNT -1 : 0];
-// 	output [(PI1RARCHBITSZ/8) -1 : 0] s_pi1r_sel_w   [PI1RSLAVECOUNT -1 : 0];
-// 	input                             s_pi1r_rdy_w   [PI1RSLAVECOUNT -1 : 0];
-// 	input  [PI1RARCHBITSZ -1 : 0]     s_pi1r_mapsz_w [PI1RSLAVECOUNT -1 : 0];
-`include "lib/perint/inst.pi1r.v"
-
-wire [(PI1RARCHBITSZ * PI1RSLAVECOUNT) -1 : 0] devtbl_id_flat_w;
-wire [PI1RARCHBITSZ -1 : 0]                    devtbl_id_w           [PI1RSLAVECOUNT -1 : 0];
-wire [(PI1RARCHBITSZ * PI1RSLAVECOUNT) -1 : 0] devtbl_mapsz_flat_w;
-wire [PI1RSLAVECOUNT -1 : 0]                   devtbl_useintr_flat_w;
-wire [PI1RSLAVECOUNT -1 : 0]                   devtbl_useintr_w;
-genvar gen_devtbl_id_flat_w_idx;
-generate for (gen_devtbl_id_flat_w_idx = 0; gen_devtbl_id_flat_w_idx < PI1RSLAVECOUNT; gen_devtbl_id_flat_w_idx = gen_devtbl_id_flat_w_idx + 1) begin :gen_devtbl_id_flat_w
-assign devtbl_id_flat_w[((gen_devtbl_id_flat_w_idx+1) * PI1RARCHBITSZ) -1 : gen_devtbl_id_flat_w_idx * PI1RARCHBITSZ] = devtbl_id_w[gen_devtbl_id_flat_w_idx];
-end endgenerate
-assign devtbl_mapsz_flat_w = s_pi1r_mapsz_w_flat /* defined in "lib/perint/inst.pi1r.v" */;
-assign devtbl_useintr_flat_w = devtbl_useintr_w;
+localparam WBPI_MASTERCOUNT       = (M_WBPI_LAST + 1);
+localparam WBPI_SLAVECOUNT        = (S_WBPI_INVALIDDEV + 1);
+localparam WBPI_DEFAULTSLAVEINDEX = S_WBPI_INVALIDDEV;
+localparam WBPI_FIRSTSLAVEADDR    = 0;
+localparam WBPI_MAXPENDINGACK     = 16;
+localparam WBPI_DNSIZR            = 7'b0001110;
+localparam WBPI_ARCHBITSZ         = ARCHBITSZ;
+localparam WBPI_CLOG2ARCHBITSZBY8 = clog2(WBPI_ARCHBITSZ/8);
+localparam WBPI_ADDRBITSZ         = (WBPI_ARCHBITSZ - WBPI_CLOG2ARCHBITSZBY8);
+localparam WBPI_CLKFREQ           = CLK1XFREQ;
+wire wbpi_rst_w = rst_w;
+wire wbpi_clk_w = clk_1x_w;
+// The peripheral interconnect is instantiated in a separate file to keep this file clean.
+// Master devices must use the following signals to plug onto the peripheral interconnect:
+// 	input                              m_wbpi_cyc_w  [WBPI_MASTERCOUNT -1 : 0];
+// 	input                              m_wbpi_stb_w  [WBPI_MASTERCOUNT -1 : 0];
+// 	input                              m_wbpi_we_w   [WBPI_MASTERCOUNT -1 : 0];
+// 	input  [WBPI_ADDRBITSZ -1 : 0]     m_wbpi_addr_w [WBPI_MASTERCOUNT -1 : 0];
+// 	input  [(WBPI_ARCHBITSZ/8) -1 : 0] m_wbpi_sel_w  [WBPI_MASTERCOUNT -1 : 0];
+// 	input  [WBPI_ARCHBITSZ -1 : 0]     m_wbpi_dati_w [WBPI_MASTERCOUNT -1 : 0];
+// 	output                             m_wbpi_bsy_w  [WBPI_MASTERCOUNT -1 : 0];
+// 	output                             m_wbpi_ack_w  [WBPI_MASTERCOUNT -1 : 0];
+// 	output [WBPI_ARCHBITSZ -1 : 0]     m_wbpi_dato_w [WBPI_MASTERCOUNT -1 : 0];
+// Slave devices must use the following signals to plug onto the peripheral interconnect:
+// 	output                             s_wbpi_cyc_w   [WBPI_SLAVECOUNT -1 : 0];
+// 	output                             s_wbpi_stb_w   [WBPI_SLAVECOUNT -1 : 0];
+// 	output                             s_wbpi_we_w    [WBPI_SLAVECOUNT -1 : 0];
+// 	output [WBPI_ADDRBITSZ -1 : 0]     s_wbpi_addr_w  [WBPI_SLAVECOUNT -1 : 0];
+// 	output [(WBPI_ARCHBITSZ/8) -1 : 0] s_wbpi_sel_w   [WBPI_SLAVECOUNT -1 : 0];
+// 	output [WBPI_ARCHBITSZ -1 : 0]     s_wbpi_dato_w  [WBPI_SLAVECOUNT -1 : 0];
+// 	input                              s_wbpi_bsy_w   [WBPI_SLAVECOUNT -1 : 0];
+// 	input                              s_wbpi_ack_w   [WBPI_SLAVECOUNT -1 : 0];
+// 	input  [WBPI_ARCHBITSZ -1 : 0]     s_wbpi_dati_w  [WBPI_SLAVECOUNT -1 : 0];
+// 	input  [ARCHBITSZ -1 : 0]          s_wbpi_mapsz_w [WBPI_SLAVECOUNT -1 : 0];
+// If "dev/devtbl.v" was included, slave devices must also use following signals:
+// 	input  [ARCHBITSZ -1 : 0]          dev_id_w       [WBPI_SLAVECOUNT -1 : 0];
+// 	input                              dev_useirq_w   [WBPI_SLAVECOUNT -1 : 0];
+`include "lib/wbpi_inst.v"
 
 localparam IRQ_SDCARD = 0;
 localparam IRQ_UART   = (IRQ_SDCARD + 1);
@@ -231,66 +231,67 @@ wire [IRQDSTCOUNT -1 : 0] irq_dst_pri_w;
 
 localparam ICACHESZ = 32;
 localparam DCACHESZ = 4;
-localparam TLBSZ    = 128;
+localparam TLBSZ    = 16;
 
 localparam ICACHEWAYCOUNT = 2;
 localparam DCACHEWAYCOUNT = 2;
 localparam TLBWAYCOUNT    = 2;
 
 cpu #(
-
 	 .ARCHBITSZ      (ARCHBITSZ)
-	,.XARCHBITSZ     (PI1RARCHBITSZ)
-	,.CLKFREQ        (PI1RCLKFREQ)
-	,.ICACHESETCOUNT ((1024/(PI1RARCHBITSZ/8))*(ICACHESZ/ICACHEWAYCOUNT))
-	,.DCACHESETCOUNT ((1024/(PI1RARCHBITSZ/8))*(DCACHESZ/DCACHEWAYCOUNT))
+	,.XARCHBITSZ     (WBPI_ARCHBITSZ)
+	,.CLKFREQ        (CLK1XFREQ)
+	,.ICACHESETCOUNT ((1024/(WBPI_ARCHBITSZ/8))*(ICACHESZ/ICACHEWAYCOUNT))
+	,.DCACHESETCOUNT ((1024/(WBPI_ARCHBITSZ/8))*(DCACHESZ/DCACHEWAYCOUNT))
 	,.TLBSETCOUNT    (TLBSZ/TLBWAYCOUNT)
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
 	,.TLBWAYCOUNT    (TLBWAYCOUNT)
 	,.IMULCNT        (2)
 	,.IDIVCNT        (2)
-
+	,.MAXPENDINGACK  (WBPI_MAXPENDINGACK)
 ) cpu (
 
 	 .rst_i (rst_w)
 
 	,.rst_o (cpu_rst_ow)
 
-	,.clk_i      (pi1r_clk_w)
+	,.clk_i      (clk_1x_w)
+	,.clk_mem_i  (wbpi_clk_w)
 	,.clk_imul_i (clk_2x_w)
 	,.clk_idiv_i (clk_2x_w)
 
-	,.pi1_op_o   (m_pi1r_op_w[M_PI1R_CPU])
-	,.pi1_addr_o (m_pi1r_addr_w[M_PI1R_CPU])
-	,.pi1_data_o (m_pi1r_data_w1[M_PI1R_CPU])
-	,.pi1_data_i (m_pi1r_data_w0[M_PI1R_CPU])
-	,.pi1_sel_o  (m_pi1r_sel_w[M_PI1R_CPU])
-	,.pi1_rdy_i  (m_pi1r_rdy_w[M_PI1R_CPU])
+	,.wb_cyc_o  (m_wbpi_cyc_w[M_WBPI_CPU])
+	,.wb_stb_o  (m_wbpi_stb_w[M_WBPI_CPU])
+	,.wb_we_o   (m_wbpi_we_w[M_WBPI_CPU])
+	,.wb_addr_o (m_wbpi_addr_w[M_WBPI_CPU])
+	,.wb_sel_o  (m_wbpi_sel_w[M_WBPI_CPU])
+	,.wb_dat_o  (m_wbpi_dati_w[M_WBPI_CPU])
+	,.wb_bsy_i  (m_wbpi_bsy_w[M_WBPI_CPU])
+	,.wb_ack_i  (m_wbpi_ack_w[M_WBPI_CPU])
+	,.wb_dat_i  (m_wbpi_dato_w[M_WBPI_CPU])
 
 	,.irq_stb_i (irq_dst_stb_w)
 	,.irq_rdy_o (irq_dst_rdy_w)
 	,.halted_o  (irq_dst_pri_w)
 
 	,.rstaddr_i  ((('h1000)>>1) +
-		(s_pi1r_mapsz_w[S_PI1R_RAM]>>1))
+		(s_wbpi_mapsz_w[S_WBPI_RAM]>>1))
 	,.rstaddr2_i (('h8000-(14/*within parkpu()*/))>>1)
 
 	,.id_i (0)
 );
 
 sdcard_spi #(
-
 	 .ARCHBITSZ  (ARCHBITSZ)
-	,.XARCHBITSZ (PI1RARCHBITSZ)
-	,.CLKFREQ    (PI1RCLKFREQ)
+	,.XARCHBITSZ (WBPI_ARCHBITSZ)
+	,.CLKFREQ    (WBPI_CLKFREQ)
 	,.PHYCLKFREQ (CLK2XFREQ)
-
 ) sdcard (
 
-	 .rst_i (pi1r_rst_w)
+	 .rst_i (wbpi_rst_w)
 
-	,.clk_i     (pi1r_clk_w)
+	,.clk_i     (wbpi_clk_w)
 	,.clk_phy_i (clk_2x_w)
 
 	,.sclk_o (flash_sclk)
@@ -298,13 +299,16 @@ sdcard_spi #(
 	,.do_i   (flash_do)
 	,.cs_o   (flash_cs)
 
-	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_SDCARD])
-	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_SDCARD])
-	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_SDCARD])
-	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_SDCARD])
-	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_SDCARD])
-	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_SDCARD])
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_SDCARD])
+	,.wb_cyc_i   (s_wbpi_cyc_w[S_WBPI_SDCARD])
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_SDCARD])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_SDCARD])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_SDCARD])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_SDCARD])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_SDCARD])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_SDCARD])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SDCARD])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SDCARD])
+	,.wb_mapsz_o (s_wbpi_mapsz_w[S_WBPI_SDCARD])
 
 	,.irq_stb_o (irq_src_stb_w[IRQ_SDCARD])
 	,.irq_rdy_i (irq_src_rdy_w[IRQ_SDCARD])
@@ -316,56 +320,58 @@ localparam RAMCACHESZ = /* In (ARCHBITSZ/8) units */
 	((1024/(ARCHBITSZ/8))*(8/RAMCACHEWAYCOUNT));
 
 devtbl #(
-
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.RAMCACHESZ (RAMCACHESZ)
-	,.DEVMAPCNT  (PI1RSLAVECOUNT)
+	,.DEVMAPCNT  (WBPI_SLAVECOUNT)
 	,.SOCID      (1)
-
 ) devtbl (
 
-	 .rst_i (pi1r_rst_w)
+	 .rst_i (wbpi_rst_w)
 
 	,.rst0_o (devtbl_rst0_w)
 	,.rst1_o (devtbl_rst1_w)
 
-	,.clk_i (pi1r_clk_w)
+	,.clk_i (wbpi_clk_w)
 
-	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_DEVTBL])
-	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_DEVTBL])
-	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_DEVTBL])
-	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_DEVTBL])
-	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_DEVTBL])
-	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_DEVTBL])
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_DEVTBL])
+	,.wb_cyc_i   (s_wbpi_cyc_w[S_WBPI_DEVTBL])
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_DEVTBL])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_DEVTBL])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_DEVTBL])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_DEVTBL])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_DEVTBL])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_DEVTBL])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_DEVTBL])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_DEVTBL])
+	,.wb_mapsz_o (s_wbpi_mapsz_w[S_WBPI_DEVTBL])
 
-	,.dev_id_i     (devtbl_id_flat_w)
-	,.dev_mapsz_i  (devtbl_mapsz_flat_w)
-	,.dev_useirq_i (devtbl_useintr_flat_w)
+	,.dev_id_i     (devtbl_id_w)
+	,.dev_mapsz_i  (devtbl_mapsz_w)
+	,.dev_useirq_i (devtbl_useirq_w)
 );
 
-assign devtbl_id_w     [S_PI1R_DEVTBL] = 7;
-assign devtbl_useintr_w[S_PI1R_DEVTBL] = 0;
+assign dev_id_w    [S_WBPI_DEVTBL] = 7;
+assign dev_useirq_w[S_WBPI_DEVTBL] = 0;
 
 irqctrl #(
-
 	 .ARCHBITSZ   (ARCHBITSZ)
 	,.IRQSRCCOUNT (IRQSRCCOUNT)
 	,.IRQDSTCOUNT (IRQDSTCOUNT)
-
 ) irqctrl (
 
-	 .rst_i (pi1r_rst_w)
+	 .rst_i (wbpi_rst_w)
 
-	,.clk_i (pi1r_clk_w)
+	,.clk_i (wbpi_clk_w)
 
-	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_IRQCTRL])
-	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_IRQCTRL])
-	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_IRQCTRL])
-	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_IRQCTRL])
-	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_IRQCTRL])
-	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_IRQCTRL])
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_IRQCTRL])
+	,.wb_cyc_i   (s_wbpi_cyc_w[S_WBPI_IRQCTRL])
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_IRQCTRL])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_IRQCTRL])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_IRQCTRL])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_IRQCTRL])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_IRQCTRL])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_IRQCTRL])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_IRQCTRL])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_IRQCTRL])
+	,.wb_mapsz_o (s_wbpi_mapsz_w[S_WBPI_IRQCTRL])
 
 	,.irq_dst_stb_o (irq_dst_stb_w)
 	,.irq_dst_rdy_i (irq_dst_rdy_w)
@@ -375,31 +381,31 @@ irqctrl #(
 	,.irq_src_rdy_o (irq_src_rdy_w)
 );
 
-assign devtbl_id_w     [S_PI1R_IRQCTRL] = 3;
-assign devtbl_useintr_w[S_PI1R_IRQCTRL] = 0;
+assign dev_id_w    [S_WBPI_IRQCTRL] = 3;
+assign dev_useirq_w[S_WBPI_IRQCTRL] = 0;
 
 uart_hw #(
-
 	 .ARCHBITSZ  (ARCHBITSZ)
-	,.PHYCLKFREQ (CLK1XFREQ)
+	,.PHYCLKFREQ (WBPI_CLKFREQ)
 	,.BUFSZ      (2048)
-
 ) uart (
 
 	 .rst_i (!pll_locked || rst_p
-		/* pi1r_rst_w is not used such that on software reset,
+		/* wbpi_rst_w is not used such that on software reset,
 		   all buffered data get a chance to be transmitted */)
+	,.clk_i     (wbpi_clk_w)
+	,.clk_phy_i (wbpi_clk_w)
 
-	,.clk_i     (pi1r_clk_w)
-	,.clk_phy_i (clk_1x_w)
-
-	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_UART])
-	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_UART])
-	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_UART])
-	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_UART])
-	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_UART])
-	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_UART])
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_UART])
+	,.wb_cyc_i   (s_wbpi_cyc_w[S_WBPI_UART])
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_UART])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_UART])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_UART])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_UART])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_UART])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_UART])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_UART])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_UART])
+	,.wb_mapsz_o (s_wbpi_mapsz_w[S_WBPI_UART])
 
 	,.irq_stb_o (irq_src_stb_w[IRQ_UART])
 	,.irq_rdy_i (irq_src_rdy_w[IRQ_UART])
@@ -408,8 +414,8 @@ uart_hw #(
 	,.tx_o (uart_tx)
 );
 
-assign devtbl_id_w     [S_PI1R_UART] = 5;
-assign devtbl_useintr_w[S_PI1R_UART] = 1;
+assign dev_id_w    [S_WBPI_UART] = 5;
+assign dev_useirq_w[S_WBPI_UART] = 1;
 
 reg [RST_CNTR_BITSZ -1 : 0] ram_rst_cntr = {RST_CNTR_BITSZ{1'b1}};
 always @ (posedge clk120mhz) begin
@@ -419,82 +425,48 @@ end
 // Because dcache.INITFILE is used only after a global reset, resetting RAM must happen only then.
 wire ram_rst_w = (|ram_rst_cntr);
 
-wire [2 -1 : 0]             dcache_op_w;
-wire [ADDRBITSZ -1 : 0]     dcache_addr_w;
-wire [ARCHBITSZ -1 : 0]     dcache_data_w1;
-wire [ARCHBITSZ -1 : 0]     dcache_data_w0;
-wire [(ARCHBITSZ/8) -1 : 0] dcache_sel_w;
-wire                        dcache_rdy_w;
+wire                             dcache_wb_cyc_w;
+wire                             dcache_wb_stb_w;
+wire                             dcache_wb_we_w;
+wire [WBPI_ADDRBITSZ -1 : 0]     dcache_wb_addr_w;
+wire [(WBPI_ARCHBITSZ/8) -1 : 0] dcache_wb_sel_w;
+wire [WBPI_ARCHBITSZ -1 : 0]     dcache_wb_dato_w;
+wire                             dcache_wb_bsy_w;
+wire                             dcache_wb_ack_w;
+wire [WBPI_ARCHBITSZ -1 : 0]     dcache_wb_dati_w;
 
-pi1_dcache #(
-
-	 .ARCHBITSZ     (ARCHBITSZ)
-	,.CACHESETCOUNT (RAMCACHESZ)
+dcache #(
+	 .ARCHBITSZ     (WBPI_ARCHBITSZ)
+	,.CACHESETCOUNT (RAMCACHESZ/(WBPI_ARCHBITSZ/ARCHBITSZ))
 	,.CACHEWAYCOUNT (RAMCACHEWAYCOUNT)
-	,.BUFFERDEPTH   (64)
-
 ) dcache (
 
 	 .rst_i (ram_rst_w)
 
-	,.clk_i (pi1r_clk_w)
+	,.clk_i (wbpi_clk_w)
 
-	,.crst_i    (ram_rst_w)
-	,.cenable_i (1'b1)
-	,.cmiss_i   (1'b0)
-	,.conly_i   (1'b0)
+	,.conly_i (1'b0)
+	,.cmiss_i (1'b0)
 
-	,.m_pi1_op_i   (s_pi1r_op_w[S_PI1R_RAM])
-	,.m_pi1_addr_i (s_pi1r_addr_w[S_PI1R_RAM])
-	,.m_pi1_data_i (s_pi1r_data_w0[S_PI1R_RAM])
-	,.m_pi1_data_o (s_pi1r_data_w1[S_PI1R_RAM])
-	,.m_pi1_sel_i  (s_pi1r_sel_w[S_PI1R_RAM])
-	,.m_pi1_rdy_o  (s_pi1r_rdy_w[S_PI1R_RAM])
+	,.m_wb_cyc_i  (s_wbpi_cyc_w[S_WBPI_RAM])
+	,.m_wb_stb_i  (s_wbpi_stb_w[S_WBPI_RAM])
+	,.m_wb_we_i   (s_wbpi_we_w[S_WBPI_RAM])
+	,.m_wb_addr_i (s_wbpi_addr_w[S_WBPI_RAM])
+	,.m_wb_sel_i  (s_wbpi_sel_w[S_WBPI_RAM])
+	,.m_wb_dat_i  (s_wbpi_dato_w[S_WBPI_RAM])
+	,.m_wb_bsy_o  (s_wbpi_bsy_w[S_WBPI_RAM])
+	,.m_wb_ack_o  (s_wbpi_ack_w[S_WBPI_RAM])
+	,.m_wb_dat_o  (s_wbpi_dati_w[S_WBPI_RAM])
 
-	,.s_pi1_op_o   (dcache_op_w)
-	,.s_pi1_addr_o (dcache_addr_w)
-	,.s_pi1_data_i (dcache_data_w1)
-	,.s_pi1_data_o (dcache_data_w0)
-	,.s_pi1_sel_o  (dcache_sel_w)
-	,.s_pi1_rdy_i  (dcache_rdy_w)
-);
-
-wire                        wb4_cyc_w;
-wire                        wb4_stb_w;
-wire                        wb4_we_w;
-wire [ARCHBITSZ -1 : 0]     wb4_addr_w;
-wire [ARCHBITSZ -1 : 0]     wb4_data_w0;
-wire [(ARCHBITSZ/8) -1 : 0] wb4_sel_w;
-wire                        wb4_stall_w;
-wire                        wb4_ack_w;
-wire [ARCHBITSZ -1 : 0]     wb4_data_w1;
-
-pi1_to_wb4 #(
-
-	.ARCHBITSZ (ARCHBITSZ)
-
-) pi1_to_wb4 (
-
-	 .rst_i (ram_rst_w)
-
-	,.clk_i (pi1r_clk_w)
-
-	,.pi1_op_i   (dcache_op_w)
-	,.pi1_addr_i (dcache_addr_w)
-	,.pi1_data_i (dcache_data_w0)
-	,.pi1_data_o (dcache_data_w1)
-	,.pi1_sel_i  (dcache_sel_w)
-	,.pi1_rdy_o  (dcache_rdy_w)
-
-	,.wb4_cyc_o   (wb4_cyc_w)
-	,.wb4_stb_o   (wb4_stb_w)
-	,.wb4_we_o    (wb4_we_w)
-	,.wb4_addr_o  (wb4_addr_w)
-	,.wb4_data_o  (wb4_data_w0)
-	,.wb4_sel_o   (wb4_sel_w)
-	,.wb4_stall_i (wb4_stall_w)
-	,.wb4_ack_i   (wb4_ack_w)
-	,.wb4_data_i  (wb4_data_w1)
+	,.s_wb_cyc_o  (dcache_wb_cyc_w)
+	,.s_wb_stb_o  (dcache_wb_stb_w)
+	,.s_wb_we_o   (dcache_wb_we_w)
+	,.s_wb_addr_o (dcache_wb_addr_w)
+	,.s_wb_sel_o  (dcache_wb_sel_w)
+	,.s_wb_dat_o  (dcache_wb_dato_w)
+	,.s_wb_bsy_i  (dcache_wb_bsy_w)
+	,.s_wb_ack_i  (dcache_wb_ack_w)
+	,.s_wb_dat_i  (dcache_wb_dati_w)
 );
 
 wb4sdram #(
@@ -512,7 +484,7 @@ wb4sdram #(
 
 	 .rst_i (ram_rst_w)
 
-	,.clk_i (pi1r_clk_w)
+	,.clk_i (wbpi_clk_w)
 
 	,.sdram_clk_o   (sdram_ck)
 	,.sdram_cke_o   (sdram_cke)
@@ -524,54 +496,53 @@ wb4sdram #(
 	,.sdram_ba_o    (sdram_ba)
 	,.sdram_data_io (sdram_dq)
 
-	,.stb_i   (wb4_stb_w)
-	,.we_i    (wb4_we_w)
-	,.sel_i   (wb4_sel_w)
-	,.cyc_i   (wb4_cyc_w)
-	,.addr_i  (wb4_addr_w)
-	,.data_i  (wb4_data_w0)
-	,.data_o  (wb4_data_w1)
-	,.stall_o (wb4_stall_w)
-	,.ack_o   (wb4_ack_w)
+	,.cyc_i   (dcache_wb_cyc_w)
+	,.stb_i   (dcache_wb_stb_w)
+	,.we_i    (dcache_wb_we_w)
+	,.addr_i  ({dcache_wb_addr_w, {WBPI_CLOG2ARCHBITSZBY8{1'b0}}})
+	,.sel_i   (dcache_wb_sel_w)
+	,.data_i  (dcache_wb_dato_w)
+	,.stall_o (dcache_wb_bsy_w)
+	,.ack_o   (dcache_wb_ack_w)
+	,.data_o  (dcache_wb_dati_w)
 );
 
-assign s_pi1r_mapsz_w[S_PI1R_RAM] = (1 << (
+assign s_wbpi_mapsz_w[S_WBPI_RAM] = (1 << (
 	(CLOG2SDRAMROWCOUNT + CLOG2SDRAMBANKCOUNT + (CLOG2SDRAMCOLUMNCOUNT - CLOG2SDRAMBURSTLENGTH)) +
 	clog2((SDRAMDQBITSIZE * SDRAMBURSTLENGTH) / 8)));
 
-assign devtbl_id_w     [S_PI1R_RAM] = 1;
-assign devtbl_useintr_w[S_PI1R_RAM] = 0;
+assign dev_id_w    [S_WBPI_RAM] = 1;
+assign dev_useirq_w[S_WBPI_RAM] = 0;
 
 bootldr #(
-
-	 .ARCHBITSZ (ARCHBITSZ)
-
+	 .ARCHBITSZ (WBPI_ARCHBITSZ)
 ) bootldr (
 
-	.clk_i (pi1r_clk_w)
+	 .rst_i (wbpi_rst_w)
 
-	,.pi1_op_i    (s_pi1r_op_w[S_PI1R_BOOTLDR])
-	,.pi1_addr_i  (s_pi1r_addr_w[S_PI1R_BOOTLDR])
-	,.pi1_data_i  (s_pi1r_data_w0[S_PI1R_BOOTLDR])
-	,.pi1_data_o  (s_pi1r_data_w1[S_PI1R_BOOTLDR])
-	,.pi1_sel_i   (s_pi1r_sel_w[S_PI1R_BOOTLDR])
-	,.pi1_rdy_o   (s_pi1r_rdy_w[S_PI1R_BOOTLDR])
-	,.pi1_mapsz_o (s_pi1r_mapsz_w[S_PI1R_BOOTLDR])
+	,.clk_i (wbpi_clk_w)
+
+	,.wb_cyc_i   (s_wbpi_cyc_w[S_WBPI_BOOTLDR])
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_BOOTLDR])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_BOOTLDR])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_BOOTLDR])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_BOOTLDR])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_BOOTLDR])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_BOOTLDR])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_BOOTLDR])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_BOOTLDR])
+	,.wb_mapsz_o (s_wbpi_mapsz_w[S_WBPI_BOOTLDR])
 );
 
-assign devtbl_id_w     [S_PI1R_BOOTLDR] = 0;
-assign devtbl_useintr_w[S_PI1R_BOOTLDR] = 0;
+assign dev_id_w    [S_WBPI_BOOTLDR] = 0;
+assign dev_useirq_w[S_WBPI_BOOTLDR] = 0;
 
-// PI1RDEFAULTSLAVEINDEX to catch invalid physical address space access.
-localparam INVALIDDEVMAPSZ = ('h1000/* 4KB */);
-//s_pi1r_op_w[S_PI1R_INVALIDDEV];
-//s_pi1r_addr_w[S_PI1R_INVALIDDEV];
-//s_pi1r_data_w0[S_PI1R_INVALIDDEV];
-assign s_pi1r_data_w1[S_PI1R_INVALIDDEV] = {PI1RARCHBITSZ{1'b0}};
-//s_pi1r_sel_w[S_PI1R_INVALIDDEV];
-assign s_pi1r_rdy_w[S_PI1R_INVALIDDEV]   = 1'b1;
-assign s_pi1r_mapsz_w[S_PI1R_INVALIDDEV] = INVALIDDEVMAPSZ;
-assign devtbl_id_w     [S_PI1R_INVALIDDEV] = 0;
-assign devtbl_useintr_w[S_PI1R_INVALIDDEV] = 0;
+// WBPI_DEFAULTSLAVEINDEX to catch invalid physical address space access.
+assign s_wbpi_bsy_w[S_WBPI_INVALIDDEV] = 0;
+assign s_wbpi_ack_w[S_WBPI_INVALIDDEV] = 0;
+assign s_wbpi_mapsz_w[S_WBPI_INVALIDDEV] = ('h1000/* 4KB */);
+
+assign dev_id_w    [S_WBPI_INVALIDDEV] = 0;
+assign dev_useirq_w[S_WBPI_INVALIDDEV] = 0;
 
 endmodule

@@ -26,6 +26,9 @@
 `define PUFMULDSP
 `define PUFDIV
 //`define PUDCACHE
+`define PUSC2
+`define PUSC2SKIPSC1LI8
+`define PUSC2SKIPSC1CPY
 `define PUCOUNT 1 /* 8 max */
 `include "pu/cpu.v"
 
@@ -260,6 +263,7 @@ localparam WBPI_MASTERCOUNT       = (M_WBPI_LAST + 1);
 localparam WBPI_SLAVECOUNT        = (S_WBPI_INVALIDDEV + 1);
 localparam WBPI_DEFAULTSLAVEINDEX = S_WBPI_INVALIDDEV;
 localparam WBPI_FIRSTSLAVEADDR    = 0;
+localparam WBPI_MAXPENDINGACK     = 16;
 localparam WBPI_DNSIZR            = 11'b01010111110;
 localparam WBPI_ARCHBITSZ         = 64/* RAM ARCHBITSZ */;
 localparam WBPI_CLOG2ARCHBITSZBY8 = clog2(WBPI_ARCHBITSZ/8);
@@ -317,7 +321,6 @@ localparam DCACHEWAYCOUNT = ((PUCOUNT > 2) ? 1 : 2);
 localparam TLBWAYCOUNT    = 1;
 
 cpu #(
-
 	 .ARCHBITSZ      (ARCHBITSZ)
 	,.XARCHBITSZ     (WBPI_ARCHBITSZ)
 	,.CLKFREQ        (CLK2XFREQ)
@@ -332,7 +335,7 @@ cpu #(
 	,.FADDFSUBCNT    (2)
 	,.FMULCNT        (2)
 	,.FDIVCNT        (4)
-
+	,.MAXPENDINGACK  (WBPI_MAXPENDINGACK)
 ) cpu (
 
 	 .rst_i (rst_w || !litedram_pll_locked)
@@ -370,12 +373,10 @@ cpu #(
 );
 
 sdcard_spi #(
-
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.XARCHBITSZ (WBPI_ARCHBITSZ)
 	,.CLKFREQ    (WBPI_CLKFREQ)
 	,.PHYCLKFREQ (CLK4XFREQ)
-
 ) sdcard (
 
 	 .rst_i (wbpi_rst_w || sd_cd)
@@ -407,20 +408,17 @@ assign dev_id_w    [S_WBPI_SDCARD] = 4;
 assign dev_useirq_w[S_WBPI_SDCARD] = 1;
 
 localparam RAMCACHEWAYCOUNT = 2;
-
 localparam RAMCACHESZ = /* In (ARCHBITSZ/8) units */
 	((1024/(ARCHBITSZ/8))*(32/RAMCACHEWAYCOUNT));
 
 wire devtbl_rst2_w;
 
 devtbl #(
-
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.RAMCACHESZ (RAMCACHESZ)
 	,.PRELDRADDR ('h1000)
 	,.DEVMAPCNT  (WBPI_SLAVECOUNT)
 	,.SOCID      (2)
-
 ) devtbl (
 
 	 .rst_i (wbpi_rst_w)
@@ -451,11 +449,9 @@ assign dev_id_w    [S_WBPI_DEVTBL] = 7;
 assign dev_useirq_w[S_WBPI_DEVTBL] = 0;
 
 gpio #(
-
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.CLKFREQ    (WBPI_CLKFREQ)
 	,.IOCOUNT    (GP0IOCOUNT)
-
 ) gpio_switches_leds (
 
 	 .rst_i (wbpi_rst_w)
@@ -484,11 +480,9 @@ assign dev_id_w    [S_WBPI_GP0IO] = 6;
 assign dev_useirq_w[S_WBPI_GP0IO] = 1;
 
 gpio #(
-
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.CLKFREQ    (WBPI_CLKFREQ)
 	,.IOCOUNT    (GP1IOCOUNT)
-
 ) gpio_buttons (
 
 	 .rst_i (wbpi_rst_w)
@@ -517,11 +511,9 @@ assign dev_id_w    [S_WBPI_GP1IO] = 6;
 assign dev_useirq_w[S_WBPI_GP1IO] = 1;
 
 irqctrl #(
-
 	 .ARCHBITSZ   (ARCHBITSZ)
 	,.IRQSRCCOUNT (IRQSRCCOUNT)
 	,.IRQDSTCOUNT (IRQDSTCOUNT)
-
 ) irqctrl (
 
 	 .rst_i (wbpi_rst_w)
@@ -551,11 +543,9 @@ assign dev_id_w    [S_WBPI_IRQCTRL] = 3;
 assign dev_useirq_w[S_WBPI_IRQCTRL] = 0;
 
 uart_hw #(
-
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.PHYCLKFREQ (WBPI_CLKFREQ)
 	,.BUFSZ      (4096)
-
 ) uart (
 
 	 .rst_i (!pll_locked || rst_p
@@ -586,11 +576,9 @@ assign dev_id_w    [S_WBPI_UART] = 5;
 assign dev_useirq_w[S_WBPI_UART] = 1;
 
 uart_hw #(
-
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.PHYCLKFREQ (WBPI_CLKFREQ)
 	,.BUFSZ      (4096)
-
 ) uart1 (
 
 	 .rst_i (!pll_locked || rst_p
@@ -650,15 +638,13 @@ wire                             dcache_wb_ack_w;
 wire [WBPI_ARCHBITSZ -1 : 0]     dcache_wb_dati_w;
 
 dcache #(
-
 	 .ARCHBITSZ     (WBPI_ARCHBITSZ)
 	,.CACHESETCOUNT (RAMCACHESZ/(WBPI_ARCHBITSZ/ARCHBITSZ))
 	,.CACHEWAYCOUNT (RAMCACHEWAYCOUNT)
 	,.INITFILE      ("litedram.hex")
-
 ) dcache (
 
-	 .rst_i (wb_rst_user_port_w)
+	 .rst_i (ram_rst_w)
 
 	,.clk_i (wb_clk_user_port_w)
 
@@ -756,9 +742,7 @@ assign dev_id_w    [S_WBPI_RAMCTRL] = 0;
 assign dev_useirq_w[S_WBPI_RAMCTRL] = 0;
 
 bootldr #(
-
 	 .ARCHBITSZ (WBPI_ARCHBITSZ)
-
 ) bootldr (
 
 	 .rst_i (wbpi_rst_w)
