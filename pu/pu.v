@@ -204,10 +204,6 @@ module pu (
 	,dbg_tx_data_o
 	,dbg_tx_rdy_i
 	`endif
-
-	`ifdef SIMULATION
-	,pc_o
-	`endif
 );
 
 `include "lib/clog2.v"
@@ -287,10 +283,6 @@ output wire [8 -1 : 0] dbg_tx_data_o;
 input  wire            dbg_tx_rdy_i;
 `endif
 
-`ifdef SIMULATION
-output wire [ARCHBITSZ -1 : 0] pc_o;
-`endif
-
 localparam MEMNOOP		= 2'b00;
 localparam MEMWRITEOP		= 2'b01;
 localparam MEMREADOP		= 2'b10;
@@ -337,22 +329,24 @@ assign halted_o = (inhalt && !isflagdisextintr);
 `include "./dbg.pu.v"
 `endif
 
-`ifdef SIMULATION_pc_o
+`ifdef SIMULATION_pc_w
 integer fd;
 initial begin
-	fd = $fopen("pc_o.txt","w");
+	fd = $fopen("pc_w.txt","w");
 	if (!fd)
-		$display("could not create \"pc_o.txt\"");
+		$display("could not create \"pc_w.txt\"");
 end
+reg [ARCHBITSZ -1 : 0] pc_w_saved = 0;
+reg pc_dump_en = 0;
 always @ (posedge clk_i) begin
 	if (rst_i)
 		pc_dump_en <= 0;
 	else if (!pc_dump_en) begin
-		if (pc_o == 'h8000)
+		if (pc_w == 'h8000)
 			pc_dump_en <= 1;
-	end else if (sequencerreadyandgprrdy12 && pc_o != pc_o_saved) begin
-		pc_o_saved <= pc_o;
-		$fwrite(fd, "0x%x: %d(0x%x) %d(0x%x)\n", pc_o, gpridx1[3:0], gprdata1, gpridx2[3:0], gprdata2);
+	end else if (sequencerreadyandgprrdy12 && pc_w != pc_w_saved) begin
+		pc_w_saved <= pc_w;
+		$fwrite(fd, "0x%x: %d(0x%x) %d(0x%x)\n", pc_w, gpridx1[3:0], gprdata1, gpridx2[3:0], gprdata2);
 		$fflush(fd);
 	end
 end

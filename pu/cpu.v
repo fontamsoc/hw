@@ -62,10 +62,6 @@ module cpu (
 	,dbg_tx_data_o
 	,dbg_tx_rdy_i
 	`endif
-
-	`ifdef SIMULATION
-	,pc_o
-	`endif
 );
 
 `include "lib/clog2.v"
@@ -136,10 +132,6 @@ output wire            dbg_rx_rdy_o;
 output reg             dbg_tx_stb_o;  // ### comb-block-reg.
 output reg  [8 -1 : 0] dbg_tx_data_o; // ### comb-block-reg.
 input  wire            dbg_tx_rdy_i;
-`endif
-
-`ifdef SIMULATION
-output wire [(ARCHBITSZ * PUCOUNT) -1 : 0] pc_o;
 `endif
 
 wire                         arbiter_wb_cyc_i  [PUCOUNT -1 : 0];
@@ -260,19 +252,11 @@ always @* begin
 end
 `endif
 
-`ifdef SIMULATION
-wire [ARCHBITSZ -1 : 0] pc_w [PUCOUNT -1 : 0];
-`endif
-
 genvar genpu_idx;
 generate for (
 	genpu_idx = 0;
 	genpu_idx < PUCOUNT;
 	genpu_idx = genpu_idx + 1) begin :genpu
-
-`ifdef SIMULATION
-assign pc_o[((genpu_idx+1) * ARCHBITSZ) -1 : genpu_idx * ARCHBITSZ] = pc_w[genpu_idx];
-`endif
 
 pu #(
 
@@ -332,10 +316,6 @@ pu #(
 	,.dbg_tx_stb_o  (dbg_tx_stb_o_[genpu_idx])
 	,.dbg_tx_data_o (dbg_tx_data_o_[genpu_idx])
 	,.dbg_tx_rdy_i  (dbg_tx_rdy_i)
-	`endif
-
-	`ifdef SIMULATION
-	,.pc_o (pc_w[genpu_idx])
 	`endif
 );
 

@@ -361,7 +361,7 @@ always @ (posedge clk_i) begin
 
 		`ifdef SIMULATION
 		SEQHALT: begin
-			$display("0x%x: halt %d\n", pc_o, clkcyclecnt);
+			$display("0x%x: halt %d\n", pc_w, clkcyclecnt);
 			$finish;
 		end
 		`endif

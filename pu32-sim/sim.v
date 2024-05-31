@@ -211,13 +211,6 @@ localparam ICACHEWAYCOUNT = 4;
 localparam DCACHEWAYCOUNT = 2;
 localparam TLBWAYCOUNT    = 1;
 
-wire [(ARCHBITSZ * PUCOUNT) -1 : 0] pc_w_flat;
-wire [ARCHBITSZ -1 : 0] pc_w [PUCOUNT -1 : 0] /* verilator public */;
-genvar gen_pc_w_idx;
-generate for (gen_pc_w_idx = 0; gen_pc_w_idx < PUCOUNT; gen_pc_w_idx = gen_pc_w_idx + 1) begin :gen_pc_w
-assign pc_w[gen_pc_w_idx] = pc_w_flat[((gen_pc_w_idx+1) * ARCHBITSZ) -1 : gen_pc_w_idx * ARCHBITSZ];
-end endgenerate
-
 cpu #(
 
 	 .ARCHBITSZ      (ARCHBITSZ)
@@ -270,9 +263,13 @@ cpu #(
 	,.rstaddr2_i (('h8000-(14/*within parkpu()*/))>>1)
 
 	,.id_i (0)
-
-	,.pc_o (pc_w_flat)
 );
+
+wire [ARCHBITSZ -1 : 0] pc_w [PUCOUNT -1 : 0] /* verilator public */;
+genvar gen_pc_w_idx;
+generate for (gen_pc_w_idx = 0; gen_pc_w_idx < PUCOUNT; gen_pc_w_idx = gen_pc_w_idx + 1) begin :gen_pc_w
+assign pc_w[gen_pc_w_idx] = cpu.genpu[gen_pc_w_idx].pu.pc_w;
+end endgenerate
 
 sdcard_spi #(
 
