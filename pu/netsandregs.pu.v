@@ -42,25 +42,6 @@ reg[3 -1 : 0] faultreason;
 // the sequencer from decoding instructions.
 reg dohalt;
 
-reg[ARCHBITSZ -1 : 0] timer;
-wire timertriggered = !(|timer);
-
-always @ (posedge clk_i) begin
-	if (miscrdyandsequencerreadyandgprrdy1 && isopsettimer && (inkernelmode || isflagsettimer))
-		timer <= gprdata1;
-	else if (!(&timer) && timer)
-		timer <= timer - 1'b1;
-end
-
-reg[(ARCHBITSZ*2) -1 : 0] clkcyclecnt;
-
-always @ (posedge clk_i) begin
-	if (rst_i)
-		clkcyclecnt <= 0;
-	else
-		clkcyclecnt <= clkcyclecnt + 1'b1;
-end
-
 // ---------- Registers and nets used for instruction buffering ----------
 
 reg[XARCHBITSZ -1 : 0] instrbuf[INSTRBUFFERSIZE -1 : 0];
@@ -516,6 +497,9 @@ wire inkernelmode_kmodepaging;
 
 `ifdef PUMMU
 
+reg itlbwritten;
+reg dtlbwritten;
+
 wire inuserspace;
 wire kmodepaging;
 
@@ -709,6 +693,9 @@ localparam SEQHALT    = 3'd6;
 localparam SEQSRET    = 3'd7;
 reg [3 -1 : 0] sequencerstate; // ### comb-block-reg.
 
+reg[ARCHBITSZ -1 : 0] timer;
+wire timertriggered = !(|timer);
+
 wire isflagdistimerintr;
 wire isflagdisextintr;
 
@@ -849,7 +836,25 @@ wire sequencerintrsysop = (inusermode & !(
 
 wire isopjtrue = (isopj && (isoptype2 || (|gprdata1 == instrbufdato0[0])));
 
+wire isopgettlb_or_isopclrtlb_found;
+reg isopgettlb_or_isopclrtlb_found_sampled;
 wire isopgettlb_or_isopclrtlb_found_posedge;
+
+always @ (posedge clk_i) begin
+	if (miscrdyandsequencerreadyandgprrdy1 && isopsettimer && (inkernelmode || isflagsettimer))
+		timer <= gprdata1;
+	else if (!(&timer) && timer)
+		timer <= timer - 1'b1;
+end
+
+reg[(ARCHBITSZ*2) -1 : 0] clkcyclecnt;
+
+always @ (posedge clk_i) begin
+	if (rst_i)
+		clkcyclecnt <= 0;
+	else
+		clkcyclecnt <= clkcyclecnt + 1'b1;
+end
 
 // ---------- Registers and nets implementing the mmu ----------
 
@@ -906,7 +911,6 @@ wire dtlbmiss__ [TLBWAYCOUNT -1 : 0];
 wire dtlben = (
 	(inusermode && (inuserspace || doutofrange)) ||
 	(inkernelmode_kmodepaging && doutofrange));
-reg dtlbwritten;
 reg[CLOG2TLBSETCOUNT -1 : 0] dtlbsetprev;
 reg dtlbre_;
 `ifdef PUREGMMUOUTPUT
@@ -955,7 +959,6 @@ wire itlbmiss__ [TLBWAYCOUNT -1 : 0];
 wire itlben = (
 	(inusermode && (inuserspace || ioutofrange)) ||
 	(inkernelmode_kmodepaging && ioutofrange));
-reg itlbwritten;
 reg[CLOG2TLBSETCOUNT -1 : 0] itlbsetprev;
 reg itlbre_;
 `ifdef PUREGMMUOUTPUT
@@ -2319,9 +2322,8 @@ wire opgetsysreg1done = (miscrdyandsequencerreadyandgprrdy1 && isopgetsysreg1 &&
 		(isoptype2 && isflagcachecmds) ||
 		(isoptype3 && isflagmmucmds)));
 
-wire isopgettlb_or_isopclrtlb_found = (miscrdyandsequencerreadyandgprrdy12 && (
+assign isopgettlb_or_isopclrtlb_found = (miscrdyandsequencerreadyandgprrdy12 && (
 	(isopgettlb && (inkernelmode || isflagmmucmds)) || (isopclrtlb && (inkernelmode || isflagmmucmds))));
-reg isopgettlb_or_isopclrtlb_found_sampled;
 assign isopgettlb_or_isopclrtlb_found_posedge = (!isopgettlb_or_isopclrtlb_found_sampled && isopgettlb_or_isopclrtlb_found);
 
 always @* begin
@@ -2466,6 +2468,8 @@ assign sc2gprrdy2 = (gprrdywe && sc2gpridx2 == gprrdyidx) ? gprrdyval : gprrdy[s
 
 // ---------- Registers and nets used by opld ----------
 
+wire opldmemack;
+
 wire opldrqsts_full;
 
 wire opldrqsts_empty;
@@ -2539,7 +2543,7 @@ wire [ARCHBITSZ -1 : 0] opldresult;
 
 wire oplddone = !opldrsps_empty_r;
 
-wire opldmemack = (dcache_m_ack_o && !opldrqstseqs_empty_r && opldrqstseqs_seq == dcache_m_rsp_cnt);
+assign opldmemack = (dcache_m_ack_o && !opldrqstseqs_empty_r && opldrqstseqs_seq == dcache_m_rsp_cnt);
 
 `ifdef PUMMU
 wire opldfault_ = (dtlben && (dtlbmiss || dtlbnotreadable[dtlbwayhitidx]));
@@ -2743,6 +2747,8 @@ reg [CLOG2MAXPENDINGACK -1 : 0] opldstmemrqstseq;
 reg opldstmemrqstseqvalid;
 wire opldstmemack = (dcache_m_ack_o && opldstmemrqstseqvalid && opldstmemrqstseq == dcache_m_rsp_cnt);
 
+reg opldstmemrqst;
+
 always @ (posedge clk_i) begin
 	if (rst_i || opldstmemack)
 		opldstmemrqstseqvalid <= 0;
@@ -2753,8 +2759,6 @@ always @ (posedge clk_i) begin
 end
 
 reg opldstdone;
-
-reg opldstmemrqst;
 
 wire opldstrdy_ = (!(opldstmemrqst || opldstdone) && dtlbrdy_opldst && !__dcache_m_bsy);
 wire opldstrdy = (isopldst && opldstrdy_

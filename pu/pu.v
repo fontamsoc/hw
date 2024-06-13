@@ -13,15 +13,13 @@
 //
 // ICACHESETCOUNT
 // 	Number of instruction cache set.
-// 	Each cache set is ARCHBITSZ bits.
-// 	It must be at least 2, a power-of-2,
-// 	and less than or equal to 2^(ADDRBITSZ-1).
+// 	Each cache set is XARCHBITSZ bits.
+// 	It must be at least 2 and a power-of-2.
 //
 // DCACHESETCOUNT
 // 	Number of data cache set.
-// 	Each cache set is ARCHBITSZ bits.
-// 	It must be at least 2, a power-of-2,
-// 	and less than or equal to 2^(ADDRBITSZ-1).
+// 	Each cache set is XARCHBITSZ bits.
+// 	It must be at least 2 and a power-of-2.
 //
 // TLBSETCOUNT
 // 	Number of tlb entries.
@@ -310,10 +308,6 @@ localparam ADDRWITHINPAGEBITSZ = (12-CLOG2ARCHBITSZBY8);
 // Number of bits in a page number.
 localparam PAGENUMBITSZ = (ARCHBITSZ-12);
 
-assign irq_rdy_o = (inusermode && !isflagdisextintr && !dbgen);
-wire inhalt = (dohalt && inusermode && !dbgen);
-assign halted_o = (inhalt && !isflagdisextintr);
-
 `include "./opcodes.pu.v"
 `include "./netsandregs.pu.v"
 `include "./sequencer.pu.v"
@@ -323,6 +317,10 @@ assign halted_o = (inhalt && !isflagdisextintr);
 `ifdef PUDBG
 `include "./dbg.pu.v"
 `endif
+
+assign irq_rdy_o = (inusermode && !isflagdisextintr && !dbgen);
+wire inhalt = (dohalt && inusermode && !dbgen);
+assign halted_o = (inhalt && !isflagdisextintr);
 
 `ifdef SIMULATION_pc_w
 integer fd;

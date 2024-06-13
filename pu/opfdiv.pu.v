@@ -208,6 +208,8 @@ parameter EXPBITSZ  = 8;
 parameter MANTBITSZ = 23;
 parameter ROUNDING  = 1;
 
+localparam GUARDBITSZ = (ROUNDING ? 3/* Must be at least 2 */: 0);
+
 input wire rst_i;
 
 input wire clk_i;
@@ -265,8 +267,6 @@ always @ (posedge clk_i) begin
 		end
 	end
 end
-
-localparam GUARDBITSZ = (ROUNDING ? 3/* Must be at least 2 */: 0);
 
 wire [(EXPBITSZ+1)             -1 : 0] norm_exp_o;
 wire [(MANTBITSZ+1)+GUARDBITSZ -1 : 0] norm_mant_o;
