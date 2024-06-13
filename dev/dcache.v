@@ -115,7 +115,7 @@ end endgenerate
 
 reg cache_bsy;
 
-wire cache_we = (!rst_i && !cmiss_r && (
+wire cache_we = (!rst_i && (
 	(state == TESTHIT && !cache_bsy && m_wb_we_r) ||
 	(!s_wb_we_o && s_wb_ack_i)));
 
