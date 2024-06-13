@@ -70,12 +70,9 @@ output reg                         wb_ack_o;
 output reg  [ARCHBITSZ -1 : 0]     wb_dat_o;
 output wire [ARCHBITSZ -1 : 0]     wb_mapsz_o;
 
-assign wb_mapsz_o = (SIZE*(ARCHBITSZ/8))
-	`ifdef SIMULATION
-	*2 // Double the memory mapping to catch pu prefetch
-	   // memory access that can occur beyond its size.
-	`endif
-	;
+// *2 is used to double the memory mapping to catch cpu
+// prefetch memory accesses that can occur beyond its size.
+assign wb_mapsz_o = ((SIZE*(ARCHBITSZ/8)) *2);
 
 reg [ARCHBITSZ -1 : 0] rom [0 : SIZE -1];
 
