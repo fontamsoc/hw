@@ -167,8 +167,8 @@ output wire [IRQSRCCOUNT -1 : 0] irq_src_rdy_o;
 
 assign wb_bsy_o = 1'b0;
 
-// Actual mmapsz is (1*(ARCHBITSZ/8)), but aligning to 64bits.
-assign wb_mapsz_o = (((ARCHBITSZ<64)?(64/ARCHBITSZ):1)*(ARCHBITSZ/8));
+// By convention, devices mapsz must be aligned to 128 bytes (1024 bits).
+assign wb_mapsz_o = 128;
 
 reg                    wb_stb_r;
 reg                    wb_we_r;

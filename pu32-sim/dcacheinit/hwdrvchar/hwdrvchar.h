@@ -41,14 +41,14 @@ static void hwdrvchar_init (hwdrvchar *dev, unsigned long baudrate) {
 			__asm__ __volatile__ (
 				"ldst %0, %1"
 				: "+r" (data)
-				: "r" (addr+8)
+				: "r" (addr+64)
 				: "memory");
 		} while ((data & 0b11) != HWDRVCHAR_CMDDEVRDY);
 		data = HWDRVCHAR_CMDDEVRDY;
 		__asm__ __volatile__ (
 			"ldst %0, %1"
 			: "+r" (data)
-			: "r" (addr+8)
+			: "r" (addr+64)
 			: "memory");
 	} while ((signed long)data >> 2); // Wait for the transmit buffer to be empty.
 
@@ -61,14 +61,14 @@ static void hwdrvchar_init (hwdrvchar *dev, unsigned long baudrate) {
 		__asm__ __volatile__ (
 			"ldst %0, %1"
 			: "+r" (data)
-			: "r" (addr+8)
+			: "r" (addr+64)
 			: "memory");
 	} while ((data & 0b11) != HWDRVCHAR_CMDDEVRDY);
 	data = HWDRVCHAR_CMDDEVRDY;
 	__asm__ __volatile__ (
 		"ldst %0, %1"
 		: "+r" (data)
-		: "r" (addr+8)
+		: "r" (addr+64)
 		: "memory");
 	dev->clkfreq = ((signed long)data >> 2);
 
@@ -81,14 +81,14 @@ static void hwdrvchar_init (hwdrvchar *dev, unsigned long baudrate) {
 		__asm__ __volatile__ (
 			"ldst %0, %1"
 			: "+r" (data)
-			: "r" (addr+8)
+			: "r" (addr+64)
 			: "memory");
 	} while ((data & 0b11) != HWDRVCHAR_CMDDEVRDY);
 	data = HWDRVCHAR_CMDDEVRDY;
 	__asm__ __volatile__ (
 		"stv %0, %1"
 		:: "r" (data),
-		   "r" (addr+8)
+		   "r" (addr+64)
 		:  "memory");
 
 	// Command HWDRVCHAR_CMDSETINTERRUPT to retrieve
@@ -101,14 +101,14 @@ static void hwdrvchar_init (hwdrvchar *dev, unsigned long baudrate) {
 		__asm__ __volatile__ (
 			"ldst %0, %1"
 			: "+r" (data)
-			: "r" (addr+8)
+			: "r" (addr+64)
 			: "memory");
 	} while ((data & 0b11) != HWDRVCHAR_CMDDEVRDY);
 	data = HWDRVCHAR_CMDDEVRDY;
 	__asm__ __volatile__ (
 		"ldst %0, %1"
 		: "+r" (data)
-		: "r" (addr+8)
+		: "r" (addr+64)
 		: "memory");
 	dev->bufsz = ((signed long)data >> 2);
 }
@@ -127,14 +127,14 @@ static inline unsigned long hwdrvchar_readable (hwdrvchar *dev) {
 		__asm__ __volatile__ (
 			"ldst %0, %1"
 			: "+r" (data)
-			: "r" (addr+8)
+			: "r" (addr+64)
 			: "memory");
 	} while ((data & 0b11) != HWDRVCHAR_CMDDEVRDY);
 	data = HWDRVCHAR_CMDDEVRDY;
 	__asm__ __volatile__ (
 		"ldst %0, %1"
 		: "+r" (data)
-		: "r" (addr+8)
+		: "r" (addr+64)
 		: "memory");
 	return ((signed long)data >> 2);
 }
@@ -177,14 +177,14 @@ static inline unsigned long hwdrvchar_writable (hwdrvchar *dev) {
 		__asm__ __volatile__ (
 			"ldst %0, %1"
 			: "+r" (data)
-			: "r" (addr+8)
+			: "r" (addr+64)
 			: "memory");
 	} while ((data & 0b11) != HWDRVCHAR_CMDDEVRDY);
 	data = HWDRVCHAR_CMDDEVRDY;
 	__asm__ __volatile__ (
 		"ldst %0, %1"
 		: "+r" (data)
-		: "r" (addr+8)
+		: "r" (addr+64)
 		: "memory");
 	return (dev->bufsz - ((signed long)data >> 2));
 }
@@ -229,14 +229,14 @@ static inline void hwdrvchar_interrupt (hwdrvchar *dev, unsigned long threshold)
 		__asm__ __volatile__ (
 			"ldst %0, %1"
 			: "+r" (data)
-			: "r" (addr+8)
+			: "r" (addr+64)
 			: "memory");
 	} while ((data & 0b11) != HWDRVCHAR_CMDDEVRDY);
 	data = HWDRVCHAR_CMDDEVRDY;
 	__asm__ __volatile__ (
 		"stv %0, %1"
 		:: "r" (data),
-		   "r" (addr+8)
+		   "r" (addr+64)
 		:  "memory");
 }
 

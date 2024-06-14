@@ -175,7 +175,9 @@ output wire tx_o;
 
 assign wb_bsy_o = 1'b0;
 
-assign wb_mapsz_o = ((128/ARCHBITSZ)*(ARCHBITSZ/8));
+// By convention, devices mapsz must be aligned to 128 bytes (1024 bits).
+localparam MAPSZ = 128;
+assign wb_mapsz_o = MAPSZ;
 
 reg                    wb_stb_r;
 reg                    wb_we_r;
@@ -203,7 +205,7 @@ reg [ARCHBITSZ -1 : 0] wb_dat_o_;
 
 // Half the memory mapping is used to send/receive data,
 // while the other half is used to issue commands.
-localparam ISCMDBIT = (clog2(64) - clog2(ARCHBITSZ));
+localparam ISCMDBIT = (clog2(MAPSZ/2) - CLOG2ARCHBITSZBY8);
 
 wire iscmd = (!rst_i && wb_stb_r && wb_we_r && wb_addr_r[ISCMDBIT]);
 
