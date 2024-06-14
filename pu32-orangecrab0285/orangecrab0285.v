@@ -38,7 +38,7 @@
 
 `include "dev/usb_serial.v"
 
-`include "dev/dcache.v"
+`include "lib/dcache.v"
 `include "lib/wb_cdc.v"
 `include "./litedram/litedram.v"
 

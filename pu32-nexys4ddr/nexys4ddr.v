@@ -42,7 +42,7 @@
 
 `include "dev/uart_hw.v"
 
-`include "dev/dcache.v"
+`include "lib/dcache.v"
 `include "./litedram/litedram.v"
 
 `include "dev/bootldr/bootldr.v"

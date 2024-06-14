@@ -159,7 +159,7 @@
 `include "lib/wb_upsizr.v"
 
 `ifdef PUDCACHE
-`include "dev/dcache.v"
+`include "lib/dcache.v"
 `endif
 
 module pu (
