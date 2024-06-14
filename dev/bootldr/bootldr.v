@@ -72,7 +72,9 @@ output wire [ARCHBITSZ -1 : 0]     wb_mapsz_o;
 
 // *2 is used to double the memory mapping to catch cpu
 // prefetch memory accesses that can occur beyond its size.
-assign wb_mapsz_o = ((SIZE*(ARCHBITSZ/8)) *2);
+localparam MAPSZ = ((SIZE*(ARCHBITSZ/8))*2);
+// By convention, devices mapsz must be aligned to 128 bytes (1024 bits).
+assign wb_mapsz_o = ((MAPSZ < 128) ? 128 : MAPSZ);
 
 reg [ARCHBITSZ -1 : 0] rom [0 : SIZE -1];
 

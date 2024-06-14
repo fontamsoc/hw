@@ -15,7 +15,9 @@ OBJCOPY := ${PREFIX}/bin/${ARCH}-elf-objcopy
 CFLAGS := -Werror -fdata-sections -ffunction-sections -Wl,--gc-sections -Os -g3
 CFLAGS += -fstack-usage
 
-.PHONY: clean
+.PHONY: all clean
+
+all: litedram.hex
 
 litedram.hex: litedram.lds litedram.c
 	${CC} -nostdlib -I. ${CFLAGS} -o litedram.elf litedram.c -Wl,-Tlitedram.lds

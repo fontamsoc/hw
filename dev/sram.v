@@ -95,7 +95,9 @@ reg [CLOG2DELAY -1 : 0] cntr = 0;
 
 assign wb_bsy_o = |cntr;
 
-assign wb_mapsz_o = (SIZE*(ARCHBITSZ/8));
+localparam MAPSZ = (SIZE*(ARCHBITSZ/8));
+// By convention, devices mapsz must be aligned to 128 bytes (1024 bits).
+assign wb_mapsz_o = ((MAPSZ < 128) ? 128 : MAPSZ);
 
 reg [ARCHBITSZ -1 : 0] ram [SIZE -1 : 0];
 
