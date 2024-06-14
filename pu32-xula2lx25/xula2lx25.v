@@ -30,7 +30,7 @@
 `include "dev/uart_hw.v"
 
 // wb4sdram is 32bits only.
-`include "dev/dcache.v"
+`include "lib/dcache.v"
 `include "lib/wb4sdram.v"
 
 `include "dev/bootldr/bootldr.v"

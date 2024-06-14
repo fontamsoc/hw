@@ -44,7 +44,7 @@
 
 //`define DCACHESRAM
 `ifdef DCACHESRAM
-`include "dev/dcache.v"
+`include "lib/dcache.v"
 `endif
 `include "dev/sram.v"
 

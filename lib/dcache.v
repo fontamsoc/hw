@@ -46,7 +46,7 @@ parameter CACHESETCOUNT = 2;
 parameter CACHEWAYCOUNT = 1;
 
 parameter REGCACHEHIT = 0;
-parameter REGDATINPUT = 0;
+parameter REGSLVINPUT = 0;
 
 parameter MAXPENDINGACK = 0; // Enables faster eviction when non-null.
 
@@ -105,7 +105,7 @@ reg [2 -1 : 0] state;
 
 reg                    _s_wb_ack_i;
 reg [ARCHBITSZ -1 : 0] _s_wb_dat_i;
-generate if (REGDATINPUT) begin
+generate if (REGSLVINPUT) begin
 	always @ (posedge clk_i) begin
 		_s_wb_ack_i <= s_wb_ack_i;
 		_s_wb_dat_i <= s_wb_dat_i;
