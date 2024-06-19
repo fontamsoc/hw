@@ -40,7 +40,7 @@ module wb_mux (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ         = 16;
+parameter ARCHBITSZ         = 32;
 parameter SLAVECOUNT        = 1;
 parameter DEFAULTSLAVEINDEX = 0;
 parameter FIRSTSLAVEADDR    = 0;

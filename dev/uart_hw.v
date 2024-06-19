@@ -141,7 +141,7 @@ module uart_hw (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 16;
+parameter ARCHBITSZ = 32;
 
 parameter PHYCLKFREQ = 1;
 parameter BUFSZ      = 2;

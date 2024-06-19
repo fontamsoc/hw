@@ -226,8 +226,8 @@ localparam CLOG2DCACHESETCOUNT = clog2(DCACHESETCOUNT);
 localparam CLOG2ICACHEWAYCOUNT = clog2(ICACHEWAYCOUNT);
 localparam CLOG2TLBWAYCOUNT    = clog2(TLBWAYCOUNT);
 
-parameter ARCHBITSZ  = 16;
-parameter XARCHBITSZ = 16; // TODO: Support all the way up to 1024 ...
+parameter ARCHBITSZ  = 32;
+parameter XARCHBITSZ = 32; // TODO: Support all the way up to 1024 ...
 
 localparam CLOG2ARCHBITSZ = clog2(ARCHBITSZ);
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);

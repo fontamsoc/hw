@@ -14,7 +14,7 @@ module addr (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 16;
+parameter ARCHBITSZ = 32;
 
 localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
 localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);

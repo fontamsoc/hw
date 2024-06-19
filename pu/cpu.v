@@ -81,8 +81,8 @@ parameter FDIVCNT        = 1;
 parameter MAXPENDINGACK  = 16;
 parameter VERSION        = {8'd1/*major-version*/, 8'd0/*minor-version*/};
 
-parameter ARCHBITSZ  = 16;
-parameter XARCHBITSZ = 16;
+parameter ARCHBITSZ  = 32;
+parameter XARCHBITSZ = 32;
 
 localparam CLOG2XARCHBITSZBY8 = clog2(XARCHBITSZ/8);
 localparam XADDRBITSZ = (XARCHBITSZ-CLOG2XARCHBITSZBY8);

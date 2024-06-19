@@ -157,8 +157,8 @@ module sdcard_spi (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 16;
-parameter XARCHBITSZ = 16;
+parameter ARCHBITSZ = 32;
+parameter XARCHBITSZ = 32;
 
 parameter CLKFREQ = 1;
 parameter PHYCLKFREQ = 1;

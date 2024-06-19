@@ -119,7 +119,7 @@ module pwm (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ  = 16;
+parameter ARCHBITSZ  = 32;
 parameter CLKFREQ    = 0;
 parameter IOCOUNT    = 0;
 parameter BUFFERSIZE = 0;

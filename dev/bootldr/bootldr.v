@@ -40,7 +40,7 @@ module bootldr (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 16;
+parameter ARCHBITSZ = 32;
 
 localparam SRCFILE =
 	ARCHBITSZ == 16 ? "bootldr16.hex" :

@@ -20,7 +20,7 @@ module idiv (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 16;
+parameter ARCHBITSZ = 32;
 parameter GPRCNT    = 32;
 
 localparam CLOG2ARCHBITSZ = clog2(ARCHBITSZ);
@@ -187,7 +187,7 @@ module opidiv (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 16;
+parameter ARCHBITSZ = 32;
 parameter GPRCNT    = 32;
 parameter INSTCNT   = 2; // pipeline depth.
 

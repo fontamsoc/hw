@@ -100,7 +100,7 @@ module usb_serial (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 16;
+parameter ARCHBITSZ = 32;
 
 parameter PHYCLKFREQ = 48000000;
 parameter BUFSZ      = 2;

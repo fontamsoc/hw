@@ -22,7 +22,7 @@ module imul (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 16;
+parameter ARCHBITSZ = 32;
 parameter GPRCNT    = 32;
 
 localparam CLOG2ARCHBITSZ = clog2(ARCHBITSZ);
@@ -110,7 +110,7 @@ module imul (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 16;
+parameter ARCHBITSZ = 32;
 parameter GPRCNT    = 32;
 
 localparam CLOG2ARCHBITSZ = clog2(ARCHBITSZ);
@@ -291,7 +291,7 @@ module opimul (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 16;
+parameter ARCHBITSZ = 32;
 parameter GPRCNT    = 32;
 parameter INSTCNT   = 2; // pipeline depth.
 

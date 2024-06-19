@@ -132,7 +132,7 @@ module irqctrl (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 16;
+parameter ARCHBITSZ = 32;
 
 parameter IRQSRCCOUNT = 0;
 parameter IRQDSTCOUNT = 0;
