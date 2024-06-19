@@ -1336,18 +1336,22 @@ wire [XARCHBITSZ -1 : 0] icachedato = icachedato_[icachewayhitidx];
 reg [CLOG2ICACHESETCOUNT -1 : 0] icachewecnt;
 // Register used to hold icache-way index to write next.
 reg [CLOG2ICACHEWAYCOUNT -1 : 0] icachewaywriteidx;
+// Eventhough there can be more than one way containing same tags,
+// it wouldn't be a problem because instruction data are read-only;
+// the data associated with two same tags would always be the same.
 always @ (posedge clk_i) begin
 	if (rst_i) begin
 		icachewaywriteidx <= 0;
 		icachewecnt <= 0;
-	end else if (icachewe) begin
-		icachewecnt <= icachewecnt + 1'b1;
-	end else if ((icachewecnt >= (ICACHESETCOUNT-1)) || (instrbufrst && icachewecnt)) begin
-		if (icachewaywriteidx >= (ICACHEWAYCOUNT-1))
-			icachewaywriteidx <= 0;
-		else
-			icachewaywriteidx <= icachewaywriteidx + 1'b1;
-		icachewecnt <= 0;
+	end else if (ICACHEWAYCOUNT > 1 && (icachewe || instrbufrst_posedge)) begin
+		if ((icachewecnt >= (ICACHESETCOUNT-1)) || (instrbufrst_posedge && icachewecnt)) begin
+			icachewecnt <= 0;
+			if (icachewaywriteidx >= (ICACHEWAYCOUNT-1))
+				icachewaywriteidx <= 0;
+			else
+				icachewaywriteidx <= icachewaywriteidx + 1'b1;
+		end else
+			icachewecnt <= icachewecnt + 1'b1;
 	end
 end
 
