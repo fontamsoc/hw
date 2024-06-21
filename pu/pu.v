@@ -149,6 +149,7 @@
 
 `include "lib/ram/bram.v"
 `include "lib/fifo.v"
+`include "lib/wb_upsizr.v"
 
 `include "./opimul.pu.v"
 `include "./opidiv.pu.v"
@@ -156,7 +157,7 @@
 `include "./opfmul.pu.v"
 `include "./opfdiv.pu.v"
 
-`include "lib/wb_upsizr.v"
+`include "./icache.v"
 
 `ifdef PUDCACHE
 `include "lib/dcache.v"

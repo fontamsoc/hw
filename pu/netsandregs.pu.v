@@ -1250,8 +1250,8 @@ end
 
 // ---------- Registers and nets used for instruction caching ----------
 
-// The instruction cache is active when the value of this register is 1.
-reg icacheactive;
+// The instruction cache is active when this wire is 1.
+wire icacheactive;
 
 // Register set to 1 to do an instruction cache check.
 reg icachecheck;
@@ -1272,138 +1272,56 @@ wire[CLOG2ICACHESETCOUNT -1 : 0] icacheset = instrfetchppninstrfetchaddr[(CLOG2I
 // Bitsize of an icache tag.
 localparam ICACHETAGBITSIZE = (ADDRBITSZ - (CLOG2ICACHESETCOUNT+CLOG2XARCHBITSZBY8DIFF));
 
+wire[ICACHETAGBITSIZE -1 : 0] icachenexttag = instrfetchnextppninstrfetchnextaddr[ADDRBITSZ-1:(CLOG2ICACHESETCOUNT+CLOG2XARCHBITSZBY8DIFF)];
+
 // Net set to the tag value being compared for an instruction cache hit.
 wire[ICACHETAGBITSIZE -1 : 0] icachetag = instrfetchppninstrfetchaddr[ADDRBITSZ-1:(CLOG2ICACHESETCOUNT+CLOG2XARCHBITSZBY8DIFF)];
 
-wire [ICACHETAGBITSIZE -1 : 0] icachetago [ICACHEWAYCOUNT -1 : 0];
-
-wire [ICACHEWAYCOUNT -1 : 0] icachevalido;
-
-`ifdef PUREGICACHEHIT
-reg [CLOG2ICACHEWAYCOUNT -1 : 0] icachewayhitidx_; // ### comb-block-reg.
-reg icachehit__; // ### comb-block-reg.
-reg [CLOG2ICACHEWAYCOUNT -1 : 0] icachewayhitidx;
-reg icachehit_;
-always @ (posedge clk_i) begin
-	icachehit_ <= icachehit__;
-	icachewayhitidx <= icachewayhitidx_;
-end
-`else
-reg [CLOG2ICACHEWAYCOUNT -1 : 0] icachewayhitidx; // ### comb-block-reg.
 reg icachehit_; // ### comb-block-reg.
-`endif
-integer gen_icachehit_idx;
-always @* begin
-	`ifdef PUREGICACHEHIT
-	icachehit__ = 0;
-	icachewayhitidx_ = 0;
-	`else
-	icachehit_ = 0;
-	icachewayhitidx = 0;
-	`endif
-	for (gen_icachehit_idx = 0; gen_icachehit_idx < ICACHEWAYCOUNT; gen_icachehit_idx = gen_icachehit_idx + 1) begin
-		`ifdef PUREGICACHEHIT
-		if (!icachehit__ && (icachevalido[gen_icachehit_idx] && (icachetag == icachetago[gen_icachehit_idx]))) begin
-			icachehit__ = 1;
-			icachewayhitidx_ = gen_icachehit_idx;
-		end
-		`else
-		if (!icachehit_ && (icachevalido[gen_icachehit_idx] && (icachetag == icachetago[gen_icachehit_idx]))) begin
-			icachehit_ = 1;
-			icachewayhitidx = gen_icachehit_idx;
-		end
-		`endif
-	end
-end
+wire icachehit__;
 
 // Net set to 1, when a hit is found in the cache.
 wire icachehit = ((
 	`ifdef PUMMU
 	itlben ? itlbcached[itlbwayhitidx] :
 	`endif
-		!ioutofrange) && icacheactive && icachehit_);
+		!ioutofrange) && icachehit_);
 
-wire icachewe = (icacheactive && instrfetchmemrqstdone && !instrbufrst);
+reg [XARCHBITSZ -1 : 0] icachedato; // ### comb-block-reg.
+wire [XARCHBITSZ -1 : 0] icachedato_;
 
-wire icacheoff = !icacheactive;
-
-// Register used as counter during the instruction cache reset.
-reg [CLOG2ICACHESETCOUNT -1 : 0] icacherstidx;
-
-wire [XARCHBITSZ -1 : 0] icachedato_ [ICACHEWAYCOUNT -1 : 0];
-wire [XARCHBITSZ -1 : 0] icachedato = icachedato_[icachewayhitidx];
-
-reg [CLOG2ICACHESETCOUNT -1 : 0] icachewecnt;
-// Register used to hold icache-way index to write next.
-reg [CLOG2ICACHEWAYCOUNT -1 : 0] icachewaywriteidx;
-// Eventhough there can be more than one way containing same tags,
-// it wouldn't be a problem because instruction data are read-only;
-// the data associated with two same tags would always be the same.
+`ifdef PUREGICACHEHIT
 always @ (posedge clk_i) begin
-	if (rst_i) begin
-		icachewaywriteidx <= 0;
-		icachewecnt <= 0;
-	end else if (ICACHEWAYCOUNT > 1 && (icachewe || instrbufrst_posedge)) begin
-		if ((icachewecnt >= (ICACHESETCOUNT-1)) || (instrbufrst_posedge && icachewecnt)) begin
-			icachewecnt <= 0;
-			if (icachewaywriteidx >= (ICACHEWAYCOUNT-1))
-				icachewaywriteidx <= 0;
-			else
-				icachewaywriteidx <= icachewaywriteidx + 1'b1;
-		end else
-			icachewecnt <= icachewecnt + 1'b1;
-	end
+	icachehit_ <= icachehit__;
+	icachedato <= icachedato_;
 end
+`else
+always @* begin
+	icachehit_ = icachehit__;
+	icachedato = icachedato_;
+end
+`endif
 
-genvar gen_icache_idx;
-generate for (gen_icache_idx = 0; gen_icache_idx < ICACHEWAYCOUNT; gen_icache_idx = gen_icache_idx + 1) begin :gen_icache
-
-bram #(
-
-	 .SZ (ICACHESETCOUNT)
-	,.DW (ICACHETAGBITSIZE)
-
-) icachetags (
-
-	 .clk0_i  (clk_i)                          ,.clk1_i  (clk_i)
-	,.en0_i   (!icachecheck || instrbufrst) ,.en1_i   (1'b1)
-	                                           ,.we1_i   (icachewe && (icachewaywriteidx == gen_icache_idx))
-	,.addr0_i (icachenextset)                  ,.addr1_i (icacheset)
-	                                           ,.i1      (icachetag)
-	,.o0      (icachetago[gen_icache_idx])     ,.o1      ()
+icache #(
+	 .WAYCNT (ICACHEWAYCOUNT)
+	,.SETCNT (ICACHESETCOUNT)
+	,.TAGBITSZ (ICACHETAGBITSIZE)
+	,.DATBITSZ (XARCHBITSZ)
+) icache (
+	 .rst_i (doicacherst)
+	,.clk_i (clk_i)
+	,.nxtway_i (instrbufrst_posedge)
+	,.we_i (instrfetchmemrqstdone && !instrbufrst)
+	,.widx_i (icacheset)
+	,.wtag_i (icachetag)
+	,.dat_i (wb_dat_i)
+	,.re_i (!icachecheck || instrbufrst)
+	,.ridx_i (icachenextset)
+	,.rtag_i (icachenexttag)
+	,.dat_o (icachedato_)
+	,.hit_o (icachehit__)
+	,.rdy_o (icacheactive)
 );
-
-bram #(
-
-	 .SZ (ICACHESETCOUNT)
-	,.DW (XARCHBITSZ)
-
-) icachedatas (
-
-	 .clk0_i  (clk_i)                          ,.clk1_i  (clk_i)
-	,.en0_i   (!icachecheck || instrbufrst) ,.en1_i   (1'b1)
-	                                           ,.we1_i   (icachewe && (icachewaywriteidx == gen_icache_idx))
-	,.addr0_i (icachenextset)                  ,.addr1_i (icacheset)
-	                                           ,.i1      (wb_dat_i)
-	,.o0      (icachedato_[gen_icache_idx])    ,.o1      ()
-);
-
-bram #(
-
-	 .SZ (ICACHESETCOUNT)
-	,.DW (1)
-
-) icachevalids (
-
-	 .clk0_i  (clk_i)                          ,.clk1_i  (clk_i)
-	,.en0_i   (!icachecheck || instrbufrst) ,.en1_i   (1'b1)
-	                                           ,.we1_i   ((icachewe && (icachewaywriteidx == gen_icache_idx)) || icacheoff)
-	,.addr0_i (icachenextset)                  ,.addr1_i (icacheoff ? icacherstidx : icacheset)
-	                                           ,.i1      (icacheactive)
-	,.o0      (icachevalido[gen_icache_idx])   ,.o1      ()
-);
-
-end endgenerate
 
 reg icachebsy = 0;
 

@@ -6,23 +6,6 @@
 // The size of the instruction buffer determines the amount
 // of prefetching done.
 
-// The instruction cache allows the pu to maintain its peak execution
-// speed (1 instruction every clock cycle) for as long as possible,
-// since it will stall less waiting on memory accesses to complete.
-// The instruction cache is set associative.
-
-always @ (posedge clk_i) begin
-	if (doicacherst) begin
-		icacheactive <= 0;
-		icacherstidx <= {CLOG2ICACHESETCOUNT{1'b1}};
-	end else if (icacheoff) begin
-		if (icacherstidx)
-			icacherstidx <= icacherstidx - 1'b1;
-		else
-			icacheactive <= 1;
-	end
-end
-
 always @ (posedge clk_i) begin
 	// Logic that set the instruction buffer.
 	if (instrbufwe) begin
