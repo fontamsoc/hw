@@ -157,7 +157,7 @@
 `include "./opfmul.pu.v"
 `include "./opfdiv.pu.v"
 
-`include "./icache.v"
+`include "lib/icache.v"
 
 `ifdef PUDCACHE
 `include "lib/dcache.v"
