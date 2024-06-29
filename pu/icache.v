@@ -75,17 +75,14 @@ always @ (posedge clk_i) begin
 end
 
 // Register used to hold clock cycle count of _we_i high.
-reg [CLOG2SETCNT -1 : 0] wecnt;
+reg [CLOG2SETCNT -1 : 0] wecnt = 0;
 // Register used to hold the way index to write next.
-reg [CLOG2WAYCNT -1 : 0] waywidx;
+reg [CLOG2WAYCNT -1 : 0] waywidx = 0;
 // Eventhough there can be more than one way containing same tags,
 // it wouldn't be a problem because instruction data are read-only;
 // the data associated with two same tags would always be the same.
 always @ (posedge clk_i) begin
-	if (rst_i) begin
-		waywidx <= 0;
-		wecnt <= 0;
-	end else if (WAYCNT > 1 && (_we_i || nxtway_i)) begin
+	if (WAYCNT > 1 && (_we_i || nxtway_i)) begin
 		if ((wecnt >= (SETCNT-1)) || (nxtway_i && wecnt)) begin
 			wecnt <= 0;
 			if (waywidx >= (WAYCNT-1))
