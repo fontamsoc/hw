@@ -1310,7 +1310,7 @@ icache #(
 ) icache (
 	 .rst_i (doicacherst)
 	,.clk_i (clk_i)
-	,.nxtway_i (instrbufrst_posedge)
+	,.nxtway_i (instrbufrst)
 	,.we_i (instrfetchmemrqstdone && !instrbufrst)
 	,.widx_i (icacheset)
 	,.wtag_i (icachetag)

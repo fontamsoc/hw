@@ -74,6 +74,16 @@ always @ (posedge clk_i) begin
 	end
 end
 
+// Since there will be multiple clock cycles between
+// posedge of nxtway_i and we_i, we can register nxtway_i
+// for better timing if it is combinational.
+reg nxtway_r, _nxtway_r;
+always @ (posedge clk_i) begin
+	nxtway_r <= nxtway_i;
+	_nxtway_r <= nxtway_r;
+end
+wire nxtway_posedge = (!_nxtway_r && nxtway_r);
+
 // Register used to hold clock cycle count of _we_i high.
 reg [CLOG2SETCNT -1 : 0] wecnt = 0;
 // Register used to hold the way index to write next.
@@ -82,8 +92,8 @@ reg [CLOG2WAYCNT -1 : 0] waywidx = 0;
 // it wouldn't be a problem because instruction data are read-only;
 // the data associated with two same tags would always be the same.
 always @ (posedge clk_i) begin
-	if (WAYCNT > 1 && (_we_i || nxtway_i)) begin
-		if ((wecnt >= (SETCNT-1)) || (nxtway_i && wecnt)) begin
+	if (WAYCNT > 1 && (_we_i || nxtway_posedge)) begin
+		if ((wecnt >= (SETCNT-1)) || (nxtway_posedge && wecnt)) begin
 			wecnt <= 0;
 			if (waywidx >= (WAYCNT-1))
 				waywidx <= 0;
