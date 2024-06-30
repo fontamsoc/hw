@@ -82,7 +82,7 @@
         <Option Name="TopModule" Val="nexysvideo"/>
         <Option Name="TopAutoSet" Val="TRUE"/>
         <Option Name="VerilogDir" Val="$PPRDIR/../../"/>
-        <Option Name="VerilogDir" Val="$PPRDIR/../../pu"/>
+        <Option Name="VerilogDir" Val="$PPRDIR/../../puxx"/>
         <Option Name="VerilogDir" Val="$PPRDIR/../../lib/spi"/>
         <Option Name="VerilogDir" Val="$PPRDIR/../../dev/bootldr"/>
         <Option Name="VerilogDir" Val="$PPRDIR/../../dev/sdcard"/>

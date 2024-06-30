@@ -19,7 +19,7 @@
 `define PUIDIVCLK
 `define PUIMULDSP
 //`define PUDCACHE
-`include "pu/cpu.v"
+`include "puxx/cpu.v"
 
 `include "dev/sdcard/sdcard_spi.v"
 

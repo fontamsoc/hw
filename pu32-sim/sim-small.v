@@ -17,7 +17,7 @@
 `define PUSC2
 `define PUSC2SKIPSC1LI8
 `define PUSC2SKIPSC1CPY
-`include "pu/cpu.v"
+`include "puxx/cpu.v"
 
 `include "dev/uart_sim.v"
 

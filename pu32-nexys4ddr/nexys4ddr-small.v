@@ -13,7 +13,7 @@
 `include "lib/wb_mux.v"
 `include "lib/wb_dnsizr.v"
 
-`include "pu/cpu.v"
+`include "puxx/cpu.v"
 
 `include "dev/uart_hw.v"
 

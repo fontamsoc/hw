@@ -30,7 +30,7 @@
 `define PUSC2SKIPSC1LI8
 `define PUSC2SKIPSC1CPY
 `define PUCOUNT 1 /* 32 max */
-`include "pu/cpu.v"
+`include "puxx/cpu.v"
 
 `include "dev/sdcard/sdcard_spi.v"
 

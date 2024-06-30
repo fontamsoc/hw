@@ -19,7 +19,7 @@
 //`define PUDCACHE
 `define PUREGICACHEHIT
 `define PUREGMMUOUTPUT
-`include "pu/cpu.v"
+`include "puxx/cpu.v"
 
 `include "dev/sdcard/sdcard_spi.v"
 
