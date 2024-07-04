@@ -1311,7 +1311,7 @@ icache #(
 	 .rst_i (doicacherst)
 	,.clk_i (clk_i)
 	,.nxtway_i (instrbufrst)
-	,.we_i (instrfetchmemrqstdone && !instrbufrst)
+	,.we_i (instrfetchmemrqstdone)
 	,.widx_i (icacheset)
 	,.wtag_i (icachetag)
 	,.dat_i (wb_dat_i)
@@ -1325,8 +1325,8 @@ icache #(
 
 reg icachebsy = 0;
 
-assign instrbufwe = ((instrfetchmemrqstdone ||
-	(icachecheck && icachehit && !icachebsy && instrbufnotfull)) && !instrbufrst);
+assign instrbufwe = (instrfetchmemrqstdone ||
+	(icachecheck && icachehit && !icachebsy && instrbufnotfull && !instrbufrst));
 
 assign instrbufi = (instrfetchmemrqstdone ? wb_dat_i : icachedato);
 
