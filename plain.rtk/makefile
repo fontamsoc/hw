@@ -13,6 +13,7 @@ CC := ${PREFIX}/bin/${ARCH}-elf-gcc
 OBJCOPY := ${PREFIX}/bin/${ARCH}-elf-objcopy
 
 CFLAGS := -Werror -fdata-sections -ffunction-sections -Wl,--gc-sections -Os -g3
+CFLAGS += -ffreestanding -nostdlib
 CFLAGS += -fstack-usage
 CFLAGS += -include crt0.h
 CFLAGS += -include serial0.h
@@ -38,7 +39,7 @@ rtk256.hex: rtk.bin
 		{ while IFS=' ' read -n 72 V0 V1 V2 V3 V4 V5 V6 V7; do echo -n "$$V7$$V6$$V5$$V4$$V3$$V2$$V1$$V0 "; done; } > rtk256.hex # 256bits.
 
 rtk.bin: rtk.lds rtk.c
-	${CC} -nostdlib -I ./ ${CFLAGS} -o rtk.elf rtk.c -Wl,-Trtk.lds
+	${CC} ${CFLAGS} -I ./ -o rtk.elf -Wl,-Trtk.lds rtk.c
 	@echo ==== Stack Usage ====
 	@cat *.su
 	@echo =====================
