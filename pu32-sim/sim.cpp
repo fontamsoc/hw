@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
+#include <termios.h>
+
 #include "Vsim.h"
 
 int main (int argc, char **argv) {
@@ -28,11 +30,21 @@ int main (int argc, char **argv) {
 		tb->rst_i = 0;
 	};
 
+	struct termios saved_termios;
+	if (isatty(STDIN_FILENO)) {
+		if (tcgetattr(STDIN_FILENO, &saved_termios) == -1) {
+			fprintf (stderr, "tcgetattr() failed\n"); fflush(stderr);
+			goto exit;
+		}
+	}
+
 	rstcycle();
 
 	// Tick the clock until we are done
 	while (!Verilated::gotFinish())
 		tickclk();
 
-	exitsim();
+	tcsetattr(STDIN_FILENO, TCSAFLUSH, &saved_termios);
+
+	exit: exitsim();
 }

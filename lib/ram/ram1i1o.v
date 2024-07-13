@@ -13,7 +13,7 @@ module ram1i1o (
 parameter SZ = 2;
 parameter DW = 32;
 
-parameter SRCFILE = "";
+parameter INITFILE = "";
 
 input wire rst_i;
 
@@ -35,10 +35,10 @@ initial begin
 	for (init_u_idx = 0; init_u_idx < SZ; init_u_idx = init_u_idx + 1)
 		u[init_u_idx] = 0;
 	`endif
-	if (SRCFILE != "") begin
-		$readmemh (SRCFILE, u);
+	if (INITFILE != "") begin
+		$readmemh (INITFILE, u);
 		`ifdef SIMULATION
-		$display ("%s loaded", SRCFILE);
+		$display ("%s loaded", INITFILE);
 		`endif
 	end
 end

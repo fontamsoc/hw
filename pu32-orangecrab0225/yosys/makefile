@@ -7,12 +7,20 @@ PROJ=orangecrab0225
 all: ${PROJ}.dfu
 
 %.json: ../%.v
-	cp ../../dev/bootldr/bootldr*.hex .
-	cp ../litedram/litedram.hex .
-	yosys -p "read_verilog ../../lib/ecp5pll.sv; read_verilog -I../../ $<; synth_ecp5 -top ${PROJ} -no-rw-check -json $@" &>0.$@.log
+	cp ../../dev/bootldr/*.hex .
+	cp ../litedram/*.hex .
+	yosys -p "read_verilog ../../lib/ecp5pll.sv; read_verilog -I../../ $<; synth_ecp5 -top ${PROJ} -json $@" &>0.$@.log
 %_out.config: %.json ../%.lpf
-	nextpnr-ecp5 --json $< --textcfg $@ --25k --package CSFBGA285 --lpf ../${PROJ}.lpf &>1.$@.log
-	rm -rf abc.history # Remove empty file that gets created sometime.
+	cp $<{,.bak}
+	cntr=0; until \
+		nextpnr-ecp5 -r --json $< --textcfg $@ --25k --package CSFBGA285 --lpf ../${PROJ}.lpf &>1.$@.log; \
+	do \
+		echo --; \
+		fgrep 'ERROR: Max frequency' 1.$@.log; \
+		((cntr++)); [[ cntr -eq 5 ]] && exit 1; \
+		cp $<{.bak,}; \
+	done
+	rm -rf $<.bak abc.history # empty file that gets created sometime.
 %.bit: %_out.config
 	ecppack --compress --freq 38.8 --input $< --bit $@ &>2.$@.log
 %.dfu : %.bit

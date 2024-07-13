@@ -36,7 +36,7 @@
 
 `include "dev/irqctrl.v"
 
-`include "dev/usb_serial.v"
+`include "dev/serial_usb.v"
 
 `include "lib/dcache.v"
 `include "lib/wb_cdc.v"
@@ -292,9 +292,9 @@ wire [IRQDSTCOUNT -1 : 0] irq_dst_stb_w;
 wire [IRQDSTCOUNT -1 : 0] irq_dst_rdy_w;
 wire [IRQDSTCOUNT -1 : 0] irq_dst_pri_w;
 
-localparam ICACHESZ = 64;
+localparam ICACHESZ = 16;
 localparam DCACHESZ = 16;
-localparam TLBSZ    = 64;
+localparam TLBSZ    = 32;
 
 localparam ICACHEWAYCOUNT = 2;
 localparam DCACHEWAYCOUNT = 2;
@@ -310,10 +310,10 @@ cpu #(
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
 	,.TLBWAYCOUNT    (TLBWAYCOUNT)
-	,.IMULCNT        (2)
+	,.IMULCNT        (4)
 	,.IDIVCNT        (4)
-	,.FADDFSUBCNT    (2)
-	,.FMULCNT        (2)
+	,.FADDFSUBCNT    (4)
+	,.FMULCNT        (4)
 	,.FDIVCNT        (4)
 	,.MAXPENDINGACK  (WBPI_MAXPENDINGACK)
 ) cpu (
@@ -461,7 +461,7 @@ irqctrl #(
 assign dev_id_w    [S_WBPI_IRQCTRL] = 3;
 assign dev_useirq_w[S_WBPI_IRQCTRL] = 0;
 
-usb_serial #(
+serial_usb #(
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.PHYCLKFREQ (CLKFREQ48MHZ) // Must be 48MHz or 60MHz.
 	,.BUFSZ      (4096)

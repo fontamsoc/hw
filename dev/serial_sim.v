@@ -1,84 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-// Serial peripheral through USB.
-//
-// The device memory mapping usage is similar to uart_hw peripheral,
-// with the difference that command CMDSETSPEED "arg" is ignnored.
+// Simulation version of serial_uart peripheral.
+// Only writing is supported through the use of $write().
+// Reading returns bogus values.
 
-// Parameters:
-//
-// PHYCLKFREQ
-// 	Frequency of the clock input "clk_phy_i" in Hz.
-// 	Must be 48000000 or 60000000 for full speed,
-// 	60000000 for high speed.
-//
-// BUFSZ
-// 	Size in bytes of the receive and transmit buffer.
-// 	It must be at least 2 and a power of 2.
-
-// Ports:
-//
-// rst_i
-// 	This input reset this module when held high
-// 	and must be held low for normal operation.
-//
-// clk_i
-// 	Clock input used by the memory interface.
-//
-// clk_phy_i
-// 	Clock input used by the internal module which transmit
-// 	and receive each bit; due to usb_cdc_core requirements,
-// 	its frequency must be 48 MHz or 60 MHz for full speed,
-// 	60 MHz for high speed.
-//
-// wb_cyc_i
-// wb_stb_i
-// wb_we_i
-// wb_addr_i
-// wb_sel_i
-// wb_dat_i
-// wb_bsy_o
-// wb_ack_o
-// wb_dat_o
-// 	Slave memory interface.
-//
-// wb_mapsz_o
-// 	Memory map size in bytes.
-//
-// irq_stb_o
-// 	This signal is set high to request an interrupt;
-// 	an interrupt is raised if enabled and the receive
-// 	buffer usage interrupt threshold is reached.
-//
-// irq_rdy_i
-// 	This signal become low when the interrupt request
-// 	has been acknowledged, and is used by this module
-// 	to lower irq_stb_o and disable interrupt.
-//
-// usb_dp_io
-// usb_dn_io
-// 	USB signals.
-
-// On reset, interrupt is disabled, and must be explicitely enabled.
-// It prevent an unwanted interrupt after reset.
-// When enabled, an interrupt request is raised if the receive buffer
-// usage interrupt threshold is reached; interrupt get disabled when
-// the raised interrupt get acknowledged.
-
-// Writing a byte when there is no space left
-// in the transmit buffer silently fail.
-// Similarly, reading a byte when there is no byte left
-// in the receive buffer return garbage.
-
-`include "lib/usb_serial_fifo_phy.v"
-
-module usb_serial (
+module serial_sim (
 
 	 rst_i
 
 	,clk_i
-	,clk_phy_i
 
 	,wb_cyc_i
 	,wb_stb_i
@@ -93,24 +24,13 @@ module usb_serial (
 
 	,irq_stb_o
 	,irq_rdy_i
-
-	,usb_dp_io
-	,usb_dn_io
 );
 
 `include "lib/clog2.v"
 
 parameter ARCHBITSZ = 32;
 
-parameter PHYCLKFREQ = 48000000;
-parameter BUFSZ      = 2;
-
-initial begin
-	if (!(  PHYCLKFREQ == 48000000 ||
-		PHYCLKFREQ == 60000000)) begin
-		$finish;
-	end
-end
+parameter BUFSZ = 2;
 
 localparam CLOG2BUFSZ = clog2(BUFSZ);
 
@@ -120,7 +40,6 @@ localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
 input wire rst_i;
 
 input wire clk_i;
-input wire clk_phy_i;
 
 input  wire                        wb_cyc_i;
 input  wire                        wb_stb_i;
@@ -135,9 +54,6 @@ output wire [ARCHBITSZ -1 : 0]     wb_mapsz_o;
 
 output wire irq_stb_o;
 input  wire irq_rdy_i;
-
-inout wire usb_dp_io;
-inout wire usb_dn_io;
 
 assign wb_bsy_o = 1'b0;
 
@@ -188,17 +104,13 @@ wire devrd = (!rst_i && wb_stb_r && !wb_we_r && !wb_addr_r[ISCMDBIT] && prevcmdi
 wire devwr = (!rst_i && wb_stb_r &&  wb_we_r && !wb_addr_r[ISCMDBIT] && prevcmdisdevrdy);
 
 wire            rx_read_w = devrd;
-wire [8 -1 : 0] rx_data_w0;
+wire [8 -1 : 0] rx_data_w0 = "\n";
 
-wire            tx_write_w = devwr;
-wire [8 -1 : 0] tx_data_w1 = wb_dat_r[8 -1 : 0];
-
-wire [(CLOG2BUFSZ +1) -1 : 0] rx_usage_w;
-wire [(CLOG2BUFSZ +1) -1 : 0] tx_usage_w;
+reg [(CLOG2BUFSZ +1) -1 : 0] rx_usage_r;
 
 reg [(ARCHBITSZ-2) -1 : 0] intrqstthresh;
 
-assign irq_stb_o = (|intrqstthresh && (rx_usage_w >= intrqstthresh) &&
+assign irq_stb_o = (|intrqstthresh && (rx_usage_r >= intrqstthresh) &&
 	// Raise intrqst only when the device is ready for the next command,
 	// otherwise an interrupt would cause software to send the device a new
 	// command while it is not ready, waiting indefinitely for it to be ready.
@@ -212,6 +124,8 @@ reg rx_read_w_sampled;
 
 assign wb_dat_o = (rx_read_w_sampled ? rx_data_w0 : wb_dat_o_);
 
+reg [ARCHBITSZ -1 : 0] cntr = 0;
+
 always @ (posedge clk_i) begin
 	// Logic enabling/disabling interrupt.
 	if (rst_i) begin
@@ -219,7 +133,7 @@ always @ (posedge clk_i) begin
 		// It prevents unwanted interrupt after reset.
 		intrqstthresh <= 0;
 	end else if (cmdsetint) begin
-		intrqstthresh <= wb_dat_r[ARCHBITSZ-1:2];
+		//intrqstthresh <= wb_dat_r[ARCHBITSZ-1:2]; /* ### Uncomment to generate interrupts */
 	end else if (irq_rdy_i_negedge) begin
 		intrqstthresh <= 0;
 	end
@@ -231,39 +145,28 @@ always @ (posedge clk_i) begin
 	end else if (cmdgetbuf) begin
 		wb_dat_o_ <= {
 			{((ARCHBITSZ-2)-(CLOG2BUFSZ+1)){1'b0}},
-			(wb_dat_r[2] ? tx_usage_w : rx_usage_w),
+			(wb_dat_r[2] ? {(CLOG2BUFSZ+1){1'b0}} : rx_usage_r),
 			wb_dat_r[1:0]};
 	end else if (cmdsetspd) begin
-		wb_dat_o_ <= {PHYCLKFREQ[(ARCHBITSZ-2)-1:0], wb_dat_r[1:0]};
+		wb_dat_o_ <= {{(ARCHBITSZ-2){1'b0}}, wb_dat_r[1:0]};
+	end
+
+	if (rst_i || cntr >= 100000000) begin
+		cntr <= 0;
+		rx_usage_r <= BUFSZ;
+	end else if (rx_usage_r) begin
+		if (devrd)
+			rx_usage_r <= rx_usage_r - 1'b1;
+	end else
+		cntr <= cntr + 1'b1;
+
+	if (devwr) begin
+		$write("%c", wb_dat_r[8 -1 : 0]); $fflush(1);
 	end
 
 	rx_read_w_sampled <= rx_read_w;
 
 	irq_rdy_i_r <= irq_rdy_i; // Sampling used for edge detection.
 end
-
-usb_serial_fifo_phy #(
-
-	 .PHYCLKFREQ (PHYCLKFREQ)
-	,.DEPTH      (BUFSZ)
-
-) phy (
-
-	 .rst_i (rst_i)
-
-	,.rx_clk_i   (clk_i)
-	,.rx_read_i  (rx_read_w)
-	,.rx_data_o  (rx_data_w0)
-	,.rx_usage_o (rx_usage_w)
-
-	,.tx_clk_i   (clk_i)
-	,.tx_write_i (tx_write_w)
-	,.tx_data_i  (tx_data_w1)
-	,.tx_usage_o (tx_usage_w)
-
-	,.clk_phy_i (clk_phy_i)
-	,.usb_dp_io (usb_dp_io)
-	,.usb_dn_io (usb_dn_io)
-);
 
 endmodule

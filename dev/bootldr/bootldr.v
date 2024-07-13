@@ -42,7 +42,7 @@ module bootldr (
 
 parameter ARCHBITSZ = 32;
 
-localparam SRCFILE =
+localparam INITFILE =
 	ARCHBITSZ == 16 ? "bootldr16.hex" :
 	ARCHBITSZ == 32 ? "bootldr32.hex" :
 	ARCHBITSZ == 64 ? "bootldr64.hex" :
@@ -79,9 +79,9 @@ assign wb_mapsz_o = ((MAPSZ < 128) ? 128 : MAPSZ);
 reg [ARCHBITSZ -1 : 0] rom [0 : SIZE -1];
 
 initial begin
-	$readmemh (SRCFILE, rom);
+	$readmemh (INITFILE, rom);
 	`ifdef SIMULATION
-	$display ("%s loaded", SRCFILE);
+	$display ("%s loaded", INITFILE);
 	`endif
 	// Initial state initialized here, otherwise
 	// block ram fails to be inferred by yosys.

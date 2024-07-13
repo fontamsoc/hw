@@ -19,7 +19,7 @@
 `define PUSC2SKIPSC1CPY
 `include "puxx/cpu.v"
 
-`include "dev/uart_sim.v"
+`include "dev/serial_sim.v"
 
 `include "dev/sram.v"
 
@@ -46,14 +46,14 @@ wire rst_w = rst_i;
 
 localparam M_WBPI_CPU        = 0;
 localparam M_WBPI_LAST       = M_WBPI_CPU;
-localparam S_WBPI_UART     = 0;
-localparam S_WBPI_RAM        = (S_WBPI_UART + 1);
+localparam S_WBPI_SERIAL     = 0;
+localparam S_WBPI_RAM        = (S_WBPI_SERIAL + 1);
 localparam S_WBPI_INVALIDDEV = (S_WBPI_RAM + 1);
 
 localparam WBPI_MASTERCOUNT       = (M_WBPI_LAST + 1);
 localparam WBPI_SLAVECOUNT        = (S_WBPI_INVALIDDEV + 1);
 localparam WBPI_DEFAULTSLAVEINDEX = S_WBPI_INVALIDDEV;
-localparam WBPI_FIRSTSLAVEADDR    = /* set so memory starts at 0x1000*/ ('h1000 - (128/*UART_MAPSZ*/));
+localparam WBPI_FIRSTSLAVEADDR    = /* set so memory starts at 0x1000*/ ('h1000 - (128/*SERIAL_MAPSZ*/));
 localparam WBPI_MAXPENDINGACK     = 16;
 localparam WBPI_DNSIZR            = 3'b001;
 localparam WBPI_ARCHBITSZ         = ARCHBITSZ*8;
@@ -89,13 +89,11 @@ wire wbpi_clk_w = clk_1x_w;
 // 	input                              dev_useirq_w   [WBPI_SLAVECOUNT -1 : 0];
 `include "lib/wbpi_inst.v"
 
-localparam ICACHESZ = 64;
-localparam DCACHESZ = 32;
-localparam TLBSZ    = 8;
+localparam ICACHESZ = 16;
+localparam DCACHESZ = 16;
 
 localparam ICACHEWAYCOUNT = 2;
 localparam DCACHEWAYCOUNT = 2;
-localparam TLBWAYCOUNT    = 1;
 
 cpu #(
 	 .ARCHBITSZ      (ARCHBITSZ)
@@ -103,12 +101,10 @@ cpu #(
 	,.CLKFREQ        (WBPI_CLKFREQ)
 	,.ICACHESETCOUNT ((1024/(WBPI_ARCHBITSZ/8))*(ICACHESZ/ICACHEWAYCOUNT))
 	,.DCACHESETCOUNT ((1024/(WBPI_ARCHBITSZ/8))*(DCACHESZ/DCACHEWAYCOUNT))
-	,.TLBSETCOUNT    (TLBSZ/TLBWAYCOUNT)
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
-	,.TLBWAYCOUNT    (TLBWAYCOUNT)
 	,.IMULCNT        (2)
-	,.IDIVCNT        (4)
+	,.IDIVCNT        (2)
 	,.MAXPENDINGACK  (WBPI_MAXPENDINGACK)
 ) cpu (
 
@@ -138,37 +134,37 @@ generate for (gen_pc_w_idx = 0; gen_pc_w_idx < PUCOUNT; gen_pc_w_idx = gen_pc_w_
 assign pc_w[gen_pc_w_idx] = cpu.genpu[gen_pc_w_idx].pu.pc_w;
 end endgenerate
 
-uart_sim #(
+serial_sim #(
 	 .ARCHBITSZ (ARCHBITSZ)
 	,.BUFSZ     (2)
-) uart (
+) serial (
 
 	 .rst_i (wbpi_rst_w)
 
 	,.clk_i (wbpi_clk_w)
 
-	,.wb_cyc_i   (s_wbpi_cyc_w[S_WBPI_UART])
-	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_UART])
-	,.wb_we_i    (s_wbpi_we_w[S_WBPI_UART])
-	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_UART])
-	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_UART])
-	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_UART])
-	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_UART])
-	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_UART])
-	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_UART])
-	,.wb_mapsz_o (s_wbpi_mapsz_w[S_WBPI_UART])
+	,.wb_cyc_i   (s_wbpi_cyc_w[S_WBPI_SERIAL])
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_SERIAL])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_SERIAL])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_SERIAL])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_SERIAL])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_SERIAL])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_SERIAL])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SERIAL])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SERIAL])
+	,.wb_mapsz_o (s_wbpi_mapsz_w[S_WBPI_SERIAL])
 );
 
-localparam SRAM_SRCFILE =
-	WBPI_ARCHBITSZ == 32 ? "sram32.hex" :
-	WBPI_ARCHBITSZ == 64 ? "sram64.hex" :
+localparam SRAM_INITFILE =
+	WBPI_ARCHBITSZ == 32  ? "sram32.hex" :
+	WBPI_ARCHBITSZ == 64  ? "sram64.hex" :
 	WBPI_ARCHBITSZ == 128 ? "sram128.hex" :
 	WBPI_ARCHBITSZ == 256 ? "sram256.hex" : "";
 
 sram #(
 	 .ARCHBITSZ (WBPI_ARCHBITSZ)
 	,.SIZE      ((64/*KB*/)*(1024/(WBPI_ARCHBITSZ/8)))
-	,.SRCFILE   (SRAM_SRCFILE)
+	,.INITFILE  (SRAM_INITFILE)
 ) sram (
 
 	 .rst_i (wbpi_rst_w)

@@ -48,9 +48,9 @@
 // 	USB signals.
 
 `include "lib/fifo.v"
-`include "lib/usb_serial_phy.v"
+`include "lib/serial_usb_phy.v"
 
-module usb_serial_fifo_phy (
+module serial_usb_fifo_phy (
 
 	 rst_i
 
@@ -159,7 +159,7 @@ fifo #(
 
 wire tx_phy_rdy_w;
 
-usb_serial_phy #(
+serial_usb_phy #(
 
 	 .PHYCLKFREQ (PHYCLKFREQ)
 

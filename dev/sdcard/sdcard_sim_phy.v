@@ -9,7 +9,7 @@
 
 // Parameters:
 //
-// SRCFILE
+// INITFILE
 // 	File from which memory will be initialized using $readmemh().
 //
 // SIMSTORAGESZ
@@ -74,7 +74,7 @@ module sdcard_sim_phy (
 
 `include "lib/clog2.v"
 
-parameter SRCFILE = "";
+parameter INITFILE = "";
 parameter SIMSTORAGESZ = 4096;
 
 input wire rst_i;
@@ -104,9 +104,9 @@ assign err_o = 1'b0;
 
 reg [8 -1 : 0] u [(SIMSTORAGESZ*512) -1 : 0];
 initial begin
-	if (SRCFILE != "") begin
-		$readmemh (SRCFILE, u);
-		$display ("%s loaded", SRCFILE);
+	if (INITFILE != "") begin
+		$readmemh (INITFILE, u);
+		$display ("%s loaded", INITFILE);
 	end
 end
 

@@ -58,7 +58,7 @@
 // 	It should be at least 500KHz in order to provide
 // 	at least 250KHz required by the device.
 //
-// SRCFILE
+// INITFILE
 // 	File from which memory will be initialized using $readmemh().
 // 	Used only when `SIMULATION was defined.
 //
@@ -163,7 +163,7 @@ parameter XARCHBITSZ = 32;
 parameter CLKFREQ = 1;
 parameter PHYCLKFREQ = 1;
 `ifdef SIMULATION
-parameter SRCFILE = "";
+parameter INITFILE = "";
 parameter SIMSTORAGESZ = 4096;
 `endif
 
@@ -283,7 +283,7 @@ sdcard_spi_phy
 	 .CLKFREQ    (CLKFREQ)
 	,.PHYCLKFREQ (PHYCLKFREQ)
 	`else
-	 .SRCFILE      (SRCFILE)
+	 .INITFILE      (INITFILE)
 	,.SIMSTORAGESZ (SIMSTORAGESZ)
 	`endif
 ) phy (

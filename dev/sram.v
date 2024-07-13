@@ -14,7 +14,7 @@
 // 	to complete; hence implementing a delay when accessing memory,
 // 	which is useful for testing devices issuing memory accesses.
 //
-// SRCFILE
+// INITFILE
 // 	File from which memory will be initialized using $readmemh().
 
 // Ports:
@@ -63,7 +63,7 @@ module sram (
 
 parameter SIZE = 0;
 parameter DELAY = 0;
-parameter SRCFILE = "";
+parameter INITFILE = "";
 
 parameter ARCHBITSZ = 32;
 
@@ -102,10 +102,10 @@ assign wb_mapsz_o = ((MAPSZ < 128) ? 128 : MAPSZ);
 reg [ARCHBITSZ -1 : 0] ram [SIZE -1 : 0];
 
 initial begin
-	if (SRCFILE != "") begin
-		$readmemh (SRCFILE, ram);
+	if (INITFILE != "") begin
+		$readmemh (INITFILE, ram);
 		`ifdef SIMULATION
-		$display ("%s loaded", SRCFILE);
+		$display ("%s loaded", INITFILE);
 		`endif
 		// Initial state initialized here, otherwise
 		// block ram fails to be inferred by yosys.

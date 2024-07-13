@@ -1,56 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-// UART peripheral.
+// Serial peripheral through USB.
 //
-// The device transfer data byte at a time.
-// The first half of the device memory mapping is used to send/receive
-// bytes while, the second half is used to send commands to the device.
-//
-// Commands sent to the device expect following format
-// | arg: (ARCHBITSZ-2) bits | cmd: 2 bit | where the field "cmd" values
-// are CMDDEVRDY(2'b00), CMDGETBUFFERUSAGE(2'b01), CMDSETINTERRUPT(2'b10)
-// and CMDSETSPEED(2'b11). The result of a previously sent command is
-// retrieved from the device reading from it and has the following format
-// | resp: (ARCHBITSZ-2) bits | cmd: 2 bit | where the fields "cmd" and
-// "resp" are the command and its result.
-// Two memory operations, a write followed by a read are needed to send
-// a command to the device and retrieve its result.
-// The device has accepted a command only if "cmd" in its result
-// is CMDDEVRDY, otherwise sending the command CMDDEVRDY is needed.
-//
-// The description of commands is as follow:
-// 	CMDDEVRDY: Make the device accept a new command.
-// 	"resp" in the result get set to 0.
-// 	CMDGETBUFFERUSAGE: Get receive/transmit buffer usage.
-// 	"arg" value encode which buffer should the usage be returned.
-// 	When "arg" is 0, the receive buffer usage is returned;
-// 	when "arg" is 1, the transmit buffer usage is returned.
-// 	"resp" in the result get set to the usage in number of bytes.
-// 	CMDSETINTERRUPT: enable/disable interrupt.
-// 	"arg" value when 0 disable interrupt, and when non-null, enables
-// 	interrupt and set the minimum receive buffer usage that would
-// 	trigger an interrupt.
-// 	"resp" in the result get set to the size in bytes of the transmit
-// 	and receive buffer.
-// 	CMDSETSPEED: Set the speed to use when sending and receiving bytes.
-// 	"arg" value is the speed computed as follow: (PHYCLKFREQ/bitrate);
-// 	ei: For a PHYCLKFREQ of 100 Mhz and a bitrate of 115200 bps,
-// 	the above formula yield 867.
-// 	"resp" in the result get set to PHYCLKFREQ.
-//
-// To be multi core proof, an atomic read-write must be used to send
-// a command to the device until CMDDEVRDY is returned, then another
-// atomic read-write sending CMDDEVRDY must be used to retrieve the
-// result while making the device ready for the next command.
+// The device memory mapping usage is similar to serial_uart peripheral,
+// with the difference that command CMDSETSPEED "arg" is ignnored.
 
 // Parameters:
 //
-// ARCHBITSZ
-// 	Must be a power-of-2 and <= 64.
-//
 // PHYCLKFREQ
 // 	Frequency of the clock input "clk_phy_i" in Hz.
+// 	Must be 48000000 or 60000000 for full speed,
+// 	60000000 for high speed.
 //
 // BUFSZ
 // 	Size in bytes of the receive and transmit buffer.
@@ -66,9 +27,10 @@
 // 	Clock input used by the memory interface.
 //
 // clk_phy_i
-// 	Clock input used by PHYs which transmit and
-// 	receive bits; its frequency must always be higher
-// 	than the desired transmission bitrate.
+// 	Clock input used by the internal module which transmit
+// 	and receive each bit; due to usb_cdc_core requirements,
+// 	its frequency must be 48 MHz or 60 MHz for full speed,
+// 	60 MHz for high speed.
 //
 // wb_cyc_i
 // wb_stb_i
@@ -94,11 +56,9 @@
 // 	has been acknowledged, and is used by this module
 // 	to lower irq_stb_o and disable interrupt.
 //
-// rx_i
-// 	Incoming serial line.
-//
-// tx_o
-// 	Outgoing serial line.
+// usb_dp_io
+// usb_dn_io
+// 	USB signals.
 
 // On reset, interrupt is disabled, and must be explicitely enabled.
 // It prevent an unwanted interrupt after reset.
@@ -111,10 +71,9 @@
 // Similarly, reading a byte when there is no byte left
 // in the receive buffer return garbage.
 
-`include "lib/uart/uart_rx.v"
-`include "lib/uart/uart_tx.v"
+`include "lib/serial_usb_fifo_phy.v"
 
-module uart_hw (
+module serial_usb (
 
 	 rst_i
 
@@ -135,16 +94,23 @@ module uart_hw (
 	,irq_stb_o
 	,irq_rdy_i
 
-	,rx_i
-	,tx_o
+	,usb_dp_io
+	,usb_dn_io
 );
 
 `include "lib/clog2.v"
 
 parameter ARCHBITSZ = 32;
 
-parameter PHYCLKFREQ = 1;
+parameter PHYCLKFREQ = 48000000;
 parameter BUFSZ      = 2;
+
+initial begin
+	if (!(  PHYCLKFREQ == 48000000 ||
+		PHYCLKFREQ == 60000000)) begin
+		$finish;
+	end
+end
 
 localparam CLOG2BUFSZ = clog2(BUFSZ);
 
@@ -170,8 +136,8 @@ output wire [ARCHBITSZ -1 : 0]     wb_mapsz_o;
 output wire irq_stb_o;
 input  wire irq_rdy_i;
 
-input  wire rx_i;
-output wire tx_o;
+inout wire usb_dp_io;
+inout wire usb_dn_io;
 
 assign wb_bsy_o = 1'b0;
 
@@ -246,13 +212,6 @@ reg rx_read_w_sampled;
 
 assign wb_dat_o = (rx_read_w_sampled ? rx_data_w0 : wb_dat_o_);
 
-// Note that (ARCHBITSZ-2) is the number of bits used by a command argument.
-localparam CLOCKCYCLESPERBITLIMIT = (1<<(ARCHBITSZ-2));
-localparam CLOG2CLOCKCYCLESPERBITLIMIT = (ARCHBITSZ-2);
-
-reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] rxclockcyclesperbit;
-reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] txclockcyclesperbit;
-
 always @ (posedge clk_i) begin
 	// Logic enabling/disabling interrupt.
 	if (rst_i) begin
@@ -275,11 +234,6 @@ always @ (posedge clk_i) begin
 			(wb_dat_r[2] ? tx_usage_w : rx_usage_w),
 			wb_dat_r[1:0]};
 	end else if (cmdsetspd) begin
-		// Normally the formula to use is:
-		// ((PHYCLKFREQ/bitrate) + ((PHYCLKFREQ/bitrate)/10/2));
-		// so this is an approximation.
-		rxclockcyclesperbit <= (wb_dat_r[ARCHBITSZ-1:2] + (wb_dat_r[ARCHBITSZ-1:2] >> 5));
-		txclockcyclesperbit <=  wb_dat_r[ARCHBITSZ-1:2];
 		wb_dat_o_ <= {PHYCLKFREQ[(ARCHBITSZ-2)-1:0], wb_dat_r[1:0]};
 	end
 
@@ -288,46 +242,28 @@ always @ (posedge clk_i) begin
 	irq_rdy_i_r <= irq_rdy_i; // Sampling used for edge detection.
 end
 
-uart_rx #(
+serial_usb_fifo_phy #(
 
-	 .BUFSZ                  (BUFSZ)
-	,.CLOCKCYCLESPERBITLIMIT (CLOCKCYCLESPERBITLIMIT)
+	 .PHYCLKFREQ (PHYCLKFREQ)
+	,.DEPTH      (BUFSZ)
 
-) uart_rx (
-
-	 .rst_i (rst_i)
-
-	,.clk_i     (clk_i)
-	,.clk_phy_i (clk_phy_i)
-
-	,.clockcyclesperbit_i (rxclockcyclesperbit)
-
-	,.read_i  (rx_read_w)
-	,.data_o  (rx_data_w0)
-	,.usage_o (rx_usage_w)
-
-	,.rx_i (rx_i)
-);
-
-uart_tx #(
-
-	 .BUFSZ                  (BUFSZ)
-	,.CLOCKCYCLESPERBITLIMIT (CLOCKCYCLESPERBITLIMIT)
-
-) uart_tx (
+) phy (
 
 	 .rst_i (rst_i)
 
-	,.clk_i     (clk_i)
+	,.rx_clk_i   (clk_i)
+	,.rx_read_i  (rx_read_w)
+	,.rx_data_o  (rx_data_w0)
+	,.rx_usage_o (rx_usage_w)
+
+	,.tx_clk_i   (clk_i)
+	,.tx_write_i (tx_write_w)
+	,.tx_data_i  (tx_data_w1)
+	,.tx_usage_o (tx_usage_w)
+
 	,.clk_phy_i (clk_phy_i)
-
-	,.clockcyclesperbit_i (txclockcyclesperbit)
-
-	,.write_i (tx_write_w)
-	,.data_i  (tx_data_w1)
-	,.usage_o (tx_usage_w)
-
-	,.tx_o (tx_o)
+	,.usb_dp_io (usb_dp_io)
+	,.usb_dn_io (usb_dn_io)
 );
 
 endmodule

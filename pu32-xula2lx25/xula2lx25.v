@@ -27,7 +27,7 @@
 
 `include "dev/irqctrl.v"
 
-`include "dev/uart_hw.v"
+`include "dev/serial_uart.v"
 
 // wb4sdram is 32bits only.
 `include "lib/dcache.v"
@@ -176,8 +176,8 @@ localparam M_WBPI_LAST       = M_WBPI_CPU;
 localparam S_WBPI_SDCARD     = 0;
 localparam S_WBPI_DEVTBL     = (S_WBPI_SDCARD + 1);
 localparam S_WBPI_IRQCTRL    = (S_WBPI_DEVTBL + 1);
-localparam S_WBPI_UART       = (S_WBPI_IRQCTRL + 1);
-localparam S_WBPI_RAM        = (S_WBPI_UART + 1);
+localparam S_WBPI_SERIAL     = (S_WBPI_IRQCTRL + 1);
+localparam S_WBPI_RAM        = (S_WBPI_SERIAL + 1);
 localparam S_WBPI_BOOTLDR    = (S_WBPI_RAM + 1);
 localparam S_WBPI_INVALIDDEV = (S_WBPI_BOOTLDR + 1);
 
@@ -221,9 +221,9 @@ wire wbpi_clk_w = clk_1x_w;
 `include "lib/wbpi_inst.v"
 
 localparam IRQ_SDCARD = 0;
-localparam IRQ_UART   = (IRQ_SDCARD + 1);
+localparam IRQ_SERIAL   = (IRQ_SDCARD + 1);
 
-localparam IRQSRCCOUNT = (IRQ_UART +1); // Number of interrupt source.
+localparam IRQSRCCOUNT = (IRQ_SERIAL +1); // Number of interrupt source.
 localparam IRQDSTCOUNT = 1; // Number of interrupt destination.
 wire [IRQSRCCOUNT -1 : 0] irq_src_stb_w;
 wire [IRQSRCCOUNT -1 : 0] irq_src_rdy_w;
@@ -386,11 +386,11 @@ irqctrl #(
 assign dev_id_w    [S_WBPI_IRQCTRL] = 3;
 assign dev_useirq_w[S_WBPI_IRQCTRL] = 0;
 
-uart_hw #(
+serial_uart #(
 	 .ARCHBITSZ  (ARCHBITSZ)
 	,.PHYCLKFREQ (WBPI_CLKFREQ)
 	,.BUFSZ      (2048)
-) uart (
+) serial (
 
 	 .rst_i (!pll_locked || rst_p
 		/* wbpi_rst_w is not used such that on software reset,
@@ -398,26 +398,26 @@ uart_hw #(
 	,.clk_i     (wbpi_clk_w)
 	,.clk_phy_i (wbpi_clk_w)
 
-	,.wb_cyc_i   (s_wbpi_cyc_w[S_WBPI_UART])
-	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_UART])
-	,.wb_we_i    (s_wbpi_we_w[S_WBPI_UART])
-	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_UART])
-	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_UART])
-	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_UART])
-	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_UART])
-	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_UART])
-	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_UART])
-	,.wb_mapsz_o (s_wbpi_mapsz_w[S_WBPI_UART])
+	,.wb_cyc_i   (s_wbpi_cyc_w[S_WBPI_SERIAL])
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_SERIAL])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_SERIAL])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_SERIAL])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_SERIAL])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_SERIAL])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_SERIAL])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SERIAL])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SERIAL])
+	,.wb_mapsz_o (s_wbpi_mapsz_w[S_WBPI_SERIAL])
 
-	,.irq_stb_o (irq_src_stb_w[IRQ_UART])
-	,.irq_rdy_i (irq_src_rdy_w[IRQ_UART])
+	,.irq_stb_o (irq_src_stb_w[IRQ_SERIAL])
+	,.irq_rdy_i (irq_src_rdy_w[IRQ_SERIAL])
 
 	,.rx_i (uart_rx)
 	,.tx_o (uart_tx)
 );
 
-assign dev_id_w    [S_WBPI_UART] = 5;
-assign dev_useirq_w[S_WBPI_UART] = 1;
+assign dev_id_w    [S_WBPI_SERIAL] = 5;
+assign dev_useirq_w[S_WBPI_SERIAL] = 1;
 
 reg [RST_CNTR_BITSZ -1 : 0] ram_rst_cntr = {RST_CNTR_BITSZ{1'b1}};
 always @ (posedge rst_clk_w) begin

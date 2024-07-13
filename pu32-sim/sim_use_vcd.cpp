@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
+#include <termios.h>
+
 #include "Vsim.h"
 #include "Vsim_sim.h"
 
@@ -9,7 +11,7 @@
 #include "verilated_vcd_c.h"
 #endif
 
-#define VCDDUMPENTHRESH (0xffffffff) /* threshold which sets vcddumpen non-null */
+#define VCDDUMPENTHRESH (/*0x763fa*/0xffffffff) /* threshold which sets vcddumpen non-null */
 #define SIMEXITTICKCNT (vcddumpen + 4000000) /* tickcnt for which to run after vcddumpen is set non-null */
 
 int main (int argc, char **argv) {
@@ -63,7 +65,7 @@ int main (int argc, char **argv) {
 		if (!vcddumpen) {
 			unsigned long pc_changed = ((tb->sim->pc_w[0]) != (sim_pc_w_0_prev));
 			if ((pc_changed && (tb->sim->pc_w[0]) == VCDDUMPENTHRESH && (threshfoundcnt++ == 0))
-				/*|| tickcnt >= ((unsigned long)1898465178-((unsigned long)4000000*1))*/) {
+				|| tickcnt >= ((unsigned long)532748068*0-((unsigned long)4000000*0)) ) {
 				fprintf (stderr, "sim_pc_w_0_saved(0x%lx); tickcnt(%lu)\n",
 					sim_pc_w_0_saved, tickcnt); fflush(stderr);
 				vcddumpen = tickcnt;
@@ -83,6 +85,14 @@ int main (int argc, char **argv) {
 		tb->rst_i = 0;
 	};
 
+	struct termios saved_termios;
+	if (isatty(STDIN_FILENO)) {
+		if (tcgetattr(STDIN_FILENO, &saved_termios) == -1) {
+			fprintf (stderr, "tcgetattr() failed\n"); fflush(stderr);
+			goto exit;
+		}
+	}
+
 	rstcycle();
 
 	// Tick the clock until we are done
@@ -92,9 +102,11 @@ int main (int argc, char **argv) {
 		#endif
 		) tickclk();
 
+	tcsetattr(STDIN_FILENO, TCSAFLUSH, &saved_termios);
+
 	#if defined(USE_VCDTRACE)
 	fprintf (stderr, "tickcnt == %ld\n", tickcnt); fflush(stderr);
 	#endif
 
-	exitsim();
+	exit: exitsim();
 }

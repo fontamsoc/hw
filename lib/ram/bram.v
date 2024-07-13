@@ -18,7 +18,7 @@ module bram (
 parameter SZ = 2;
 parameter DW = 32;
 
-parameter SRCFILE = "";
+parameter INITFILE = "";
 
 input wire                 clk0_i;
 input wire                 clk1_i;
@@ -42,10 +42,10 @@ initial begin
 	for (init_u_idx = 0; init_u_idx < SZ; init_u_idx = init_u_idx + 1)
 		u[init_u_idx] = 0;
 	`endif
-	if (SRCFILE != "") begin
-		$readmemh (SRCFILE, u);
+	if (INITFILE != "") begin
+		$readmemh (INITFILE, u);
 		`ifdef SIMULATION
-		$display ("%s loaded", SRCFILE);
+		$display ("%s loaded", INITFILE);
 		`endif
 		// Initial state initialized here, otherwise
 		// block ram fails to be inferred by yosys.

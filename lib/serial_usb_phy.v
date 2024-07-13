@@ -49,7 +49,7 @@
 `include "lib/core_usb_fs_phy/src_v/usb_fs_phy.v"
 `include "lib/core_usb_fs_phy/src_v/usb_transceiver.v"
 
-module usb_serial_phy (
+module serial_usb_phy (
 
 	 rst_i
 
