@@ -1313,8 +1313,9 @@ icache #(
 	,.TAGBITSZ (ICACHETAGBITSIZE)
 	,.DATBITSZ (XWORDBITSZ)
 ) icache (
-	 .rst_i (doicacherst)
+	 .rst_i (rst_i)
 	,.clk_i (clk_i)
+	,.invd_i (doicacherst)
 	,.nxtway_i (instrbufrst)
 	,.we_i (instrfetchmemrqstdone)
 	,.widx_i (icacheset)

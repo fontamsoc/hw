@@ -12,6 +12,7 @@ module icache (
 
 	,clk_i
 
+	,invd_i
 	,nxtway_i
 
 	,we_i
@@ -42,6 +43,7 @@ input wire rst_i;
 
 input wire clk_i;
 
+input wire invd_i;
 input wire nxtway_i;
 
 input wire                      we_i;
@@ -67,6 +69,10 @@ reg [CLOG2SETCNT -1 : 0] rstidx;
 
 always @ (posedge clk_i) begin
 	if (rst_i) begin
+		rdy_o <= 0;
+		rstidx <= {CLOG2SETCNT{1'b1}};
+	end else if (invd_i) begin
+		// TODO: Invalidate using a date ...
 		rdy_o <= 0;
 		rstidx <= {CLOG2SETCNT{1'b1}};
 	end else if (!rdy_o) begin
