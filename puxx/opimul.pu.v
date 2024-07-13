@@ -293,7 +293,7 @@ module opimul (
 
 parameter ARCHBITSZ = 32;
 parameter GPRCNT    = 32;
-parameter INSTCNT   = 2; // pipeline depth.
+parameter INSTCNT   = 2;
 
 localparam CLOG2GPRCNT = clog2(GPRCNT);
 
@@ -393,10 +393,8 @@ end
 genvar gen_imul_idx;
 generate for (gen_imul_idx = 0; gen_imul_idx < INSTCNT; gen_imul_idx = gen_imul_idx + 1) begin :gen_imul
 imul #(
-
 	 .ARCHBITSZ (ARCHBITSZ)
 	,.GPRCNT    (GPRCNT)
-
 ) imul (
 
 	 .rst_i (rst_i)

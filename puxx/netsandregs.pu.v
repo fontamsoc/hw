@@ -1970,12 +1970,12 @@ end
 // [0]: 0/1 means ARCHBITSZ lsb/msb of result.
 localparam IMULTYPEBITSZ = 2;
 
-wire opimul_rdy_w;
-
-wire opimul_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopimul && opimul_rdy_w);
+wire opimul_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopimul);
 
 wire [(((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+IMULTYPEBITSZ) -1 : 0] opimul_data_w =
 	{instrbufdato0[1:0], gpridx1, gprdata1, gprdata2};
+
+wire opimul_rdy_w;
 
 wire [ARCHBITSZ -1 : 0]        opimulresult;
 wire [CLOG2GPRCNTTOTAL -1 : 0] opimulgpr;
@@ -2012,12 +2012,12 @@ opimul #(
 // [0]: 0/1 means quotient/remainder of result.
 localparam IDIVTYPEBITSZ = 2;
 
-wire opidiv_rdy_w;
-
-wire opidiv_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopidiv && opidiv_rdy_w);
+wire opidiv_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopidiv);
 
 wire [(((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+IDIVTYPEBITSZ) -1 : 0] opidiv_data_w =
 	{instrbufdato0[1:0], gpridx1, gprdata1, gprdata2};
+
+wire opidiv_rdy_w;
 
 wire [ARCHBITSZ -1 : 0]        opidivresult;
 wire [CLOG2GPRCNTTOTAL -1 : 0] opidivgpr;
@@ -2054,12 +2054,12 @@ opidiv #(
 // addition or substraction is 0 or 1 respectively.
 localparam FADDFSUBSELBITSZ = 1;
 
-wire opfaddfsub_rdy_w;
-
-wire opfaddfsub_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopfaddfsub && opfaddfsub_rdy_w);
+wire opfaddfsub_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopfaddfsub);
 
 wire [(((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+FADDFSUBSELBITSZ) -1 : 0] opfaddfsub_data_w =
 	{instrbufdato0[0], gpridx1, gprdata1, gprdata2};
+
+wire opfaddfsub_rdy_w;
 
 wire [ARCHBITSZ -1 : 0]        opfaddfsubresult;
 wire [CLOG2GPRCNTTOTAL -1 : 0] opfaddfsubgpr;
@@ -2103,12 +2103,12 @@ end endgenerate
 
 `ifdef PUFMUL
 
-wire opfmul_rdy_w;
-
-wire opfmul_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopfmul && opfmul_rdy_w);
+wire opfmul_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopfmul);
 
 wire [((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL) -1 : 0] opfmul_data_w =
 	{gpridx1, gprdata1, gprdata2};
+
+wire opfmul_rdy_w;
 
 wire [ARCHBITSZ -1 : 0]        opfmulresult;
 wire [CLOG2GPRCNTTOTAL -1 : 0] opfmulgpr;
@@ -2156,12 +2156,12 @@ end endgenerate
 
 `ifdef PUFDIV
 
-wire opfdiv_rdy_w;
-
-wire opfdiv_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopfdiv && opfdiv_rdy_w);
+wire opfdiv_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopfdiv);
 
 wire [((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL) -1 : 0] opfdiv_data_w =
 	{gpridx1, gprdata1, gprdata2};
+
+wire opfdiv_rdy_w;
 
 wire [ARCHBITSZ -1 : 0]        opfdivresult;
 wire [CLOG2GPRCNTTOTAL -1 : 0] opfdivgpr;
@@ -2444,18 +2444,18 @@ generate if (ARCHBITSZ == 64) begin
 	assign opldrsps_dat =
 		(opldrqsts_sel == 8'b11110000) ? {{32{1'b0}}, dcache_m_dat_o[63:32]} :
 		(opldrqsts_sel == 8'b00001111) ? {{32{1'b0}}, dcache_m_dat_o[31:0]} :
-		(opldrqsts_sel == 8'b11000000) ? {{16{1'b0}}, dcache_m_dat_o[63:48]} :
-		(opldrqsts_sel == 8'b00110000) ? {{16{1'b0}}, dcache_m_dat_o[47:32]} :
-		(opldrqsts_sel == 8'b00001100) ? {{16{1'b0}}, dcache_m_dat_o[31:16]} :
-		(opldrqsts_sel == 8'b00000011) ? {{16{1'b0}}, dcache_m_dat_o[15:0]} :
-		(opldrqsts_sel == 8'b10000000) ? {{24{1'b0}}, dcache_m_dat_o[63:56]} :
-		(opldrqsts_sel == 8'b01000000) ? {{24{1'b0}}, dcache_m_dat_o[55:48]} :
-		(opldrqsts_sel == 8'b00100000) ? {{24{1'b0}}, dcache_m_dat_o[47:40]} :
-		(opldrqsts_sel == 8'b00010000) ? {{24{1'b0}}, dcache_m_dat_o[39:32]} :
-		(opldrqsts_sel == 8'b00001000) ? {{24{1'b0}}, dcache_m_dat_o[31:24]} :
-		(opldrqsts_sel == 8'b00000100) ? {{24{1'b0}}, dcache_m_dat_o[23:16]} :
-		(opldrqsts_sel == 8'b00000010) ? {{24{1'b0}}, dcache_m_dat_o[15:8]} :
-		(opldrqsts_sel == 8'b00000001) ? {{24{1'b0}}, dcache_m_dat_o[7:0]} :
+		(opldrqsts_sel == 8'b11000000) ? {{48{1'b0}}, dcache_m_dat_o[63:48]} :
+		(opldrqsts_sel == 8'b00110000) ? {{48{1'b0}}, dcache_m_dat_o[47:32]} :
+		(opldrqsts_sel == 8'b00001100) ? {{48{1'b0}}, dcache_m_dat_o[31:16]} :
+		(opldrqsts_sel == 8'b00000011) ? {{48{1'b0}}, dcache_m_dat_o[15:0]} :
+		(opldrqsts_sel == 8'b10000000) ? {{56{1'b0}}, dcache_m_dat_o[63:56]} :
+		(opldrqsts_sel == 8'b01000000) ? {{56{1'b0}}, dcache_m_dat_o[55:48]} :
+		(opldrqsts_sel == 8'b00100000) ? {{56{1'b0}}, dcache_m_dat_o[47:40]} :
+		(opldrqsts_sel == 8'b00010000) ? {{56{1'b0}}, dcache_m_dat_o[39:32]} :
+		(opldrqsts_sel == 8'b00001000) ? {{56{1'b0}}, dcache_m_dat_o[31:24]} :
+		(opldrqsts_sel == 8'b00000100) ? {{56{1'b0}}, dcache_m_dat_o[23:16]} :
+		(opldrqsts_sel == 8'b00000010) ? {{56{1'b0}}, dcache_m_dat_o[15:8]} :
+		(opldrqsts_sel == 8'b00000001) ? {{56{1'b0}}, dcache_m_dat_o[7:0]} :
 		                                              dcache_m_dat_o;
 end endgenerate
 

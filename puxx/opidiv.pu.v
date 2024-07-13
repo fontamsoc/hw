@@ -189,7 +189,7 @@ module opidiv (
 
 parameter ARCHBITSZ = 32;
 parameter GPRCNT    = 32;
-parameter INSTCNT   = 2; // pipeline depth.
+parameter INSTCNT   = 2;
 
 localparam CLOG2GPRCNT = clog2(GPRCNT);
 
@@ -289,10 +289,8 @@ end
 genvar gen_idiv_idx;
 generate for (gen_idiv_idx = 0; gen_idiv_idx < INSTCNT; gen_idiv_idx = gen_idiv_idx + 1) begin :gen_idiv
 idiv #(
-
 	 .ARCHBITSZ (ARCHBITSZ)
 	,.GPRCNT    (GPRCNT)
-
 ) idiv (
 
 	 .rst_i (rst_i)
