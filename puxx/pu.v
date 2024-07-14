@@ -213,7 +213,6 @@ parameter DCACHESETCOUNT = 2;
 parameter TLBSETCOUNT    = 2;
 parameter ICACHEWAYCOUNT = 1;
 parameter DCACHEWAYCOUNT = 1;
-parameter TLBWAYCOUNT    = 1;
 parameter IMULCNT        = 2;
 parameter IDIVCNT        = 2;
 parameter FADDFSUBCNT    = 1;
@@ -225,7 +224,6 @@ parameter VERSION        = {8'd1/*major-version*/, 8'd0/*minor-version*/};
 localparam CLOG2ICACHESETCOUNT = clog2(ICACHESETCOUNT);
 localparam CLOG2DCACHESETCOUNT = clog2(DCACHESETCOUNT);
 localparam CLOG2ICACHEWAYCOUNT = clog2(ICACHEWAYCOUNT);
-localparam CLOG2TLBWAYCOUNT    = clog2(TLBWAYCOUNT);
 
 parameter WORDBITSZ  = 32;
 parameter XWORDBITSZ = 32; // TODO: Support all the way up to 1024 ...

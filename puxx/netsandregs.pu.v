@@ -874,6 +874,11 @@ wire doutofrange_;
 reg ioutofrange;
 reg doutofrange;
 
+// TLBWAYCOUNT must be 1, because there is no instruction to return
+// its value. Its value is needed when using clrtlb for example.
+localparam TLBWAYCOUNT      = 1;
+localparam CLOG2TLBWAYCOUNT = clog2(TLBWAYCOUNT);
+
 `ifdef PUMMU
 
 reg[(1+1+12) -1 : 0] asid;
@@ -2221,7 +2226,7 @@ always @* begin
 	3:       opgetsysregresult = {{(WORDBITSZ-3){1'b0}}, faultreason};
 	4:       opgetsysregresult = clkcyclecnt[WORDBITSZ -1 : 0];
 	5:       opgetsysregresult = clkcyclecnt[(WORDBITSZ*2) -1 : WORDBITSZ];
-	6:       opgetsysregresult = TLBSETCOUNT;
+	6:       opgetsysregresult = (TLBSETCOUNT*TLBWAYCOUNT);
 	default: opgetsysregresult = (ICACHESETCOUNT << CLOG2XWORDBITSZBY8DIFF);
 	endcase
 end
