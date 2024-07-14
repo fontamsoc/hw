@@ -2227,7 +2227,7 @@ always @* begin
 	4:       opgetsysregresult = clkcyclecnt[WORDBITSZ -1 : 0];
 	5:       opgetsysregresult = clkcyclecnt[(WORDBITSZ*2) -1 : WORDBITSZ];
 	6:       opgetsysregresult = (TLBSETCOUNT*TLBWAYCOUNT);
-	default: opgetsysregresult = (ICACHESETCOUNT << CLOG2XWORDBITSZBY8DIFF);
+	default: opgetsysregresult = ((ICACHESETCOUNT*ICACHEWAYCOUNT) << CLOG2XWORDBITSZBY8DIFF);
 	endcase
 end
 
@@ -2259,7 +2259,7 @@ always @* begin
 	0:       opgetsysreg1result = id_i;
 	1:       opgetsysreg1result = CLKFREQ;
 	`ifdef PUDCACHE
-	2:       opgetsysreg1result = (DCACHESETCOUNT << CLOG2XWORDBITSZBY8DIFF);
+	2:       opgetsysreg1result = ((DCACHESETCOUNT*DCACHEWAYCOUNT) << CLOG2XWORDBITSZBY8DIFF);
 	`endif
 	`ifdef PUMMU
 	3:       opgetsysreg1result = opgettlbresult;
