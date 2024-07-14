@@ -30,10 +30,10 @@ module sim (
 
 `include "lib/clog2.v"
 
-localparam ARCHBITSZ = 32;
+localparam WORDBITSZ = 32;
 
-localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
-localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
+localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
+localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
 input wire rst_i;
 input wire clk_i;
@@ -56,9 +56,9 @@ localparam WBPI_DEFAULTSLAVEINDEX = S_WBPI_INVALIDDEV;
 localparam WBPI_FIRSTSLAVEADDR    = /* set so memory starts at 0x1000*/ ('h1000 - (128/*SERIAL_MAPSZ*/));
 localparam WBPI_MAXPENDINGACK     = 16;
 localparam WBPI_DNSIZR            = 3'b001;
-localparam WBPI_ARCHBITSZ         = ARCHBITSZ*8;
-localparam WBPI_CLOG2ARCHBITSZBY8 = clog2(WBPI_ARCHBITSZ/8);
-localparam WBPI_ADDRBITSZ         = (WBPI_ARCHBITSZ - WBPI_CLOG2ARCHBITSZBY8);
+localparam WBPI_WORDBITSZ         = WORDBITSZ*8;
+localparam WBPI_CLOG2WORDBITSZBY8 = clog2(WBPI_WORDBITSZ/8);
+localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
 localparam WBPI_CLKFREQ           = CLK1XFREQ;
 wire wbpi_rst_w = rst_w;
 wire wbpi_clk_w = clk_1x_w;
@@ -68,24 +68,24 @@ wire wbpi_clk_w = clk_1x_w;
 // 	input                              m_wbpi_stb_w  [WBPI_MASTERCOUNT -1 : 0];
 // 	input                              m_wbpi_we_w   [WBPI_MASTERCOUNT -1 : 0];
 // 	input  [WBPI_ADDRBITSZ -1 : 0]     m_wbpi_addr_w [WBPI_MASTERCOUNT -1 : 0];
-// 	input  [(WBPI_ARCHBITSZ/8) -1 : 0] m_wbpi_sel_w  [WBPI_MASTERCOUNT -1 : 0];
-// 	input  [WBPI_ARCHBITSZ -1 : 0]     m_wbpi_dati_w [WBPI_MASTERCOUNT -1 : 0];
+// 	input  [(WBPI_WORDBITSZ/8) -1 : 0] m_wbpi_sel_w  [WBPI_MASTERCOUNT -1 : 0];
+// 	input  [WBPI_WORDBITSZ -1 : 0]     m_wbpi_dati_w [WBPI_MASTERCOUNT -1 : 0];
 // 	output                             m_wbpi_bsy_w  [WBPI_MASTERCOUNT -1 : 0];
 // 	output                             m_wbpi_ack_w  [WBPI_MASTERCOUNT -1 : 0];
-// 	output [WBPI_ARCHBITSZ -1 : 0]     m_wbpi_dato_w [WBPI_MASTERCOUNT -1 : 0];
+// 	output [WBPI_WORDBITSZ -1 : 0]     m_wbpi_dato_w [WBPI_MASTERCOUNT -1 : 0];
 // Slave devices must use the following signals to plug onto the peripheral interconnect:
 // 	output                             s_wbpi_cyc_w   [WBPI_SLAVECOUNT -1 : 0];
 // 	output                             s_wbpi_stb_w   [WBPI_SLAVECOUNT -1 : 0];
 // 	output                             s_wbpi_we_w    [WBPI_SLAVECOUNT -1 : 0];
 // 	output [WBPI_ADDRBITSZ -1 : 0]     s_wbpi_addr_w  [WBPI_SLAVECOUNT -1 : 0];
-// 	output [(WBPI_ARCHBITSZ/8) -1 : 0] s_wbpi_sel_w   [WBPI_SLAVECOUNT -1 : 0];
-// 	output [WBPI_ARCHBITSZ -1 : 0]     s_wbpi_dato_w  [WBPI_SLAVECOUNT -1 : 0];
+// 	output [(WBPI_WORDBITSZ/8) -1 : 0] s_wbpi_sel_w   [WBPI_SLAVECOUNT -1 : 0];
+// 	output [WBPI_WORDBITSZ -1 : 0]     s_wbpi_dato_w  [WBPI_SLAVECOUNT -1 : 0];
 // 	input                              s_wbpi_bsy_w   [WBPI_SLAVECOUNT -1 : 0];
 // 	input                              s_wbpi_ack_w   [WBPI_SLAVECOUNT -1 : 0];
-// 	input  [WBPI_ARCHBITSZ -1 : 0]     s_wbpi_dati_w  [WBPI_SLAVECOUNT -1 : 0];
-// 	input  [ARCHBITSZ -1 : 0]          s_wbpi_mapsz_w [WBPI_SLAVECOUNT -1 : 0];
+// 	input  [WBPI_WORDBITSZ -1 : 0]     s_wbpi_dati_w  [WBPI_SLAVECOUNT -1 : 0];
+// 	input  [WORDBITSZ -1 : 0]          s_wbpi_mapsz_w [WBPI_SLAVECOUNT -1 : 0];
 // If "dev/devtbl.v" was included, slave devices must also use following signals:
-// 	input  [ARCHBITSZ -1 : 0]          dev_id_w       [WBPI_SLAVECOUNT -1 : 0];
+// 	input  [WORDBITSZ -1 : 0]          dev_id_w       [WBPI_SLAVECOUNT -1 : 0];
 // 	input                              dev_useirq_w   [WBPI_SLAVECOUNT -1 : 0];
 `include "lib/wbpi_inst.v"
 
@@ -96,11 +96,11 @@ localparam ICACHEWAYCOUNT = 2;
 localparam DCACHEWAYCOUNT = 2;
 
 cpu #(
-	 .ARCHBITSZ      (ARCHBITSZ)
-	,.XARCHBITSZ     (WBPI_ARCHBITSZ)
+	 .WORDBITSZ      (WORDBITSZ)
+	,.XWORDBITSZ     (WBPI_WORDBITSZ)
 	,.CLKFREQ        (WBPI_CLKFREQ)
-	,.ICACHESETCOUNT ((1024/(WBPI_ARCHBITSZ/8))*(ICACHESZ/ICACHEWAYCOUNT))
-	,.DCACHESETCOUNT ((1024/(WBPI_ARCHBITSZ/8))*(DCACHESZ/DCACHEWAYCOUNT))
+	,.ICACHESETCOUNT ((1024/(WBPI_WORDBITSZ/8))*(ICACHESZ/ICACHEWAYCOUNT))
+	,.DCACHESETCOUNT ((1024/(WBPI_WORDBITSZ/8))*(DCACHESZ/DCACHEWAYCOUNT))
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
 	,.IMULCNT        (2)
@@ -128,14 +128,14 @@ cpu #(
 
 localparam PUCOUNT = 1;
 // Logic used by sim_use_vcd verilator testbench.
-wire [ARCHBITSZ -1 : 0] pc_w [PUCOUNT -1 : 0] /* verilator public */;
+wire [WORDBITSZ -1 : 0] pc_w [PUCOUNT -1 : 0] /* verilator public */;
 genvar gen_pc_w_idx;
 generate for (gen_pc_w_idx = 0; gen_pc_w_idx < PUCOUNT; gen_pc_w_idx = gen_pc_w_idx + 1) begin :gen_pc_w
 assign pc_w[gen_pc_w_idx] = cpu.genpu[gen_pc_w_idx].pu.pc_w;
 end endgenerate
 
 serial_sim #(
-	 .ARCHBITSZ (ARCHBITSZ)
+	 .WORDBITSZ (WORDBITSZ)
 	,.BUFSZ     (2)
 ) serial (
 
@@ -156,14 +156,14 @@ serial_sim #(
 );
 
 localparam SRAM_INITFILE =
-	WBPI_ARCHBITSZ == 32  ? "sram32.hex" :
-	WBPI_ARCHBITSZ == 64  ? "sram64.hex" :
-	WBPI_ARCHBITSZ == 128 ? "sram128.hex" :
-	WBPI_ARCHBITSZ == 256 ? "sram256.hex" : "";
+	WBPI_WORDBITSZ == 32  ? "sram32.hex" :
+	WBPI_WORDBITSZ == 64  ? "sram64.hex" :
+	WBPI_WORDBITSZ == 128 ? "sram128.hex" :
+	WBPI_WORDBITSZ == 256 ? "sram256.hex" : "";
 
 sram #(
-	 .ARCHBITSZ (WBPI_ARCHBITSZ)
-	,.SIZE      ((64/*KB*/)*(1024/(WBPI_ARCHBITSZ/8)))
+	 .WORDBITSZ (WBPI_WORDBITSZ)
+	,.SIZE      ((64/*KB*/)*(1024/(WBPI_WORDBITSZ/8)))
 	,.INITFILE  (SRAM_INITFILE)
 ) sram (
 
@@ -190,7 +190,7 @@ assign s_wbpi_mapsz_w[S_WBPI_INVALIDDEV] = ('h1000/* 4KB */);
 always @ (posedge wbpi_clk_w) begin
 	if (!wbpi_rst_w && s_wbpi_cyc_w[S_WBPI_INVALIDDEV]) begin
 		$write("!!! s_wbpi_addr_w[S_WBPI_INVALIDDEV] == 0x%x\n",
-			{{WBPI_CLOG2ARCHBITSZBY8{1'b0}}, s_wbpi_addr_w[S_WBPI_INVALIDDEV]}<<WBPI_CLOG2ARCHBITSZBY8);
+			{{WBPI_CLOG2WORDBITSZBY8{1'b0}}, s_wbpi_addr_w[S_WBPI_INVALIDDEV]}<<WBPI_CLOG2WORDBITSZBY8);
 		$fflush(1);
 		$finish;
 	end

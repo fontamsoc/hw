@@ -27,8 +27,8 @@ always @* begin
 		wb_cyc_o = 1;
 		wb_stb_o = 1;
 		wb_we_o = 0;
-		wb_addr_o = {{(XADDRBITSZ-ADDRBITSZ){1'b0}}, instrfetchppninstrfetchaddr[ADDRBITSZ -1 : CLOG2XARCHBITSZBY8DIFF]};
-		wb_sel_o = {(XARCHBITSZ/8){1'b1}};
+		wb_addr_o = {{(XADDRBITSZ-ADDRBITSZ){1'b0}}, instrfetchppninstrfetchaddr[ADDRBITSZ -1 : CLOG2XWORDBITSZBY8DIFF]};
+		wb_sel_o = {(XWORDBITSZ/8){1'b1}};
 	end else
 		wb_cyc_o = (|wb_pending_acks);
 end
@@ -132,8 +132,8 @@ always @ (posedge clk_i) begin
 
 					dcache_m_stb_i <= 1'b1;
 					dcache_m_we_i <= 0;
-					dcache_m_addr_i <= hptwpgd_plus_hptwdpgdoffset[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8];
-					dcache_m_sel_i <= {(ARCHBITSZ/8){1'b1}};
+					dcache_m_addr_i <= hptwpgd_plus_hptwdpgdoffset[WORDBITSZ -1 : CLOG2WORDBITSZBY8];
+					dcache_m_sel_i <= {(WORDBITSZ/8){1'b1}};
 					`ifdef PUDCACHE
 					dcache_cmiss_r <= 1'b1;
 					`endif
@@ -143,8 +143,8 @@ always @ (posedge clk_i) begin
 
 					dcache_m_stb_i <= 1'b1;
 					dcache_m_we_i <= 0;
-					dcache_m_addr_i <= hptwdpte_plus_hptwdpteoffset[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8];
-					dcache_m_sel_i <= {(ARCHBITSZ/8){1'b1}};
+					dcache_m_addr_i <= hptwdpte_plus_hptwdpteoffset[WORDBITSZ -1 : CLOG2WORDBITSZBY8];
+					dcache_m_sel_i <= {(WORDBITSZ/8){1'b1}};
 					`ifdef PUDCACHE
 					dcache_cmiss_r <= 1'b1;
 					`endif
@@ -162,7 +162,7 @@ always @ (posedge clk_i) begin
 			`endif
 				dcache_m_stb_i <= 1'b1;
 				dcache_m_we_i <= 0;
-				dcache_m_addr_i <= {dppn, gprdata2[12-1:CLOG2ARCHBITSZBY8]};
+				dcache_m_addr_i <= {dppn, gprdata2[12-1:CLOG2WORDBITSZBY8]};
 				dcache_m_sel_i <= dcache_m_sel_i_;
 				`ifdef PUDCACHE
 				dcache_cmiss_r <= dcache_cmiss_r_;
@@ -190,8 +190,8 @@ always @ (posedge clk_i) begin
 
 					dcache_m_stb_i <= 1'b1;
 					dcache_m_we_i <= 0;
-					dcache_m_addr_i <= hptwpgd_plus_hptwdpgdoffset[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8];
-					dcache_m_sel_i <= {(ARCHBITSZ/8){1'b1}};
+					dcache_m_addr_i <= hptwpgd_plus_hptwdpgdoffset[WORDBITSZ -1 : CLOG2WORDBITSZBY8];
+					dcache_m_sel_i <= {(WORDBITSZ/8){1'b1}};
 					`ifdef PUDCACHE
 					dcache_cmiss_r <= 1'b1;
 					`endif
@@ -201,8 +201,8 @@ always @ (posedge clk_i) begin
 
 					dcache_m_stb_i <= 1'b1;
 					dcache_m_we_i <= 0;
-					dcache_m_addr_i <= hptwdpte_plus_hptwdpteoffset[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8];
-					dcache_m_sel_i <= {(ARCHBITSZ/8){1'b1}};
+					dcache_m_addr_i <= hptwdpte_plus_hptwdpteoffset[WORDBITSZ -1 : CLOG2WORDBITSZBY8];
+					dcache_m_sel_i <= {(WORDBITSZ/8){1'b1}};
 					`ifdef PUDCACHE
 					dcache_cmiss_r <= 1'b1;
 					`endif
@@ -220,7 +220,7 @@ always @ (posedge clk_i) begin
 			`endif
 				dcache_m_stb_i <= 1'b1;
 				dcache_m_we_i <= 1;
-				dcache_m_addr_i <= {dppn, gprdata2[12-1:CLOG2ARCHBITSZBY8]};
+				dcache_m_addr_i <= {dppn, gprdata2[12-1:CLOG2WORDBITSZBY8]};
 				dcache_m_sel_i <= dcache_m_sel_i_;
 				dcache_m_dat_i <= dcache_m_dat_i_;
 				`ifdef PUDCACHE
@@ -249,8 +249,8 @@ always @ (posedge clk_i) begin
 
 					dcache_m_stb_i <= 1'b1;
 					dcache_m_we_i <= 0;
-					dcache_m_addr_i <= hptwpgd_plus_hptwdpgdoffset[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8];
-					dcache_m_sel_i <= {(ARCHBITSZ/8){1'b1}};
+					dcache_m_addr_i <= hptwpgd_plus_hptwdpgdoffset[WORDBITSZ -1 : CLOG2WORDBITSZBY8];
+					dcache_m_sel_i <= {(WORDBITSZ/8){1'b1}};
 					`ifdef PUDCACHE
 					dcache_cmiss_r <= 1'b1;
 					`endif
@@ -260,8 +260,8 @@ always @ (posedge clk_i) begin
 
 					dcache_m_stb_i <= 1'b1;
 					dcache_m_we_i <= 0;
-					dcache_m_addr_i <= hptwdpte_plus_hptwdpteoffset[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8];
-					dcache_m_sel_i <= {(ARCHBITSZ/8){1'b1}};
+					dcache_m_addr_i <= hptwdpte_plus_hptwdpteoffset[WORDBITSZ -1 : CLOG2WORDBITSZBY8];
+					dcache_m_sel_i <= {(WORDBITSZ/8){1'b1}};
 					`ifdef PUDCACHE
 					dcache_cmiss_r <= 1'b1;
 					`endif
@@ -282,7 +282,7 @@ always @ (posedge clk_i) begin
 				dcache_m_stb_i <= 1'b1;
 				dcache_m_we_i <= 1'b0;
 				dcache_m_we_i_ <= 1'b1;
-				dcache_m_addr_i <= {dppn, gprdata2[12-1:CLOG2ARCHBITSZBY8]};
+				dcache_m_addr_i <= {dppn, gprdata2[12-1:CLOG2WORDBITSZBY8]};
 				dcache_m_sel_i <= dcache_m_sel_i_;
 				dcache_m_dat_i <= dcache_m_dat_i_;
 				`ifdef PUDCACHE
@@ -316,8 +316,8 @@ always @ (posedge clk_i) begin
 
 			dcache_m_stb_i <= 1'b1;
 			dcache_m_we_i <= 0;
-			dcache_m_addr_i <= hptwpgd_plus_hptwipgdoffset[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8];
-			dcache_m_sel_i <= {(ARCHBITSZ/8){1'b1}};
+			dcache_m_addr_i <= hptwpgd_plus_hptwipgdoffset[WORDBITSZ -1 : CLOG2WORDBITSZBY8];
+			dcache_m_sel_i <= {(WORDBITSZ/8){1'b1}};
 			`ifdef PUDCACHE
 			dcache_cmiss_r <= 1'b1;
 			`endif
@@ -327,8 +327,8 @@ always @ (posedge clk_i) begin
 
 			dcache_m_stb_i <= 1'b1;
 			dcache_m_we_i <= 0;
-			dcache_m_addr_i <= hptwipte_plus_hptwipteoffset[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8];
-			dcache_m_sel_i <= {(ARCHBITSZ/8){1'b1}};
+			dcache_m_addr_i <= hptwipte_plus_hptwipteoffset[WORDBITSZ -1 : CLOG2WORDBITSZBY8];
+			dcache_m_sel_i <= {(WORDBITSZ/8){1'b1}};
 			`ifdef PUDCACHE
 			dcache_cmiss_r <= 1'b1;
 			`endif
@@ -350,10 +350,10 @@ always @ (posedge clk_i) begin
 	end
 end
 
-generate if (ARCHBITSZ == 16) begin
+generate if (WORDBITSZ == 16) begin
 	always @* begin
-		dcache_m_sel_i_ = {(ARCHBITSZ/8){1'b0}};
-		dcache_m_dat_i_ = {ARCHBITSZ{1'b0}};
+		dcache_m_sel_i_ = {(WORDBITSZ/8){1'b0}};
+		dcache_m_dat_i_ = {WORDBITSZ{1'b0}};
 		if (instrbufdato0[0]) begin
 			dcache_m_sel_i_ = 2'b11;
 			dcache_m_dat_i_ = gprdata1;
@@ -368,10 +368,10 @@ generate if (ARCHBITSZ == 16) begin
 		end
 	end
 end endgenerate
-generate if (ARCHBITSZ == 32) begin
+generate if (WORDBITSZ == 32) begin
 	always @* begin
-		dcache_m_sel_i_ = {(ARCHBITSZ/8){1'b0}};
-		dcache_m_dat_i_ = {ARCHBITSZ{1'b0}};
+		dcache_m_sel_i_ = {(WORDBITSZ/8){1'b0}};
+		dcache_m_dat_i_ = {WORDBITSZ{1'b0}};
 		if (instrbufdato0[1]) begin
 			dcache_m_sel_i_ = 4'b1111;
 			dcache_m_dat_i_ = gprdata1;
@@ -400,10 +400,10 @@ generate if (ARCHBITSZ == 32) begin
 		end
 	end
 end endgenerate
-generate if (ARCHBITSZ == 64) begin
+generate if (WORDBITSZ == 64) begin
 	always @* begin
-		dcache_m_sel_i_ = {(ARCHBITSZ/8){1'b0}};
-		dcache_m_dat_i_ = {ARCHBITSZ{1'b0}};
+		dcache_m_sel_i_ = {(WORDBITSZ/8){1'b0}};
+		dcache_m_dat_i_ = {WORDBITSZ{1'b0}};
 		if (&instrbufdato0[1:0]) begin
 			dcache_m_sel_i_ = 8'b11111111;
 			dcache_m_dat_i_ = gprdata1;

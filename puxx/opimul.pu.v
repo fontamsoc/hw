@@ -22,19 +22,19 @@ module imul (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 32;
+parameter WORDBITSZ = 32;
 parameter GPRCNT    = 32;
 
-localparam CLOG2ARCHBITSZ = clog2(ARCHBITSZ);
+localparam CLOG2WORDBITSZ = clog2(WORDBITSZ);
 localparam CLOG2GPRCNT    = clog2(GPRCNT);
 
 // Significance of each bit in the field within
 // data_i storing the type of multiplication to perform.
 // [1]: 0/1 means unsigned/signed computation.
-// [0]: 0/1 means ARCHBITSZ lsb/msb of result.
+// [0]: 0/1 means WORDBITSZ lsb/msb of result.
 localparam IMULTYPEBITSZ = 2;
-localparam IMULMSBRSLT   = ((ARCHBITSZ*2)+CLOG2GPRCNT);
-localparam IMULSIGNED    = ((ARCHBITSZ*2)+CLOG2GPRCNT+1);
+localparam IMULMSBRSLT   = ((WORDBITSZ*2)+CLOG2GPRCNT);
+localparam IMULSIGNED    = ((WORDBITSZ*2)+CLOG2GPRCNT+1);
 
 input wire rst_i;
 
@@ -42,16 +42,16 @@ input wire clk_i;
 
 input wire stb_i;
 
-// bits[(((ARCHBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ)-1:((ARCHBITSZ*2)+CLOG2GPRCNT)]
+// bits[(((WORDBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ)-1:((WORDBITSZ*2)+CLOG2GPRCNT)]
 // store the type of multiplication to perform,
-// bits[((ARCHBITSZ*2)+CLOG2GPRCNT)-1:ARCHBITSZ*2]
+// bits[((WORDBITSZ*2)+CLOG2GPRCNT)-1:WORDBITSZ*2]
 // store the id of the register to which the result will be saved,
-// bits[(ARCHBITSZ*2)-1:ARCHBITSZ] and bits[ARCHBITSZ-1:0]
+// bits[(WORDBITSZ*2)-1:WORDBITSZ] and bits[WORDBITSZ-1:0]
 // respectively store the first and second operand values.
-input wire [(((ARCHBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] data_i;
+input wire [(((WORDBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] data_i;
 
 // Reg set to the result of the multiplication.
-output reg [ARCHBITSZ -1 : 0] data_o;
+output reg [WORDBITSZ -1 : 0] data_o;
 
 // Reg set to the id of the gpr to which the result is to be stored.
 output reg [CLOG2GPRCNT -1 : 0] gprid_o;
@@ -60,31 +60,31 @@ output wire rdy_o;
 
 assign rdy_o = 1'b1;
 
-wire [(ARCHBITSZ*2) -1 : 0] rslt_unsigned =
-	(data_i[(ARCHBITSZ*2)-1:ARCHBITSZ] * data_i[ARCHBITSZ-1:0]);
-wire [(ARCHBITSZ*2) -1 : 0] rslt_signed =
-	($signed(data_i[(ARCHBITSZ*2)-1:ARCHBITSZ]) * $signed(data_i[ARCHBITSZ-1:0]));
+wire [(WORDBITSZ*2) -1 : 0] rslt_unsigned =
+	(data_i[(WORDBITSZ*2)-1:WORDBITSZ] * data_i[WORDBITSZ-1:0]);
+wire [(WORDBITSZ*2) -1 : 0] rslt_signed =
+	($signed(data_i[(WORDBITSZ*2)-1:WORDBITSZ]) * $signed(data_i[WORDBITSZ-1:0]));
 
 always @ (posedge clk_i) begin
 
 	if (stb_i) begin
 
-		gprid_o <= data_i[((ARCHBITSZ*2)+CLOG2GPRCNT)-1:ARCHBITSZ*2];
+		gprid_o <= data_i[((WORDBITSZ*2)+CLOG2GPRCNT)-1:WORDBITSZ*2];
 
-		// When data_i[IMULMSBRSLT] == 0, the ARCHBITSZ lsb are used as result.
-		// When data_i[IMULMSBRSLT] == 1, the ARCHBITSZ msb are used as result.
+		// When data_i[IMULMSBRSLT] == 0, the WORDBITSZ lsb are used as result.
+		// When data_i[IMULMSBRSLT] == 1, the WORDBITSZ msb are used as result.
 		// When data_i[IMULSIGNED] == 0, an unsigned multiplication was done.
 		// When data_i[IMULSIGNED] == 1, a signed multiplication was done.
 		if (data_i[IMULMSBRSLT]) begin
 			if (data_i[IMULSIGNED])
-				data_o <= rslt_signed[(ARCHBITSZ*2)-1:ARCHBITSZ];
+				data_o <= rslt_signed[(WORDBITSZ*2)-1:WORDBITSZ];
 			else
-				data_o <= rslt_unsigned[(ARCHBITSZ*2)-1:ARCHBITSZ];
+				data_o <= rslt_unsigned[(WORDBITSZ*2)-1:WORDBITSZ];
 
 		end else begin
-			// When only the ARCHBITSZ lsb of the multiplication are used,
+			// When only the WORDBITSZ lsb of the multiplication are used,
 			// there is no difference between a signed and unsigned multiplication.
-			data_o <= rslt_unsigned[ARCHBITSZ-1:0];
+			data_o <= rslt_unsigned[WORDBITSZ-1:0];
 		end
 	end
 end
@@ -110,19 +110,19 @@ module imul (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 32;
+parameter WORDBITSZ = 32;
 parameter GPRCNT    = 32;
 
-localparam CLOG2ARCHBITSZ = clog2(ARCHBITSZ);
+localparam CLOG2WORDBITSZ = clog2(WORDBITSZ);
 localparam CLOG2GPRCNT    = clog2(GPRCNT);
 
 // Significance of each bit in the field within
 // data_i storing the type of multiplication to perform.
 // [1]: 0/1 means unsigned/signed computation.
-// [0]: 0/1 means ARCHBITSZ lsb/msb of result.
+// [0]: 0/1 means WORDBITSZ lsb/msb of result.
 localparam IMULTYPEBITSZ = 2;
-localparam IMULMSBRSLT   = ((ARCHBITSZ*2)+CLOG2GPRCNT);
-localparam IMULSIGNED    = ((ARCHBITSZ*2)+CLOG2GPRCNT+1);
+localparam IMULMSBRSLT   = ((WORDBITSZ*2)+CLOG2GPRCNT);
+localparam IMULSIGNED    = ((WORDBITSZ*2)+CLOG2GPRCNT+1);
 
 input wire rst_i;
 
@@ -130,16 +130,16 @@ input wire clk_i;
 
 input wire stb_i;
 
-// bits[(((ARCHBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ)-1:((ARCHBITSZ*2)+CLOG2GPRCNT)]
+// bits[(((WORDBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ)-1:((WORDBITSZ*2)+CLOG2GPRCNT)]
 // store the type of multiplication to perform,
-// bits[((ARCHBITSZ*2)+CLOG2GPRCNT)-1:ARCHBITSZ*2]
+// bits[((WORDBITSZ*2)+CLOG2GPRCNT)-1:WORDBITSZ*2]
 // store the id of the register to which the result will be saved,
-// bits[(ARCHBITSZ*2)-1:ARCHBITSZ] and bits[ARCHBITSZ-1:0]
+// bits[(WORDBITSZ*2)-1:WORDBITSZ] and bits[WORDBITSZ-1:0]
 // respectively store the first and second operand values.
-input wire [(((ARCHBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] data_i;
+input wire [(((WORDBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] data_i;
 
 // Net set to the result of the multiplication.
-output reg [ARCHBITSZ -1 : 0] data_o; // ### comb-block-reg.
+output reg [WORDBITSZ -1 : 0] data_o; // ### comb-block-reg.
 
 // Net set to the id of the gpr to which the result is to be stored.
 output wire [CLOG2GPRCNT -1 : 0] gprid_o;
@@ -147,23 +147,23 @@ output wire [CLOG2GPRCNT -1 : 0] gprid_o;
 output reg rdy_o;
 
 // Register in which the multiplication will be computed.
-reg  [(ARCHBITSZ*2) -1 : 0] cumulator        = 0;
-wire [(ARCHBITSZ*2) -1 : 0] cumulatornegated = -cumulator;
+reg  [(WORDBITSZ*2) -1 : 0] cumulator        = 0;
+wire [(WORDBITSZ*2) -1 : 0] cumulatornegated = -cumulator;
 
 // Net used by the multiplication; compute the multiplier
 // times 0, 1, 2 or 3 based on cumulator[1:0].
-reg [(ARCHBITSZ+2) -1 : 0] mulx; // ### comb-block-reg.
+reg [(WORDBITSZ+2) -1 : 0] mulx; // ### comb-block-reg.
 
 // Reg set to the right operand value of the multiplication, which is the multiplier.
-reg [ARCHBITSZ -1 : 0] rval;
+reg [WORDBITSZ -1 : 0] rval;
 
 // ### Used so that verilog simulation would work.
-wire [(ARCHBITSZ+2) -1 : 0] cumulatorarg = (mulx + cumulator[(ARCHBITSZ*2)-1:ARCHBITSZ]);
+wire [(WORDBITSZ+2) -1 : 0] cumulatorarg = (mulx + cumulator[(WORDBITSZ*2)-1:WORDBITSZ]);
 
 // Reg used to capture data_i.
-reg [(((ARCHBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] operands;
+reg [(((WORDBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] operands;
 
-assign gprid_o = operands[((ARCHBITSZ*2)+CLOG2GPRCNT)-1:ARCHBITSZ*2];
+assign gprid_o = operands[((WORDBITSZ*2)+CLOG2GPRCNT)-1:WORDBITSZ*2];
 
 always @* begin
 	// Logic used by the multiplication; compute the multiplier
@@ -180,33 +180,33 @@ end
 
 reg tst_result_sign;
 always @ (posedge clk_i) begin
-	tst_result_sign <= (operands[IMULSIGNED] && (operands[(ARCHBITSZ*2)-1] != operands[(ARCHBITSZ-1)]));
+	tst_result_sign <= (operands[IMULSIGNED] && (operands[(WORDBITSZ*2)-1] != operands[(WORDBITSZ-1)]));
 end
 
 always @* begin
 	// Logic setting data_o using the result computed in cumulator.
 
-	// When operands[IMULMSBRSLT] == 0, the ARCHBITSZ lsb are used as result.
-	// When operands[IMULMSBRSLT] == 1, the ARCHBITSZ msb are used as result.
+	// When operands[IMULMSBRSLT] == 0, the WORDBITSZ lsb are used as result.
+	// When operands[IMULMSBRSLT] == 1, the WORDBITSZ msb are used as result.
 	// When operands[IMULSIGNED] == 0, an unsigned multiplication was done.
 	// When operands[IMULSIGNED] == 1, a signed multiplication was done.
 	if (operands[IMULMSBRSLT]) begin
 		// The sign of the result is positive if the multiplicand
 		// and multiplier have the same sign otherwise it is negative.
 		if (tst_result_sign)
-			data_o = cumulatornegated[(ARCHBITSZ*2)-1:ARCHBITSZ];
+			data_o = cumulatornegated[(WORDBITSZ*2)-1:WORDBITSZ];
 		else
-			data_o = cumulator[(ARCHBITSZ*2)-1:ARCHBITSZ];
+			data_o = cumulator[(WORDBITSZ*2)-1:WORDBITSZ];
 
 	end else begin
-		// When only the ARCHBITSZ lsb of the multiplication are used,
+		// When only the WORDBITSZ lsb of the multiplication are used,
 		// there is no difference between a signed and unsigned multiplication.
-		data_o = cumulator[ARCHBITSZ-1:0];
+		data_o = cumulator[WORDBITSZ-1:0];
 	end
 end
 
 // Register used to count the number of two-bits-set already used from the multiplier.
-reg [(CLOG2ARCHBITSZ-1) -1 : 0] cntr;
+reg [(CLOG2WORDBITSZ-1) -1 : 0] cntr;
 
 always @ (posedge clk_i) begin
 
@@ -223,21 +223,21 @@ always @ (posedge clk_i) begin
 			// If data_i[IMULSIGNED] == 0, it is an unsigned computation.
 			// If data_i[IMULSIGNED] == 1, it is a signed computation.
 			// For a signed computation, I turn the right operand positive if it was negative.
-			if (data_i[IMULSIGNED] && data_i[(ARCHBITSZ-1)])
-				rval <= -data_i[ARCHBITSZ-1:0];
+			if (data_i[IMULSIGNED] && data_i[(WORDBITSZ-1)])
+				rval <= -data_i[WORDBITSZ-1:0];
 			else
-				rval <= data_i[ARCHBITSZ-1:0];
+				rval <= data_i[WORDBITSZ-1:0];
 
-			// The multiplicand is in data_i[(ARCHBITSZ*2)-1:ARCHBITSZ].
-			// The multiplier is in data_i[ARCHBITSZ-1:0].
+			// The multiplicand is in data_i[(WORDBITSZ*2)-1:WORDBITSZ].
+			// The multiplier is in data_i[WORDBITSZ-1:0].
 
 			// If data_i[IMULSIGNED] == 0, an unsigned computation is to be done.
 			// If data_i[IMULSIGNED] == 1, a signed computation is to be done.
 			// If a signed computation is to be done, I turn the left operand positive if it was negative.
-			if (data_i[IMULSIGNED] && data_i[(ARCHBITSZ*2)-1])
-				cumulator <= {{ARCHBITSZ{1'b0}}, -data_i[(ARCHBITSZ*2)-1:ARCHBITSZ]};
+			if (data_i[IMULSIGNED] && data_i[(WORDBITSZ*2)-1])
+				cumulator <= {{WORDBITSZ{1'b0}}, -data_i[(WORDBITSZ*2)-1:WORDBITSZ]};
 			else
-				cumulator <= {{ARCHBITSZ{1'b0}}, data_i[(ARCHBITSZ*2)-1:ARCHBITSZ]};
+				cumulator <= {{WORDBITSZ{1'b0}}, data_i[(WORDBITSZ*2)-1:WORDBITSZ]};
 
 			rdy_o <= 0;
 
@@ -245,20 +245,20 @@ always @ (posedge clk_i) begin
 		end
 
 	end else begin
-		// Note that although mulx is (ARCHBITSZ+2) bits,
-		// the result of mulx + cumulator[(ARCHBITSZ*2)-1:ARCHBITSZ]
+		// Note that although mulx is (WORDBITSZ+2) bits,
+		// the result of mulx + cumulator[(WORDBITSZ*2)-1:WORDBITSZ]
 		// will never generate a carry, because
-		// mulx[(ARCHBITSZ+1):ARCHBITSZ] is guaranteed to never
+		// mulx[(WORDBITSZ+1):WORDBITSZ] is guaranteed to never
 		// be greater than 2'b10.
-		// ### mulx + cumulator[(ARCHBITSZ*2)-1:ARCHBITSZ]
+		// ### mulx + cumulator[(WORDBITSZ*2)-1:WORDBITSZ]
 		// ### was computed in cumulatorarg so that
 		// ### verilog simulation would work.
-		// ### cumulatorarg is (ARCHBITSZ+2) bits.
-		cumulator <= {cumulatorarg, cumulator[ARCHBITSZ-1:2]};
+		// ### cumulatorarg is (WORDBITSZ+2) bits.
+		cumulator <= {cumulatorarg, cumulator[WORDBITSZ-1:2]};
 
-		if (cntr == ((ARCHBITSZ/2)-1)) begin
+		if (cntr == ((WORDBITSZ/2)-1)) begin
 			// The multiplication is complete after cntr has been
-			// incremented (ARCHBITSZ/2) times; the result will
+			// incremented (WORDBITSZ/2) times; the result will
 			// be ready in cumulator after the next clockedge.
 			rdy_o <= 1;
 		end
@@ -291,7 +291,7 @@ module opimul (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 32;
+parameter WORDBITSZ = 32;
 parameter GPRCNT    = 32;
 parameter INSTCNT   = 2;
 
@@ -300,7 +300,7 @@ localparam CLOG2GPRCNT = clog2(GPRCNT);
 // Significance of each bit in the field within
 // data_i storing the type of multiplication to perform.
 // [1]: 0/1 means unsigned/signed computation.
-// [0]: 0/1 means ARCHBITSZ lsb/msb of result.
+// [0]: 0/1 means WORDBITSZ lsb/msb of result.
 localparam IMULTYPEBITSZ = 2;
 
 localparam CLOG2INSTCNT = clog2(INSTCNT);
@@ -312,20 +312,20 @@ input wire clk_imul_i;
 
 input wire stb_i;
 
-// bits[(((ARCHBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ)-1:((ARCHBITSZ*2)+CLOG2GPRCNT)]
+// bits[(((WORDBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ)-1:((WORDBITSZ*2)+CLOG2GPRCNT)]
 // store the type of multiplication to perform,
-// bits[((ARCHBITSZ*2)+CLOG2GPRCNT)-1:ARCHBITSZ*2]
+// bits[((WORDBITSZ*2)+CLOG2GPRCNT)-1:WORDBITSZ*2]
 // store the id of the register to which the result will be saved,
-// bits[(ARCHBITSZ*2)-1:ARCHBITSZ] and bits[ARCHBITSZ-1:0]
+// bits[(WORDBITSZ*2)-1:WORDBITSZ] and bits[WORDBITSZ-1:0]
 // respectively store the first and second operand values.
-input wire [(((ARCHBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] data_i;
+input wire [(((WORDBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] data_i;
 
 output wire rdy_o;
 
 input wire ostb_i;
 
 // Net set to the result of the multiplication.
-output wire [ARCHBITSZ -1 : 0] data_o;
+output wire [WORDBITSZ -1 : 0] data_o;
 
 // Net set to the id of the gpr to which the result is to be stored.
 output wire [CLOG2GPRCNT -1 : 0] gprid_o;
@@ -341,7 +341,7 @@ wire [(CLOG2INSTCNT +1) -1 : 0] _rdidx = ((INSTCNT-1) ? rdidx : 0);
 wire [(CLOG2INSTCNT +1) -1 : 0] usage;
 assign usage = (wridx - rdidx);
 
-wire [ARCHBITSZ -1 : 0] data_w [INSTCNT -1 : 0];
+wire [WORDBITSZ -1 : 0] data_w [INSTCNT -1 : 0];
 assign data_o = data_w[_rdidx];
 
 wire [CLOG2GPRCNT -1 : 0] gprid_w [INSTCNT -1 : 0];
@@ -355,11 +355,11 @@ assign ordy_o = ((usage != 0) && rdy_w[_rdidx]);
 
 `ifdef PUIMULCLK
 reg                                                       _stb_i  = 0;
-reg  [(((ARCHBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] _data_i = 0;
+reg  [(((WORDBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] _data_i = 0;
 reg  [(CLOG2INSTCNT +1) -1 : 0]                           __wridx = 0;
 `else
 wire                                                      _stb_i  = stb_i;
-wire [(((ARCHBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] _data_i = data_i;
+wire [(((WORDBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] _data_i = data_i;
 wire [(CLOG2INSTCNT +1) -1 : 0]                           __wridx = _wridx;
 `endif
 
@@ -393,7 +393,7 @@ end
 genvar gen_imul_idx;
 generate for (gen_imul_idx = 0; gen_imul_idx < INSTCNT; gen_imul_idx = gen_imul_idx + 1) begin :gen_imul
 imul #(
-	 .ARCHBITSZ (ARCHBITSZ)
+	 .WORDBITSZ (WORDBITSZ)
 	,.GPRCNT    (GPRCNT)
 ) imul (
 

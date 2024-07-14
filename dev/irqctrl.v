@@ -12,11 +12,11 @@
 //
 // IRQDSTCOUNT
 // 	Number of interrupt destination.
-// 	It must be non-null and less than ((1<<(ARCHBITSZ-5))-2).
+// 	It must be non-null and less than ((1<<(WORDBITSZ-5))-2).
 //
 // IRQSRCCOUNT
 // 	Number of interrupt source.
-// 	It must be non-null and less than ((1<<(ARCHBITSZ-5))-2).
+// 	It must be non-null and less than ((1<<(WORDBITSZ-5))-2).
 
 // Ports:
 //
@@ -65,11 +65,11 @@
 // 	when irq_src_rdy_o has become high and irq_src_stb_i is still high.
 //
 // Commands are sent to the controller writing to it with the
-// following expected format | arg: (ARCHBITSZ-2) bits | cmd: 2 bit |
+// following expected format | arg: (WORDBITSZ-2) bits | cmd: 2 bit |
 // where the field "cmd" values are CMDDEVRDY(2'b00), CMDACKIRQ(2'b01),
 // CMDINTDST(2'b10) and CMDENAIRQ(2'b11). The result of a previously
 // sent command is retrieved from the controller reading from it and
-// has the following format | resp: (ARCHBITSZ-2) bits | cmd: 2 bit |,
+// has the following format | resp: (WORDBITSZ-2) bits | cmd: 2 bit |,
 // where the fields "cmd" and "resp" are the command and its result.
 // Two memory operations, a write followed by a read are needed to send
 // a command to the controller and retrieve its result.
@@ -80,7 +80,7 @@
 // 	CMDDEVRDY: Make the controller accept a new command.
 // 	"resp" in the result get set to 0.
 // 	CMDACKIRQ: Acknowledges an interrupt source; field "arg" is expected
-// 	to have following format | idx: (ARCHBITSZ-3) bits | en: 1 bit |
+// 	to have following format | idx: (WORDBITSZ-3) bits | en: 1 bit |
 // 	where "idx" is the interrupt destination index, "en" enable/disable
 // 	further interrupt delivery to the interrupt destination "idx".
 // 	"resp" in the result get set to the interrupt source index, or -2
@@ -91,7 +91,7 @@
 // 	while "resp" in the result get set to the interrupt destination index
 // 	if valid, -2 if not ready due to an interrupt pending ack, or -1 if invalid.
 // 	CMDENAIRQ: Enable/Disable an interrupt source; field "arg" is expected
-// 	to have following format | idx: (ARCHBITSZ-3) bits | en: 1 bit|
+// 	to have following format | idx: (WORDBITSZ-3) bits | en: 1 bit|
 // 	where "idx" is the interrupt source index, "en" enable/disable
 // 	interrupts from the interrupt source "idx".
 // 	"resp" in the result get set to the interrupt source index, or -1
@@ -132,7 +132,7 @@ module irqctrl (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 32;
+parameter WORDBITSZ = 32;
 
 parameter IRQSRCCOUNT = 0;
 parameter IRQDSTCOUNT = 0;
@@ -140,8 +140,8 @@ parameter IRQDSTCOUNT = 0;
 localparam CLOG2IRQSRCCOUNT = clog2(IRQSRCCOUNT);
 localparam CLOG2IRQDSTCOUNT = clog2(IRQDSTCOUNT);
 
-localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
-localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
+localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
+localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
 input wire rst_i;
 
@@ -151,12 +151,12 @@ input  wire                        wb_cyc_i;
 input  wire                        wb_stb_i;
 input  wire                        wb_we_i;
 input  wire [ADDRBITSZ -1 : 0]     wb_addr_i;
-input  wire [(ARCHBITSZ/8) -1 : 0] wb_sel_i;
-input  wire [ARCHBITSZ -1 : 0]     wb_dat_i;
+input  wire [(WORDBITSZ/8) -1 : 0] wb_sel_i;
+input  wire [WORDBITSZ -1 : 0]     wb_dat_i;
 output wire                        wb_bsy_o;
 output reg                         wb_ack_o;
-output reg  [ARCHBITSZ -1 : 0]     wb_dat_o;
-output wire [ARCHBITSZ -1 : 0]     wb_mapsz_o;
+output reg  [WORDBITSZ -1 : 0]     wb_dat_o;
+output wire [WORDBITSZ -1 : 0]     wb_mapsz_o;
 
 output wire [IRQDSTCOUNT -1 : 0] irq_dst_stb_o;
 input  wire [IRQDSTCOUNT -1 : 0] irq_dst_rdy_i;
@@ -172,7 +172,7 @@ assign wb_mapsz_o = 128;
 
 reg                    wb_stb_r;
 reg                    wb_we_r;
-reg [ARCHBITSZ -1 : 0] wb_dat_r;
+reg [WORDBITSZ -1 : 0] wb_dat_r;
 
 wire wb_stb_r_ = (wb_cyc_i && wb_stb_i);
 
@@ -203,7 +203,7 @@ wire cmdackirq = (prevcmddone && wb_dat_r[1:0] == CMDACKIRQ);
 wire cmdintdst = (prevcmddone && wb_dat_r[1:0] == CMDINTDST);
 wire cmdenairq = (prevcmddone && wb_dat_r[1:0] == CMDENAIRQ);
 
-reg [ARCHBITSZ -1 : 0] irqdstdat;
+reg [WORDBITSZ -1 : 0] irqdstdat;
 wire irqdstseek = (
 	irqdstdat[1:0] == CMDINTDST &&
 	dstidx != irqdstdat[(CLOG2IRQDSTCOUNT +2) -1 : 2]);
@@ -242,57 +242,57 @@ reg [IRQDSTCOUNT -1 : 0] irqdsten;
 
 always @ (posedge clk_i) begin
 	if (rst_i) begin
-		wb_dat_o <= {ARCHBITSZ{1'b0}};
+		wb_dat_o <= {WORDBITSZ{1'b0}};
 		srcidx <= {CLOG2IRQSRCCOUNT{1'b0}};
 		dstidx <= {CLOG2IRQDSTCOUNT{1'b0}};
 		irqpending <= 1'b0;
-		irqdstdat <= {ARCHBITSZ{1'b0}};
+		irqdstdat <= {WORDBITSZ{1'b0}};
 		irqsrcen <= {IRQSRCCOUNT{1'b0}};
 		irqdsten <= {IRQDSTCOUNT{1'b0}};
 	end else if (cmddevrdy) begin
-		wb_dat_o <= {ARCHBITSZ{1'b0}};
+		wb_dat_o <= {WORDBITSZ{1'b0}};
 	end else if (cmdenairq) begin
-		if (wb_dat_r[ARCHBITSZ -1 : 3] < IRQSRCCOUNT) begin
+		if (wb_dat_r[WORDBITSZ -1 : 3] < IRQSRCCOUNT) begin
 			irqsrcen[wb_dat_r[(CLOG2IRQSRCCOUNT +3) -1 : 3]] <= wb_dat_r[2];
 			wb_dat_o <= {
-				{((ARCHBITSZ-2)-CLOG2IRQSRCCOUNT){1'b0}},
+				{((WORDBITSZ-2)-CLOG2IRQSRCCOUNT){1'b0}},
 				wb_dat_r[(CLOG2IRQSRCCOUNT +3) -1 : 3],
 				wb_dat_r[1:0]};
 		end else
-			wb_dat_o <= {{(ARCHBITSZ-2){1'b1}}, wb_dat_r[1:0]};
+			wb_dat_o <= {{(WORDBITSZ-2){1'b1}}, wb_dat_r[1:0]};
 	end else if (cmdintdst) begin
-		if (wb_dat_r[ARCHBITSZ -1 : 2] < IRQDSTCOUNT) begin
+		if (wb_dat_r[WORDBITSZ -1 : 2] < IRQDSTCOUNT) begin
 			if (irqpending) begin
-				wb_dat_o <= {{(ARCHBITSZ-3){1'b1}}, 1'b0, wb_dat_r[1:0]};
+				wb_dat_o <= {{(WORDBITSZ-3){1'b1}}, 1'b0, wb_dat_r[1:0]};
 			end else begin
 				wb_dat_o <= {
-					{((ARCHBITSZ-2)-CLOG2IRQDSTCOUNT){1'b0}},
+					{((WORDBITSZ-2)-CLOG2IRQDSTCOUNT){1'b0}},
 					wb_dat_r[(CLOG2IRQDSTCOUNT +2) -1 : 2],
 					wb_dat_r[1:0]};
 				irqpending <= 1'b1;
 				irqdstdat <= wb_dat_r;
 			end
 		end else
-			wb_dat_o <= {{(ARCHBITSZ-2){1'b1}}, wb_dat_r[1:0]};
+			wb_dat_o <= {{(WORDBITSZ-2){1'b1}}, wb_dat_r[1:0]};
 	end else if (irqdstseek) begin
 		// Keep incrementing dstidx until the targeted interrupt destination is indexed.
 		dstidx <= nextdstidx;
 	end else if (irqpending || cmdackirq) begin
 		// Logic that acknowledges a triggered interrupt.
 		if (cmdackirq) begin
-			if (wb_dat_r[ARCHBITSZ -1 : 3] == dstidx) begin
+			if (wb_dat_r[WORDBITSZ -1 : 3] == dstidx) begin
 				wb_dat_o <= ((irqdstdat[1:0] == CMDINTDST) ?
-					{{(ARCHBITSZ-2){1'b1}}, wb_dat_r[1:0]} :
-					{{((ARCHBITSZ-2)-CLOG2IRQSRCCOUNT){1'b0}}, srcidx, wb_dat_r[1:0]});
+					{{(WORDBITSZ-2){1'b1}}, wb_dat_r[1:0]} :
+					{{((WORDBITSZ-2)-CLOG2IRQSRCCOUNT){1'b0}}, srcidx, wb_dat_r[1:0]});
 				irqpending <= 1'b0;
-				irqdstdat <= {ARCHBITSZ{1'b0}};
+				irqdstdat <= {WORDBITSZ{1'b0}};
 				// The destination with the lowest index is always preferred.
 				dstidx <= {CLOG2IRQDSTCOUNT{1'b0}};
 				srcidx <= nextsrcidx;
 			end else begin
-				wb_dat_o <= {{(ARCHBITSZ-3){1'b1}}, 1'b0, wb_dat_r[1:0]};
+				wb_dat_o <= {{(WORDBITSZ-3){1'b1}}, 1'b0, wb_dat_r[1:0]};
 			end
-			if (wb_dat_r[ARCHBITSZ -1 : 3] < IRQDSTCOUNT)
+			if (wb_dat_r[WORDBITSZ -1 : 3] < IRQDSTCOUNT)
 				irqdsten[wb_dat_r[(CLOG2IRQDSTCOUNT +3) -1 : 3]] <= wb_dat_r[2];
 		end
 	end else if (irqsrcen[srcidx] && irq_src_stb_i[srcidx]) begin

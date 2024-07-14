@@ -11,7 +11,7 @@
 // The second half of the mapping has read/write registers used to
 // send commands to the device.
 // The registers and their offsets within the second half of the mapping are:
-// - RESET: 0*(ARCHBITSZ/8): Reading this register returns current status.
+// - RESET: 0*(WORDBITSZ/8): Reading this register returns current status.
 // 	A controller reset is initiated when writing any value to this register,
 // 	and an interrupt is raised once the reset is complete.
 // 	The status value returned can be:
@@ -21,7 +21,7 @@
 // 	3: Error.
 // 	Note that there is no reporting of timeout, as it is best implemented
 // 	in software by timing how long the device has been busy.
-// - SWAP: 1*(ARCHBITSZ/8): Reading this register returns PHYBLKSZ.
+// - SWAP: 1*(WORDBITSZ/8): Reading this register returns PHYBLKSZ.
 // 	Writing this register implements double caching whereby the RAM cache
 // 	presented in the first half of the memory mapping is swapped so that
 // 	the controller can now have access to it and so that its content can
@@ -35,13 +35,13 @@
 // 	is being stored in the device.
 // 	Writing this register must be done when the controller status is ready,
 // 	otherwise silent faillures and undefined behaviors will occur.
-// - READ: 2*(ARCHBITSZ/8): Reading this register returns the total block
+// - READ: 2*(WORDBITSZ/8): Reading this register returns the total block
 // 	count of the device.
 // 	Writing this register read a block of data from the block address written.
 // 	An interrupt is raised once reading the data block from the device is complete.
 // 	Writing this register must be done when the controller status is ready,
 // 	otherwise silent faillures and undefined behaviors will occur.
-// - WRITE: 3*(ARCHBITSZ/8): Reading this register returns the total block
+// - WRITE: 3*(WORDBITSZ/8): Reading this register returns the total block
 // 	count of the device.
 // 	Writing this register write a block of data to the block address written.
 // 	An interrupt is raised once writing the data block to the device is complete.
@@ -157,8 +157,8 @@ module sdcard_spi (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 32;
-parameter XARCHBITSZ = 32;
+parameter WORDBITSZ = 32;
+parameter XWORDBITSZ = 32;
 
 parameter CLKFREQ = 1;
 parameter PHYCLKFREQ = 1;
@@ -175,14 +175,14 @@ parameter SIMSTORAGESZ = 4096;
 // Note also that the value of this macro is the block size used by the controller.
 localparam PHYBLKSZ = 512; // ### Must not change for SDCard.
 
-localparam CLOG2ARCHBITSZ = clog2(ARCHBITSZ);
-localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
-localparam ADDRBITSZ = (ARCHBITSZ - CLOG2ARCHBITSZBY8);
+localparam CLOG2WORDBITSZ = clog2(WORDBITSZ);
+localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
+localparam ADDRBITSZ = (WORDBITSZ - CLOG2WORDBITSZBY8);
 
-localparam CLOG2XARCHBITSZBY8 = clog2(XARCHBITSZ/8);
-localparam XADDRBITSZ = (XARCHBITSZ-CLOG2XARCHBITSZBY8);
+localparam CLOG2XWORDBITSZBY8 = clog2(XWORDBITSZ/8);
+localparam XADDRBITSZ = (XWORDBITSZ-CLOG2XWORDBITSZBY8);
 
-localparam CLOG2XARCHBITSZBY8DIFF = (CLOG2XARCHBITSZBY8 - CLOG2ARCHBITSZBY8);
+localparam CLOG2XWORDBITSZBY8DIFF = (CLOG2XWORDBITSZBY8 - CLOG2WORDBITSZBY8);
 
 input wire rst_i;
 
@@ -200,12 +200,12 @@ input  wire                         wb_cyc_i;
 input  wire                         wb_stb_i;
 input  wire                         wb_we_i;
 input  wire [XADDRBITSZ -1 : 0]     wb_addr_i;
-input  wire [(XARCHBITSZ/8) -1 : 0] wb_sel_i;
-input  wire [XARCHBITSZ -1 : 0]     wb_dat_i;
+input  wire [(XWORDBITSZ/8) -1 : 0] wb_sel_i;
+input  wire [XWORDBITSZ -1 : 0]     wb_dat_i;
 output wire                         wb_bsy_o;
 output reg                          wb_ack_o;
-output reg  [XARCHBITSZ -1 : 0]     wb_dat_o;
-output wire [ARCHBITSZ -1 : 0]      wb_mapsz_o;
+output reg  [XWORDBITSZ -1 : 0]     wb_dat_o;
+output wire [WORDBITSZ -1 : 0]      wb_mapsz_o;
 
 output reg  irq_stb_o;
 input  wire irq_rdy_i;
@@ -231,23 +231,23 @@ localparam STATUSERROR    = 3;
 reg                         wb_stb_r;
 reg                         wb_we_r;
 reg [XADDRBITSZ -1 : 0]     wb_addr_r;
-reg [(XARCHBITSZ/8) -1 : 0] wb_sel_r;
-reg [XARCHBITSZ -1 : 0]     wb_dat_r;
+reg [(XWORDBITSZ/8) -1 : 0] wb_sel_r;
+reg [XWORDBITSZ -1 : 0]     wb_dat_r;
 
-wire [XARCHBITSZ -1 : 0] _wb_addr_r;
+wire [XWORDBITSZ -1 : 0] _wb_addr_r;
 addr #(
-	.ARCHBITSZ (XARCHBITSZ)
+	.WORDBITSZ (XWORDBITSZ)
 ) addr (
 	 .addr_i (wb_addr_r)
 	,.sel_i  (wb_sel_r)
 	,.addr_o (_wb_addr_r)
 );
-wire [ADDRBITSZ -1 : 0] addr_w = _wb_addr_r[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8];
+wire [ADDRBITSZ -1 : 0] addr_w = _wb_addr_r[WORDBITSZ -1 : CLOG2WORDBITSZBY8];
 
-wire cmd_reset = (wb_stb_r && (addr_w == ((CMDRESET * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8)));
-wire cmd_swap  = (wb_stb_r && (addr_w == ((CMDSWAP  * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8)));
-wire cmd_read  = (wb_stb_r && (addr_w == ((CMDREAD  * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8)));
-wire cmd_write = (wb_stb_r && (addr_w == ((CMDWRITE * (ARCHBITSZ/8) + PHYBLKSZ) >> CLOG2ARCHBITSZBY8)));
+wire cmd_reset = (wb_stb_r && (addr_w == ((CMDRESET * (WORDBITSZ/8) + PHYBLKSZ) >> CLOG2WORDBITSZBY8)));
+wire cmd_swap  = (wb_stb_r && (addr_w == ((CMDSWAP  * (WORDBITSZ/8) + PHYBLKSZ) >> CLOG2WORDBITSZBY8)));
+wire cmd_read  = (wb_stb_r && (addr_w == ((CMDREAD  * (WORDBITSZ/8) + PHYBLKSZ) >> CLOG2WORDBITSZBY8)));
+wire cmd_write = (wb_stb_r && (addr_w == ((CMDWRITE * (WORDBITSZ/8) + PHYBLKSZ) >> CLOG2WORDBITSZBY8)));
 
 wire phy_tx_pop_o, phy_rx_push_o;
 
@@ -328,27 +328,27 @@ reg cachesel;
 // Register keeping track of the cache byte location the PHY will access next.
 reg [CLOG2PHYBLKSZ -1 : 0] cachephyaddr;
 
-// Nets set to the index within the respective cache. Each cache element is XARCHBITSZ bits.
-wire [(CLOG2PHYBLKSZ-CLOG2XARCHBITSZBY8) -1 : 0] cache0addr =
-	cachesel ? wb_addr_r : cachephyaddr[CLOG2PHYBLKSZ -1 : CLOG2XARCHBITSZBY8];
-wire [(CLOG2PHYBLKSZ-CLOG2XARCHBITSZBY8) -1 : 0] cache1addr =
-	cachesel ? cachephyaddr[CLOG2PHYBLKSZ -1 : CLOG2XARCHBITSZBY8] : wb_addr_r;
+// Nets set to the index within the respective cache. Each cache element is XWORDBITSZ bits.
+wire [(CLOG2PHYBLKSZ-CLOG2XWORDBITSZBY8) -1 : 0] cache0addr =
+	cachesel ? wb_addr_r : cachephyaddr[CLOG2PHYBLKSZ -1 : CLOG2XWORDBITSZBY8];
+wire [(CLOG2PHYBLKSZ-CLOG2XWORDBITSZBY8) -1 : 0] cache1addr =
+	cachesel ? cachephyaddr[CLOG2PHYBLKSZ -1 : CLOG2XWORDBITSZBY8] : wb_addr_r;
 
-wire [XARCHBITSZ -1 : 0] cache0dato;
-wire [XARCHBITSZ -1 : 0] cache1dato;
+wire [XWORDBITSZ -1 : 0] cache0dato;
+wire [XWORDBITSZ -1 : 0] cache1dato;
 
-wire [XARCHBITSZ -1 : 0] cachephydata = cachesel ? cache1dato : cache0dato;
+wire [XWORDBITSZ -1 : 0] cachephydata = cachesel ? cache1dato : cache0dato;
 
 // Net set to the value from the PHY to store in the cache.
-reg [XARCHBITSZ -1 : 0] phy_rx_data_o_byteselected; // ### comb-always-block-reg.
-generate if (XARCHBITSZ == 16) begin
+reg [XWORDBITSZ -1 : 0] phy_rx_data_o_byteselected; // ### comb-always-block-reg.
+generate if (XWORDBITSZ == 16) begin
 	always @* begin
 		phy_rx_data_o_byteselected =
 			(cachephyaddr[0] == 0) ? {cachephydata[15:8], phy_rx_data_o} :
 			                         {phy_rx_data_o, cachephydata[7:0]};
 	end
 end endgenerate
-generate if (XARCHBITSZ == 32) begin
+generate if (XWORDBITSZ == 32) begin
 	always @* begin
 		phy_rx_data_o_byteselected =
 			(cachephyaddr[1:0] == 0) ? {cachephydata[31:8],  phy_rx_data_o} :
@@ -357,7 +357,7 @@ generate if (XARCHBITSZ == 32) begin
 			                           {                     phy_rx_data_o, cachephydata[23:0]};
 	end
 end endgenerate
-generate if (XARCHBITSZ == 64) begin
+generate if (XWORDBITSZ == 64) begin
 	always @* begin
 		phy_rx_data_o_byteselected =
 			(cachephyaddr[2:0] == 0) ? {cachephydata[63:8],  phy_rx_data_o} :
@@ -370,7 +370,7 @@ generate if (XARCHBITSZ == 64) begin
 			                           {                     phy_rx_data_o, cachephydata[55:0]};
 	end
 end endgenerate
-generate if (XARCHBITSZ == 128) begin
+generate if (XWORDBITSZ == 128) begin
 	always @* begin
 		phy_rx_data_o_byteselected =
 			(cachephyaddr[3:0] == 0)  ? {cachephydata[127:8],   phy_rx_data_o} :
@@ -391,7 +391,7 @@ generate if (XARCHBITSZ == 128) begin
 			                            {                       phy_rx_data_o, cachephydata[119:0]};
 	end
 end endgenerate
-generate if (XARCHBITSZ == 256) begin
+generate if (XWORDBITSZ == 256) begin
 	always @* begin
 		phy_rx_data_o_byteselected =
 			(cachephyaddr[4:0] == 0) ? {cachephydata[255:8],    phy_rx_data_o} :
@@ -429,25 +429,25 @@ generate if (XARCHBITSZ == 256) begin
 	end
 end endgenerate
 
-reg [XARCHBITSZ -1 : 0] _wb_sel_r; // ### comb-always-block-reg.
-generate if (XARCHBITSZ == 16) begin
+reg [XWORDBITSZ -1 : 0] _wb_sel_r; // ### comb-always-block-reg.
+generate if (XWORDBITSZ == 16) begin
 	always @* begin
 		_wb_sel_r = {{8{wb_sel_r[1]}}, {8{wb_sel_r[0]}}};
 	end
 end endgenerate
-generate if (XARCHBITSZ == 32) begin
+generate if (XWORDBITSZ == 32) begin
 	always @* begin
 		_wb_sel_r = {{8{wb_sel_r[3]}}, {8{wb_sel_r[2]}}, {8{wb_sel_r[1]}}, {8{wb_sel_r[0]}}};
 	end
 end endgenerate
-generate if (XARCHBITSZ == 64) begin
+generate if (XWORDBITSZ == 64) begin
 	always @* begin
 		_wb_sel_r = {
 			{8{wb_sel_r[7]}}, {8{wb_sel_r[6]}}, {8{wb_sel_r[5]}}, {8{wb_sel_r[4]}},
 			{8{wb_sel_r[3]}}, {8{wb_sel_r[2]}}, {8{wb_sel_r[1]}}, {8{wb_sel_r[0]}}};
 	end
 end endgenerate
-generate if (XARCHBITSZ == 128) begin
+generate if (XWORDBITSZ == 128) begin
 	always @* begin
 		_wb_sel_r = {
 			{8{wb_sel_r[15]}}, {8{wb_sel_r[14]}}, {8{wb_sel_r[13]}}, {8{wb_sel_r[12]}},
@@ -456,7 +456,7 @@ generate if (XARCHBITSZ == 128) begin
 			{8{wb_sel_r[3]}},  {8{wb_sel_r[2]}},  {8{wb_sel_r[1]}},  {8{wb_sel_r[0]}}};
 	end
 end endgenerate
-generate if (XARCHBITSZ == 256) begin
+generate if (XWORDBITSZ == 256) begin
 	always @* begin
 		_wb_sel_r = {
 			{8{wb_sel_r[31]}}, {8{wb_sel_r[30]}}, {8{wb_sel_r[29]}}, {8{wb_sel_r[28]}},
@@ -470,15 +470,15 @@ generate if (XARCHBITSZ == 256) begin
 	end
 end endgenerate
 
-wire [XARCHBITSZ -1 : 0] cachedato = (cachesel ? cache0dato : cache1dato);
+wire [XWORDBITSZ -1 : 0] cachedato = (cachesel ? cache0dato : cache1dato);
 
-wire [XARCHBITSZ -1 : 0] _wb_dat_r = ((wb_dat_r & _wb_sel_r) | (cachedato & ~_wb_sel_r));
+wire [XWORDBITSZ -1 : 0] _wb_dat_r = ((wb_dat_r & _wb_sel_r) | (cachedato & ~_wb_sel_r));
 // Nets set to the value to write in the respective cache.
-wire [XARCHBITSZ -1 : 0] cache0dati = cachesel ? _wb_dat_r : phy_rx_data_o_byteselected[XARCHBITSZ -1 : 0];
-wire [XARCHBITSZ -1 : 0] cache1dati = cachesel ? phy_rx_data_o_byteselected[XARCHBITSZ -1 : 0] : _wb_dat_r;
+wire [XWORDBITSZ -1 : 0] cache0dati = cachesel ? _wb_dat_r : phy_rx_data_o_byteselected[XWORDBITSZ -1 : 0];
+wire [XWORDBITSZ -1 : 0] cache1dati = cachesel ? phy_rx_data_o_byteselected[XWORDBITSZ -1 : 0] : _wb_dat_r;
 
 // phy_tx_data_i is set to the value read from the respective cache.
-generate if (XARCHBITSZ == 16) begin
+generate if (XWORDBITSZ == 16) begin
 	always @* begin
 		if (cachephyaddr[0] == 0)
 			phy_tx_data_i = cachesel ? cache1dato[7:0] : cache0dato[7:0];
@@ -486,7 +486,7 @@ generate if (XARCHBITSZ == 16) begin
 			phy_tx_data_i = cachesel ? cache1dato[15:8] : cache0dato[15:8];
 	end
 end endgenerate
-generate if (XARCHBITSZ == 32) begin
+generate if (XWORDBITSZ == 32) begin
 	always @* begin
 		if (cachephyaddr[1:0] == 0)
 			phy_tx_data_i = cachesel ? cache1dato[7:0] : cache0dato[7:0];
@@ -498,7 +498,7 @@ generate if (XARCHBITSZ == 32) begin
 			phy_tx_data_i = cachesel ? cache1dato[31:24] : cache0dato[31:24];
 	end
 end endgenerate
-generate if (XARCHBITSZ == 64) begin
+generate if (XWORDBITSZ == 64) begin
 	always @* begin
 		if (cachephyaddr[2:0] == 0)
 			phy_tx_data_i = cachesel ? cache1dato[7:0] : cache0dato[7:0];
@@ -518,7 +518,7 @@ generate if (XARCHBITSZ == 64) begin
 			phy_tx_data_i = cachesel ? cache1dato[63:56] : cache0dato[63:56];
 	end
 end endgenerate
-generate if (XARCHBITSZ == 128) begin
+generate if (XWORDBITSZ == 128) begin
 	always @* begin
 		if (cachephyaddr[3:0] == 0)
 			phy_tx_data_i = cachesel ? cache1dato[7:0] : cache0dato[7:0];
@@ -554,7 +554,7 @@ generate if (XARCHBITSZ == 128) begin
 			phy_tx_data_i = cachesel ? cache1dato[127:120] : cache0dato[127:120];
 	end
 end endgenerate
-generate if (XARCHBITSZ == 256) begin
+generate if (XWORDBITSZ == 256) begin
 	always @* begin
 		if (cachephyaddr[4:0] == 0)
 			phy_tx_data_i = cachesel ? cache1dato[7:0] : cache0dato[7:0];
@@ -635,8 +635,8 @@ wire phy_err_o_posedge = (phy_err_o && !phy_err_o_r);
 reg  phy_bsy_w_r;
 wire phy_bsy_w_negedge = (!phy_bsy_w && phy_bsy_w_r);
 
-wire cache_rdop = (wb_stb_r && !wb_we_r && wb_addr_r < (PHYBLKSZ >> CLOG2XARCHBITSZBY8));
-wire cache_wrop = (wb_stb_r && wb_we_r  && wb_addr_r < (PHYBLKSZ >> CLOG2XARCHBITSZBY8));
+wire cache_rdop = (wb_stb_r && !wb_we_r && wb_addr_r < (PHYBLKSZ >> CLOG2XWORDBITSZBY8));
+wire cache_wrop = (wb_stb_r && wb_we_r  && wb_addr_r < (PHYBLKSZ >> CLOG2XWORDBITSZBY8));
 
 // Nets set to 1 when a read/write request is done to their respective cache.
 wire cache0rd = cachesel ? cache_rdop : phy_tx_pop_o;
@@ -644,8 +644,8 @@ wire cache1rd = cachesel ? phy_tx_pop_o : cache_rdop;
 wire cache0wr = cachesel ? cache_wrop : phy_rx_push_o;
 wire cache1wr = cachesel ? phy_rx_push_o : cache_wrop;
 
-reg [XARCHBITSZ -1 : 0] cache0 [(PHYBLKSZ/(XARCHBITSZ/8)) -1 : 0];
-reg [XARCHBITSZ -1 : 0] cache1 [(PHYBLKSZ/(XARCHBITSZ/8)) -1 : 0];
+reg [XWORDBITSZ -1 : 0] cache0 [(PHYBLKSZ/(XWORDBITSZ/8)) -1 : 0];
+reg [XWORDBITSZ -1 : 0] cache1 [(PHYBLKSZ/(XWORDBITSZ/8)) -1 : 0];
 
 assign cache0dato = cache0[cache0addr];
 assign cache1dato = cache1[cache1addr];
@@ -669,7 +669,7 @@ always @* begin
 		status = STATUSREADY;
 end
 
-reg [XARCHBITSZ -1 : 0] wb_dat_o_; // ### comb-block-reg.
+reg [XWORDBITSZ -1 : 0] wb_dat_o_; // ### comb-block-reg.
 always @* begin
 	if (cmd_reset)
 		wb_dat_o_ = status;
@@ -683,11 +683,11 @@ end
 
 wire wb_stb_r_ = (wb_cyc_i && wb_stb_i);
 
-wire [(CLOG2XARCHBITSZBY8DIFF+CLOG2ARCHBITSZ)-1:0] wb_dat_shift;
-generate if (XARCHBITSZ == ARCHBITSZ) begin
+wire [(CLOG2XWORDBITSZBY8DIFF+CLOG2WORDBITSZ)-1:0] wb_dat_shift;
+generate if (XWORDBITSZ == WORDBITSZ) begin
 assign wb_dat_shift = 0;
 end else begin
-assign wb_dat_shift = {_wb_addr_r[CLOG2XARCHBITSZBY8-1:CLOG2ARCHBITSZBY8], {CLOG2ARCHBITSZ{1'b0}}};
+assign wb_dat_shift = {_wb_addr_r[CLOG2XWORDBITSZBY8-1:CLOG2WORDBITSZBY8], {CLOG2WORDBITSZ{1'b0}}};
 end endgenerate
 
 always @ (posedge clk_i) begin

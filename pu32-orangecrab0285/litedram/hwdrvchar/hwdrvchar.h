@@ -34,7 +34,7 @@ static void hwdrvchar_init (hwdrvchar *dev, unsigned long baudrate) {
 	// Command HWDRVCHAR_CMDGETBUFFERUSAGE to retrieve
 	// the number of bytes in the UART transmit buffer.
 	// The encoding of a command and its argument
-	// is as follow: | arg: (ARCHBITSZ-2) bits | cmd: 2 bits |
+	// is as follow: | arg: (WORDBITSZ-2) bits | cmd: 2 bits |
 	do {
 		do {
 			data = ((1<<2) | HWDRVCHAR_CMDGETBUFFERUSAGE);
@@ -55,7 +55,7 @@ static void hwdrvchar_init (hwdrvchar *dev, unsigned long baudrate) {
 	// Command HWDRVCHAR_CMDSETSPEED to retrieve
 	// the clock frequency used by the UART device.
 	// The encoding of a command and its argument
-	// is as follow: | arg: (ARCHBITSZ-2) bits | cmd: 2 bits |
+	// is as follow: | arg: (WORDBITSZ-2) bits | cmd: 2 bits |
 	do {
 		data = HWDRVCHAR_CMDSETSPEED;
 		__asm__ __volatile__ (
@@ -75,7 +75,7 @@ static void hwdrvchar_init (hwdrvchar *dev, unsigned long baudrate) {
 	// Command HWDRVCHAR_CMDSETSPEED to set
 	// the speed to use when sending and receiving bytes.
 	// The encoding of a command and its argument
-	// is as follow: | arg: (ARCHBITSZ-2) bits | cmd: 2 bits |
+	// is as follow: | arg: (WORDBITSZ-2) bits | cmd: 2 bits |
 	do {
 		data = (((dev->clkfreq/baudrate)<<2) | HWDRVCHAR_CMDSETSPEED);
 		__asm__ __volatile__ (
@@ -95,7 +95,7 @@ static void hwdrvchar_init (hwdrvchar *dev, unsigned long baudrate) {
 	// the size in bytes of the UART transmit
 	// and receive buffer.
 	// The encoding of a command and its argument
-	// is as follow: | arg: (ARCHBITSZ-2) bits | cmd: 2 bits |
+	// is as follow: | arg: (WORDBITSZ-2) bits | cmd: 2 bits |
 	do {
 		data = HWDRVCHAR_CMDSETINTERRUPT;
 		__asm__ __volatile__ (
@@ -121,7 +121,7 @@ static inline unsigned long hwdrvchar_readable (hwdrvchar *dev) {
 	// Command HWDRVCHAR_CMDGETBUFFERUSAGE to retrieve
 	// the number of bytes in the UART receive buffer.
 	// The encoding of a command and its argument
-	// is as follow: | arg: (ARCHBITSZ-2) bits | cmd: 2 bits |
+	// is as follow: | arg: (WORDBITSZ-2) bits | cmd: 2 bits |
 	do {
 		data = HWDRVCHAR_CMDGETBUFFERUSAGE;
 		__asm__ __volatile__ (
@@ -171,7 +171,7 @@ static inline unsigned long hwdrvchar_writable (hwdrvchar *dev) {
 	// Command HWDRVCHAR_CMDGETBUFFERUSAGE to retrieve
 	// the number of bytes in the UART transmit buffer.
 	// The encoding of a command and its argument
-	// is as follow: | arg: (ARCHBITSZ-2) bits | cmd: 2 bits |
+	// is as follow: | arg: (WORDBITSZ-2) bits | cmd: 2 bits |
 	do {
 		data = ((1<<2) | HWDRVCHAR_CMDGETBUFFERUSAGE);
 		__asm__ __volatile__ (
@@ -223,7 +223,7 @@ static inline void hwdrvchar_interrupt (hwdrvchar *dev, unsigned long threshold)
 	void* addr = dev->addr;
 	// Command HWDRVCHAR_CMDSETINTERRUPT to enable/disable interrupt.
 	// The encoding of a command and its argument
-	// is as follow: | arg: (ARCHBITSZ-2) bits | cmd: 2 bits |
+	// is as follow: | arg: (WORDBITSZ-2) bits | cmd: 2 bits |
 	do {
 		data = ((threshold<<2) | HWDRVCHAR_CMDSETINTERRUPT);
 		__asm__ __volatile__ (

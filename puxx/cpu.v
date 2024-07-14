@@ -81,11 +81,11 @@ parameter FDIVCNT        = 1;
 parameter MAXPENDINGACK  = 16;
 parameter VERSION        = {8'd1/*major-version*/, 8'd0/*minor-version*/};
 
-parameter ARCHBITSZ  = 32;
-parameter XARCHBITSZ = 32;
+parameter WORDBITSZ  = 32;
+parameter XWORDBITSZ = 32;
 
-localparam CLOG2XARCHBITSZBY8 = clog2(XARCHBITSZ/8);
-localparam XADDRBITSZ = (XARCHBITSZ-CLOG2XARCHBITSZBY8);
+localparam CLOG2XWORDBITSZBY8 = clog2(XWORDBITSZ/8);
+localparam XADDRBITSZ = (XWORDBITSZ-CLOG2XWORDBITSZBY8);
 
 `ifdef PUCOUNT
 localparam PUCOUNT = `PUCOUNT;
@@ -109,20 +109,20 @@ output wire                         wb_cyc_o;
 output wire                         wb_stb_o;
 output wire                         wb_we_o;
 output wire [XADDRBITSZ -1 : 0]     wb_addr_o;
-output wire [(XARCHBITSZ/8) -1 : 0] wb_sel_o;
-output wire [XARCHBITSZ -1 : 0]     wb_dat_o;
+output wire [(XWORDBITSZ/8) -1 : 0] wb_sel_o;
+output wire [XWORDBITSZ -1 : 0]     wb_dat_o;
 input  wire                         wb_bsy_i;
 input  wire                         wb_ack_i;
-input  wire [XARCHBITSZ -1 : 0]     wb_dat_i;
+input  wire [XWORDBITSZ -1 : 0]     wb_dat_i;
 
 input  wire [PUCOUNT -1 : 0] irq_stb_i;
 output wire [PUCOUNT -1 : 0] irq_rdy_o;
 output wire [PUCOUNT -1 : 0] halted_o;
 
-input wire [(ARCHBITSZ-1) -1 : 0] rstaddr_i;
-input wire [(ARCHBITSZ-1) -1 : 0] rstaddr2_i;
+input wire [(WORDBITSZ-1) -1 : 0] rstaddr_i;
+input wire [(WORDBITSZ-1) -1 : 0] rstaddr2_i;
 
-input wire [ARCHBITSZ -1 : 0] id_i;
+input wire [WORDBITSZ -1 : 0] id_i;
 
 `ifdef PUDBG
 input  wire            brkonrst_i;
@@ -138,35 +138,35 @@ wire                         arbiter_wb_cyc_i  [PUCOUNT -1 : 0];
 wire                         arbiter_wb_stb_i  [PUCOUNT -1 : 0];
 wire                         arbiter_wb_we_i   [PUCOUNT -1 : 0];
 wire [XADDRBITSZ -1 : 0]     arbiter_wb_addr_i [PUCOUNT -1 : 0];
-wire [(XARCHBITSZ/8) -1 : 0] arbiter_wb_sel_i  [PUCOUNT -1 : 0];
-wire [XARCHBITSZ -1 : 0]     arbiter_wb_dat_i  [PUCOUNT -1 : 0];
+wire [(XWORDBITSZ/8) -1 : 0] arbiter_wb_sel_i  [PUCOUNT -1 : 0];
+wire [XWORDBITSZ -1 : 0]     arbiter_wb_dat_i  [PUCOUNT -1 : 0];
 wire                         arbiter_wb_bsy_o  [PUCOUNT -1 : 0];
 wire                         arbiter_wb_ack_o  [PUCOUNT -1 : 0];
-wire [XARCHBITSZ -1 : 0]     arbiter_wb_dat_o  [PUCOUNT -1 : 0];
+wire [XWORDBITSZ -1 : 0]     arbiter_wb_dat_o  [PUCOUNT -1 : 0];
 
 wire [(1 * PUCOUNT) -1 : 0]              _arbiter_wb_cyc_i;
 wire [(1 * PUCOUNT) -1 : 0]              _arbiter_wb_stb_i;
 wire [(1 * PUCOUNT) -1 : 0]              _arbiter_wb_we_i;
 wire [(XADDRBITSZ * PUCOUNT) -1 : 0]     _arbiter_wb_addr_i;
-wire [((XARCHBITSZ/8) * PUCOUNT) -1 : 0] _arbiter_wb_sel_i;
-wire [(XARCHBITSZ * PUCOUNT) -1 : 0]     _arbiter_wb_dat_i;
+wire [((XWORDBITSZ/8) * PUCOUNT) -1 : 0] _arbiter_wb_sel_i;
+wire [(XWORDBITSZ * PUCOUNT) -1 : 0]     _arbiter_wb_dat_i;
 wire [(1 * PUCOUNT) -1 : 0]              arbiter_wb_bsy_o_;
 wire [(1 * PUCOUNT) -1 : 0]              arbiter_wb_ack_o_;
-wire [(XARCHBITSZ * PUCOUNT) -1 : 0]     arbiter_wb_dat_o_;
+wire [(XWORDBITSZ * PUCOUNT) -1 : 0]     arbiter_wb_dat_o_;
 
 wire                         wb_cyc_o_;
 wire                         wb_stb_o_;
 wire                         wb_we_o_;
 wire [XADDRBITSZ -1 : 0]     wb_addr_o_;
-wire [(XARCHBITSZ/8) -1 : 0] wb_sel_o_;
-wire [XARCHBITSZ -1 : 0]     wb_dat_o_;
+wire [(XWORDBITSZ/8) -1 : 0] wb_sel_o_;
+wire [XWORDBITSZ -1 : 0]     wb_dat_o_;
 wire                         _wb_bsy_i;
 wire                         _wb_ack_i;
-wire [XARCHBITSZ -1 : 0]     _wb_dat_i;
+wire [XWORDBITSZ -1 : 0]     _wb_dat_i;
 
 wb_arbiter #(
 
-	 .ARCHBITSZ   (XARCHBITSZ)
+	 .WORDBITSZ   (XWORDBITSZ)
 	,.MASTERCOUNT (PUCOUNT)
 
 ) wb_arbiter (
@@ -201,7 +201,7 @@ wb_arbiter #(
 // needed by pu.opldrqstseqs if there is no dcache.
 wb_cdc #(
 
-	 .ARCHBITSZ     (XARCHBITSZ)
+	 .WORDBITSZ     (XWORDBITSZ)
 	,.MAXPENDINGACK (MAXPENDINGACK)
 
 ) wb_cdc (
@@ -260,8 +260,8 @@ generate for (
 
 pu #(
 
-	 .ARCHBITSZ      (ARCHBITSZ)
-	,.XARCHBITSZ     (XARCHBITSZ)
+	 .WORDBITSZ      (WORDBITSZ)
+	,.XWORDBITSZ     (XWORDBITSZ)
 	,.CLKFREQ        (CLKFREQ)
 	,.ICACHESETCOUNT (ICACHESETCOUNT)
 	,.DCACHESETCOUNT (DCACHESETCOUNT)
@@ -324,14 +324,14 @@ assign _arbiter_wb_stb_i[genpu_idx] = arbiter_wb_stb_i[genpu_idx];
 assign _arbiter_wb_we_i[genpu_idx] = arbiter_wb_we_i[genpu_idx];
 assign _arbiter_wb_addr_i[((genpu_idx+1) * XADDRBITSZ) -1 : (genpu_idx * XADDRBITSZ)] =
 	arbiter_wb_addr_i[genpu_idx];
-assign _arbiter_wb_sel_i[((genpu_idx+1) * (XARCHBITSZ/8)) -1 : (genpu_idx * (XARCHBITSZ/8))] =
+assign _arbiter_wb_sel_i[((genpu_idx+1) * (XWORDBITSZ/8)) -1 : (genpu_idx * (XWORDBITSZ/8))] =
 	arbiter_wb_sel_i[genpu_idx];
-assign _arbiter_wb_dat_i[((genpu_idx+1) * XARCHBITSZ) -1 : (genpu_idx * XARCHBITSZ)] =
+assign _arbiter_wb_dat_i[((genpu_idx+1) * XWORDBITSZ) -1 : (genpu_idx * XWORDBITSZ)] =
 	arbiter_wb_dat_i[genpu_idx];
 assign arbiter_wb_bsy_o[genpu_idx] = arbiter_wb_bsy_o_[genpu_idx];
 assign arbiter_wb_ack_o[genpu_idx] = arbiter_wb_ack_o_[genpu_idx];
 assign arbiter_wb_dat_o[genpu_idx] =
-	arbiter_wb_dat_o_[((genpu_idx+1) * XARCHBITSZ) -1 : (genpu_idx * XARCHBITSZ)];
+	arbiter_wb_dat_o_[((genpu_idx+1) * XWORDBITSZ) -1 : (genpu_idx * XWORDBITSZ)];
 
 end endgenerate
 

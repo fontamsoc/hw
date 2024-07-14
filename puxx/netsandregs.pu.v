@@ -6,27 +6,27 @@ wire inkernelmode = ~inusermode;
 
 // This register hold the address of the instruction
 // currently being sequenced from the instruction buffer.
-reg[(ARCHBITSZ-1) -1 : 0] ip;
+reg[(WORDBITSZ-1) -1 : 0] ip;
 
 `ifdef SIMULATION
-wire [ARCHBITSZ -1 : 0] pc_w = ({1'b0, ip} << 1'b1);
+wire [WORDBITSZ -1 : 0] pc_w = ({1'b0, ip} << 1'b1);
 `endif
 
-reg[(ARCHBITSZ-1) -1 : 0] kip;
-reg[(ARCHBITSZ-1) -1 : 0] uip;
+reg[(WORDBITSZ-1) -1 : 0] kip;
+reg[(WORDBITSZ-1) -1 : 0] uip;
 
 reg ksysopfaultmode;
-reg[(ARCHBITSZ-1) -1 : 0] ksysopfaulthdlr;
-reg[(ARCHBITSZ-1) -1 : 0] ksysopfaultaddr;
-wire[(ARCHBITSZ-1) -1 : 0] ksysopfaulthdlrplustwo = (ksysopfaulthdlr + 'h2);
+reg[(WORDBITSZ-1) -1 : 0] ksysopfaulthdlr;
+reg[(WORDBITSZ-1) -1 : 0] ksysopfaultaddr;
+wire[(WORDBITSZ-1) -1 : 0] ksysopfaulthdlrplustwo = (ksysopfaulthdlr + 'h2);
 
-wire[(ARCHBITSZ-1) -1 : 0] ipnxt = (ip + 1'b1);
+wire[(WORDBITSZ-1) -1 : 0] ipnxt = (ip + 1'b1);
 
 reg[16 -1 : 0] sysopcode;
 reg[16 -1 : 0] saved_sysopcode;
 
-reg[ARCHBITSZ -1 : 0] faultaddr;
-reg[ARCHBITSZ -1 : 0] saved_faultaddr;
+reg[WORDBITSZ -1 : 0] faultaddr;
+reg[WORDBITSZ -1 : 0] saved_faultaddr;
 
 localparam READFAULTINTR	= 3'd0;
 localparam WRITEFAULTINTR	= 3'd1;
@@ -44,11 +44,11 @@ reg dohalt;
 
 // ---------- Registers and nets used for instruction buffering ----------
 
-reg[XARCHBITSZ -1 : 0] instrbuf[INSTRBUFFERSIZE -1 : 0];
+reg[XWORDBITSZ -1 : 0] instrbuf[INSTRBUFFERSIZE -1 : 0];
 
 wire instrbufwe;
 
-wire [XARCHBITSZ -1 : 0] instrbufi;
+wire [XWORDBITSZ -1 : 0] instrbufi;
 
 // Write index within the instruction buffer.
 // Only the CLOG2INSTRBUFFERSIZE lsb are used for indexing.
@@ -56,31 +56,31 @@ reg[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufwriteidx;
 
 // Net set to the space used in the instrbuf.
 wire[(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufusage =
-	(instrbufwriteidx - ip[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) : ((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)]);
+	(instrbufwriteidx - ip[(CLOG2INSTRBUFFERSIZE+((CLOG2WORDBITSZBY8-1)+CLOG2XWORDBITSZBY8DIFF)) : ((CLOG2WORDBITSZBY8-1)+CLOG2XWORDBITSZBY8DIFF)]);
 
 wire [(CLOG2INSTRBUFFERSIZE +1) -1 : 0] instrbufusage2 =
-	(instrbufwriteidx - ipnxt[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) : ((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)]);
+	(instrbufwriteidx - ipnxt[(CLOG2INSTRBUFFERSIZE+((CLOG2WORDBITSZBY8-1)+CLOG2XWORDBITSZBY8DIFF)) : ((CLOG2WORDBITSZBY8-1)+CLOG2XWORDBITSZBY8DIFF)]);
 
-wire [XARCHBITSZ -1 : 0] instrbufipnxt = instrbuf[ipnxt[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) -1 : (CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF]];
+wire [XWORDBITSZ -1 : 0] instrbufipnxt = instrbuf[ipnxt[(CLOG2INSTRBUFFERSIZE+((CLOG2WORDBITSZBY8-1)+CLOG2XWORDBITSZBY8DIFF)) -1 : (CLOG2WORDBITSZBY8-1)+CLOG2XWORDBITSZBY8DIFF]];
 
 // Net set to 16bits data indexed from instrbuf; note that instructions are 16bits.
 reg [16 -1 : 0] _instrbufipnxt; // ### declared as reg to be usable within always block.
-generate if (XARCHBITSZ == 16) begin
+generate if (XWORDBITSZ == 16) begin
 	always @* begin
 		_instrbufipnxt = instrbufipnxt;
 	end
 end endgenerate
-generate if (XARCHBITSZ == 32) begin
+generate if (XWORDBITSZ == 32) begin
 	always @* begin
-		case (ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (ipnxt[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _instrbufipnxt = instrbufipnxt[15:0];
 		default: _instrbufipnxt = instrbufipnxt[31:16];
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 64) begin
+generate if (XWORDBITSZ == 64) begin
 	always @* begin
-		case (ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (ipnxt[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _instrbufipnxt = instrbufipnxt[15:0];
 		1:       _instrbufipnxt = instrbufipnxt[31:16];
 		2:       _instrbufipnxt = instrbufipnxt[47:32];
@@ -88,9 +88,9 @@ generate if (XARCHBITSZ == 64) begin
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 128) begin
+generate if (XWORDBITSZ == 128) begin
 	always @* begin
-		case (ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (ipnxt[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _instrbufipnxt = instrbufipnxt[15:0];
 		1:       _instrbufipnxt = instrbufipnxt[31:16];
 		2:       _instrbufipnxt = instrbufipnxt[47:32];
@@ -102,9 +102,9 @@ generate if (XARCHBITSZ == 128) begin
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 256) begin
+generate if (XWORDBITSZ == 256) begin
 	always @* begin
-		case (ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (ipnxt[CLOG2XWORDBITSZBY16 -1 : 0])
 		0 :      _instrbufipnxt = instrbufipnxt[15:0];
 		1 :      _instrbufipnxt = instrbufipnxt[31:16];
 		2 :      _instrbufipnxt = instrbufipnxt[47:32];
@@ -126,22 +126,22 @@ generate if (XARCHBITSZ == 256) begin
 end endgenerate
 
 reg [16 -1 : 0] _instrbufi; // ### declared as reg to be usable within always block.
-generate if (XARCHBITSZ == 16) begin
+generate if (XWORDBITSZ == 16) begin
 	always @* begin
 		_instrbufi = instrbufi;
 	end
 end endgenerate
-generate if (XARCHBITSZ == 32) begin
+generate if (XWORDBITSZ == 32) begin
 	always @* begin
-		case (ip[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (ip[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _instrbufi = instrbufi[15:0];
 		default: _instrbufi = instrbufi[31:16];
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 64) begin
+generate if (XWORDBITSZ == 64) begin
 	always @* begin
-		case (ip[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (ip[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _instrbufi = instrbufi[15:0];
 		1:       _instrbufi = instrbufi[31:16];
 		2:       _instrbufi = instrbufi[47:32];
@@ -149,9 +149,9 @@ generate if (XARCHBITSZ == 64) begin
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 128) begin
+generate if (XWORDBITSZ == 128) begin
 	always @* begin
-		case (ip[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (ip[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _instrbufi = instrbufi[15:0];
 		1:       _instrbufi = instrbufi[31:16];
 		2:       _instrbufi = instrbufi[47:32];
@@ -163,9 +163,9 @@ generate if (XARCHBITSZ == 128) begin
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 256) begin
+generate if (XWORDBITSZ == 256) begin
 	always @* begin
-		case (ip[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (ip[CLOG2XWORDBITSZBY16 -1 : 0])
 		0 :      _instrbufi = instrbufi[15:0];
 		1 :      _instrbufi = instrbufi[31:16];
 		2 :      _instrbufi = instrbufi[47:32];
@@ -187,22 +187,22 @@ generate if (XARCHBITSZ == 256) begin
 end endgenerate
 
 reg [16 -1 : 0] _instrbufi2; // ### declared as reg to be usable within always block.
-generate if (XARCHBITSZ == 16) begin
+generate if (XWORDBITSZ == 16) begin
 	always @* begin
 		_instrbufi2 = instrbufi;
 	end
 end endgenerate
-generate if (XARCHBITSZ == 32) begin
+generate if (XWORDBITSZ == 32) begin
 	always @* begin
-		case (ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (ipnxt[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _instrbufi2 = instrbufi[15:0];
 		default: _instrbufi2 = instrbufi[31:16];
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 64) begin
+generate if (XWORDBITSZ == 64) begin
 	always @* begin
-		case (ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (ipnxt[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _instrbufi2 = instrbufi[15:0];
 		1:       _instrbufi2 = instrbufi[31:16];
 		2:       _instrbufi2 = instrbufi[47:32];
@@ -210,9 +210,9 @@ generate if (XARCHBITSZ == 64) begin
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 128) begin
+generate if (XWORDBITSZ == 128) begin
 	always @* begin
-		case (ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (ipnxt[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _instrbufi2 = instrbufi[15:0];
 		1:       _instrbufi2 = instrbufi[31:16];
 		2:       _instrbufi2 = instrbufi[47:32];
@@ -224,9 +224,9 @@ generate if (XARCHBITSZ == 128) begin
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 256) begin
+generate if (XWORDBITSZ == 256) begin
 	always @* begin
-		case (ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (ipnxt[CLOG2XWORDBITSZBY16 -1 : 0])
 		0 :      _instrbufi2 = instrbufi[15:0];
 		1 :      _instrbufi2 = instrbufi[31:16];
 		2 :      _instrbufi2 = instrbufi[47:32];
@@ -274,7 +274,7 @@ wire instrbufrst_posedge = (!instrbufrst_sampled && instrbufrst);
 reg[ADDRBITSZ -1 : 0] instrfetchaddr;
 
 // Net set to the next value of instrfetchaddr.
-wire[ADDRBITSZ -1 : 0] instrfetchnextaddr = instrbufrst ? ip[(ARCHBITSZ-1)-1:CLOG2ARCHBITSZBY8-1] : (instrfetchaddr+(XARCHBITSZ/ARCHBITSZ));
+wire[ADDRBITSZ -1 : 0] instrfetchnextaddr = instrbufrst ? ip[(WORDBITSZ-1)-1:CLOG2WORDBITSZBY8-1] : (instrfetchaddr+(XWORDBITSZ/WORDBITSZ));
 
 // Register holding the physical page number of the instruction to fetch.
 reg[PAGENUMBITSZ -1 : 0] instrfetchppn;
@@ -285,7 +285,7 @@ reg instrfetchfaulted_b;
 wire instrfetchfaulted = (instrfetchfaulted_a ^ instrfetchfaulted_b);
 
 // Register holding the instruction fetch fault virtual address.
-reg[ARCHBITSZ -1 : 0] instrfetchfaultaddr;
+reg[WORDBITSZ -1 : 0] instrfetchfaultaddr;
 
 // Register set to 1 for a mem request.
 reg instrfetchmemrqst;
@@ -341,18 +341,18 @@ localparam DBGARGSTEPTILL	= 3;
 // Debug interface registers and nets.
 reg dbgen;
 reg dbgselected;
-reg[(CLOG2ARCHBITSZBY8+1) -1 : 0] dbgcounter;
-wire[(CLOG2ARCHBITSZBY8+1) -1 : 0] dbgcounterminusone = (dbgcounter - 1'b1);
+reg[(CLOG2WORDBITSZBY8+1) -1 : 0] dbgcounter;
+wire[(CLOG2WORDBITSZBY8+1) -1 : 0] dbgcounterminusone = (dbgcounter - 1'b1);
 reg dbgcntren;
 reg[3 -1 : 0] dbgcmd;
 reg[5 -1 : 0] dbgarg;
-reg[ARCHBITSZ -1 : 0] dbgiarg;
+reg[WORDBITSZ -1 : 0] dbgiarg;
 wire dbgiargeqip = (dbgiarg == {ip, 1'b0});
 wire dbgcmdsteptilldone = (dbgcmd == DBGCMDSTEP && (
 	(dbgarg == DBGARGSTEPONCE && ((!dbgiargeqip && !oplicounter) || instrbufrst)) ||
 	(dbgarg == DBGARGSTEPTILL && dbgiargeqip)));
 wire dbgbrk = (dbgen && (dbgcmd != DBGCMDSTEP || dbgcmdsteptilldone || dbgarg == DBGARGSTEPSTOP));
-wire[ARCHBITSZ -1 : 0] dbggprdata;
+wire[WORDBITSZ -1 : 0] dbggprdata;
 `else
 wire dbgen = 1'b0;
 `endif
@@ -388,22 +388,22 @@ wire                        dcache_m_cyc_i;
 reg                         dcache_m_stb_i;
 reg                         dcache_m_we_i;
 reg  [ADDRBITSZ -1 : 0]     dcache_m_addr_i;
-reg  [(ARCHBITSZ/8) -1 : 0] dcache_m_sel_i;
-reg  [ARCHBITSZ -1 : 0]     dcache_m_dat_i;
+reg  [(WORDBITSZ/8) -1 : 0] dcache_m_sel_i;
+reg  [WORDBITSZ -1 : 0]     dcache_m_dat_i;
 wire                        dcache_m_bsy_o;
 wire                        dcache_m_ack_o;
-wire [ARCHBITSZ -1 : 0]     dcache_m_dat_o;
+wire [WORDBITSZ -1 : 0]     dcache_m_dat_o;
 
 reg                         dcache_m_we_i_;  // Used by opldst.
-reg  [(ARCHBITSZ/8) -1 : 0] dcache_m_sel_i_; // ### comb-block-reg.
-reg  [ARCHBITSZ -1 : 0]     dcache_m_dat_i_; // ### comb-block-reg.
+reg  [(WORDBITSZ/8) -1 : 0] dcache_m_sel_i_; // ### comb-block-reg.
+reg  [WORDBITSZ -1 : 0]     dcache_m_dat_i_; // ### comb-block-reg.
 
 wire                         dcache_s_cyc_o;
 wire                         dcache_s_stb_o;
 wire                         dcache_s_we_o;
 wire [XADDRBITSZ -1 : 0]     dcache_s_addr_o;
-wire [(XARCHBITSZ/8) -1 : 0] dcache_s_sel_o;
-wire [XARCHBITSZ -1 : 0]     dcache_s_dat_o;
+wire [(XWORDBITSZ/8) -1 : 0] dcache_s_sel_o;
+wire [XWORDBITSZ -1 : 0]     dcache_s_dat_o;
 
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] dcache_m_pending_acks;
 
@@ -485,8 +485,8 @@ wire dtlbrdy_opldst = !(
 
 // These nets will respectively hold the value of the first
 // and second gpr operand of an instruction being sequenced.
-wire[ARCHBITSZ -1 : 0] gprdata1;
-wire[ARCHBITSZ -1 : 0] gprdata2;
+wire[WORDBITSZ -1 : 0] gprdata1;
+wire[WORDBITSZ -1 : 0] gprdata2;
 
 wire isopgettlb;
 wire isopld;
@@ -507,7 +507,7 @@ assign inkernelmode_kmodepaging = (inkernelmode && kmodepaging);
 
 `ifdef PUHPTW
 
-reg[ARCHBITSZ -1 : 0] hptwpgd;
+reg[WORDBITSZ -1 : 0] hptwpgd;
 
 localparam HPTWSTATEPGD0 = 0;
 localparam HPTWSTATEPGD1 = 1;
@@ -558,10 +558,10 @@ wire hptwitlbwe = (hptwimemack && !instrbufrst_posedge &&
 	(((!inkernelmode_kmodepaging && inuserspace) ? dcache_m_dat_o[4] : 1'b1) && dcache_m_dat_o[0]) &&
 	hptwistate_eq_HPTWSTATEPTE1);
 wire[10 -1 : 0] hptwipgdoffset = instrfetchnextaddr[ADDRBITSZ -1 : ADDRBITSZ -10];
-wire[ARCHBITSZ -1 : 0] hptwpgd_plus_hptwipgdoffset = (hptwpgd + {hptwipgdoffset, {CLOG2ARCHBITSZBY8{1'b0}}});
-reg[ARCHBITSZ -1 : 0] hptwipte;
+wire[WORDBITSZ -1 : 0] hptwpgd_plus_hptwipgdoffset = (hptwpgd + {hptwipgdoffset, {CLOG2WORDBITSZBY8{1'b0}}});
+reg[WORDBITSZ -1 : 0] hptwipte;
 wire[10 -1 : 0] hptwipteoffset = instrfetchnextaddr[(ADDRBITSZ -10) -1 : (ADDRBITSZ -10) -10];
-wire[ARCHBITSZ -1 : 0] hptwipte_plus_hptwipteoffset = (hptwipte + {hptwipteoffset, {CLOG2ARCHBITSZBY8{1'b0}}});
+wire[WORDBITSZ -1 : 0] hptwipte_plus_hptwipteoffset = (hptwipte + {hptwipteoffset, {CLOG2WORDBITSZBY8{1'b0}}});
 reg hptwidone;
 
 reg[3 -1 : 0] hptwdstate; // Must have enough bits such that it can be used with the sequencer to determine whether in use.
@@ -577,11 +577,11 @@ wire hptwdtlbwe = (hptwdmemack &&
 		(isopst    && dcache_m_dat_o[1])        ||
 		(isopldst  && (|dcache_m_dat_o[2:1])))) &&
 	hptwdstate_eq_HPTWSTATEPTE1);
-wire[10 -1 : 0] hptwdpgdoffset = gprdata2[ARCHBITSZ -1 : ARCHBITSZ -10];
-wire[ARCHBITSZ -1 : 0] hptwpgd_plus_hptwdpgdoffset = (hptwpgd + {hptwdpgdoffset, {CLOG2ARCHBITSZBY8{1'b0}}});
-reg[ARCHBITSZ -1 : 0] hptwdpte;
-wire[10 -1 : 0] hptwdpteoffset = gprdata2[(ARCHBITSZ -10) -1 : (ARCHBITSZ -10) -10];
-wire[ARCHBITSZ -1 : 0] hptwdpte_plus_hptwdpteoffset = (hptwdpte + {hptwdpteoffset, {CLOG2ARCHBITSZBY8{1'b0}}});
+wire[10 -1 : 0] hptwdpgdoffset = gprdata2[WORDBITSZ -1 : WORDBITSZ -10];
+wire[WORDBITSZ -1 : 0] hptwpgd_plus_hptwdpgdoffset = (hptwpgd + {hptwdpgdoffset, {CLOG2WORDBITSZBY8{1'b0}}});
+reg[WORDBITSZ -1 : 0] hptwdpte;
+wire[10 -1 : 0] hptwdpteoffset = gprdata2[(WORDBITSZ -10) -1 : (WORDBITSZ -10) -10];
+wire[WORDBITSZ -1 : 0] hptwdpte_plus_hptwdpteoffset = (hptwdpte + {hptwdpteoffset, {CLOG2WORDBITSZBY8{1'b0}}});
 reg hptwddone;
 
 wire hptwbsy = (!hptwistate_eq_HPTWSTATEPGD0 || !hptwdstate_eq_HPTWSTATEPGD0);
@@ -606,7 +606,7 @@ always @ (posedge clk_i) begin
 
 		if (hptwistate_eq_HPTWSTATEPGD1) begin
 			if (dcache_m_dat_o[5])
-				hptwipte <= {dcache_m_dat_o[ARCHBITSZ-1:12], 12'b0};
+				hptwipte <= {dcache_m_dat_o[WORDBITSZ-1:12], 12'b0};
 			else
 				hptwidone <= 1'b1;
 		end else if (hptwistate_eq_HPTWSTATEPTE1)
@@ -636,7 +636,7 @@ always @ (posedge clk_i) begin
 
 		if (hptwdstate_eq_HPTWSTATEPGD1) begin
 			if (dcache_m_dat_o[5])
-				hptwdpte <= {dcache_m_dat_o[ARCHBITSZ-1:12], 12'b0};
+				hptwdpte <= {dcache_m_dat_o[WORDBITSZ-1:12], 12'b0};
 			else
 				hptwddone <= 1'b1;
 		end else if (hptwdstate_eq_HPTWSTATEPTE1)
@@ -675,13 +675,13 @@ localparam GPRCTRLSTATEOPFMUL     = 6;
 localparam GPRCTRLSTATEOPFDIV     = 7;
 reg[3 -1 : 0] gprctrlstate; // ### comb-block-reg.
 reg[CLOG2GPRCNTTOTAL -1 : 0] gpridx;
-reg[ARCHBITSZ -1 : 0] gprdata;
+reg[WORDBITSZ -1 : 0] gprdata;
 reg gprwe;
 reg[CLOG2GPRCNTTOTAL -1 : 0] gprrdyidx;
 reg gprrdyval;
 reg gprrdywe;
 
-wire [ARCHBITSZ -1 : 0] gpr13val;
+wire [WORDBITSZ -1 : 0] gpr13val;
 
 localparam SEQIBUFRST = 3'd0;
 localparam SEQINTR    = 3'd1;
@@ -693,7 +693,7 @@ localparam SEQHALT    = 3'd6;
 localparam SEQSRET    = 3'd7;
 reg [3 -1 : 0] sequencerstate; // ### comb-block-reg.
 
-reg[ARCHBITSZ -1 : 0] timer;
+reg[WORDBITSZ -1 : 0] timer;
 wire timertriggered = !(|timer);
 
 wire isflagdistimerintr;
@@ -847,7 +847,7 @@ always @ (posedge clk_i) begin
 		timer <= timer - 1'b1;
 end
 
-reg[(ARCHBITSZ*2) -1 : 0] clkcyclecnt;
+reg[(WORDBITSZ*2) -1 : 0] clkcyclecnt;
 
 always @ (posedge clk_i) begin
 	if (rst_i)
@@ -867,7 +867,7 @@ wire _istlbop = (miscrdyandsequencerreadyandgprrdy12 && istlbop);
 // of TLB entries if the memory access address
 // is >= 0x1000 and < %ksl ; when running in userspace,
 // the TLB is never ignored and this register is ignored.
-reg[ARCHBITSZ -1 : 0] ksl;
+reg[WORDBITSZ -1 : 0] ksl;
 
 wire ioutofrange_;
 wire doutofrange_;
@@ -906,7 +906,7 @@ wire dtlbcached [TLBWAYCOUNT -1 : 0];
 wire dtlbuser [TLBWAYCOUNT -1 : 0];
 wire dtlbnotuser [TLBWAYCOUNT -1 : 0];
 wire[12 -1 : 0] dtlbasid [TLBWAYCOUNT -1 : 0];
-wire[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0] dvpn = gprdata2[ARCHBITSZ -1 : (12 +CLOG2TLBSETCOUNT)];
+wire[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0] dvpn = gprdata2[WORDBITSZ -1 : (12 +CLOG2TLBSETCOUNT)];
 wire dtlbmiss__ [TLBWAYCOUNT -1 : 0];
 wire dtlben = (
 	(inusermode && (inuserspace || doutofrange)) ||
@@ -988,10 +988,10 @@ wire itlbwe = (
 
 // Net used to write itlb and dtlb.
 wire[TLBENTRYBITSZ -1 : 0] tlbwritedata = (
-	isopsettlb ? {gprdata2[12-1:0], gprdata1[4:0], gprdata1[ARCHBITSZ-1:12], dvpn} :
+	isopsettlb ? {gprdata2[12-1:0], gprdata1[4:0], gprdata1[WORDBITSZ-1:12], dvpn} :
 	`ifdef PUHPTW
-	hptwitlbwe ? {asid[12-1:0], dcache_m_dat_o[4:3], 2'b00, dcache_m_dat_o[0], dcache_m_dat_o[ARCHBITSZ-1:12], ivpn} :
-	hptwdtlbwe ? {asid[12-1:0], dcache_m_dat_o[4:1], 1'b0,                       dcache_m_dat_o[ARCHBITSZ-1:12], dvpn} :
+	hptwitlbwe ? {asid[12-1:0], dcache_m_dat_o[4:3], 2'b00, dcache_m_dat_o[0], dcache_m_dat_o[WORDBITSZ-1:12], ivpn} :
+	hptwdtlbwe ? {asid[12-1:0], dcache_m_dat_o[4:1], 1'b0,                       dcache_m_dat_o[WORDBITSZ-1:12], dvpn} :
 	`endif
 	             {TLBENTRYBITSZ{1'b0}});
 
@@ -1133,24 +1133,24 @@ assign dtlbmiss__[gen_tlb_idx] = (
 end endgenerate
 
 // Nets used by gettlb.
-wire itlbgettlbhit = ((gprdata2[12 -1 : 0] == itlbasid[itlbwayhitidx]) && (gprdata2[(ARCHBITSZ-1) : 12 +CLOG2TLBSETCOUNT] == itlbtag[itlbwayhitidx]));
-wire dtlbgettlbhit = ((gprdata2[12 -1 : 0] == dtlbasid[dtlbwayhitidx]) && (gprdata2[(ARCHBITSZ-1) : 12 +CLOG2TLBSETCOUNT] == dtlbtag[dtlbwayhitidx]));
-reg[ARCHBITSZ -1 : 0] opgettlbresult;
-wire[ARCHBITSZ -1 : 0] opgettlbresult_ = (
-	(!(itlbgettlbhit | dtlbgettlbhit)) ? {ARCHBITSZ{1'b0}} :
+wire itlbgettlbhit = ((gprdata2[12 -1 : 0] == itlbasid[itlbwayhitidx]) && (gprdata2[(WORDBITSZ-1) : 12 +CLOG2TLBSETCOUNT] == itlbtag[itlbwayhitidx]));
+wire dtlbgettlbhit = ((gprdata2[12 -1 : 0] == dtlbasid[dtlbwayhitidx]) && (gprdata2[(WORDBITSZ-1) : 12 +CLOG2TLBSETCOUNT] == dtlbtag[dtlbwayhitidx]));
+reg[WORDBITSZ -1 : 0] opgettlbresult;
+wire[WORDBITSZ -1 : 0] opgettlbresult_ = (
+	(!(itlbgettlbhit | dtlbgettlbhit)) ? {WORDBITSZ{1'b0}} :
 	(itlbgettlbhit ^ dtlbgettlbhit) ?
 		(itlbgettlbhit ?
 			{itlbppn[itlbwayhitidx], {7{1'b0}}, itlbuser[itlbwayhitidx], itlbcached[itlbwayhitidx], {2{1'b0}}, itlbexecutable[itlbwayhitidx]} :
 			{dtlbppn[dtlbwayhitidx], {7{1'b0}}, dtlbuser[dtlbwayhitidx], dtlbcached[dtlbwayhitidx], dtlbreadable[dtlbwayhitidx], dtlbwritable[dtlbwayhitidx], 1'b0}) :
 	(itlbppn[itlbwayhitidx] == dtlbppn[dtlbwayhitidx]) ?
 		{dtlbppn[dtlbwayhitidx], {7{1'b0}}, (itlbuser[itlbwayhitidx]|dtlbuser[dtlbwayhitidx]), (itlbcached[itlbwayhitidx]|dtlbcached[dtlbwayhitidx]), dtlbreadable[dtlbwayhitidx], dtlbwritable[dtlbwayhitidx], itlbexecutable[itlbwayhitidx]} :
-		{ARCHBITSZ{1'b0}});
+		{WORDBITSZ{1'b0}});
 always @ (posedge clk_i) begin
 	opgettlbresult <= opgettlbresult_;
 end
 
 // Net used by opld opst opldst and the sequencer.
-wire[PAGENUMBITSZ -1 : 0] dppn = (dtlben ? dtlbppn[dtlbwayhitidx] : gprdata2[ARCHBITSZ-1:12]);
+wire[PAGENUMBITSZ -1 : 0] dppn = (dtlben ? dtlbppn[dtlbwayhitidx] : gprdata2[WORDBITSZ-1:12]);
 
 always @ (posedge clk_i)
 	itlbwritten <= (rst_i || itlbwe);
@@ -1189,14 +1189,14 @@ generate for (gen_tlb_idx = 0; gen_tlb_idx < TLBWAYCOUNT; gen_tlb_idx = gen_tlb_
 assign itlbppn[gen_tlb_idx] = 0;
 end endgenerate
 wire itlben = 0;
-wire[PAGENUMBITSZ -1 : 0] dppn = gprdata2[ARCHBITSZ-1:12];
+wire[PAGENUMBITSZ -1 : 0] dppn = gprdata2[WORDBITSZ-1:12];
 
 `endif
 
 localparam KERNELSPACESTART = 'h1000;
 assign ioutofrange_ = (
-	instrfetchnextaddr < (KERNELSPACESTART >> CLOG2ARCHBITSZBY8) ||
-	(instrfetchnextaddr >= ksl[ARCHBITSZ -1 : CLOG2ARCHBITSZBY8]));
+	instrfetchnextaddr < (KERNELSPACESTART >> CLOG2WORDBITSZBY8) ||
+	(instrfetchnextaddr >= ksl[WORDBITSZ -1 : CLOG2WORDBITSZBY8]));
 assign doutofrange_ = (gprdata2 < KERNELSPACESTART || gprdata2 >= ksl);
 `ifdef PUREGMMUOUTPUT
 always @ (posedge clk_i) begin
@@ -1234,13 +1234,13 @@ wire itlbfault = 0;
 reg alignfault; // ### comb-block-reg.
 always @* begin
 	alignfault = 0;
-	if          (ARCHBITSZ == 16) begin
+	if          (WORDBITSZ == 16) begin
 		alignfault = (instrbufdato0[0] && gprdata2[0]);
-	end else if (ARCHBITSZ == 32) begin
+	end else if (WORDBITSZ == 32) begin
 		alignfault = (
 			(instrbufdato0[1] && gprdata2[1:0]) ||
 			(instrbufdato0[0] && gprdata2[0]));
-	end else if (ARCHBITSZ == 64) begin
+	end else if (WORDBITSZ == 64) begin
 		alignfault = (
 			(&instrbufdato0[1:0] && gprdata2[2:0]) ||
 			(instrbufdato0[1] && gprdata2[1:0]) ||
@@ -1266,16 +1266,16 @@ wire[PAGENUMBITSZ -1 : 0] instrfetchnextppn =
 wire[ADDRBITSZ -1 : 0] instrfetchnextppninstrfetchnextaddr = {instrfetchnextppn, instrfetchnextaddr[ADDRWITHINPAGEBITSZ-1:0]};
 wire[ADDRBITSZ -1 : 0] instrfetchppninstrfetchaddr = {instrfetchppn, instrfetchaddr[ADDRWITHINPAGEBITSZ-1:0]};
 
-wire[CLOG2ICACHESETCOUNT -1 : 0] icachenextset = instrfetchnextppninstrfetchnextaddr[(CLOG2ICACHESETCOUNT+CLOG2XARCHBITSZBY8DIFF)-1:CLOG2XARCHBITSZBY8DIFF];
-wire[CLOG2ICACHESETCOUNT -1 : 0] icacheset = instrfetchppninstrfetchaddr[(CLOG2ICACHESETCOUNT+CLOG2XARCHBITSZBY8DIFF)-1:CLOG2XARCHBITSZBY8DIFF];
+wire[CLOG2ICACHESETCOUNT -1 : 0] icachenextset = instrfetchnextppninstrfetchnextaddr[(CLOG2ICACHESETCOUNT+CLOG2XWORDBITSZBY8DIFF)-1:CLOG2XWORDBITSZBY8DIFF];
+wire[CLOG2ICACHESETCOUNT -1 : 0] icacheset = instrfetchppninstrfetchaddr[(CLOG2ICACHESETCOUNT+CLOG2XWORDBITSZBY8DIFF)-1:CLOG2XWORDBITSZBY8DIFF];
 
 // Bitsize of an icache tag.
-localparam ICACHETAGBITSIZE = (ADDRBITSZ - (CLOG2ICACHESETCOUNT+CLOG2XARCHBITSZBY8DIFF));
+localparam ICACHETAGBITSIZE = (ADDRBITSZ - (CLOG2ICACHESETCOUNT+CLOG2XWORDBITSZBY8DIFF));
 
-wire[ICACHETAGBITSIZE -1 : 0] icachenexttag = instrfetchnextppninstrfetchnextaddr[ADDRBITSZ-1:(CLOG2ICACHESETCOUNT+CLOG2XARCHBITSZBY8DIFF)];
+wire[ICACHETAGBITSIZE -1 : 0] icachenexttag = instrfetchnextppninstrfetchnextaddr[ADDRBITSZ-1:(CLOG2ICACHESETCOUNT+CLOG2XWORDBITSZBY8DIFF)];
 
 // Net set to the tag value being compared for an instruction cache hit.
-wire[ICACHETAGBITSIZE -1 : 0] icachetag = instrfetchppninstrfetchaddr[ADDRBITSZ-1:(CLOG2ICACHESETCOUNT+CLOG2XARCHBITSZBY8DIFF)];
+wire[ICACHETAGBITSIZE -1 : 0] icachetag = instrfetchppninstrfetchaddr[ADDRBITSZ-1:(CLOG2ICACHESETCOUNT+CLOG2XWORDBITSZBY8DIFF)];
 
 reg icachehit_; // ### comb-block-reg.
 wire icachehit__;
@@ -1287,8 +1287,8 @@ wire icachehit = ((
 	`endif
 		!ioutofrange) && icachehit_);
 
-reg [XARCHBITSZ -1 : 0] icachedato; // ### comb-block-reg.
-wire [XARCHBITSZ -1 : 0] icachedato_;
+reg [XWORDBITSZ -1 : 0] icachedato; // ### comb-block-reg.
+wire [XWORDBITSZ -1 : 0] icachedato_;
 
 `ifdef PUREGICACHEHIT
 always @ (posedge clk_i) begin
@@ -1306,7 +1306,7 @@ icache #(
 	 .WAYCNT (ICACHEWAYCOUNT)
 	,.SETCNT (ICACHESETCOUNT)
 	,.TAGBITSZ (ICACHETAGBITSIZE)
-	,.DATBITSZ (XARCHBITSZ)
+	,.DATBITSZ (XWORDBITSZ)
 ) icache (
 	 .rst_i (doicacherst)
 	,.clk_i (clk_i)
@@ -1333,39 +1333,39 @@ assign instrbufi = (instrfetchmemrqstdone ? wb_dat_i : icachedato);
 `ifdef PUSC2
 // ---------- Registers and nets used for superscalar-2nd-issue ----------
 
-wire [(ARCHBITSZ-1) -1 : 0] sc2ip = ipnxt;
-wire [(ARCHBITSZ-1) -1 : 0] sc2ipnxt = (ip + 2'd2);
-wire [(ARCHBITSZ-1) -1 : 0] sc2ip3 = (ip + 2'd3);
+wire [(WORDBITSZ-1) -1 : 0] sc2ip = ipnxt;
+wire [(WORDBITSZ-1) -1 : 0] sc2ipnxt = (ip + 2'd2);
+wire [(WORDBITSZ-1) -1 : 0] sc2ip3 = (ip + 2'd3);
 
 // Net set to the space used in the instrbuf.
 wire [(CLOG2INSTRBUFFERSIZE +1) -1 : 0] sc2instrbufusage =
-	(instrbufwriteidx - sc2ip[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) : ((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)]);
+	(instrbufwriteidx - sc2ip[(CLOG2INSTRBUFFERSIZE+((CLOG2WORDBITSZBY8-1)+CLOG2XWORDBITSZBY8DIFF)) : ((CLOG2WORDBITSZBY8-1)+CLOG2XWORDBITSZBY8DIFF)]);
 
 wire [(CLOG2INSTRBUFFERSIZE +1) -1 : 0] sc2instrbufusage2 =
-	(instrbufwriteidx - sc2ipnxt[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) : ((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)]);
+	(instrbufwriteidx - sc2ipnxt[(CLOG2INSTRBUFFERSIZE+((CLOG2WORDBITSZBY8-1)+CLOG2XWORDBITSZBY8DIFF)) : ((CLOG2WORDBITSZBY8-1)+CLOG2XWORDBITSZBY8DIFF)]);
 
 wire [(CLOG2INSTRBUFFERSIZE +1) -1 : 0] sc2instrbufusage3 =
-	(instrbufwriteidx - sc2ip3[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) : ((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)]);
+	(instrbufwriteidx - sc2ip3[(CLOG2INSTRBUFFERSIZE+((CLOG2WORDBITSZBY8-1)+CLOG2XWORDBITSZBY8DIFF)) : ((CLOG2WORDBITSZBY8-1)+CLOG2XWORDBITSZBY8DIFF)]);
 
-wire [XARCHBITSZ -1 : 0] sc2instrbufipnxt = instrbuf[sc2ipnxt[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) -1 : (CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF]];
+wire [XWORDBITSZ -1 : 0] sc2instrbufipnxt = instrbuf[sc2ipnxt[(CLOG2INSTRBUFFERSIZE+((CLOG2WORDBITSZBY8-1)+CLOG2XWORDBITSZBY8DIFF)) -1 : (CLOG2WORDBITSZBY8-1)+CLOG2XWORDBITSZBY8DIFF]];
 
 reg [16 -1 : 0] _sc2instrbufipnxt; // ### declared as reg to be usable within always block.
-generate if (XARCHBITSZ == 16) begin
+generate if (XWORDBITSZ == 16) begin
 	always @* begin
 		_sc2instrbufipnxt = sc2instrbufipnxt;
 	end
 end endgenerate
-generate if (XARCHBITSZ == 32) begin
+generate if (XWORDBITSZ == 32) begin
 	always @* begin
-		case (sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (sc2ipnxt[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _sc2instrbufipnxt = sc2instrbufipnxt[15:0];
 		default: _sc2instrbufipnxt = sc2instrbufipnxt[31:16];
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 64) begin
+generate if (XWORDBITSZ == 64) begin
 	always @* begin
-		case (sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (sc2ipnxt[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _sc2instrbufipnxt = sc2instrbufipnxt[15:0];
 		1:       _sc2instrbufipnxt = sc2instrbufipnxt[31:16];
 		2:       _sc2instrbufipnxt = sc2instrbufipnxt[47:32];
@@ -1373,9 +1373,9 @@ generate if (XARCHBITSZ == 64) begin
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 128) begin
+generate if (XWORDBITSZ == 128) begin
 	always @* begin
-		case (sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (sc2ipnxt[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _sc2instrbufipnxt = sc2instrbufipnxt[15:0];
 		1:       _sc2instrbufipnxt = sc2instrbufipnxt[31:16];
 		2:       _sc2instrbufipnxt = sc2instrbufipnxt[47:32];
@@ -1387,9 +1387,9 @@ generate if (XARCHBITSZ == 128) begin
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 256) begin
+generate if (XWORDBITSZ == 256) begin
 	always @* begin
-		case (sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (sc2ipnxt[CLOG2XWORDBITSZBY16 -1 : 0])
 		0 :      _sc2instrbufipnxt = sc2instrbufipnxt[15:0];
 		1 :      _sc2instrbufipnxt = sc2instrbufipnxt[31:16];
 		2 :      _sc2instrbufipnxt = sc2instrbufipnxt[47:32];
@@ -1410,25 +1410,25 @@ generate if (XARCHBITSZ == 256) begin
 	end
 end endgenerate
 
-wire [XARCHBITSZ -1 : 0] sc2instrbufip3 = instrbuf[sc2ip3[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) -1 : (CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF]];
+wire [XWORDBITSZ -1 : 0] sc2instrbufip3 = instrbuf[sc2ip3[(CLOG2INSTRBUFFERSIZE+((CLOG2WORDBITSZBY8-1)+CLOG2XWORDBITSZBY8DIFF)) -1 : (CLOG2WORDBITSZBY8-1)+CLOG2XWORDBITSZBY8DIFF]];
 
 reg [16 -1 : 0] _sc2instrbufip3; // ### declared as reg to be usable within always block.
-generate if (XARCHBITSZ == 16) begin
+generate if (XWORDBITSZ == 16) begin
 	always @* begin
 		_sc2instrbufip3 = sc2instrbufip3;
 	end
 end endgenerate
-generate if (XARCHBITSZ == 32) begin
+generate if (XWORDBITSZ == 32) begin
 	always @* begin
-		case (sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (sc2ip3[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _sc2instrbufip3 = sc2instrbufip3[15:0];
 		default: _sc2instrbufip3 = sc2instrbufip3[31:16];
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 64) begin
+generate if (XWORDBITSZ == 64) begin
 	always @* begin
-		case (sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (sc2ip3[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _sc2instrbufip3 = sc2instrbufip3[15:0];
 		1:       _sc2instrbufip3 = sc2instrbufip3[31:16];
 		2:       _sc2instrbufip3 = sc2instrbufip3[47:32];
@@ -1436,9 +1436,9 @@ generate if (XARCHBITSZ == 64) begin
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 128) begin
+generate if (XWORDBITSZ == 128) begin
 	always @* begin
-		case (sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (sc2ip3[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _sc2instrbufip3 = sc2instrbufip3[15:0];
 		1:       _sc2instrbufip3 = sc2instrbufip3[31:16];
 		2:       _sc2instrbufip3 = sc2instrbufip3[47:32];
@@ -1450,9 +1450,9 @@ generate if (XARCHBITSZ == 128) begin
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 256) begin
+generate if (XWORDBITSZ == 256) begin
 	always @* begin
-		case (sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (sc2ip3[CLOG2XWORDBITSZBY16 -1 : 0])
 		0 :      _sc2instrbufip3 = sc2instrbufip3[15:0];
 		1 :      _sc2instrbufip3 = sc2instrbufip3[31:16];
 		2 :      _sc2instrbufip3 = sc2instrbufip3[47:32];
@@ -1474,22 +1474,22 @@ generate if (XARCHBITSZ == 256) begin
 end endgenerate
 
 reg [16 -1 : 0] _sc2instrbufi; // ### declared as reg to be usable within always block.
-generate if (XARCHBITSZ == 16) begin
+generate if (XWORDBITSZ == 16) begin
 	always @* begin
 		_sc2instrbufi = instrbufi;
 	end
 end endgenerate
-generate if (XARCHBITSZ == 32) begin
+generate if (XWORDBITSZ == 32) begin
 	always @* begin
-		case (sc2ip[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (sc2ip[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _sc2instrbufi = instrbufi[15:0];
 		default: _sc2instrbufi = instrbufi[31:16];
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 64) begin
+generate if (XWORDBITSZ == 64) begin
 	always @* begin
-		case (sc2ip[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (sc2ip[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _sc2instrbufi = instrbufi[15:0];
 		1:       _sc2instrbufi = instrbufi[31:16];
 		2:       _sc2instrbufi = instrbufi[47:32];
@@ -1497,9 +1497,9 @@ generate if (XARCHBITSZ == 64) begin
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 128) begin
+generate if (XWORDBITSZ == 128) begin
 	always @* begin
-		case (sc2ip[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (sc2ip[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _sc2instrbufi = instrbufi[15:0];
 		1:       _sc2instrbufi = instrbufi[31:16];
 		2:       _sc2instrbufi = instrbufi[47:32];
@@ -1511,9 +1511,9 @@ generate if (XARCHBITSZ == 128) begin
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 256) begin
+generate if (XWORDBITSZ == 256) begin
 	always @* begin
-		case (sc2ip[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (sc2ip[CLOG2XWORDBITSZBY16 -1 : 0])
 		0 :      _sc2instrbufi = instrbufi[15:0];
 		1 :      _sc2instrbufi = instrbufi[31:16];
 		2 :      _sc2instrbufi = instrbufi[47:32];
@@ -1535,22 +1535,22 @@ generate if (XARCHBITSZ == 256) begin
 end endgenerate
 
 reg [16 -1 : 0] _sc2instrbufi2; // ### declared as reg to be usable within always block.
-generate if (XARCHBITSZ == 16) begin
+generate if (XWORDBITSZ == 16) begin
 	always @* begin
 		_sc2instrbufi2 = instrbufi;
 	end
 end endgenerate
-generate if (XARCHBITSZ == 32) begin
+generate if (XWORDBITSZ == 32) begin
 	always @* begin
-		case (sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (sc2ipnxt[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _sc2instrbufi2 = instrbufi[15:0];
 		default: _sc2instrbufi2 = instrbufi[31:16];
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 64) begin
+generate if (XWORDBITSZ == 64) begin
 	always @* begin
-		case (sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (sc2ipnxt[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _sc2instrbufi2 = instrbufi[15:0];
 		1:       _sc2instrbufi2 = instrbufi[31:16];
 		2:       _sc2instrbufi2 = instrbufi[47:32];
@@ -1558,9 +1558,9 @@ generate if (XARCHBITSZ == 64) begin
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 128) begin
+generate if (XWORDBITSZ == 128) begin
 	always @* begin
-		case (sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (sc2ipnxt[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _sc2instrbufi2 = instrbufi[15:0];
 		1:       _sc2instrbufi2 = instrbufi[31:16];
 		2:       _sc2instrbufi2 = instrbufi[47:32];
@@ -1572,9 +1572,9 @@ generate if (XARCHBITSZ == 128) begin
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 256) begin
+generate if (XWORDBITSZ == 256) begin
 	always @* begin
-		case (sc2ipnxt[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (sc2ipnxt[CLOG2XWORDBITSZBY16 -1 : 0])
 		0 :      _sc2instrbufi2 = instrbufi[15:0];
 		1 :      _sc2instrbufi2 = instrbufi[31:16];
 		2 :      _sc2instrbufi2 = instrbufi[47:32];
@@ -1596,22 +1596,22 @@ generate if (XARCHBITSZ == 256) begin
 end endgenerate
 
 reg [16 -1 : 0] _sc2instrbufi3; // ### declared as reg to be usable within always block.
-generate if (XARCHBITSZ == 16) begin
+generate if (XWORDBITSZ == 16) begin
 	always @* begin
 		_sc2instrbufi3 = instrbufi;
 	end
 end endgenerate
-generate if (XARCHBITSZ == 32) begin
+generate if (XWORDBITSZ == 32) begin
 	always @* begin
-		case (sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (sc2ip3[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _sc2instrbufi3 = instrbufi[15:0];
 		default: _sc2instrbufi3 = instrbufi[31:16];
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 64) begin
+generate if (XWORDBITSZ == 64) begin
 	always @* begin
-		case (sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (sc2ip3[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _sc2instrbufi3 = instrbufi[15:0];
 		1:       _sc2instrbufi3 = instrbufi[31:16];
 		2:       _sc2instrbufi3 = instrbufi[47:32];
@@ -1619,9 +1619,9 @@ generate if (XARCHBITSZ == 64) begin
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 128) begin
+generate if (XWORDBITSZ == 128) begin
 	always @* begin
-		case (sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (sc2ip3[CLOG2XWORDBITSZBY16 -1 : 0])
 		0:       _sc2instrbufi3 = instrbufi[15:0];
 		1:       _sc2instrbufi3 = instrbufi[31:16];
 		2:       _sc2instrbufi3 = instrbufi[47:32];
@@ -1633,9 +1633,9 @@ generate if (XARCHBITSZ == 128) begin
 		endcase
 	end
 end endgenerate
-generate if (XARCHBITSZ == 256) begin
+generate if (XWORDBITSZ == 256) begin
 	always @* begin
-		case (sc2ip3[CLOG2XARCHBITSZBY16 -1 : 0])
+		case (sc2ip3[CLOG2XWORDBITSZBY16 -1 : 0])
 		0 :      _sc2instrbufi3 = instrbufi[15:0];
 		1 :      _sc2instrbufi3 = instrbufi[31:16];
 		2 :      _sc2instrbufi3 = instrbufi[47:32];
@@ -1687,14 +1687,14 @@ wire sc2isopjtrue = (sc2isopj && (sc2isoptype2 || (|sc2gprdata1 == sc2instrbufda
 wire [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx1 = {inusermode, sc2instrbufdato1[7:4]};
 wire [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx2 = {inusermode, sc2instrbufdato1[3:0]};
 
-wire [ARCHBITSZ -1 : 0] sc2gprdata1;
-wire [ARCHBITSZ -1 : 0] sc2gprdata2;
+wire [WORDBITSZ -1 : 0] sc2gprdata1;
+wire [WORDBITSZ -1 : 0] sc2gprdata2;
 
 wire sc2gprrdy1;
 wire sc2gprrdy2;
 
 reg [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx;
-reg [ARCHBITSZ -1 : 0] sc2gprdata;
+reg [WORDBITSZ -1 : 0] sc2gprdata;
 reg sc2gprwe;
 
 wire sc2usegpr2 = (sc2isopalu0 || sc2isopalu1 || sc2isopalu2 || sc2isopj);
@@ -1754,15 +1754,15 @@ wire sc2exec = (sc2rdy && sc2ops &&
 
 // ---------- Nets used by opali8 ----------
 
-wire[ARCHBITSZ -1 : 0] opli8result = {{(ARCHBITSZ-8){instrbufdato0[3]}}, instrbufdato0[3:0], instrbufdato1[3:0]} +
-	(isopinc8 ? gprdata1 : (isoprli8 ? {ipnxt, 1'b0} : {ARCHBITSZ{1'b0}}));
+wire[WORDBITSZ -1 : 0] opli8result = {{(WORDBITSZ-8){instrbufdato0[3]}}, instrbufdato0[3:0], instrbufdato1[3:0]} +
+	(isopinc8 ? gprdata1 : (isoprli8 ? {ipnxt, 1'b0} : {WORDBITSZ{1'b0}}));
 
 wire opli8done = (miscrdyandsequencerreadyandgprrdy1 && (isopli8 || isopinc8 || isoprli8));
 
 `ifdef PUSC2
 
-wire [ARCHBITSZ -1 : 0] sc2opli8result = {{(ARCHBITSZ-8){sc2instrbufdato0[3]}}, sc2instrbufdato0[3:0], sc2instrbufdato1[3:0]} +
-	(sc2isopinc8 ? sc2gprdata1 : (sc2isoprli8 ? {sc2ipnxt, 1'b0} : {ARCHBITSZ{1'b0}}));
+wire [WORDBITSZ -1 : 0] sc2opli8result = {{(WORDBITSZ-8){sc2instrbufdato0[3]}}, sc2instrbufdato0[3:0], sc2instrbufdato1[3:0]} +
+	(sc2isopinc8 ? sc2gprdata1 : (sc2isoprli8 ? {sc2ipnxt, 1'b0} : {WORDBITSZ{1'b0}}));
 
 wire sc2opli8done = (sc2rdyandgprrdy1 && (sc2isopli8 || sc2isopinc8 || sc2isoprli8));
 
@@ -1776,35 +1776,35 @@ reg wasopinc;
 reg wasoprli;
 
 // Register used to save the value of gprdata1 when opli is sequenced.
-reg[ARCHBITSZ -1 : 0] opligprdata1;
+reg[WORDBITSZ -1 : 0] opligprdata1;
 
 // Register used to store the type of opinc opli oprli.
 reg[2 -1 : 0] oplitype;
 
 // Register used to store the least significant bits of the immediate being loaded.
-reg [(ARCHBITSZ -16) -1 : 0] oplilsb;
+reg [(WORDBITSZ -16) -1 : 0] oplilsb;
 
 // Net that get set to the immediate loaded.
-wire [ARCHBITSZ -1 : 0] opliresult_;
-generate if (ARCHBITSZ == 16) begin
+wire [WORDBITSZ -1 : 0] opliresult_;
+generate if (WORDBITSZ == 16) begin
 	assign opliresult_ = ({instrbufdato1, instrbufdato0});
 end endgenerate
-generate if (ARCHBITSZ == 32) begin
+generate if (WORDBITSZ == 32) begin
 	assign opliresult_ = (
-		(oplitype == 1) ? {{(ARCHBITSZ-16){instrbufdato1[7]}}, instrbufdato1, instrbufdato0} :
+		(oplitype == 1) ? {{(WORDBITSZ-16){instrbufdato1[7]}}, instrbufdato1, instrbufdato0} :
 		/* (oplitype == 2) */{instrbufdato1, instrbufdato0, oplilsb[((16*(0+1))-1):(16*(0))]});
 end endgenerate
-generate if (ARCHBITSZ == 64) begin
+generate if (WORDBITSZ == 64) begin
 	assign opliresult_ = (
-		(oplitype == 1) ? {{(ARCHBITSZ-16){instrbufdato1[7]}}, instrbufdato1, instrbufdato0} :
-		(oplitype == 2) ? {{(ARCHBITSZ-32){instrbufdato1[7]}}, instrbufdato1, instrbufdato0,
+		(oplitype == 1) ? {{(WORDBITSZ-16){instrbufdato1[7]}}, instrbufdato1, instrbufdato0} :
+		(oplitype == 2) ? {{(WORDBITSZ-32){instrbufdato1[7]}}, instrbufdato1, instrbufdato0,
 			oplilsb[((16*(0+1))-1):(16*(0))]} :
 		/*(oplitype == 3)*/{instrbufdato1, instrbufdato0,
 			oplilsb[((16*(0+1))-1):(16*(0))], oplilsb[((16*(1+1))-1):(16*(1))],
 			oplilsb[((16*(2+1))-1):(16*(2))]});
 end endgenerate
-wire [ARCHBITSZ -1 : 0] opliresult = (
-	opliresult_ + (wasopinc ? opligprdata1 : (wasoprli ? {ipnxt, 1'b0} : {ARCHBITSZ{1'b0}})));
+wire [WORDBITSZ -1 : 0] opliresult = (
+	opliresult_ + (wasopinc ? opligprdata1 : (wasoprli ? {ipnxt, 1'b0} : {WORDBITSZ{1'b0}})));
 
 // Register that will hold the id of the GPR to which
 // the result will be stored.
@@ -1824,7 +1824,7 @@ always @ (posedge clk_i) begin
 
 	end else if (sequencerready && oplicounter) begin
 
-		oplilsb <= {oplilsb[((ARCHBITSZ-16)-1):(16*(0))], {instrbufdato1, instrbufdato0}};
+		oplilsb <= {oplilsb[((WORDBITSZ-16)-1):(16*(0))], {instrbufdato1, instrbufdato0}};
 
 		oplicounter <= (oplicounter - 1'b1);
 
@@ -1850,11 +1850,11 @@ always @ (posedge clk_i) begin
 
 		opligpr <= instrbufdato1[7:4];
 
-		if      (ARCHBITSZ == 16)
+		if      (WORDBITSZ == 16)
 			oplicounter <= instrbufdato0[0];
-		else if (ARCHBITSZ == 32)
+		else if (WORDBITSZ == 32)
 			oplicounter <= instrbufdato0[1:0];
-		else if (ARCHBITSZ == 64)
+		else if (WORDBITSZ == 64)
 			oplicounter <= ((instrbufdato0[1:0] == 2'b11) ? 3'd4 : {1'b0, instrbufdato0[1:0]});
 
 		oplioffset <= 1;
@@ -1863,14 +1863,14 @@ end
 
 // ---------- Nets used by opalu ----------
 
-reg[ARCHBITSZ -1 : 0] opaluresult; // ### comb-block-reg.
+reg[WORDBITSZ -1 : 0] opaluresult; // ### comb-block-reg.
 
 wire opaludone = (miscrdyandsequencerreadyandgprrdy12 &&
 	(isopalu0 || isopalu1 || isopalu2 || isopjl));
 
 `ifdef PUSC2
 
-reg[ARCHBITSZ -1 : 0] sc2opaluresult; // ### comb-block-reg.
+reg[WORDBITSZ -1 : 0] sc2opaluresult; // ### comb-block-reg.
 
 wire sc2opaludone = (sc2rdyandgprrdy12 &&
 	(sc2isopalu0 || sc2isopalu1 || sc2isopalu2 || sc2isopjl));
@@ -1884,10 +1884,10 @@ always @* begin
 	if (isopalu0) begin
 		// Implement sgt, sgte, sgtu, sgteu.
 		case (instrbufdato0[2:0])
-		0:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(gprdata1) > $signed(gprdata2)};
-		1:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(gprdata1) >= $signed(gprdata2)};
-		2:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, gprdata1 > gprdata2};
-		default: opaluresult = {{(ARCHBITSZ-1){1'b0}}, gprdata1 >= gprdata2};
+		0:       opaluresult = {{(WORDBITSZ-1){1'b0}}, $signed(gprdata1) > $signed(gprdata2)};
+		1:       opaluresult = {{(WORDBITSZ-1){1'b0}}, $signed(gprdata1) >= $signed(gprdata2)};
+		2:       opaluresult = {{(WORDBITSZ-1){1'b0}}, gprdata1 > gprdata2};
+		default: opaluresult = {{(WORDBITSZ-1){1'b0}}, gprdata1 >= gprdata2};
 		endcase
 	end
 
@@ -1896,21 +1896,21 @@ always @* begin
 		case (instrbufdato0[2:0])
 		0:       opaluresult = gprdata1 + gprdata2;
 		1:       opaluresult = gprdata1 - gprdata2;
-		2:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, gprdata1 == gprdata2};
-		3:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, gprdata1 != gprdata2};
-		4:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(gprdata1) < $signed(gprdata2)};
-		5:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(gprdata1) <= $signed(gprdata2)};
-		6:       opaluresult = {{(ARCHBITSZ-1){1'b0}}, gprdata1 < gprdata2};
-		default: opaluresult = {{(ARCHBITSZ-1){1'b0}}, gprdata1 <= gprdata2};
+		2:       opaluresult = {{(WORDBITSZ-1){1'b0}}, gprdata1 == gprdata2};
+		3:       opaluresult = {{(WORDBITSZ-1){1'b0}}, gprdata1 != gprdata2};
+		4:       opaluresult = {{(WORDBITSZ-1){1'b0}}, $signed(gprdata1) < $signed(gprdata2)};
+		5:       opaluresult = {{(WORDBITSZ-1){1'b0}}, $signed(gprdata1) <= $signed(gprdata2)};
+		6:       opaluresult = {{(WORDBITSZ-1){1'b0}}, gprdata1 < gprdata2};
+		default: opaluresult = {{(WORDBITSZ-1){1'b0}}, gprdata1 <= gprdata2};
 		endcase
 	end
 
 	if (isopalu2) begin
 		// Implement sll, srl, sra, and, or, xor, not, cpy.
 		case (instrbufdato0[2:0])
-		0:       opaluresult = gprdata1 << gprdata2[CLOG2ARCHBITSZ-1:0];
-		1:       opaluresult = gprdata1 >> gprdata2[CLOG2ARCHBITSZ-1:0];
-		2:       opaluresult = $signed(gprdata1) >>> gprdata2[CLOG2ARCHBITSZ-1:0];
+		0:       opaluresult = gprdata1 << gprdata2[CLOG2WORDBITSZ-1:0];
+		1:       opaluresult = gprdata1 >> gprdata2[CLOG2WORDBITSZ-1:0];
+		2:       opaluresult = $signed(gprdata1) >>> gprdata2[CLOG2WORDBITSZ-1:0];
 		3:       opaluresult = gprdata1 & gprdata2;
 		4:       opaluresult = gprdata1 | gprdata2;
 		5:       opaluresult = gprdata1 ^ gprdata2;
@@ -1927,10 +1927,10 @@ always @* begin
 
 	if (sc2isopalu0) begin
 		case (sc2instrbufdato0[2:0])
-		0:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(sc2gprdata1) > $signed(sc2gprdata2)};
-		1:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(sc2gprdata1) >= $signed(sc2gprdata2)};
-		2:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 > sc2gprdata2};
-		default: sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 >= sc2gprdata2};
+		0:       sc2opaluresult = {{(WORDBITSZ-1){1'b0}}, $signed(sc2gprdata1) > $signed(sc2gprdata2)};
+		1:       sc2opaluresult = {{(WORDBITSZ-1){1'b0}}, $signed(sc2gprdata1) >= $signed(sc2gprdata2)};
+		2:       sc2opaluresult = {{(WORDBITSZ-1){1'b0}}, sc2gprdata1 > sc2gprdata2};
+		default: sc2opaluresult = {{(WORDBITSZ-1){1'b0}}, sc2gprdata1 >= sc2gprdata2};
 		endcase
 	end
 
@@ -1938,20 +1938,20 @@ always @* begin
 		case (sc2instrbufdato0[2:0])
 		0:       sc2opaluresult = sc2gprdata1 + sc2gprdata2;
 		1:       sc2opaluresult = sc2gprdata1 - sc2gprdata2;
-		2:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 == sc2gprdata2};
-		3:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 != sc2gprdata2};
-		4:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(sc2gprdata1) < $signed(sc2gprdata2)};
-		5:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, $signed(sc2gprdata1) <= $signed(sc2gprdata2)};
-		6:       sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 < sc2gprdata2};
-		default: sc2opaluresult = {{(ARCHBITSZ-1){1'b0}}, sc2gprdata1 <= sc2gprdata2};
+		2:       sc2opaluresult = {{(WORDBITSZ-1){1'b0}}, sc2gprdata1 == sc2gprdata2};
+		3:       sc2opaluresult = {{(WORDBITSZ-1){1'b0}}, sc2gprdata1 != sc2gprdata2};
+		4:       sc2opaluresult = {{(WORDBITSZ-1){1'b0}}, $signed(sc2gprdata1) < $signed(sc2gprdata2)};
+		5:       sc2opaluresult = {{(WORDBITSZ-1){1'b0}}, $signed(sc2gprdata1) <= $signed(sc2gprdata2)};
+		6:       sc2opaluresult = {{(WORDBITSZ-1){1'b0}}, sc2gprdata1 < sc2gprdata2};
+		default: sc2opaluresult = {{(WORDBITSZ-1){1'b0}}, sc2gprdata1 <= sc2gprdata2};
 		endcase
 	end
 
 	if (sc2isopalu2) begin
 		case (sc2instrbufdato0[2:0])
-		0:       sc2opaluresult = sc2gprdata1 << sc2gprdata2[CLOG2ARCHBITSZ-1:0];
-		1:       sc2opaluresult = sc2gprdata1 >> sc2gprdata2[CLOG2ARCHBITSZ-1:0];
-		2:       sc2opaluresult = $signed(sc2gprdata1) >>> sc2gprdata2[CLOG2ARCHBITSZ-1:0];
+		0:       sc2opaluresult = sc2gprdata1 << sc2gprdata2[CLOG2WORDBITSZ-1:0];
+		1:       sc2opaluresult = sc2gprdata1 >> sc2gprdata2[CLOG2WORDBITSZ-1:0];
+		2:       sc2opaluresult = $signed(sc2gprdata1) >>> sc2gprdata2[CLOG2WORDBITSZ-1:0];
 		3:       sc2opaluresult = sc2gprdata1 & sc2gprdata2;
 		4:       sc2opaluresult = sc2gprdata1 | sc2gprdata2;
 		5:       sc2opaluresult = sc2gprdata1 ^ sc2gprdata2;
@@ -1967,24 +1967,24 @@ end
 // Significance of each bit in the field within
 // opimul_data_w storing the type of multiplication to perform.
 // [1]: 0/1 means unsigned/signed computation.
-// [0]: 0/1 means ARCHBITSZ lsb/msb of result.
+// [0]: 0/1 means WORDBITSZ lsb/msb of result.
 localparam IMULTYPEBITSZ = 2;
 
 wire opimul_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopimul);
 
-wire [(((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+IMULTYPEBITSZ) -1 : 0] opimul_data_w =
+wire [(((WORDBITSZ*2)+CLOG2GPRCNTTOTAL)+IMULTYPEBITSZ) -1 : 0] opimul_data_w =
 	{instrbufdato0[1:0], gpridx1, gprdata1, gprdata2};
 
 wire opimul_rdy_w;
 
-wire [ARCHBITSZ -1 : 0]        opimulresult;
+wire [WORDBITSZ -1 : 0]        opimulresult;
 wire [CLOG2GPRCNTTOTAL -1 : 0] opimulgpr;
 wire                           opimuldone;
 
 localparam OPIMULCNT = ((IMULCNT != 2 && IMULCNT != 4 && IMULCNT != 8) ? 1 : IMULCNT);
 
 opimul #(
-	 .ARCHBITSZ (ARCHBITSZ)
+	 .WORDBITSZ (WORDBITSZ)
 	,.GPRCNT    (GPRCNTTOTAL)
 	,.INSTCNT   (OPIMULCNT)
 ) opimul (
@@ -2014,19 +2014,19 @@ localparam IDIVTYPEBITSZ = 2;
 
 wire opidiv_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopidiv);
 
-wire [(((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+IDIVTYPEBITSZ) -1 : 0] opidiv_data_w =
+wire [(((WORDBITSZ*2)+CLOG2GPRCNTTOTAL)+IDIVTYPEBITSZ) -1 : 0] opidiv_data_w =
 	{instrbufdato0[1:0], gpridx1, gprdata1, gprdata2};
 
 wire opidiv_rdy_w;
 
-wire [ARCHBITSZ -1 : 0]        opidivresult;
+wire [WORDBITSZ -1 : 0]        opidivresult;
 wire [CLOG2GPRCNTTOTAL -1 : 0] opidivgpr;
 wire                           opidivdone;
 
 localparam OPIDIVCNT = ((IDIVCNT != 2 && IDIVCNT != 4 && IDIVCNT != 8) ? 1 : IDIVCNT);
 
 opidiv #(
-	 .ARCHBITSZ (ARCHBITSZ)
+	 .WORDBITSZ (WORDBITSZ)
 	,.GPRCNT    (GPRCNTTOTAL)
 	,.INSTCNT   (OPIDIVCNT)
 ) opidiv (
@@ -2056,20 +2056,20 @@ localparam FADDFSUBSELBITSZ = 1;
 
 wire opfaddfsub_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopfaddfsub);
 
-wire [(((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL)+FADDFSUBSELBITSZ) -1 : 0] opfaddfsub_data_w =
+wire [(((WORDBITSZ*2)+CLOG2GPRCNTTOTAL)+FADDFSUBSELBITSZ) -1 : 0] opfaddfsub_data_w =
 	{instrbufdato0[0], gpridx1, gprdata1, gprdata2};
 
 wire opfaddfsub_rdy_w;
 
-wire [ARCHBITSZ -1 : 0]        opfaddfsubresult;
+wire [WORDBITSZ -1 : 0]        opfaddfsubresult;
 wire [CLOG2GPRCNTTOTAL -1 : 0] opfaddfsubgpr;
 wire                           opfaddfsubdone;
 
 localparam OPFADDFSUBCNT = ((FADDFSUBCNT != 2) ? 1 : FADDFSUBCNT);
 
-generate if (ARCHBITSZ == 32) begin :genopfaddfsub
+generate if (WORDBITSZ == 32) begin :genopfaddfsub
 opfaddfsub #(
-	 .ARCHBITSZ (ARCHBITSZ)
+	 .WORDBITSZ (WORDBITSZ)
 	,.GPRCNT    (GPRCNTTOTAL)
 	,.EXPBITSZ  (8)
 	,.MANTBITSZ (23)
@@ -2105,12 +2105,12 @@ end endgenerate
 
 wire opfmul_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopfmul);
 
-wire [((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL) -1 : 0] opfmul_data_w =
+wire [((WORDBITSZ*2)+CLOG2GPRCNTTOTAL) -1 : 0] opfmul_data_w =
 	{gpridx1, gprdata1, gprdata2};
 
 wire opfmul_rdy_w;
 
-wire [ARCHBITSZ -1 : 0]        opfmulresult;
+wire [WORDBITSZ -1 : 0]        opfmulresult;
 wire [CLOG2GPRCNTTOTAL -1 : 0] opfmulgpr;
 wire                           opfmuldone;
 
@@ -2120,9 +2120,9 @@ localparam OPFMULCNT = ((FMULCNT != 2 && FMULCNT != 4) ? 1 : FMULCNT);
 localparam OPFMULCNT = ((FMULCNT != 2 && FMULCNT != 4 && FMULCNT != 8) ? 1 : FMULCNT);
 `endif
 
-generate if (ARCHBITSZ == 32) begin :genopfmul
+generate if (WORDBITSZ == 32) begin :genopfmul
 opfmul #(
-	 .ARCHBITSZ (ARCHBITSZ)
+	 .WORDBITSZ (WORDBITSZ)
 	,.GPRCNT    (GPRCNTTOTAL)
 	,.EXPBITSZ  (8)
 	,.MANTBITSZ (23)
@@ -2158,20 +2158,20 @@ end endgenerate
 
 wire opfdiv_stb_w = (miscrdyandsequencerreadyandgprrdy12 && isopfdiv);
 
-wire [((ARCHBITSZ*2)+CLOG2GPRCNTTOTAL) -1 : 0] opfdiv_data_w =
+wire [((WORDBITSZ*2)+CLOG2GPRCNTTOTAL) -1 : 0] opfdiv_data_w =
 	{gpridx1, gprdata1, gprdata2};
 
 wire opfdiv_rdy_w;
 
-wire [ARCHBITSZ -1 : 0]        opfdivresult;
+wire [WORDBITSZ -1 : 0]        opfdivresult;
 wire [CLOG2GPRCNTTOTAL -1 : 0] opfdivgpr;
 wire                           opfdivdone;
 
 localparam OPFDIVCNT = ((FDIVCNT != 2 && FDIVCNT != 4 && FDIVCNT != 8) ? 1 : FDIVCNT);
 
-generate if (ARCHBITSZ == 32) begin :genopfdiv
+generate if (WORDBITSZ == 32) begin :genopfdiv
 opfdiv #(
-	 .ARCHBITSZ (ARCHBITSZ)
+	 .WORDBITSZ (WORDBITSZ)
 	,.GPRCNT    (GPRCNTTOTAL)
 	,.EXPBITSZ  (8)
 	,.MANTBITSZ (23)
@@ -2203,7 +2203,7 @@ end endgenerate
 
 // ---------- Nets used by opgetsysreg ----------
 
-reg[ARCHBITSZ -1 : 0] opgetsysregresult; // ### comb-block-reg.
+reg[WORDBITSZ -1 : 0] opgetsysregresult; // ### comb-block-reg.
 
 wire opgetsysregdone = (miscrdyandsequencerreadyandgprrdy1 && isopgetsysreg && (
 	inkernelmode ||
@@ -2215,20 +2215,20 @@ always @* begin
 	// Implement getsysopcode, getuip, getfaultaddr, getfaultreason,
 	// getclkcyclecnt, getclkcyclecnth, gettlbsize, geticachesize.
 	case (instrbufdato0[2:0])
-	0:       opgetsysregresult = {{(ARCHBITSZ-16){1'b0}}, sysopcode};
+	0:       opgetsysregresult = {{(WORDBITSZ-16){1'b0}}, sysopcode};
 	1:       opgetsysregresult = {uip, 1'b0};
 	2:       opgetsysregresult = faultaddr;
-	3:       opgetsysregresult = {{(ARCHBITSZ-3){1'b0}}, faultreason};
-	4:       opgetsysregresult = clkcyclecnt[ARCHBITSZ -1 : 0];
-	5:       opgetsysregresult = clkcyclecnt[(ARCHBITSZ*2) -1 : ARCHBITSZ];
+	3:       opgetsysregresult = {{(WORDBITSZ-3){1'b0}}, faultreason};
+	4:       opgetsysregresult = clkcyclecnt[WORDBITSZ -1 : 0];
+	5:       opgetsysregresult = clkcyclecnt[(WORDBITSZ*2) -1 : WORDBITSZ];
 	6:       opgetsysregresult = TLBSETCOUNT;
-	default: opgetsysregresult = (ICACHESETCOUNT << CLOG2XARCHBITSZBY8DIFF);
+	default: opgetsysregresult = (ICACHESETCOUNT << CLOG2XWORDBITSZBY8DIFF);
 	endcase
 end
 
 // ---------- Registers and nets used by opgetsysreg1 ----------
 
-reg[ARCHBITSZ -1 : 0] opgetsysreg1result; // ### comb-block-reg.
+reg[WORDBITSZ -1 : 0] opgetsysreg1result; // ### comb-block-reg.
 
 reg opgettlbrdy;
 always @ (posedge clk_i) begin
@@ -2254,7 +2254,7 @@ always @* begin
 	0:       opgetsysreg1result = id_i;
 	1:       opgetsysreg1result = CLKFREQ;
 	`ifdef PUDCACHE
-	2:       opgetsysreg1result = (DCACHESETCOUNT << CLOG2XARCHBITSZBY8DIFF);
+	2:       opgetsysreg1result = (DCACHESETCOUNT << CLOG2XWORDBITSZBY8DIFF);
 	`endif
 	`ifdef PUMMU
 	3:       opgetsysreg1result = opgettlbresult;
@@ -2282,7 +2282,7 @@ end
 wire[CLOG2GPRCNTTOTAL -1 : 0] opsetgprdstidx = {instrbufdato0[1], instrbufdato1[7:4]};
 wire[CLOG2GPRCNTTOTAL -1 : 0] opsetgprsrcidx = {instrbufdato0[0], instrbufdato1[3:0]};
 
-wire[ARCHBITSZ -1 : 0] opsetgprresult;
+wire[WORDBITSZ -1 : 0] opsetgprresult;
 
 // These nets will respectively hold the busy state of the first
 // and second gpr operand to be used with opsetgpr.
@@ -2296,7 +2296,7 @@ wire opsetgprdone = (miscrdy && sequencerready && opsetgprrdy1 && opsetgprrdy2 &
 always @ (posedge clk_i) begin
 	// Implement setksysopfaulthdlr, setksl, setasid, setuip, setflags.
 	if (rst_i) begin
-		ksysopfaulthdlr <= {(ARCHBITSZ-1){1'b0}};
+		ksysopfaulthdlr <= {(WORDBITSZ-1){1'b0}};
 		ksl <= KERNELSPACESTART;
 		flags <= ('h2000 /* disTimerIntr */);
 		`ifdef PUMMU
@@ -2306,7 +2306,7 @@ always @ (posedge clk_i) begin
 		`endif
 		`endif
 	end else if (miscrdyandsequencerreadyandgprrdy1 && isopsetsysreg) begin
-		if (isoptype0) ksysopfaulthdlr <= gprdata1[ARCHBITSZ-1:1];
+		if (isoptype0) ksysopfaulthdlr <= gprdata1[WORDBITSZ-1:1];
 		else if (isoptype1) ksl <= gprdata1;
 		`ifdef PUMMU
 		else if (isoptype4 && (inkernelmode || isflagmmucmds)) begin
@@ -2323,7 +2323,7 @@ end
 
 // ---------- General purpose registers ----------
 
-reg [ARCHBITSZ -1 : 0] gpr [GPRCNTTOTAL -1 : 0];
+reg [WORDBITSZ -1 : 0] gpr [GPRCNTTOTAL -1 : 0];
 
 `ifdef PUDBG
 wire [CLOG2GPRCNTTOTAL -1 : 0] dbggpridx = {inusermode, dbg_rx_data_i[3:0]};
@@ -2403,7 +2403,7 @@ end
 
 wire [CLOG2GPRCNTTOTAL -1 : 0] opldrqsts_gpr;
 
-wire [(ARCHBITSZ/8) -1 : 0] opldrqsts_sel;
+wire [(WORDBITSZ/8) -1 : 0] opldrqsts_sel;
 
 wire opldrqstseqs_empty;
 reg opldrqstseqs_empty_r;
@@ -2421,16 +2421,16 @@ always @ (posedge clk_i) begin
 		opldrsps_empty_r <= opldrsps_empty;
 end
 
-wire [ARCHBITSZ -1 : 0] opldrsps_dat;
+wire [WORDBITSZ -1 : 0] opldrsps_dat;
 
 // Apropriately set opldrsps_dat depending on opldrqsts_sel.
-generate if (ARCHBITSZ == 16) begin
+generate if (WORDBITSZ == 16) begin
 	assign opldrsps_dat =
 		(opldrqsts_sel == 2'b10) ? {{8{1'b0}}, dcache_m_dat_o[15:8]} :
 		(opldrqsts_sel == 2'b01) ? {{8{1'b0}}, dcache_m_dat_o[7:0]} :
 		                                       dcache_m_dat_o;
 end endgenerate
-generate if (ARCHBITSZ == 32) begin
+generate if (WORDBITSZ == 32) begin
 	assign opldrsps_dat =
 		(opldrqsts_sel == 4'b1100) ? {{16{1'b0}}, dcache_m_dat_o[31:16]} :
 		(opldrqsts_sel == 4'b0011) ? {{16{1'b0}}, dcache_m_dat_o[15:0]} :
@@ -2440,7 +2440,7 @@ generate if (ARCHBITSZ == 32) begin
 		(opldrqsts_sel == 4'b0001) ? {{24{1'b0}}, dcache_m_dat_o[7:0]} :
 		                                          dcache_m_dat_o;
 end endgenerate
-generate if (ARCHBITSZ == 64) begin
+generate if (WORDBITSZ == 64) begin
 	assign opldrsps_dat =
 		(opldrqsts_sel == 8'b11110000) ? {{32{1'b0}}, dcache_m_dat_o[63:32]} :
 		(opldrqsts_sel == 8'b00001111) ? {{32{1'b0}}, dcache_m_dat_o[31:0]} :
@@ -2461,7 +2461,7 @@ end endgenerate
 
 wire [CLOG2GPRCNTTOTAL -1 : 0] opldgpr;
 
-wire [ARCHBITSZ -1 : 0] opldresult;
+wire [WORDBITSZ -1 : 0] opldresult;
 
 wire oplddone = !opldrsps_empty_r;
 
@@ -2502,7 +2502,7 @@ always @ (posedge clk_i) begin
 end
 
 fifo #(
-	 .WIDTH (CLOG2GPRCNTTOTAL + (ARCHBITSZ/8))
+	 .WIDTH (CLOG2GPRCNTTOTAL + (WORDBITSZ/8))
 	,.DEPTH (MAXPENDINGACK)
 ) opldrqsts (
 	 .rst_i       (rst_i)
@@ -2533,7 +2533,7 @@ fifo #(
 );
 
 fifo #(
-	 .WIDTH (CLOG2GPRCNTTOTAL + ARCHBITSZ)
+	 .WIDTH (CLOG2GPRCNTTOTAL + WORDBITSZ)
 	,.DEPTH (GPRCNTTOTAL)
 ) opldrsps (
 	 .rst_i       (rst_i)
@@ -2613,18 +2613,18 @@ end
 // Register that will hold the id of the gpr to which the result will be stored.
 reg [CLOG2GPRCNTTOTAL -1 : 0] opldstgpr;
 
-reg [(ARCHBITSZ/8) -1 : 0] opldstmemrqstsel;
+reg [(WORDBITSZ/8) -1 : 0] opldstmemrqstsel;
 
-wire [ARCHBITSZ -1 : 0] opldstresult_;
+wire [WORDBITSZ -1 : 0] opldstresult_;
 
 // Apropriately set opldstresult_ depending on opldstmemrqstsel.
-generate if (ARCHBITSZ == 16) begin
+generate if (WORDBITSZ == 16) begin
 	assign opldstresult_ =
 		(opldstmemrqstsel == 2'b10) ? {{8{1'b0}}, dcache_m_dat_o[15:8]} :
 		(opldstmemrqstsel == 2'b01) ? {{8{1'b0}}, dcache_m_dat_o[7:0]} :
 		                                          dcache_m_dat_o;
 end endgenerate
-generate if (ARCHBITSZ == 32) begin
+generate if (WORDBITSZ == 32) begin
 	assign opldstresult_ =
 		(opldstmemrqstsel == 4'b1100) ? {{16{1'b0}}, dcache_m_dat_o[31:16]} :
 		(opldstmemrqstsel == 4'b0011) ? {{16{1'b0}}, dcache_m_dat_o[15:0]} :
@@ -2634,7 +2634,7 @@ generate if (ARCHBITSZ == 32) begin
 		(opldstmemrqstsel == 4'b0001) ? {{24{1'b0}}, dcache_m_dat_o[7:0]} :
 		                                             dcache_m_dat_o;
 end endgenerate
-generate if (ARCHBITSZ == 64) begin
+generate if (WORDBITSZ == 64) begin
 	assign opldstresult_ =
 		(opldstmemrqstsel == 8'b11110000) ? {{32{1'b0}}, dcache_m_dat_o[63:32]} :
 		(opldstmemrqstsel == 8'b00001111) ? {{32{1'b0}}, dcache_m_dat_o[31:0]} :
@@ -2653,7 +2653,7 @@ generate if (ARCHBITSZ == 64) begin
 		                                                 dcache_m_dat_o;
 end endgenerate
 
-reg [ARCHBITSZ -1 : 0] opldstresult;
+reg [WORDBITSZ -1 : 0] opldstresult;
 
 `ifdef PUMMU
 wire opldstfault_ = (dtlben && (dtlbmiss || dtlbnotreadable[dtlbwayhitidx] || dtlbnotwritable[dtlbwayhitidx]));
@@ -2722,7 +2722,7 @@ always @ (posedge clk_i) begin
 end
 
 reg                    opldst_iscond;
-reg [ARCHBITSZ -1 : 0] opldst_condval;
+reg [WORDBITSZ -1 : 0] opldst_condval;
 
 wire opldst_found_ = (miscrdyandsequencerreadyandgprrdy12 && isopldst && opldstrdy_
 	`ifdef PUMMU
@@ -2746,16 +2746,16 @@ wire                         upsizr_dcache_m_cyc_i;
 wire                         upsizr_dcache_m_stb_i;
 wire                         upsizr_dcache_m_we_i;
 wire [XADDRBITSZ -1 : 0]     upsizr_dcache_m_addr_i;
-wire [(XARCHBITSZ/8) -1 : 0] upsizr_dcache_m_sel_i;
-wire [XARCHBITSZ -1 : 0]     upsizr_dcache_m_dat_i;
+wire [(XWORDBITSZ/8) -1 : 0] upsizr_dcache_m_sel_i;
+wire [XWORDBITSZ -1 : 0]     upsizr_dcache_m_dat_i;
 wire                         upsizr_dcache_m_bsy_o;
 wire                         upsizr_dcache_m_ack_o;
-wire [XARCHBITSZ -1 : 0]     upsizr_dcache_m_dat_o;
+wire [XWORDBITSZ -1 : 0]     upsizr_dcache_m_dat_o;
 
 wb_upsizr #(
 
-	 .MARCHBITSZ    (ARCHBITSZ)
-	,.SARCHBITSZ    (XARCHBITSZ)
+	 .MWORDBITSZ    (WORDBITSZ)
+	,.SWORDBITSZ    (XWORDBITSZ)
 	,.MAXPENDINGACK (MAXPENDINGACK)
 	,.USEFWFTFIFO   (1)
 
@@ -2799,7 +2799,7 @@ reg dcache_cmiss_r;
 
 dcache #(
 
-	 .ARCHBITSZ     (XARCHBITSZ)
+	 .WORDBITSZ     (XWORDBITSZ)
 	,.CACHESETCOUNT (DCACHESETCOUNT)
 	,.CACHEWAYCOUNT (DCACHEWAYCOUNT)
 	,.MAXPENDINGACK (MAXPENDINGACK)

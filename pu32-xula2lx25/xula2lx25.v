@@ -66,10 +66,10 @@ module xula2lx25 (
 
 `include "lib/clog2.v"
 
-localparam ARCHBITSZ = 32;
+localparam WORDBITSZ = 32;
 
-localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
-localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
+localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
+localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
 input wire rst_p;
 
@@ -187,9 +187,9 @@ localparam WBPI_DEFAULTSLAVEINDEX = S_WBPI_INVALIDDEV;
 localparam WBPI_FIRSTSLAVEADDR    = 0;
 localparam WBPI_MAXPENDINGACK     = 16;
 localparam WBPI_DNSIZR            = 7'b0001110;
-localparam WBPI_ARCHBITSZ         = ARCHBITSZ;
-localparam WBPI_CLOG2ARCHBITSZBY8 = clog2(WBPI_ARCHBITSZ/8);
-localparam WBPI_ADDRBITSZ         = (WBPI_ARCHBITSZ - WBPI_CLOG2ARCHBITSZBY8);
+localparam WBPI_WORDBITSZ         = WORDBITSZ;
+localparam WBPI_CLOG2WORDBITSZBY8 = clog2(WBPI_WORDBITSZ/8);
+localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
 localparam WBPI_CLKFREQ           = CLK1XFREQ;
 wire wbpi_rst_w = rst_w;
 wire wbpi_clk_w = clk_1x_w;
@@ -199,24 +199,24 @@ wire wbpi_clk_w = clk_1x_w;
 // 	input                              m_wbpi_stb_w  [WBPI_MASTERCOUNT -1 : 0];
 // 	input                              m_wbpi_we_w   [WBPI_MASTERCOUNT -1 : 0];
 // 	input  [WBPI_ADDRBITSZ -1 : 0]     m_wbpi_addr_w [WBPI_MASTERCOUNT -1 : 0];
-// 	input  [(WBPI_ARCHBITSZ/8) -1 : 0] m_wbpi_sel_w  [WBPI_MASTERCOUNT -1 : 0];
-// 	input  [WBPI_ARCHBITSZ -1 : 0]     m_wbpi_dati_w [WBPI_MASTERCOUNT -1 : 0];
+// 	input  [(WBPI_WORDBITSZ/8) -1 : 0] m_wbpi_sel_w  [WBPI_MASTERCOUNT -1 : 0];
+// 	input  [WBPI_WORDBITSZ -1 : 0]     m_wbpi_dati_w [WBPI_MASTERCOUNT -1 : 0];
 // 	output                             m_wbpi_bsy_w  [WBPI_MASTERCOUNT -1 : 0];
 // 	output                             m_wbpi_ack_w  [WBPI_MASTERCOUNT -1 : 0];
-// 	output [WBPI_ARCHBITSZ -1 : 0]     m_wbpi_dato_w [WBPI_MASTERCOUNT -1 : 0];
+// 	output [WBPI_WORDBITSZ -1 : 0]     m_wbpi_dato_w [WBPI_MASTERCOUNT -1 : 0];
 // Slave devices must use the following signals to plug onto the peripheral interconnect:
 // 	output                             s_wbpi_cyc_w   [WBPI_SLAVECOUNT -1 : 0];
 // 	output                             s_wbpi_stb_w   [WBPI_SLAVECOUNT -1 : 0];
 // 	output                             s_wbpi_we_w    [WBPI_SLAVECOUNT -1 : 0];
 // 	output [WBPI_ADDRBITSZ -1 : 0]     s_wbpi_addr_w  [WBPI_SLAVECOUNT -1 : 0];
-// 	output [(WBPI_ARCHBITSZ/8) -1 : 0] s_wbpi_sel_w   [WBPI_SLAVECOUNT -1 : 0];
-// 	output [WBPI_ARCHBITSZ -1 : 0]     s_wbpi_dato_w  [WBPI_SLAVECOUNT -1 : 0];
+// 	output [(WBPI_WORDBITSZ/8) -1 : 0] s_wbpi_sel_w   [WBPI_SLAVECOUNT -1 : 0];
+// 	output [WBPI_WORDBITSZ -1 : 0]     s_wbpi_dato_w  [WBPI_SLAVECOUNT -1 : 0];
 // 	input                              s_wbpi_bsy_w   [WBPI_SLAVECOUNT -1 : 0];
 // 	input                              s_wbpi_ack_w   [WBPI_SLAVECOUNT -1 : 0];
-// 	input  [WBPI_ARCHBITSZ -1 : 0]     s_wbpi_dati_w  [WBPI_SLAVECOUNT -1 : 0];
-// 	input  [ARCHBITSZ -1 : 0]          s_wbpi_mapsz_w [WBPI_SLAVECOUNT -1 : 0];
+// 	input  [WBPI_WORDBITSZ -1 : 0]     s_wbpi_dati_w  [WBPI_SLAVECOUNT -1 : 0];
+// 	input  [WORDBITSZ -1 : 0]          s_wbpi_mapsz_w [WBPI_SLAVECOUNT -1 : 0];
 // If "dev/devtbl.v" was included, slave devices must also use following signals:
-// 	input  [ARCHBITSZ -1 : 0]          dev_id_w       [WBPI_SLAVECOUNT -1 : 0];
+// 	input  [WORDBITSZ -1 : 0]          dev_id_w       [WBPI_SLAVECOUNT -1 : 0];
 // 	input                              dev_useirq_w   [WBPI_SLAVECOUNT -1 : 0];
 `include "lib/wbpi_inst.v"
 
@@ -240,11 +240,11 @@ localparam DCACHEWAYCOUNT = 2;
 localparam TLBWAYCOUNT    = 2;
 
 cpu #(
-	 .ARCHBITSZ      (ARCHBITSZ)
-	,.XARCHBITSZ     (WBPI_ARCHBITSZ)
+	 .WORDBITSZ      (WORDBITSZ)
+	,.XWORDBITSZ     (WBPI_WORDBITSZ)
 	,.CLKFREQ        (CLK1XFREQ)
-	,.ICACHESETCOUNT ((1024/(WBPI_ARCHBITSZ/8))*(ICACHESZ/ICACHEWAYCOUNT))
-	,.DCACHESETCOUNT ((1024/(WBPI_ARCHBITSZ/8))*(DCACHESZ/DCACHEWAYCOUNT))
+	,.ICACHESETCOUNT ((1024/(WBPI_WORDBITSZ/8))*(ICACHESZ/ICACHEWAYCOUNT))
+	,.DCACHESETCOUNT ((1024/(WBPI_WORDBITSZ/8))*(DCACHESZ/DCACHEWAYCOUNT))
 	,.TLBSETCOUNT    (TLBSZ/TLBWAYCOUNT)
 	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
 	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
@@ -285,8 +285,8 @@ cpu #(
 );
 
 sdcard_spi #(
-	 .ARCHBITSZ  (ARCHBITSZ)
-	,.XARCHBITSZ (WBPI_ARCHBITSZ)
+	 .WORDBITSZ  (WORDBITSZ)
+	,.XWORDBITSZ (WBPI_WORDBITSZ)
 	,.CLKFREQ    (WBPI_CLKFREQ)
 	,.PHYCLKFREQ (CLK2XFREQ)
 ) sdcard (
@@ -318,11 +318,11 @@ sdcard_spi #(
 
 localparam RAMCACHEWAYCOUNT = 2;
 
-localparam RAMCACHESZ = /* In (ARCHBITSZ/8) units */
-	((1024/(ARCHBITSZ/8))*(8/RAMCACHEWAYCOUNT));
+localparam RAMCACHESZ = /* In (WORDBITSZ/8) units */
+	((1024/(WORDBITSZ/8))*(8/RAMCACHEWAYCOUNT));
 
 devtbl #(
-	 .ARCHBITSZ  (ARCHBITSZ)
+	 .WORDBITSZ  (WORDBITSZ)
 	,.RAMCACHESZ (RAMCACHESZ)
 	,.DEVMAPCNT  (WBPI_SLAVECOUNT)
 	,.SOCID      (1)
@@ -355,7 +355,7 @@ assign dev_id_w    [S_WBPI_DEVTBL] = 7;
 assign dev_useirq_w[S_WBPI_DEVTBL] = 0;
 
 irqctrl #(
-	 .ARCHBITSZ   (ARCHBITSZ)
+	 .WORDBITSZ   (WORDBITSZ)
 	,.IRQSRCCOUNT (IRQSRCCOUNT)
 	,.IRQDSTCOUNT (IRQDSTCOUNT)
 ) irqctrl (
@@ -387,7 +387,7 @@ assign dev_id_w    [S_WBPI_IRQCTRL] = 3;
 assign dev_useirq_w[S_WBPI_IRQCTRL] = 0;
 
 serial_uart #(
-	 .ARCHBITSZ  (ARCHBITSZ)
+	 .WORDBITSZ  (WORDBITSZ)
 	,.PHYCLKFREQ (WBPI_CLKFREQ)
 	,.BUFSZ      (2048)
 ) serial (
@@ -431,15 +431,15 @@ wire                             dcache_wb_cyc_w;
 wire                             dcache_wb_stb_w;
 wire                             dcache_wb_we_w;
 wire [WBPI_ADDRBITSZ -1 : 0]     dcache_wb_addr_w;
-wire [(WBPI_ARCHBITSZ/8) -1 : 0] dcache_wb_sel_w;
-wire [WBPI_ARCHBITSZ -1 : 0]     dcache_wb_dato_w;
+wire [(WBPI_WORDBITSZ/8) -1 : 0] dcache_wb_sel_w;
+wire [WBPI_WORDBITSZ -1 : 0]     dcache_wb_dato_w;
 wire                             dcache_wb_bsy_w;
 wire                             dcache_wb_ack_w;
-wire [WBPI_ARCHBITSZ -1 : 0]     dcache_wb_dati_w;
+wire [WBPI_WORDBITSZ -1 : 0]     dcache_wb_dati_w;
 
 dcache #(
-	 .ARCHBITSZ     (WBPI_ARCHBITSZ)
-	,.CACHESETCOUNT (RAMCACHESZ/(WBPI_ARCHBITSZ/ARCHBITSZ))
+	 .WORDBITSZ     (WBPI_WORDBITSZ)
+	,.CACHESETCOUNT (RAMCACHESZ/(WBPI_WORDBITSZ/WORDBITSZ))
 	,.CACHEWAYCOUNT (RAMCACHEWAYCOUNT)
 ) dcache (
 
@@ -501,7 +501,7 @@ wb4sdram #(
 	,.cyc_i   (dcache_wb_cyc_w)
 	,.stb_i   (dcache_wb_stb_w)
 	,.we_i    (dcache_wb_we_w)
-	,.addr_i  ({dcache_wb_addr_w, {WBPI_CLOG2ARCHBITSZBY8{1'b0}}})
+	,.addr_i  ({dcache_wb_addr_w, {WBPI_CLOG2WORDBITSZBY8{1'b0}}})
 	,.sel_i   (dcache_wb_sel_w)
 	,.data_i  (dcache_wb_dato_w)
 	,.stall_o (dcache_wb_bsy_w)
@@ -517,7 +517,7 @@ assign dev_id_w    [S_WBPI_RAM] = 1;
 assign dev_useirq_w[S_WBPI_RAM] = 0;
 
 bootldr #(
-	 .ARCHBITSZ (WBPI_ARCHBITSZ)
+	 .WORDBITSZ (WBPI_WORDBITSZ)
 ) bootldr (
 
 	 .rst_i (wbpi_rst_w)

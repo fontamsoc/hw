@@ -6,7 +6,7 @@
 // Parameters:
 //
 // SIZE
-// 	Size in (ARCHBITSZ/8) bytes.
+// 	Size in (WORDBITSZ/8) bytes.
 // 	It must be at least 2 and a power of 2.
 //
 // DELAY
@@ -65,11 +65,11 @@ parameter SIZE = 0;
 parameter DELAY = 0;
 parameter INITFILE = "";
 
-parameter ARCHBITSZ = 32;
+parameter WORDBITSZ = 32;
 
-localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
+localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
 
-localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
+localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
 input wire rst_i;
 
@@ -79,12 +79,12 @@ input  wire                        wb_cyc_i;
 input  wire                        wb_stb_i;
 input  wire                        wb_we_i;
 input  wire [ADDRBITSZ -1 : 0]     wb_addr_i;
-input  wire [(ARCHBITSZ/8) -1 : 0] wb_sel_i;
-input  wire [ARCHBITSZ -1 : 0]     wb_dat_i;
+input  wire [(WORDBITSZ/8) -1 : 0] wb_sel_i;
+input  wire [WORDBITSZ -1 : 0]     wb_dat_i;
 output wire                        wb_bsy_o;
 output reg                         wb_ack_o;
-output reg  [ARCHBITSZ -1 : 0]     wb_dat_o;
-output wire [ARCHBITSZ -1 : 0]     wb_mapsz_o;
+output reg  [WORDBITSZ -1 : 0]     wb_dat_o;
+output wire [WORDBITSZ -1 : 0]     wb_mapsz_o;
 
 localparam CLOG2DELAY = clog2(DELAY);
 
@@ -95,11 +95,11 @@ reg [CLOG2DELAY -1 : 0] cntr = 0;
 
 assign wb_bsy_o = |cntr;
 
-localparam MAPSZ = (SIZE*(ARCHBITSZ/8));
+localparam MAPSZ = (SIZE*(WORDBITSZ/8));
 // By convention, devices mapsz must be aligned to 128 bytes (1024 bits).
 assign wb_mapsz_o = ((MAPSZ < 128) ? 128 : MAPSZ);
 
-reg [ARCHBITSZ -1 : 0] ram [SIZE -1 : 0];
+reg [WORDBITSZ -1 : 0] ram [SIZE -1 : 0];
 
 initial begin
 	if (INITFILE != "") begin
@@ -113,9 +113,9 @@ initial begin
 	end
 end
 
-wire [ARCHBITSZ -1 : 0] _wb_sel_i;
-wire [ARCHBITSZ -1 : 0] ram_w0 = ram[wb_addr_i];
-wire [ARCHBITSZ -1 : 0] ram_w1 = ((wb_dat_i & _wb_sel_i) | (ram_w0 & ~_wb_sel_i));
+wire [WORDBITSZ -1 : 0] _wb_sel_i;
+wire [WORDBITSZ -1 : 0] ram_w0 = ram[wb_addr_i];
+wire [WORDBITSZ -1 : 0] ram_w1 = ((wb_dat_i & _wb_sel_i) | (ram_w0 & ~_wb_sel_i));
 
 wire _wb_stb_i = (wb_cyc_i && wb_stb_i);
 
@@ -143,25 +143,25 @@ always @ (posedge clk_i) begin
 		wb_ack_o <= _wb_stb_i;
 end
 
-generate if (ARCHBITSZ == 16) begin
+generate if (WORDBITSZ == 16) begin
 	assign _wb_sel_i = {{8{wb_sel_i[1]}}, {8{wb_sel_i[0]}}};
 end endgenerate
-generate if (ARCHBITSZ == 32) begin
+generate if (WORDBITSZ == 32) begin
 	assign _wb_sel_i = {{8{wb_sel_i[3]}}, {8{wb_sel_i[2]}}, {8{wb_sel_i[1]}}, {8{wb_sel_i[0]}}};
 end endgenerate
-generate if (ARCHBITSZ == 64) begin
+generate if (WORDBITSZ == 64) begin
 	assign _wb_sel_i = {
 		{8{wb_sel_i[7]}}, {8{wb_sel_i[6]}}, {8{wb_sel_i[5]}}, {8{wb_sel_i[4]}},
 		{8{wb_sel_i[3]}}, {8{wb_sel_i[2]}}, {8{wb_sel_i[1]}}, {8{wb_sel_i[0]}}};
 end endgenerate
-generate if (ARCHBITSZ == 128) begin
+generate if (WORDBITSZ == 128) begin
 	assign _wb_sel_i = {
 		{8{wb_sel_i[15]}}, {8{wb_sel_i[14]}}, {8{wb_sel_i[13]}}, {8{wb_sel_i[12]}},
 		{8{wb_sel_i[11]}}, {8{wb_sel_i[10]}}, {8{wb_sel_i[9]}}, {8{wb_sel_i[8]}},
 		{8{wb_sel_i[7]}}, {8{wb_sel_i[6]}}, {8{wb_sel_i[5]}}, {8{wb_sel_i[4]}},
 		{8{wb_sel_i[3]}}, {8{wb_sel_i[2]}}, {8{wb_sel_i[1]}}, {8{wb_sel_i[0]}}};
 end endgenerate
-generate if (ARCHBITSZ == 256) begin
+generate if (WORDBITSZ == 256) begin
 	assign _wb_sel_i = {
 		{8{wb_sel_i[31]}}, {8{wb_sel_i[30]}}, {8{wb_sel_i[29]}}, {8{wb_sel_i[28]}},
 		{8{wb_sel_i[27]}}, {8{wb_sel_i[26]}}, {8{wb_sel_i[25]}}, {8{wb_sel_i[24]}},

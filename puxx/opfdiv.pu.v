@@ -346,7 +346,7 @@ module fdiv (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 32;
+parameter WORDBITSZ = 32;
 parameter GPRCNT    = 32;
 parameter EXPBITSZ  = 8;
 parameter MANTBITSZ = 23;
@@ -359,14 +359,14 @@ input wire clk_i;
 
 input wire stb_i;
 
-// bits[((ARCHBITSZ*2)+CLOG2GPRCNT)-1:ARCHBITSZ*2]
+// bits[((WORDBITSZ*2)+CLOG2GPRCNT)-1:WORDBITSZ*2]
 // stores the id of the register to which the result will be saved,
-// bits[(ARCHBITSZ*2)-1:ARCHBITSZ] and bits[ARCHBITSZ-1:0]
+// bits[(WORDBITSZ*2)-1:WORDBITSZ] and bits[WORDBITSZ-1:0]
 // respectively store the first and second operand values.
-input wire [((ARCHBITSZ*2)+CLOG2GPRCNT) -1 : 0] data_i;
+input wire [((WORDBITSZ*2)+CLOG2GPRCNT) -1 : 0] data_i;
 
 // Net set to the result of the division.
-output wire [ARCHBITSZ -1 : 0] data_o;
+output wire [WORDBITSZ -1 : 0] data_o;
 
 // Reg set to the id of the gpr to which the result is to be stored.
 output reg [CLOG2GPRCNT -1 : 0] gprid_o;
@@ -383,11 +383,11 @@ wire [MANTBITSZ -1 : 0] arg1_mant = data_i[MANTBITSZ-1:0];
 wire [EXPBITSZ  -1 : 0] arg1_exp  = data_i[(EXPBITSZ+MANTBITSZ)-1:MANTBITSZ];
 wire                    arg1_sign = data_i[(1+EXPBITSZ+MANTBITSZ)-1:(EXPBITSZ+MANTBITSZ)];
 
-wire [MANTBITSZ -1 : 0] arg0_mant = data_i[MANTBITSZ+ARCHBITSZ-1:ARCHBITSZ];
-wire [EXPBITSZ  -1 : 0] arg0_exp  = data_i[(EXPBITSZ+MANTBITSZ)+ARCHBITSZ-1:MANTBITSZ+ARCHBITSZ];
-wire                    arg0_sign = data_i[(1+EXPBITSZ+MANTBITSZ)+ARCHBITSZ-1:(EXPBITSZ+MANTBITSZ)+ARCHBITSZ];
+wire [MANTBITSZ -1 : 0] arg0_mant = data_i[MANTBITSZ+WORDBITSZ-1:WORDBITSZ];
+wire [EXPBITSZ  -1 : 0] arg0_exp  = data_i[(EXPBITSZ+MANTBITSZ)+WORDBITSZ-1:MANTBITSZ+WORDBITSZ];
+wire                    arg0_sign = data_i[(1+EXPBITSZ+MANTBITSZ)+WORDBITSZ-1:(EXPBITSZ+MANTBITSZ)+WORDBITSZ];
 
-wire [CLOG2GPRCNT -1 : 0] gprid = data_i[(CLOG2GPRCNT+(ARCHBITSZ*2))-1:(ARCHBITSZ*2)];
+wire [CLOG2GPRCNT -1 : 0] gprid = data_i[(CLOG2GPRCNT+(WORDBITSZ*2))-1:(WORDBITSZ*2)];
 
 reg                         divider_stb = 0;
 reg  [(MANTBITSZ+1) -1 : 0] divider_arg0_mant;
@@ -505,7 +505,7 @@ module opfdiv (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 32;
+parameter WORDBITSZ = 32;
 parameter GPRCNT    = 32;
 parameter EXPBITSZ  = 8;
 parameter MANTBITSZ = 23;
@@ -522,18 +522,18 @@ input wire clk_fdiv_i;
 
 input wire stb_i;
 
-// bits[((ARCHBITSZ*2)+CLOG2GPRCNT)-1:ARCHBITSZ*2]
+// bits[((WORDBITSZ*2)+CLOG2GPRCNT)-1:WORDBITSZ*2]
 // stores the id of the register to which the result will be saved,
-// bits[(ARCHBITSZ*2)-1:ARCHBITSZ] and bits[ARCHBITSZ-1:0]
+// bits[(WORDBITSZ*2)-1:WORDBITSZ] and bits[WORDBITSZ-1:0]
 // respectively store the first and second operand values.
-input wire [((ARCHBITSZ*2)+CLOG2GPRCNT) -1 : 0] data_i;
+input wire [((WORDBITSZ*2)+CLOG2GPRCNT) -1 : 0] data_i;
 
 output wire rdy_o;
 
 input wire ostb_i;
 
 // Net set to the result of the division.
-output wire [ARCHBITSZ -1 : 0] data_o;
+output wire [WORDBITSZ -1 : 0] data_o;
 
 // Net set to the id of the gpr to which the result is to be stored.
 output wire [CLOG2GPRCNT -1 : 0] gprid_o;
@@ -549,7 +549,7 @@ wire [(CLOG2INSTCNT +1) -1 : 0] _rdidx = ((INSTCNT-1) ? rdidx : 0);
 wire [(CLOG2INSTCNT +1) -1 : 0] usage;
 assign usage = (wridx - rdidx);
 
-wire [ARCHBITSZ -1 : 0] data_w [INSTCNT -1 : 0];
+wire [WORDBITSZ -1 : 0] data_w [INSTCNT -1 : 0];
 assign data_o = data_w[_rdidx];
 
 wire [CLOG2GPRCNT -1 : 0] gprid_w [INSTCNT -1 : 0];
@@ -563,11 +563,11 @@ assign ordy_o = ((usage != 0) && rdy_w[_rdidx]);
 
 `ifdef PUFDIVCLK
 reg                                       stb_r    = 0;
-reg  [((ARCHBITSZ*2)+CLOG2GPRCNT) -1 : 0] data_r   = 0;
+reg  [((WORDBITSZ*2)+CLOG2GPRCNT) -1 : 0] data_r   = 0;
 reg  [(CLOG2INSTCNT +1) -1 : 0]           _wridx_r = 0;
 `else
 wire                                      stb_r    = stb_i;
-wire [((ARCHBITSZ*2)+CLOG2GPRCNT) -1 : 0] data_r   = data_i;
+wire [((WORDBITSZ*2)+CLOG2GPRCNT) -1 : 0] data_r   = data_i;
 wire [(CLOG2INSTCNT +1) -1 : 0]           _wridx_r = _wridx;
 `endif
 
@@ -601,7 +601,7 @@ end
 genvar gen_fdiv_idx;
 generate for (gen_fdiv_idx = 0; gen_fdiv_idx < INSTCNT; gen_fdiv_idx = gen_fdiv_idx + 1) begin :gen_fdiv
 fdiv #(
-	 .ARCHBITSZ (ARCHBITSZ)
+	 .WORDBITSZ (WORDBITSZ)
 	,.GPRCNT    (GPRCNT)
 	,.EXPBITSZ  (EXPBITSZ)
 	,.MANTBITSZ (MANTBITSZ)

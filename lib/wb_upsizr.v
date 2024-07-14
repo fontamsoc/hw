@@ -4,7 +4,7 @@
 `ifndef WB_UPSIZR_V
 `define WB_UPSIZR_V
 
-// (MARCHBITSZ <= SARCHBITSZ) must be true.
+// (MWORDBITSZ <= SWORDBITSZ) must be true.
 
 `include "lib/fifo.v"
 `include "lib/fifo_fwft.v"
@@ -38,18 +38,18 @@ module wb_upsizr (
 
 `include "lib/clog2.v"
 
-parameter MARCHBITSZ = 0;
-parameter SARCHBITSZ = 0;
+parameter MWORDBITSZ = 0;
+parameter SWORDBITSZ = 0;
 
 parameter MAXPENDINGACK = 8; // It must be at least 2 and a power of 2.
 
 parameter USEFWFTFIFO = 0;
 
-localparam CLOG2MARCHBITSZBY8 = clog2(MARCHBITSZ/8);
-localparam CLOG2SARCHBITSZBY8 = clog2(SARCHBITSZ/8);
+localparam CLOG2MWORDBITSZBY8 = clog2(MWORDBITSZ/8);
+localparam CLOG2SWORDBITSZBY8 = clog2(SWORDBITSZ/8);
 
-localparam MADDRBITSZ = (MARCHBITSZ-CLOG2MARCHBITSZBY8);
-localparam SADDRBITSZ = (SARCHBITSZ-CLOG2SARCHBITSZBY8);
+localparam MADDRBITSZ = (MWORDBITSZ-CLOG2MWORDBITSZBY8);
+localparam SADDRBITSZ = (SWORDBITSZ-CLOG2SWORDBITSZBY8);
 
 input wire rst_i;
 
@@ -59,21 +59,21 @@ input  wire                         m_wb_cyc_i;
 input  wire                         m_wb_stb_i;
 input  wire                         m_wb_we_i;
 input  wire [MADDRBITSZ -1 : 0]     m_wb_addr_i;
-input  wire [(MARCHBITSZ/8) -1 : 0] m_wb_sel_i;
-input  wire [MARCHBITSZ -1 : 0]     m_wb_dat_i;
+input  wire [(MWORDBITSZ/8) -1 : 0] m_wb_sel_i;
+input  wire [MWORDBITSZ -1 : 0]     m_wb_dat_i;
 output wire                         m_wb_bsy_o;
 output reg                          m_wb_ack_o;
-output wire [MARCHBITSZ -1 : 0]     m_wb_dat_o;
+output wire [MWORDBITSZ -1 : 0]     m_wb_dat_o;
 
 output wire                         s_wb_cyc_o;
 output wire                         s_wb_stb_o;
 output wire                         s_wb_we_o;
 output wire [SADDRBITSZ -1 : 0]     s_wb_addr_o;
-output wire [(SARCHBITSZ/8) -1 : 0] s_wb_sel_o;
-output wire [SARCHBITSZ -1 : 0]     s_wb_dat_o;
+output wire [(SWORDBITSZ/8) -1 : 0] s_wb_sel_o;
+output wire [SWORDBITSZ -1 : 0]     s_wb_dat_o;
 input  wire                         s_wb_bsy_i;
 input  wire                         s_wb_ack_i;
-input  wire [SARCHBITSZ -1 : 0]     s_wb_dat_i;
+input  wire [SWORDBITSZ -1 : 0]     s_wb_dat_i;
 
 wire m_wb_bsy_o_;
 assign s_wb_cyc_o = m_wb_cyc_i;
@@ -81,11 +81,11 @@ assign s_wb_stb_o = (m_wb_stb_i && !m_wb_bsy_o_);
 assign s_wb_we_o = m_wb_we_i;
 assign m_wb_bsy_o = (m_wb_bsy_o_ || s_wb_bsy_i);
 
-generate if (MARCHBITSZ < SARCHBITSZ) begin :gen_upsizr
+generate if (MWORDBITSZ < SWORDBITSZ) begin :gen_upsizr
 
 	assign s_wb_addr_o = {
-		{(SADDRBITSZ-(MADDRBITSZ-(CLOG2SARCHBITSZBY8-CLOG2MARCHBITSZBY8))){1'b0}},
-		m_wb_addr_i[MADDRBITSZ -1 : (CLOG2SARCHBITSZBY8-CLOG2MARCHBITSZBY8)]};
+		{(SADDRBITSZ-(MADDRBITSZ-(CLOG2SWORDBITSZBY8-CLOG2MWORDBITSZBY8))){1'b0}},
+		m_wb_addr_i[MADDRBITSZ -1 : (CLOG2SWORDBITSZBY8-CLOG2MWORDBITSZBY8)]};
 
 	wire [MADDRBITSZ -1 : 0] _m_wb_addr_i;
 
@@ -119,17 +119,17 @@ generate if (MARCHBITSZ < SARCHBITSZ) begin :gen_upsizr
 	);
 	end
 
-	reg [SARCHBITSZ -1 : 0] _s_wb_dat_i;
+	reg [SWORDBITSZ -1 : 0] _s_wb_dat_i;
 
 	assign m_wb_dat_o = {_s_wb_dat_i >>
-		(_m_wb_addr_i[(CLOG2SARCHBITSZBY8-CLOG2MARCHBITSZBY8) -1 : 0]*MARCHBITSZ)};
+		(_m_wb_addr_i[(CLOG2SWORDBITSZBY8-CLOG2MWORDBITSZBY8) -1 : 0]*MWORDBITSZ)};
 
 	assign s_wb_dat_o = (
-		{{(SARCHBITSZ-MARCHBITSZ){1'b0}}, m_wb_dat_i} <<
-		(m_wb_addr_i[(CLOG2SARCHBITSZBY8-CLOG2MARCHBITSZBY8) -1 : 0]*MARCHBITSZ));
+		{{(SWORDBITSZ-MWORDBITSZ){1'b0}}, m_wb_dat_i} <<
+		(m_wb_addr_i[(CLOG2SWORDBITSZBY8-CLOG2MWORDBITSZBY8) -1 : 0]*MWORDBITSZ));
 
-	assign s_wb_sel_o = ({{((SARCHBITSZ-MARCHBITSZ)/8){1'b0}}, m_wb_sel_i} <<
-		(m_wb_addr_i[(CLOG2SARCHBITSZBY8-CLOG2MARCHBITSZBY8) -1 : 0]*(MARCHBITSZ/8)));
+	assign s_wb_sel_o = ({{((SWORDBITSZ-MWORDBITSZ)/8){1'b0}}, m_wb_sel_i} <<
+		(m_wb_addr_i[(CLOG2SWORDBITSZBY8-CLOG2MWORDBITSZBY8) -1 : 0]*(MWORDBITSZ/8)));
 
 	if (USEFWFTFIFO) begin
 	always @* begin

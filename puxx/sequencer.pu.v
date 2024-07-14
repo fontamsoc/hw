@@ -8,7 +8,7 @@ always @* begin
 
 	if (rst_i || instrbufrst
 		`ifdef PUHPTW
-		|| (ARCHBITSZ != 32) // for now, HPTW is supported only for (ARCHBITSZ == 32).
+		|| (WORDBITSZ != 32) // for now, HPTW is supported only for (WORDBITSZ == 32).
 		`endif
 		) begin
 		// Interrupts must not be processed until
@@ -296,13 +296,13 @@ always @ (posedge clk_i) begin
 
 			dohalt <= ((!oplicounter && isophalt) ? 1 : dohalt);
 
-			uip <= ((!oplicounter && isopsetuip) ? gprdata1[ARCHBITSZ-1:1] : uip);
+			uip <= ((!oplicounter && isopsetuip) ? gprdata1[WORDBITSZ-1:1] : uip);
 
 			ip <= (
 				`ifdef PUSC2
-				sc2exec ? (sc2isopjtrue ? sc2gprdata2[ARCHBITSZ-1:1] : sc2ipnxt) :
+				sc2exec ? (sc2isopjtrue ? sc2gprdata2[WORDBITSZ-1:1] : sc2ipnxt) :
 				`endif
-				((!oplicounter && isopjtrue) ? gprdata2[ARCHBITSZ-1:1] : ipnxt));
+				((!oplicounter && isopjtrue) ? gprdata2[WORDBITSZ-1:1] : ipnxt));
 
 			instrbufdato <= (
 				`ifdef PUSC2

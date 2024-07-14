@@ -37,14 +37,14 @@ module wb_cdc (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 32;
+parameter WORDBITSZ = 32;
 
 parameter MAXPENDINGACK = 2;
 
 parameter ASYNC = 1;
 
-localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
-localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
+localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
+localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
 input wire rst_i;
 
@@ -55,21 +55,21 @@ input  wire                        m_wb_cyc_i;
 input  wire                        m_wb_stb_i;
 input  wire                        m_wb_we_i;
 input  wire [ADDRBITSZ -1 : 0]     m_wb_addr_i;
-input  wire [(ARCHBITSZ/8) -1 : 0] m_wb_sel_i;
-input  wire [ARCHBITSZ -1 : 0]     m_wb_dat_i;
+input  wire [(WORDBITSZ/8) -1 : 0] m_wb_sel_i;
+input  wire [WORDBITSZ -1 : 0]     m_wb_dat_i;
 output wire                        m_wb_bsy_o;
 output reg                         m_wb_ack_o;
-output wire [ARCHBITSZ -1 : 0]     m_wb_dat_o;
+output wire [WORDBITSZ -1 : 0]     m_wb_dat_o;
 
 output reg                         s_wb_cyc_o;
 output reg                         s_wb_stb_o;
 output wire                        s_wb_we_o;
 output wire [ADDRBITSZ -1 : 0]     s_wb_addr_o;
-output wire [(ARCHBITSZ/8) -1 : 0] s_wb_sel_o;
-output wire [ARCHBITSZ -1 : 0]     s_wb_dat_o;
+output wire [(WORDBITSZ/8) -1 : 0] s_wb_sel_o;
+output wire [WORDBITSZ -1 : 0]     s_wb_dat_o;
 input  wire                        s_wb_bsy_i;
 input  wire                        s_wb_ack_i;
-input  wire [ARCHBITSZ -1 : 0]     s_wb_dat_i;
+input  wire [WORDBITSZ -1 : 0]     s_wb_dat_i;
 
 wire rqst_write_w = (m_wb_cyc_i && m_wb_stb_i && !m_wb_bsy_o);
 
@@ -103,7 +103,7 @@ end
 
 generate if (ASYNC != 0) begin
 fifo #(
-	 .WIDTH (1 + ADDRBITSZ + (ARCHBITSZ/8) + ARCHBITSZ)
+	 .WIDTH (1 + ADDRBITSZ + (WORDBITSZ/8) + WORDBITSZ)
 	,.DEPTH (MAXPENDINGACK)
 ) rqst (
 
@@ -120,7 +120,7 @@ fifo #(
 );
 end else begin
 fifo_async #(
-	 .WIDTH (1 + ADDRBITSZ + (ARCHBITSZ/8) + ARCHBITSZ)
+	 .WIDTH (1 + ADDRBITSZ + (WORDBITSZ/8) + WORDBITSZ)
 	,.DEPTH (MAXPENDINGACK)
 ) rqst (
 
@@ -148,7 +148,7 @@ end
 
 generate if (ASYNC != 0) begin
 fifo #(
-	 .WIDTH (ARCHBITSZ)
+	 .WIDTH (WORDBITSZ)
 	,.DEPTH (MAXPENDINGACK)
 ) rsp (
 
@@ -165,7 +165,7 @@ fifo #(
 );
 end else begin
 fifo_async #(
-	 .WIDTH (ARCHBITSZ)
+	 .WIDTH (WORDBITSZ)
 	,.DEPTH (MAXPENDINGACK)
 ) rsp (
 

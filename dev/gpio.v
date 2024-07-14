@@ -8,10 +8,10 @@
 // while, the second half is used to send commands to the device.
 //
 // Commands sent to the device expect following format
-// | cmd: 1 bit | arg: (ARCHBITSZ-1) bits | where the field "cmd" values
+// | cmd: 1 bit | arg: (WORDBITSZ-1) bits | where the field "cmd" values
 // are CMDCONFIGUREIO(1'b0), CMDSETDEBOUNCE(1'b1). The result of a previously
 // sent command is retrieved from the device reading from it and has
-// the following format | cmd: 1 bit | resp: (ARCHBITSZ-1) bits |
+// the following format | cmd: 1 bit | resp: (WORDBITSZ-1) bits |
 // where the fields "cmd" and "resp" are the command and its result.
 //
 // The description of commands is as follow:
@@ -28,7 +28,7 @@
 //
 // IOCOUNT:
 // 	Number of IOs.
-// 	It must be non-null and less than ARCHBITSZ.
+// 	It must be non-null and less than WORDBITSZ.
 
 // Ports:
 //
@@ -92,12 +92,12 @@ module gpio (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 32;
+parameter WORDBITSZ = 32;
 parameter CLKFREQ   = 1;
 parameter IOCOUNT   = 1;
 
-localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
-localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
+localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
+localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
 input wire rst_i;
 
@@ -107,12 +107,12 @@ input  wire                        wb_cyc_i;
 input  wire                        wb_stb_i;
 input  wire                        wb_we_i;
 input  wire [ADDRBITSZ -1 : 0]     wb_addr_i;
-input  wire [(ARCHBITSZ/8) -1 : 0] wb_sel_i;
-input  wire [ARCHBITSZ -1 : 0]     wb_dat_i;
+input  wire [(WORDBITSZ/8) -1 : 0] wb_sel_i;
+input  wire [WORDBITSZ -1 : 0]     wb_dat_i;
 output wire                        wb_bsy_o;
 output reg                         wb_ack_o;
-output wire [ARCHBITSZ -1 : 0]     wb_dat_o;
-output wire [ARCHBITSZ -1 : 0]     wb_mapsz_o;
+output wire [WORDBITSZ -1 : 0]     wb_dat_o;
+output wire [WORDBITSZ -1 : 0]     wb_mapsz_o;
 
 output wire irq_stb_o;
 input  wire irq_rdy_i;
@@ -133,7 +133,7 @@ assign wb_mapsz_o = MAPSZ;
 reg                    wb_stb_r;
 reg                    wb_we_r;
 reg [ADDRBITSZ -1 : 0] wb_addr_r;
-reg [ARCHBITSZ -1 : 0] wb_dat_r;
+reg [WORDBITSZ -1 : 0] wb_dat_r;
 
 wire wb_stb_r_ = (wb_cyc_i && wb_stb_i);
 
@@ -151,16 +151,16 @@ end
 localparam CMDCONFIGUREIO = 0;
 localparam CMDSETDEBOUNCE = 1;
 
-reg [ARCHBITSZ -1 : 0] wb_dat_o_;
+reg [WORDBITSZ -1 : 0] wb_dat_o_;
 
 // Half the memory mapping is used to send/receive data,
 // while the other half is used to issue commands.
-localparam ISCMDBIT = (clog2(MAPSZ/2) - CLOG2ARCHBITSZBY8);
+localparam ISCMDBIT = (clog2(MAPSZ/2) - CLOG2WORDBITSZBY8);
 
 wire iscmd = (!rst_i && wb_stb_r && wb_we_r && wb_addr_r[ISCMDBIT]);
 
-wire cmdconfigureio = (iscmd && wb_dat_r[ARCHBITSZ-1] == CMDCONFIGUREIO);
-wire cmdsetdebounce = (iscmd && wb_dat_r[ARCHBITSZ-1] == CMDSETDEBOUNCE);
+wire cmdconfigureio = (iscmd && wb_dat_r[WORDBITSZ-1] == CMDCONFIGUREIO);
+wire cmdsetdebounce = (iscmd && wb_dat_r[WORDBITSZ-1] == CMDSETDEBOUNCE);
 
 wire devrd = (!rst_i && wb_stb_r && !wb_we_r && !wb_addr_r[ISCMDBIT]);
 wire devwr = (!rst_i && wb_stb_r &&  wb_we_r && !wb_addr_r[ISCMDBIT]);
@@ -171,13 +171,13 @@ wire [IOCOUNT -1 : 0] _i;
 // Register set to the number of clock cycles used
 // to debounce the input "i" when configured as input.
 // It has the bitsize of a command argument.
-reg [(ARCHBITSZ -1) -1 : 0] dbncrthresh;
+reg [(WORDBITSZ -1) -1 : 0] dbncrthresh;
 
 genvar gen_dbncr_idx;
 generate for (gen_dbncr_idx = 0; gen_dbncr_idx < IOCOUNT; gen_dbncr_idx = gen_dbncr_idx + 1) begin: gen_dbncr // gen_dbncr is just a label that verilog wants to see; and it is not used anywhere.
 dbncr  #(
 	// Bitsize of the command argument.
-	 .THRESBITSZ (ARCHBITSZ -1)
+	 .THRESBITSZ (WORDBITSZ -1)
 	,.INIT       (1'b0)
 ) dbncr (
 	 .rst_i    (rst_i)
@@ -213,18 +213,18 @@ always @(posedge clk_i) begin
 	if (rst_i)
 		t <= 0;
 	else if (cmdconfigureio)
-		t <= wb_dat_r[ARCHBITSZ-2:0];
+		t <= wb_dat_r[WORDBITSZ-2:0];
 
 	if (rst_i)
 		dbncrthresh <= 0;
 	else if (cmdsetdebounce)
-		dbncrthresh <= wb_dat_r[ARCHBITSZ-2:0];
+		dbncrthresh <= wb_dat_r[WORDBITSZ-2:0];
 
 	// Logic that set output "o".
 	if (rst_i)
 		o <= 0;
 	else if (devwr)
-		o <= wb_dat_r[ARCHBITSZ-2:0];
+		o <= wb_dat_r[WORDBITSZ-2:0];
 
 	// Logic that update i_change.
 	if (irq_rdy_i_negedge)
@@ -233,9 +233,9 @@ always @(posedge clk_i) begin
 		i_change <= (i_change | i_changed);
 
 	if (cmdconfigureio)
-		wb_dat_o_ <= {wb_dat_r[ARCHBITSZ-1], IOCOUNT[ARCHBITSZ-2:0]};
+		wb_dat_o_ <= {wb_dat_r[WORDBITSZ-1], IOCOUNT[WORDBITSZ-2:0]};
 	else if (cmdsetdebounce)
-		wb_dat_o_ <= {wb_dat_r[ARCHBITSZ-1], CLKFREQ[ARCHBITSZ-2:0]};
+		wb_dat_o_ <= {wb_dat_r[WORDBITSZ-1], CLKFREQ[WORDBITSZ-2:0]};
 
 	devrd_r <= devrd;
 

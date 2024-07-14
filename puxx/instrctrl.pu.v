@@ -2,7 +2,7 @@
 // (c) William Fonkou Tambe
 
 // The instruction buffer allows for indexing 16bits at a time,
-// the ARCHBITSZ bits data fetched from memory.
+// the WORDBITSZ bits data fetched from memory.
 // The size of the instruction buffer determines the amount
 // of prefetching done.
 
@@ -61,7 +61,7 @@ always @ (posedge clk_i) begin
 		// and the penalty for it, is at least 2 clock cycles during
 		// which the sequencer stalls.
 		if (instrbufrst)
-			instrbufwriteidx <= ip[(CLOG2INSTRBUFFERSIZE+((CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF)) : (CLOG2ARCHBITSZBY8-1)+CLOG2XARCHBITSZBY8DIFF];
+			instrbufwriteidx <= ip[(CLOG2INSTRBUFFERSIZE+((CLOG2WORDBITSZBY8-1)+CLOG2XWORDBITSZBY8DIFF)) : (CLOG2WORDBITSZBY8-1)+CLOG2XWORDBITSZBY8DIFF];
 		else if (instrfetchmemrqstdone_) begin // Note that instrfetchmemrqstdone is 1 for 1 clock cycle.
 			// I increment instrbufwriteidx to the index
 			// within the instruction buffer where the next data
@@ -86,7 +86,7 @@ always @ (posedge clk_i) begin
 				// Setting instrfetchfaulted will stall instrfetch until the sequencer clears it.
 				instrfetchfaulted_a <= ~instrfetchfaulted_b;
 
-				instrfetchfaultaddr <= {instrfetchnextaddr, {CLOG2ARCHBITSZBY8{1'b0}}};
+				instrfetchfaultaddr <= {instrfetchnextaddr, {CLOG2WORDBITSZBY8{1'b0}}};
 
 				// Set icachecheck to 0 in case it was still 1.
 				icachecheck <= 0;

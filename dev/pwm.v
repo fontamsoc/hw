@@ -11,7 +11,7 @@
 // Each IO has a dedicated PWM/PDM period as well as a delay used between
 // the transfer of a pulse-density value from/to the buffer to/from the IO.
 
-// All PIWROP, PIRDOP and PIRWOP are to be ARCHBITSZ bits operations,
+// All PIWROP, PIRDOP and PIRWOP are to be WORDBITSZ bits operations,
 // otherwise undefined behavior will be the result.
 
 // PIRDOP returns a pulsedensity value from the indexed input buffer.
@@ -19,11 +19,11 @@
 
 // PIWROP writes to the indexed output buffer, a PWM/PDM pulsedensity
 // in clockcycles, to be synthesized on the IO when configured as output.
-// Only the (ARCHBITSZ-2) lsb of the value written are used.
+// Only the (WORDBITSZ-2) lsb of the value written are used.
 // Writing silently fails when the IO is configured as input.
 
 // PIRWOP sends commands, where the value written encodes both
-// the command and its argument as follow: |cmd: 2bits|arg: (ARCHBITSZ-2)bits|
+// the command and its argument as follow: |cmd: 2bits|arg: (WORDBITSZ-2)bits|
 // while the value read is the return value of the command.
 
 // Description of commands:
@@ -119,7 +119,7 @@ module pwm (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ  = 32;
+parameter WORDBITSZ  = 32;
 parameter CLKFREQ    = 0;
 parameter IOCOUNT    = 0;
 parameter BUFFERSIZE = 0;
@@ -127,9 +127,9 @@ parameter BUFFERSIZE = 0;
 localparam CLOG2IOCOUNT    = clog2(IOCOUNT);
 localparam CLOG2BUFFERSIZE = clog2(BUFFERSIZE);
 
-localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
+localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
 
-localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
+localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
 input wire rst_i;
 
@@ -137,11 +137,11 @@ input wire clk_i;
 
 input  wire [2 -1 : 0]             pi1_op_i;
 input  wire [ADDRBITSZ -1 : 0]     pi1_addr_i;
-input  wire [ARCHBITSZ -1 : 0]     pi1_data_i;
-output wire [ARCHBITSZ -1 : 0]     pi1_data_o;
-input  wire [(ARCHBITSZ/8) -1 : 0] pi1_sel_i; /* not used */
+input  wire [WORDBITSZ -1 : 0]     pi1_data_i;
+output wire [WORDBITSZ -1 : 0]     pi1_data_o;
+input  wire [(WORDBITSZ/8) -1 : 0] pi1_sel_i; /* not used */
 output wire                        pi1_rdy_o;
-output wire [ARCHBITSZ -1 : 0]     pi1_mapsz_o;
+output wire [WORDBITSZ -1 : 0]     pi1_mapsz_o;
 
 input  wire [IOCOUNT -1 : 0] i;
 output wire [IOCOUNT -1 : 0] o;
@@ -150,18 +150,18 @@ output wire [IOCOUNT -1 : 0] o;
 // input "i" is an input.
 output reg  [IOCOUNT -1 : 0] t;
 
-assign pi1_mapsz_o = ((IOCOUNT+(((IOCOUNT*ARCHBITSZ)%64)/ARCHBITSZ)/* align to 64bits */)*(ARCHBITSZ/8));
+assign pi1_mapsz_o = ((IOCOUNT+(((IOCOUNT*WORDBITSZ)%64)/WORDBITSZ)/* align to 64bits */)*(WORDBITSZ/8));
 
 wire [2 -1 : 0]             pi1b_op_i;
 wire [ADDRBITSZ -1 : 0]     pi1b_addr_i;
-reg  [ARCHBITSZ -1 : 0]     pi1b_data_o;
-wire [ARCHBITSZ -1 : 0]     pi1b_data_i;
-wire [(ARCHBITSZ/8) -1 : 0] pi1b_sel_i;
+reg  [WORDBITSZ -1 : 0]     pi1b_data_o;
+wire [WORDBITSZ -1 : 0]     pi1b_data_i;
+wire [(WORDBITSZ/8) -1 : 0] pi1b_sel_i;
 wire                        pi1b_rdy_o;
 
 pi1b #(
 
-	.ARCHBITSZ (ARCHBITSZ)
+	.WORDBITSZ (WORDBITSZ)
 
 ) pi1b (
 
@@ -193,17 +193,17 @@ reg [IOCOUNT -1 : 0] ioflag;
 
 // Registers used to implement pulse-width-modulation
 // or pulse-density-modulation on each output "o".
-// They each have the bitsize from the (ARCHBITSZ-2) lsb of a command.
-reg [(ARCHBITSZ-2) -1 : 0] ocounter [IOCOUNT -1 : 0]; // Current count within the PWM/PDM period.
-reg [(ARCHBITSZ-2) -1 : 0] operiod  [IOCOUNT -1 : 0]; // PWM/PDM period.
+// They each have the bitsize from the (WORDBITSZ-2) lsb of a command.
+reg [(WORDBITSZ-2) -1 : 0] ocounter [IOCOUNT -1 : 0]; // Current count within the PWM/PDM period.
+reg [(WORDBITSZ-2) -1 : 0] operiod  [IOCOUNT -1 : 0]; // PWM/PDM period.
 
 // Value retrieved from the pulsedensity fifo.
-wire [(ARCHBITSZ-2) -1 : 0] pdfifodato [IOCOUNT -1 : 0];
+wire [(WORDBITSZ-2) -1 : 0] pdfifodato [IOCOUNT -1 : 0];
 
 // Accumulator used for measuring/synthesizing PWM/PDM signals.
-// It has the bitsize from the (ARCHBITSZ-2) lsb of a command,
+// It has the bitsize from the (WORDBITSZ-2) lsb of a command,
 // plus one more bit in order to correctly compute signed values.
-reg [((ARCHBITSZ-2)+1) -1 : 0] accumulator [IOCOUNT -1 : 0];
+reg [((WORDBITSZ-2)+1) -1 : 0] accumulator [IOCOUNT -1 : 0];
 
 genvar geno_idx;
 // Logic generating output "o".
@@ -252,17 +252,17 @@ generate for (gen_pdfifo_idx = 0; gen_pdfifo_idx < IOCOUNT; gen_pdfifo_idx = gen
 assign pdfiforeaden[gen_pdfifo_idx] = (t[gen_pdfifo_idx] ? operiodreached[gen_pdfifo_idx] : (!pdfifowasread[gen_pdfifo_idx] && pdfifousage[gen_pdfifo_idx]));
 
 // fifo for each IO to buffer pulsedensity values.
-// Each buffer element has the bitsize from the (ARCHBITSZ-2) lsb
+// Each buffer element has the bitsize from the (WORDBITSZ-2) lsb
 // of the command argument.
 fifo #(
-	 .WIDTH ((ARCHBITSZ-2))
+	 .WIDTH ((WORDBITSZ-2))
 	,.DEPTH (BUFFERSIZE)
 
 ) pdfifo (
 
 	 .rst_i (rst_i || (
 		pi1b_op_i == PIRWOP &&
-		pi1b_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDCONFIGUREIO &&
+		pi1b_data_i[WORDBITSZ-1:WORDBITSZ-2] == CMDCONFIGUREIO &&
 		pi1b_addr_i == gen_pdfifo_idx &&
 		t[gen_pdfifo_idx] != pi1b_data_i[0]))
 
@@ -274,7 +274,7 @@ fifo #(
 
 	,.clk_write_i (clk_i)
 	,.write_i     (t[gen_pdfifo_idx] ? (pi1b_op_i == PIWROP && pi1b_addr_i == gen_pdfifo_idx) : operiodreached[gen_pdfifo_idx])
-	,.data_i      (t[gen_pdfifo_idx] ? pi1b_data_i[ARCHBITSZ-3:0] : (accumulator[gen_pdfifo_idx] + i[gen_pdfifo_idx]))
+	,.data_i      (t[gen_pdfifo_idx] ? pi1b_data_i[WORDBITSZ-3:0] : (accumulator[gen_pdfifo_idx] + i[gen_pdfifo_idx]))
 );
 end endgenerate
 
@@ -291,7 +291,7 @@ always @(posedge clk_i) begin
 		ioflag <= {IOCOUNT{1'b0}};
 		`endif
 		t <= {IOCOUNT{1'b0}};
-	end else if (pi1b_op_i == PIRWOP && pi1b_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDCONFIGUREIO) begin
+	end else if (pi1b_op_i == PIRWOP && pi1b_data_i[WORDBITSZ-1:WORDBITSZ-2] == CMDCONFIGUREIO) begin
 		t[pi1b_addr_i] <= pi1b_data_i[0];
 		`ifdef PWM_PDM_SUPPORT
 		ioflag[pi1b_addr_i] <= pi1b_data_i[1];
@@ -299,20 +299,20 @@ always @(posedge clk_i) begin
 	end
 
 	// Logic that set operiod.
-	if (pi1b_op_i == PIRWOP && pi1b_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDSETPERIOD)
-		operiod[pi1b_addr_i] <= pi1b_data_i[ARCHBITSZ-3:0];
+	if (pi1b_op_i == PIRWOP && pi1b_data_i[WORDBITSZ-1:WORDBITSZ-2] == CMDSETPERIOD)
+		operiod[pi1b_addr_i] <= pi1b_data_i[WORDBITSZ-3:0];
 
 	// Logic that set pi1b_data_o.
 	if (pi1b_op_i == PIRDOP) begin
 		pi1b_data_o <= pdfifodato[pi1b_addr_i];
 	end else if (pi1b_op_i == PIRWOP) begin
-		if (pi1b_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDCONFIGUREIO)
+		if (pi1b_data_i[WORDBITSZ-1:WORDBITSZ-2] == CMDCONFIGUREIO)
 			pi1b_data_o <= IOCOUNT;
-		else if (pi1b_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDGETBUFFERSIZE)
+		else if (pi1b_data_i[WORDBITSZ-1:WORDBITSZ-2] == CMDGETBUFFERSIZE)
 			pi1b_data_o <= BUFFERSIZE;
-		else if (pi1b_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDGETBUFFERUSAGE)
+		else if (pi1b_data_i[WORDBITSZ-1:WORDBITSZ-2] == CMDGETBUFFERUSAGE)
 			pi1b_data_o <= pdfifousage[pi1b_addr_i];
-		else if (pi1b_data_i[ARCHBITSZ-1:ARCHBITSZ-2] == CMDSETPERIOD)
+		else if (pi1b_data_i[WORDBITSZ-1:WORDBITSZ-2] == CMDSETPERIOD)
 			pi1b_data_o <= CLKFREQ;
 		else
 			pi1b_data_o <= 0;
@@ -345,7 +345,7 @@ always @(posedge clk_i) begin
 			accumulator[gen_accumulator_idx] <= (
 				accumulator[gen_accumulator_idx] + (
 					{1'b0, pdfifodato[gen_accumulator_idx]} + (
-						 o[gen_accumulator_idx] ? -operiod[gen_accumulator_idx] : {(ARCHBITSZ-2){1'b0}}))); // Accumulation for sythesizing PDM (Pulse-Density-Modulation).
+						 o[gen_accumulator_idx] ? -operiod[gen_accumulator_idx] : {(WORDBITSZ-2){1'b0}}))); // Accumulation for sythesizing PDM (Pulse-Density-Modulation).
 		`endif
 		else
 			accumulator[gen_accumulator_idx] <= (accumulator[gen_accumulator_idx] + i[gen_accumulator_idx]); // Accumulation for measuring pulsedensity.

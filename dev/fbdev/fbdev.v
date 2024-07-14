@@ -42,8 +42,8 @@ module fbdev (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ  = 32;
-parameter XARCHBITSZ = 32;
+parameter WORDBITSZ  = 32;
+parameter XWORDBITSZ = 32;
 
 parameter WIDTH   = 800;
 parameter HEIGHT  = 600;
@@ -54,18 +54,18 @@ parameter FORCE_PINOOP = 0;
 
 parameter M_ADDR_OFFSET = 'h1000;
 
-localparam CLOG2ARCHBITSZ = clog2(ARCHBITSZ);
-localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
-localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
+localparam CLOG2WORDBITSZ = clog2(WORDBITSZ);
+localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
+localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
-localparam CLOG2XARCHBITSZBY8 = clog2(XARCHBITSZ/8);
-localparam XADDRBITSZ = (XARCHBITSZ-CLOG2XARCHBITSZBY8);
+localparam CLOG2XWORDBITSZBY8 = clog2(XWORDBITSZ/8);
+localparam XADDRBITSZ = (XWORDBITSZ-CLOG2XWORDBITSZBY8);
 
-localparam CLOG2XARCHBITSZBY8DIFF = (CLOG2XARCHBITSZBY8 - CLOG2ARCHBITSZBY8);
-localparam _CLOG2XARCHBITSZBY8DIFF = (CLOG2XARCHBITSZBY8DIFF ? CLOG2XARCHBITSZBY8DIFF : 1);
+localparam CLOG2XWORDBITSZBY8DIFF = (CLOG2XWORDBITSZBY8 - CLOG2WORDBITSZBY8);
+localparam _CLOG2XWORDBITSZBY8DIFF = (CLOG2XWORDBITSZBY8DIFF ? CLOG2XWORDBITSZBY8DIFF : 1);
 
-localparam CLOG2XARCHBITSZBY8DIFF2 = (CLOG2XARCHBITSZBY8 - 2/*clog2(32/8)*/);
-localparam _CLOG2XARCHBITSZBY8DIFF2 = (CLOG2XARCHBITSZBY8DIFF2 ? CLOG2XARCHBITSZBY8DIFF2 : 1);
+localparam CLOG2XWORDBITSZBY8DIFF2 = (CLOG2XWORDBITSZBY8 - 2/*clog2(32/8)*/);
+localparam _CLOG2XWORDBITSZBY8DIFF2 = (CLOG2XWORDBITSZBY8DIFF2 ? CLOG2XWORDBITSZBY8DIFF2 : 1);
 
 localparam CLOG2BUFSZ = clog2(BUFSZ);
 
@@ -76,18 +76,18 @@ input wire pi1_clk_i;
 
 output reg  [2 -1 : 0]              m_pi1_op_o = 0/*PINOOP*/;
 output reg  [XADDRBITSZ -1 : 0]     m_pi1_addr_o = 0;
-output wire [XARCHBITSZ -1 : 0]     m_pi1_data_o;
-input  wire [XARCHBITSZ -1 : 0]     m_pi1_data_i;
-output wire [(XARCHBITSZ/8) -1 : 0] m_pi1_sel_o;
+output wire [XWORDBITSZ -1 : 0]     m_pi1_data_o;
+input  wire [XWORDBITSZ -1 : 0]     m_pi1_data_i;
+output wire [(XWORDBITSZ/8) -1 : 0] m_pi1_sel_o;
 input  wire                         m_pi1_rdy_i;
 
 input  wire [2 -1 : 0]              s_pi1_op_i;
 input  wire [XADDRBITSZ -1 : 0]     s_pi1_addr_i;
-input  wire [XARCHBITSZ -1 : 0]     s_pi1_data_i;
-output wire [XARCHBITSZ -1 : 0]     s_pi1_data_o;
-input  wire [(XARCHBITSZ/8) -1 : 0] s_pi1_sel_i;
+input  wire [XWORDBITSZ -1 : 0]     s_pi1_data_i;
+output wire [XWORDBITSZ -1 : 0]     s_pi1_data_o;
+input  wire [(XWORDBITSZ/8) -1 : 0] s_pi1_sel_i;
 output wire                         s_pi1_rdy_o;
-output wire [XARCHBITSZ -1 : 0]     s_pi1_mapsz_o;
+output wire [XWORDBITSZ -1 : 0]     s_pi1_mapsz_o;
 
 output wire [XADDRBITSZ -1 : 0] pxdat_first_addr_o;
 output reg  [XADDRBITSZ -1 : 0] pxdat_last_addr_o;
@@ -101,14 +101,14 @@ output wire       vga_vsync_o;
 
 output wire vga_rst_o;
 
-assign m_pi1_sel_o = {(XARCHBITSZ/8){1'b1}};
+assign m_pi1_sel_o = {(XWORDBITSZ/8){1'b1}};
 
 assign m_pi1_data_o = 0;
 
 assign s_pi1_rdy_o = 1'b1;
 
-// Actual mapsz is (1*(XARCHBITSZ/8)), but aligning to 64bits.
-assign s_pi1_mapsz_o = (((XARCHBITSZ<64)?(64/XARCHBITSZ):1)*(XARCHBITSZ/8));
+// Actual mapsz is (1*(XWORDBITSZ/8)), but aligning to 64bits.
+assign s_pi1_mapsz_o = (((XWORDBITSZ<64)?(64/XWORDBITSZ):1)*(XWORDBITSZ/8));
 
 // Video Timings.
 localparam H_REZ        = WIDTH;
@@ -145,7 +145,7 @@ localparam V_MAX        = (HEIGHT == 480 && REFRESH == 60) ? 525  :
 reg [11:0] h_pos_r = 0;
 reg [11:0] v_pos_r = 0;
 
-reg [ARCHBITSZ -1 : 0] pxdat_addr_r = {ARCHBITSZ{1'b1}};
+reg [WORDBITSZ -1 : 0] pxdat_addr_r = {WORDBITSZ{1'b1}};
 
 assign vga_rst_o = (rst_i || (&pxdat_addr_r));
 
@@ -179,10 +179,10 @@ localparam GETINFO_HZ     = 2;
 localparam GETINFO_BUFCNT = 3;
 localparam GETINFO_ACCEL  = 4;
 
-wire [XARCHBITSZ -1 : 0] s_pi1_addr_w;
+wire [XWORDBITSZ -1 : 0] s_pi1_addr_w;
 
 addr #(
-	.ARCHBITSZ (XARCHBITSZ)
+	.WORDBITSZ (XWORDBITSZ)
 ) addr (
 	 .addr_i (s_pi1_addr_i)
 	,.sel_i  (s_pi1_sel_i)
@@ -190,30 +190,30 @@ addr #(
 );
 
 // upconverter logic.
-reg [XARCHBITSZ -1 : 0] s_pi1_addr_w_hold = 0;
-reg [XARCHBITSZ -1 : 0] data_w0 = 0;
-wire [((CLOG2XARCHBITSZBY8-CLOG2ARCHBITSZBY8)+CLOG2ARCHBITSZ):0] data_w0_shift = {s_pi1_addr_w_hold[CLOG2XARCHBITSZBY8:CLOG2ARCHBITSZBY8], {CLOG2ARCHBITSZ{1'b0}}};
-assign s_pi1_data_o = (data_w0 << data_w0_shift[(CLOG2XARCHBITSZBY8DIFF+CLOG2ARCHBITSZ)-1:0]);
-wire [((CLOG2XARCHBITSZBY8-CLOG2ARCHBITSZBY8)+CLOG2ARCHBITSZ):0] data_w1_shift = {s_pi1_addr_w[CLOG2XARCHBITSZBY8:CLOG2ARCHBITSZBY8], {CLOG2ARCHBITSZ{1'b0}}};
-wire [XARCHBITSZ -1 : 0] data_w1 = (s_pi1_data_i >> data_w1_shift[(CLOG2XARCHBITSZBY8DIFF+CLOG2ARCHBITSZ)-1:0]);
+reg [XWORDBITSZ -1 : 0] s_pi1_addr_w_hold = 0;
+reg [XWORDBITSZ -1 : 0] data_w0 = 0;
+wire [((CLOG2XWORDBITSZBY8-CLOG2WORDBITSZBY8)+CLOG2WORDBITSZ):0] data_w0_shift = {s_pi1_addr_w_hold[CLOG2XWORDBITSZBY8:CLOG2WORDBITSZBY8], {CLOG2WORDBITSZ{1'b0}}};
+assign s_pi1_data_o = (data_w0 << data_w0_shift[(CLOG2XWORDBITSZBY8DIFF+CLOG2WORDBITSZ)-1:0]);
+wire [((CLOG2XWORDBITSZBY8-CLOG2WORDBITSZBY8)+CLOG2WORDBITSZ):0] data_w1_shift = {s_pi1_addr_w[CLOG2XWORDBITSZBY8:CLOG2WORDBITSZBY8], {CLOG2WORDBITSZ{1'b0}}};
+wire [XWORDBITSZ -1 : 0] data_w1 = (s_pi1_data_i >> data_w1_shift[(CLOG2XWORDBITSZBY8DIFF+CLOG2WORDBITSZ)-1:0]);
 
 localparam PXBITSZ = (8*4);
-localparam PXBUF_WIDTH = (PXBITSZ*(XARCHBITSZ/ARCHBITSZ));
+localparam PXBUF_WIDTH = (PXBITSZ*(XWORDBITSZ/WORDBITSZ));
 
 wire [PXBUF_WIDTH -1 : 0] pxbuf_data_w1;
 genvar gen_pxbuf_data_w1_idx;
 generate for (
 	gen_pxbuf_data_w1_idx = 0;
-	gen_pxbuf_data_w1_idx < (XARCHBITSZ/ARCHBITSZ);
+	gen_pxbuf_data_w1_idx < (XWORDBITSZ/WORDBITSZ);
 	gen_pxbuf_data_w1_idx = gen_pxbuf_data_w1_idx + 1) begin :gen_pxbuf_data_w1
 assign pxbuf_data_w1[((gen_pxbuf_data_w1_idx+1)*PXBITSZ) -1 : gen_pxbuf_data_w1_idx*PXBITSZ] = {
-	m_pi1_data_i[31+(ARCHBITSZ*gen_pxbuf_data_w1_idx):24+(ARCHBITSZ*gen_pxbuf_data_w1_idx)],
-	m_pi1_data_i[23+(ARCHBITSZ*gen_pxbuf_data_w1_idx):16+(ARCHBITSZ*gen_pxbuf_data_w1_idx)],
-	m_pi1_data_i[15+(ARCHBITSZ*gen_pxbuf_data_w1_idx):8 +(ARCHBITSZ*gen_pxbuf_data_w1_idx)],
-	m_pi1_data_i[7 +(ARCHBITSZ*gen_pxbuf_data_w1_idx):0 +(ARCHBITSZ*gen_pxbuf_data_w1_idx)]};
+	m_pi1_data_i[31+(WORDBITSZ*gen_pxbuf_data_w1_idx):24+(WORDBITSZ*gen_pxbuf_data_w1_idx)],
+	m_pi1_data_i[23+(WORDBITSZ*gen_pxbuf_data_w1_idx):16+(WORDBITSZ*gen_pxbuf_data_w1_idx)],
+	m_pi1_data_i[15+(WORDBITSZ*gen_pxbuf_data_w1_idx):8 +(WORDBITSZ*gen_pxbuf_data_w1_idx)],
+	m_pi1_data_i[7 +(WORDBITSZ*gen_pxbuf_data_w1_idx):0 +(WORDBITSZ*gen_pxbuf_data_w1_idx)]};
 end endgenerate
 
-reg [_CLOG2XARCHBITSZBY8DIFF2 -1 : 0] datidx = 0;
+reg [_CLOG2XWORDBITSZBY8DIFF2 -1 : 0] datidx = 0;
 
 wire [PXBUF_WIDTH -1 : 0] pxbuf_data_w0;
 wire [PXBUF_WIDTH -1 : 0] _pxbuf_data_w0 = (pxbuf_data_w0 >> (datidx*PXBITSZ));
@@ -232,7 +232,7 @@ wire pxbuf_read_en_posedge = (pxbuf_read_en && !pxbuf_read_en_sampled);
 
 wire pxbuf_read_w = pxbuf_read_en_posedge || (
 	pxbuf_read_en && !vga_blank_o && (
-	(datidx == ((XARCHBITSZ/ARCHBITSZ)-1) && px_repeat_done) ||
+	(datidx == ((XWORDBITSZ/WORDBITSZ)-1) && px_repeat_done) ||
 		/* or last data of the frame */
 		(h_pos_r == (H_REZ-1) && v_pos_r == (V_REZ-1))));
 
@@ -249,7 +249,7 @@ always @ (posedge clk_i) begin
 	if (!pxbuf_read_en || vga_vblank_w_ || pxbuf_read_w)
 		datidx <= 0;
 	else if (vga_hblank_w_); // Do nothing.
-	else if (CLOG2XARCHBITSZBY8DIFF2 && px_repeat_done)
+	else if (CLOG2XWORDBITSZBY8DIFF2 && px_repeat_done)
 		datidx <= datidx + 1'b1;
 end
 
@@ -260,18 +260,18 @@ localparam CLOG2PXCNT = clog2(PXCNT);
 
 localparam BUFCNT = 2/*for double-buffering*/;
 
-assign pxdat_first_addr_o = pxdat_addr_r[ARCHBITSZ-1:CLOG2XARCHBITSZBY8];
+assign pxdat_first_addr_o = pxdat_addr_r[WORDBITSZ-1:CLOG2XWORDBITSZBY8];
 reg [XADDRBITSZ -1 : 0] pxdat_last_addr_r = 0;
-wire [XADDRBITSZ -1 : 0] pxdat_last_addr_r_next = ((pxdat_first_addr_o + (PXCNT>>CLOG2XARCHBITSZBY8DIFF2))-1);
+wire [XADDRBITSZ -1 : 0] pxdat_last_addr_r_next = ((pxdat_first_addr_o + (PXCNT>>CLOG2XWORDBITSZBY8DIFF2))-1);
 always @ (posedge pi1_clk_i)
-	pxdat_last_addr_o <= ((pxdat_first_addr_o + ((PXCNT*BUFCNT)>>CLOG2XARCHBITSZBY8DIFF2))-1);
+	pxdat_last_addr_o <= ((pxdat_first_addr_o + ((PXCNT*BUFCNT)>>CLOG2XWORDBITSZBY8DIFF2))-1);
 
 integer datpxidx;
 reg [CLOG2PXCNT -1 : 0] m_pi1_data_i_px_cnt; // ### declared as reg so as to be usable by verilog within the always block.
-reg [ARCHBITSZ -1 : 0] m_pi1_data_i_px; // ### declared as reg so as to be usable by verilog within the always block.
+reg [WORDBITSZ -1 : 0] m_pi1_data_i_px; // ### declared as reg so as to be usable by verilog within the always block.
 always @* begin
-	for (datpxidx = 0, m_pi1_data_i_px_cnt = 0; datpxidx < (XARCHBITSZ/ARCHBITSZ); datpxidx = datpxidx + 1) begin
-		m_pi1_data_i_px = (m_pi1_data_i>>(ARCHBITSZ*datpxidx));
+	for (datpxidx = 0, m_pi1_data_i_px_cnt = 0; datpxidx < (XWORDBITSZ/WORDBITSZ); datpxidx = datpxidx + 1) begin
+		m_pi1_data_i_px = (m_pi1_data_i>>(WORDBITSZ*datpxidx));
 		m_pi1_data_i_px_cnt = (m_pi1_data_i_px_cnt + ((m_pi1_data_i_px[31:24]+2)&'hff));
 	end
 end
@@ -299,22 +299,22 @@ always @ (posedge pi1_clk_i) begin
 		s_pi1_addr_w_hold <= s_pi1_addr_w;
 
 	if (rst_i)
-		pxdat_addr_r <= {ARCHBITSZ{1'b1}};
+		pxdat_addr_r <= {WORDBITSZ{1'b1}};
 	else if (s_pi1_op_i == PIRWOP && s_pi1_rdy_o) begin
 		if (data_w1[1:0] == CMDSRCSET) begin
-			data_w0 <= (1<<CLOG2XARCHBITSZBY8);
-			pxdat_addr_r <= (&data_w1[ARCHBITSZ-1:2/*clog2(32/8)*/]) ? {ARCHBITSZ{1'b1}} :
-				{{data_w1[ARCHBITSZ-1:2/*clog2(32/8)*/] - M_ADDR_OFFSET[ARCHBITSZ-1:2/*clog2(32/8)*/]}, 2'b00};
+			data_w0 <= (1<<CLOG2XWORDBITSZBY8);
+			pxdat_addr_r <= (&data_w1[WORDBITSZ-1:2/*clog2(32/8)*/]) ? {WORDBITSZ{1'b1}} :
+				{{data_w1[WORDBITSZ-1:2/*clog2(32/8)*/] - M_ADDR_OFFSET[WORDBITSZ-1:2/*clog2(32/8)*/]}, 2'b00};
 		end else if (data_w1[1:0] == CMDGETINFO) begin
-			if (data_w1[ARCHBITSZ-1:2/*clog2(32/8)*/] == GETINFO_WIDTH)
+			if (data_w1[WORDBITSZ-1:2/*clog2(32/8)*/] == GETINFO_WIDTH)
 				data_w0 <= WIDTH;
-			else if (data_w1[ARCHBITSZ-1:2/*clog2(32/8)*/] == GETINFO_HEIGHT)
+			else if (data_w1[WORDBITSZ-1:2/*clog2(32/8)*/] == GETINFO_HEIGHT)
 				data_w0 <= HEIGHT;
-			else if (data_w1[ARCHBITSZ-1:2/*clog2(32/8)*/] == GETINFO_HZ)
+			else if (data_w1[WORDBITSZ-1:2/*clog2(32/8)*/] == GETINFO_HZ)
 				data_w0 <= REFRESH;
-			else if (data_w1[ARCHBITSZ-1:2/*clog2(32/8)*/] == GETINFO_BUFCNT)
+			else if (data_w1[WORDBITSZ-1:2/*clog2(32/8)*/] == GETINFO_BUFCNT)
 				data_w0 <= BUFCNT;
-			else if (data_w1[ARCHBITSZ-1:2/*clog2(32/8)*/] == GETINFO_ACCEL)
+			else if (data_w1[WORDBITSZ-1:2/*clog2(32/8)*/] == GETINFO_ACCEL)
 				data_w0 <= 1/* Acceleration Version */;
 			else
 				data_w0 <= 0;

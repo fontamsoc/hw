@@ -4,7 +4,7 @@
 `ifndef ADDR_V
 `define ADDR_V
 
-// Module computing full ARCHBITSZ address from ADDRBITSZ and sel bits.
+// Module computing full WORDBITSZ address from ADDRBITSZ and sel bits.
 
 module addr (
 	 addr_i
@@ -14,16 +14,16 @@ module addr (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 32;
+parameter WORDBITSZ = 32;
 
-localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
-localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
+localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
+localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
 input  wire [ADDRBITSZ -1 : 0]     addr_i;
-input  wire [(ARCHBITSZ/8) -1 : 0] sel_i;
-output wire [ARCHBITSZ -1 : 0]     addr_o;
+input  wire [(WORDBITSZ/8) -1 : 0] sel_i;
+output wire [WORDBITSZ -1 : 0]     addr_o;
 
-generate if (ARCHBITSZ == 16) begin
+generate if (WORDBITSZ == 16) begin
 	assign addr_o = {addr_i, {
 		sel_i[0] ? 1'b0 :
 		sel_i[1] ? 1'b1 : 1'b0 /*
@@ -31,7 +31,7 @@ generate if (ARCHBITSZ == 16) begin
 		sel_i == 2'b01 ? 1'b0 :
 		sel_i == 2'b10 ? 1'b1 : 1'b0 */}};
 end endgenerate
-generate if (ARCHBITSZ == 32) begin
+generate if (WORDBITSZ == 32) begin
 	assign addr_o = {addr_i, {
 		sel_i[0] ? 2'b00 :
 		sel_i[1] ? 2'b01 :
@@ -45,7 +45,7 @@ generate if (ARCHBITSZ == 32) begin
 		sel_i == 4'b0100 ? 2'b10 :
 		sel_i == 4'b1000 ? 2'b11 : 2'b00 */}};
 end endgenerate
-generate if (ARCHBITSZ == 64) begin
+generate if (WORDBITSZ == 64) begin
 	assign addr_o = {addr_i, {
 		sel_i[0] ? 3'b000 :
 		sel_i[1] ? 3'b001 :
@@ -71,7 +71,7 @@ generate if (ARCHBITSZ == 64) begin
 		sel_i == 8'b01000000 ? 3'b110 :
 		sel_i == 8'b10000000 ? 3'b111 : 3'b000 */}};
 end endgenerate
-generate if (ARCHBITSZ == 128) begin
+generate if (WORDBITSZ == 128) begin
 	assign addr_o = {addr_i, {
 		sel_i[0]  ? 4'b0000 :
 		sel_i[1]  ? 4'b0001 :
@@ -121,7 +121,7 @@ generate if (ARCHBITSZ == 128) begin
 		sel_i == 16'b0100000000000000 ? 4'b1110 :
 		sel_i == 16'b1000000000000000 ? 4'b1111 : 4'b0000 */}};
 end endgenerate
-generate if (ARCHBITSZ == 256) begin
+generate if (WORDBITSZ == 256) begin
 	assign addr_o = {addr_i, {
 		sel_i[0]  ? 5'b00000 :
 		sel_i[1]  ? 5'b00001 :

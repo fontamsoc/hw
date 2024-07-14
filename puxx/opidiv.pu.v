@@ -20,10 +20,10 @@ module idiv (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 32;
+parameter WORDBITSZ = 32;
 parameter GPRCNT    = 32;
 
-localparam CLOG2ARCHBITSZ = clog2(ARCHBITSZ);
+localparam CLOG2WORDBITSZ = clog2(WORDBITSZ);
 localparam CLOG2GPRCNT    = clog2(GPRCNT);
 
 // Significance of each bit in the field within
@@ -31,8 +31,8 @@ localparam CLOG2GPRCNT    = clog2(GPRCNT);
 // [1]: 0/1 means unsigned/signed computation.
 // [0]: 0/1 means quotient/remainder of result.
 localparam IDIVTYPEBITSZ = 2;
-localparam IDIVMSBRSLT   = ((ARCHBITSZ*2)+CLOG2GPRCNT);
-localparam IDIVSIGNED    = ((ARCHBITSZ*2)+CLOG2GPRCNT+1);
+localparam IDIVMSBRSLT   = ((WORDBITSZ*2)+CLOG2GPRCNT);
+localparam IDIVSIGNED    = ((WORDBITSZ*2)+CLOG2GPRCNT+1);
 
 input wire rst_i;
 
@@ -40,16 +40,16 @@ input wire clk_i;
 
 input wire stb_i;
 
-// bits[(((ARCHBITSZ*2)+CLOG2GPRCNT)+IDIVTYPEBITSZ)-1:((ARCHBITSZ*2)+CLOG2GPRCNT)]
+// bits[(((WORDBITSZ*2)+CLOG2GPRCNT)+IDIVTYPEBITSZ)-1:((WORDBITSZ*2)+CLOG2GPRCNT)]
 // store the type of division to perform,
-// bits[((ARCHBITSZ*2)+CLOG2GPRCNT)-1:ARCHBITSZ*2]
+// bits[((WORDBITSZ*2)+CLOG2GPRCNT)-1:WORDBITSZ*2]
 // store the id of the register to which the result will be saved,
-// bits[(ARCHBITSZ*2)-1:ARCHBITSZ] and bits[ARCHBITSZ-1:0]
+// bits[(WORDBITSZ*2)-1:WORDBITSZ] and bits[WORDBITSZ-1:0]
 // respectively store the first and second operand values.
-input wire [(((ARCHBITSZ*2)+CLOG2GPRCNT)+IDIVTYPEBITSZ) -1 : 0] data_i;
+input wire [(((WORDBITSZ*2)+CLOG2GPRCNT)+IDIVTYPEBITSZ) -1 : 0] data_i;
 
 // Net set to the result of the division.
-output reg [ARCHBITSZ -1 : 0] data_o; // ### comb-block-reg.
+output reg [WORDBITSZ -1 : 0] data_o; // ### comb-block-reg.
 
 // Net set to the id of the gpr to which the result is to be stored.
 output wire [CLOG2GPRCNT -1 : 0] gprid_o;
@@ -57,31 +57,31 @@ output wire [CLOG2GPRCNT -1 : 0] gprid_o;
 output reg rdy_o;
 
 // Register in which the division will be computed.
-reg  [(ARCHBITSZ*2) -1 : 0] cumulator = 0;
+reg  [(WORDBITSZ*2) -1 : 0] cumulator = 0;
 
 // Reg set to the right operand value of the division, which is the divider.
-reg [ARCHBITSZ -1 : 0] rval;
+reg [WORDBITSZ -1 : 0] rval;
 
 // Net used by the division; compute the difference
 // between the quotient and the left shifted divider.
-wire [(ARCHBITSZ*2) -1 : 0] divdiff = (cumulator - ({rval, {(ARCHBITSZ-1){1'b0}}}));
+wire [(WORDBITSZ*2) -1 : 0] divdiff = (cumulator - ({rval, {(WORDBITSZ-1){1'b0}}}));
 
 // Register used to count the number of bits already used from the divider.
-reg [CLOG2ARCHBITSZ -1 : 0] cntr;
+reg [CLOG2WORDBITSZ -1 : 0] cntr;
 
 // Reg used to capture data_i.
-reg [(((ARCHBITSZ*2)+CLOG2GPRCNT)+IDIVTYPEBITSZ) -1 : 0] operands;
+reg [(((WORDBITSZ*2)+CLOG2GPRCNT)+IDIVTYPEBITSZ) -1 : 0] operands;
 
-assign gprid_o = operands[((ARCHBITSZ*2)+CLOG2GPRCNT)-1:ARCHBITSZ*2];
+assign gprid_o = operands[((WORDBITSZ*2)+CLOG2GPRCNT)-1:WORDBITSZ*2];
 
 reg tst_remainder_sign;
 always @ (posedge clk_i) begin
-	tst_remainder_sign <= (operands[IDIVSIGNED] && operands[(ARCHBITSZ*2)-1]);
+	tst_remainder_sign <= (operands[IDIVSIGNED] && operands[(WORDBITSZ*2)-1]);
 end
 
 reg tst_quotient_sign;
 always @ (posedge clk_i) begin
-	tst_quotient_sign <= (operands[IDIVSIGNED] && (operands[(ARCHBITSZ*2)-1] != operands[(ARCHBITSZ-1)]));
+	tst_quotient_sign <= (operands[IDIVSIGNED] && (operands[(WORDBITSZ*2)-1] != operands[(WORDBITSZ-1)]));
 end
 
 always @* begin
@@ -95,18 +95,18 @@ always @* begin
 		// If I get here, the remainder is used as result.
 		// The sign of the remainder is the same as the sign of the dividend.
 		if (tst_remainder_sign)
-			data_o = -cumulator[(ARCHBITSZ*2)-1:ARCHBITSZ];
+			data_o = -cumulator[(WORDBITSZ*2)-1:WORDBITSZ];
 		else
-			data_o = cumulator[(ARCHBITSZ*2)-1:ARCHBITSZ];
+			data_o = cumulator[(WORDBITSZ*2)-1:WORDBITSZ];
 
 	end else begin
 		// If I get here, the quotient is used as result.
 		// The sign of the quotient is positive if the dividend
 		// and divisor have the same sign otherwise it is negative.
 		if (tst_quotient_sign)
-			data_o = -cumulator[ARCHBITSZ-1:0];
+			data_o = -cumulator[WORDBITSZ-1:0];
 		else
-			data_o = cumulator[ARCHBITSZ-1:0];
+			data_o = cumulator[WORDBITSZ-1:0];
 	end
 end
 
@@ -125,21 +125,21 @@ always @ (posedge clk_i) begin
 			// If data_i[IDIVSIGNED] == 0, it is an unsigned computation.
 			// If data_i[IDIVSIGNED] == 1, it is a signed computation.
 			// For a signed computation, I turn the right operand positive if it was negative.
-			if (data_i[IDIVSIGNED] && data_i[(ARCHBITSZ-1)])
-				rval <= -data_i[ARCHBITSZ-1:0];
+			if (data_i[IDIVSIGNED] && data_i[(WORDBITSZ-1)])
+				rval <= -data_i[WORDBITSZ-1:0];
 			else
-				rval <= data_i[ARCHBITSZ-1:0];
+				rval <= data_i[WORDBITSZ-1:0];
 
-			// The dividend is in data_i[(ARCHBITSZ*2)-1:ARCHBITSZ].
-			// The divider is in data_i[ARCHBITSZ-1:0].
+			// The dividend is in data_i[(WORDBITSZ*2)-1:WORDBITSZ].
+			// The divider is in data_i[WORDBITSZ-1:0].
 
 			// If data_i[IDIVSIGNED] == 0, an unsigned computation is to be done.
 			// If data_i[IDIVSIGNED] == 1, a signed computation is to be done.
 			// If a signed computation is to be done, I turn the left operand positive if it was negative.
-			if (data_i[IDIVSIGNED] && data_i[(ARCHBITSZ*2)-1])
-				cumulator <= {{ARCHBITSZ{1'b0}}, -data_i[(ARCHBITSZ*2)-1:ARCHBITSZ]};
+			if (data_i[IDIVSIGNED] && data_i[(WORDBITSZ*2)-1])
+				cumulator <= {{WORDBITSZ{1'b0}}, -data_i[(WORDBITSZ*2)-1:WORDBITSZ]};
 			else
-				cumulator <= {{ARCHBITSZ{1'b0}}, data_i[(ARCHBITSZ*2)-1:ARCHBITSZ]};
+				cumulator <= {{WORDBITSZ{1'b0}}, data_i[(WORDBITSZ*2)-1:WORDBITSZ]};
 
 			rdy_o <= 0;
 
@@ -147,16 +147,16 @@ always @ (posedge clk_i) begin
 		end
 
 	end else begin
-		// divdiff[(ARCHBITSZ*2)-1] is 1 when
+		// divdiff[(WORDBITSZ*2)-1] is 1 when
 		// the difference is negative, otherwise it is 0.
-		if (divdiff[(ARCHBITSZ*2)-1])
-			cumulator <= {cumulator[(ARCHBITSZ*2)-2:0], 1'b0};
+		if (divdiff[(WORDBITSZ*2)-1])
+			cumulator <= {cumulator[(WORDBITSZ*2)-2:0], 1'b0};
 		else
-			cumulator <= {divdiff[(ARCHBITSZ*2)-2:0], 1'b1};
+			cumulator <= {divdiff[(WORDBITSZ*2)-2:0], 1'b1};
 
-		if (cntr == (ARCHBITSZ-1)) begin
+		if (cntr == (WORDBITSZ-1)) begin
 			// The division is complete after cntr has been
-			// incremented ARCHBITSZ times; the result will be
+			// incremented WORDBITSZ times; the result will be
 			// ready in cumulator after the next clockedge.
 			rdy_o <= 1;
 		end
@@ -187,7 +187,7 @@ module opidiv (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 32;
+parameter WORDBITSZ = 32;
 parameter GPRCNT    = 32;
 parameter INSTCNT   = 2;
 
@@ -208,20 +208,20 @@ input wire clk_idiv_i;
 
 input wire stb_i;
 
-// bits[(((ARCHBITSZ*2)+CLOG2GPRCNT)+IDIVTYPEBITSZ)-1:((ARCHBITSZ*2)+CLOG2GPRCNT)]
+// bits[(((WORDBITSZ*2)+CLOG2GPRCNT)+IDIVTYPEBITSZ)-1:((WORDBITSZ*2)+CLOG2GPRCNT)]
 // store the type of division to perform,
-// bits[((ARCHBITSZ*2)+CLOG2GPRCNT)-1:ARCHBITSZ*2]
+// bits[((WORDBITSZ*2)+CLOG2GPRCNT)-1:WORDBITSZ*2]
 // store the id of the register to which the result will be saved,
-// bits[(ARCHBITSZ*2)-1:ARCHBITSZ] and bits[ARCHBITSZ-1:0]
+// bits[(WORDBITSZ*2)-1:WORDBITSZ] and bits[WORDBITSZ-1:0]
 // respectively store the first and second operand values.
-input wire [(((ARCHBITSZ*2)+CLOG2GPRCNT)+IDIVTYPEBITSZ) -1 : 0] data_i;
+input wire [(((WORDBITSZ*2)+CLOG2GPRCNT)+IDIVTYPEBITSZ) -1 : 0] data_i;
 
 output wire rdy_o;
 
 input wire ostb_i;
 
 // Net set to the result of the division.
-output wire [ARCHBITSZ -1 : 0] data_o;
+output wire [WORDBITSZ -1 : 0] data_o;
 
 // Net set to the id of the gpr to which the result is to be stored.
 output wire [CLOG2GPRCNT -1 : 0] gprid_o;
@@ -237,7 +237,7 @@ wire [(CLOG2INSTCNT +1) -1 : 0] _rdidx = ((INSTCNT-1) ? rdidx : 0);
 wire [(CLOG2INSTCNT +1) -1 : 0] usage;
 assign usage = (wridx - rdidx);
 
-wire [ARCHBITSZ -1 : 0] data_w [INSTCNT -1 : 0];
+wire [WORDBITSZ -1 : 0] data_w [INSTCNT -1 : 0];
 assign data_o = data_w[_rdidx];
 
 wire [CLOG2GPRCNT -1 : 0] gprid_w [INSTCNT -1 : 0];
@@ -251,11 +251,11 @@ assign ordy_o = ((usage != 0) && rdy_w[_rdidx]);
 
 `ifdef PUIDIVCLK
 reg                                                       stb_r    = 0;
-reg  [(((ARCHBITSZ*2)+CLOG2GPRCNT)+IDIVTYPEBITSZ) -1 : 0] data_r   = 0;
+reg  [(((WORDBITSZ*2)+CLOG2GPRCNT)+IDIVTYPEBITSZ) -1 : 0] data_r   = 0;
 reg  [(CLOG2INSTCNT +1) -1 : 0]                           _wridx_r = 0;
 `else
 wire                                                      stb_r  = stb_i;
-wire [(((ARCHBITSZ*2)+CLOG2GPRCNT)+IDIVTYPEBITSZ) -1 : 0] data_r = data_i;
+wire [(((WORDBITSZ*2)+CLOG2GPRCNT)+IDIVTYPEBITSZ) -1 : 0] data_r = data_i;
 wire [(CLOG2INSTCNT +1) -1 : 0]                           _wridx_r = _wridx;
 `endif
 
@@ -289,7 +289,7 @@ end
 genvar gen_idiv_idx;
 generate for (gen_idiv_idx = 0; gen_idiv_idx < INSTCNT; gen_idiv_idx = gen_idiv_idx + 1) begin :gen_idiv
 idiv #(
-	 .ARCHBITSZ (ARCHBITSZ)
+	 .WORDBITSZ (WORDBITSZ)
 	,.GPRCNT    (GPRCNT)
 ) idiv (
 

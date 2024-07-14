@@ -36,14 +36,14 @@ module devtbl (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ  = 32;
-parameter RAMCACHESZ = 2; // Size of the RAM cache in (ARCHBITSZ/8) bytes.
+parameter WORDBITSZ  = 32;
+parameter RAMCACHESZ = 2; // Size of the RAM cache in (WORDBITSZ/8) bytes.
 parameter PRELDRADDR = 0; // Address of pre-loader in bytes.
-parameter DEVMAPCNT  = 3; // Number of device mappings; must be >= 3 and <= (((4096-1024)/(ARCHBITSZ/8))/2).
+parameter DEVMAPCNT  = 3; // Number of device mappings; must be >= 3 and <= (((4096-1024)/(WORDBITSZ/8))/2).
 parameter SOCID      = 0;
 
-localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
-localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
+localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
+localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
 input wire clk_i;
 
@@ -57,26 +57,26 @@ input  wire                        wb_cyc_i;
 input  wire                        wb_stb_i;
 input  wire                        wb_we_i;
 input  wire [ADDRBITSZ -1 : 0]     wb_addr_i;
-input  wire [(ARCHBITSZ/8) -1 : 0] wb_sel_i;
-input  wire [ARCHBITSZ -1 : 0]     wb_dat_i;
+input  wire [(WORDBITSZ/8) -1 : 0] wb_sel_i;
+input  wire [WORDBITSZ -1 : 0]     wb_dat_i;
 output wire                        wb_bsy_o;
 output reg                         wb_ack_o;
-output reg  [ARCHBITSZ -1 : 0]     wb_dat_o;
-output reg  [ARCHBITSZ -1 : 0]     wb_mapsz_o;
+output reg  [WORDBITSZ -1 : 0]     wb_dat_o;
+output reg  [WORDBITSZ -1 : 0]     wb_mapsz_o;
 
-input  wire [(ARCHBITSZ * DEVMAPCNT) -1 : 0] dev_id_i;
-input  wire [(ARCHBITSZ * DEVMAPCNT) -1 : 0] dev_mapsz_i /* verilator lint_off UNOPTFLAT */;
+input  wire [(WORDBITSZ * DEVMAPCNT) -1 : 0] dev_id_i;
+input  wire [(WORDBITSZ * DEVMAPCNT) -1 : 0] dev_mapsz_i /* verilator lint_off UNOPTFLAT */;
 input  wire [DEVMAPCNT -1 : 0]               dev_useirq_i;
 
 assign wb_bsy_o = 1'b0;
 
-wire [ARCHBITSZ -1 : 0] _dev_id_i    [DEVMAPCNT -1 : 0];
-wire [ARCHBITSZ -1 : 0] _dev_mapsz_i [DEVMAPCNT -1 : 0];
+wire [WORDBITSZ -1 : 0] _dev_id_i    [DEVMAPCNT -1 : 0];
+wire [WORDBITSZ -1 : 0] _dev_mapsz_i [DEVMAPCNT -1 : 0];
 
 localparam BLKDEVMAPSZ = 1024;
 
-reg [ARCHBITSZ -1 : 0] wb_mapsz_o_; // ### comb-block-reg.
-reg [ARCHBITSZ -1 : 0] gen_wb_mapsz_o_idx_max; // ### comb-block-reg.
+reg [WORDBITSZ -1 : 0] wb_mapsz_o_; // ### comb-block-reg.
+reg [WORDBITSZ -1 : 0] gen_wb_mapsz_o_idx_max; // ### comb-block-reg.
 integer gen_wb_mapsz_o_idx;
 always @* begin
 	wb_mapsz_o_ = (4096 - BLKDEVMAPSZ); /* first 2 devices must be Block and DevTbl devices */
@@ -102,17 +102,17 @@ generate for (
 	gen_dev_idx = gen_dev_idx + 1) begin :gen_dev
 
 assign _dev_id_i[gen_dev_idx] =
-	dev_id_i[((gen_dev_idx+1) * ARCHBITSZ) -1 : gen_dev_idx * ARCHBITSZ];
+	dev_id_i[((gen_dev_idx+1) * WORDBITSZ) -1 : gen_dev_idx * WORDBITSZ];
 
 assign _dev_mapsz_i[gen_dev_idx] =
-	dev_mapsz_i[((gen_dev_idx+1) * ARCHBITSZ) -1 : gen_dev_idx * ARCHBITSZ];
+	dev_mapsz_i[((gen_dev_idx+1) * WORDBITSZ) -1 : gen_dev_idx * WORDBITSZ];
 
 end endgenerate
 
 reg                    wb_stb_r;
 reg                    wb_we_r;
 reg [ADDRBITSZ -1 : 0] wb_addr_r;
-reg [ARCHBITSZ -1 : 0] wb_dat_r;
+reg [WORDBITSZ -1 : 0] wb_dat_r;
 
 wire wb_stb_r_ = (wb_cyc_i && wb_stb_i);
 

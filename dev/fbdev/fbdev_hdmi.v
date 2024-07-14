@@ -8,14 +8,14 @@
 //   where X is used to compute pixel repeat count using ((X+2)&8'hFF).
 //   X must not be 8'hFE which for now is reserved.
 // Memory operation PIRWOP sends commands, where the value to write encodes both
-//   the command and its argument as follow: |arg: (ARCHBITSZ-2)bits|cmd: 2bits|
+//   the command and its argument as follow: |arg: (WORDBITSZ-2)bits|cmd: 2bits|
 //   while the value read is the return value of the command.
 
 // Description of commands:
 //
 // CMDSRCSET:
 //   Cmd value is 0.
-//   Arg[(ARCHBITSZ-2)-1:0] set offset within pixel-memory-map if used,
+//   Arg[(WORDBITSZ-2)-1:0] set offset within pixel-memory-map if used,
 //     or set 32bits aligned address of pixel datas if direct-memory-access used;
 //     turn off video when -1.
 //   Return value is the pixel-data address alignment, or
@@ -63,8 +63,8 @@ module fbdev_hdmi (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ  = 32;
-parameter XARCHBITSZ = 32;
+parameter WORDBITSZ  = 32;
+parameter XWORDBITSZ = 32;
 
 parameter WIDTH   = 800;
 parameter HEIGHT  = 600;
@@ -75,8 +75,8 @@ parameter FORCE_PINOOP = 0;
 
 parameter M_ADDR_OFFSET = 'h1000;
 
-localparam CLOG2XARCHBITSZBY8 = clog2(XARCHBITSZ/8);
-localparam XADDRBITSZ = (XARCHBITSZ-CLOG2XARCHBITSZBY8);
+localparam CLOG2XWORDBITSZBY8 = clog2(XWORDBITSZ/8);
+localparam XADDRBITSZ = (XWORDBITSZ-CLOG2XWORDBITSZBY8);
 
 input wire rst_i;
 
@@ -85,18 +85,18 @@ input wire clk100mhz_i;
 
 output wire [2 -1 : 0]              m_pi1_op_o;
 output wire [XADDRBITSZ -1 : 0]     m_pi1_addr_o;
-output wire [XARCHBITSZ -1 : 0]     m_pi1_data_o;
-input  wire [XARCHBITSZ -1 : 0]     m_pi1_data_i;
-output wire [(XARCHBITSZ/8) -1 : 0] m_pi1_sel_o;
+output wire [XWORDBITSZ -1 : 0]     m_pi1_data_o;
+input  wire [XWORDBITSZ -1 : 0]     m_pi1_data_i;
+output wire [(XWORDBITSZ/8) -1 : 0] m_pi1_sel_o;
 input  wire                         m_pi1_rdy_i;
 
 input  wire [2 -1 : 0]              s_pi1_op_i;
 input  wire [XADDRBITSZ -1 : 0]     s_pi1_addr_i;
-input  wire [XARCHBITSZ -1 : 0]     s_pi1_data_i;
-output wire [XARCHBITSZ -1 : 0]     s_pi1_data_o;
-input  wire [(XARCHBITSZ/8) -1 : 0] s_pi1_sel_i;
+input  wire [XWORDBITSZ -1 : 0]     s_pi1_data_i;
+output wire [XWORDBITSZ -1 : 0]     s_pi1_data_o;
+input  wire [(XWORDBITSZ/8) -1 : 0] s_pi1_sel_i;
 output wire                         s_pi1_rdy_o;
-output wire [XARCHBITSZ -1 : 0]     s_pi1_mapsz_o;
+output wire [XWORDBITSZ -1 : 0]     s_pi1_mapsz_o;
 
 output wire [XADDRBITSZ -1 : 0] pxdat_first_addr_o;
 output wire [XADDRBITSZ -1 : 0] pxdat_last_addr_o;
@@ -157,8 +157,8 @@ wire vga_rst_w;
 
 fbdev
 #(
-	 .ARCHBITSZ     (ARCHBITSZ)
-	,.XARCHBITSZ    (XARCHBITSZ)
+	 .WORDBITSZ     (WORDBITSZ)
+	,.XWORDBITSZ    (XWORDBITSZ)
 	,.WIDTH         (WIDTH)
 	,.HEIGHT        (HEIGHT)
 	,.REFRESH       (REFRESH)

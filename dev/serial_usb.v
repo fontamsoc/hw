@@ -100,7 +100,7 @@ module serial_usb (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 32;
+parameter WORDBITSZ = 32;
 
 parameter PHYCLKFREQ = 48000000;
 parameter BUFSZ      = 2;
@@ -114,8 +114,8 @@ end
 
 localparam CLOG2BUFSZ = clog2(BUFSZ);
 
-localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
-localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
+localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
+localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
 input wire rst_i;
 
@@ -126,12 +126,12 @@ input  wire                        wb_cyc_i;
 input  wire                        wb_stb_i;
 input  wire                        wb_we_i;
 input  wire [ADDRBITSZ -1 : 0]     wb_addr_i;
-input  wire [(ARCHBITSZ/8) -1 : 0] wb_sel_i;
-input  wire [ARCHBITSZ -1 : 0]     wb_dat_i;
+input  wire [(WORDBITSZ/8) -1 : 0] wb_sel_i;
+input  wire [WORDBITSZ -1 : 0]     wb_dat_i;
 output wire                        wb_bsy_o;
 output reg                         wb_ack_o;
-output wire [ARCHBITSZ -1 : 0]     wb_dat_o;
-output wire [ARCHBITSZ -1 : 0]     wb_mapsz_o;
+output wire [WORDBITSZ -1 : 0]     wb_dat_o;
+output wire [WORDBITSZ -1 : 0]     wb_mapsz_o;
 
 output wire irq_stb_o;
 input  wire irq_rdy_i;
@@ -148,7 +148,7 @@ assign wb_mapsz_o = MAPSZ;
 reg                    wb_stb_r;
 reg                    wb_we_r;
 reg [ADDRBITSZ -1 : 0] wb_addr_r;
-reg [ARCHBITSZ -1 : 0] wb_dat_r;
+reg [WORDBITSZ -1 : 0] wb_dat_r;
 
 wire wb_stb_r_ = (wb_cyc_i && wb_stb_i);
 
@@ -167,11 +167,11 @@ localparam CMDGETBUFFERUSAGE = 1;
 localparam CMDSETINTERRUPT   = 2;
 localparam CMDSETSPEED       = 3;
 
-reg [ARCHBITSZ -1 : 0] wb_dat_o_;
+reg [WORDBITSZ -1 : 0] wb_dat_o_;
 
 // Half the memory mapping is used to send/receive data,
 // while the other half is used to issue commands.
-localparam ISCMDBIT = (clog2(MAPSZ/2) - CLOG2ARCHBITSZBY8);
+localparam ISCMDBIT = (clog2(MAPSZ/2) - CLOG2WORDBITSZBY8);
 
 wire iscmd = (!rst_i && wb_stb_r && wb_we_r && wb_addr_r[ISCMDBIT]);
 
@@ -196,7 +196,7 @@ wire [8 -1 : 0] tx_data_w1 = wb_dat_r[8 -1 : 0];
 wire [(CLOG2BUFSZ +1) -1 : 0] rx_usage_w;
 wire [(CLOG2BUFSZ +1) -1 : 0] tx_usage_w;
 
-reg [(ARCHBITSZ-2) -1 : 0] intrqstthresh;
+reg [(WORDBITSZ-2) -1 : 0] intrqstthresh;
 
 assign irq_stb_o = (|intrqstthresh && (rx_usage_w >= intrqstthresh) &&
 	// Raise intrqst only when the device is ready for the next command,
@@ -219,22 +219,22 @@ always @ (posedge clk_i) begin
 		// It prevents unwanted interrupt after reset.
 		intrqstthresh <= 0;
 	end else if (cmdsetint) begin
-		intrqstthresh <= wb_dat_r[ARCHBITSZ-1:2];
+		intrqstthresh <= wb_dat_r[WORDBITSZ-1:2];
 	end else if (irq_rdy_i_negedge) begin
 		intrqstthresh <= 0;
 	end
 
 	if (rst_i || cmddevrdy) begin
-		wb_dat_o_ <= {ARCHBITSZ{1'b0}};
+		wb_dat_o_ <= {WORDBITSZ{1'b0}};
 	end else if (cmdsetint) begin
-		wb_dat_o_ <= {BUFSZ[(ARCHBITSZ-2)-1:0], wb_dat_r[1:0]};
+		wb_dat_o_ <= {BUFSZ[(WORDBITSZ-2)-1:0], wb_dat_r[1:0]};
 	end else if (cmdgetbuf) begin
 		wb_dat_o_ <= {
-			{((ARCHBITSZ-2)-(CLOG2BUFSZ+1)){1'b0}},
+			{((WORDBITSZ-2)-(CLOG2BUFSZ+1)){1'b0}},
 			(wb_dat_r[2] ? tx_usage_w : rx_usage_w),
 			wb_dat_r[1:0]};
 	end else if (cmdsetspd) begin
-		wb_dat_o_ <= {PHYCLKFREQ[(ARCHBITSZ-2)-1:0], wb_dat_r[1:0]};
+		wb_dat_o_ <= {PHYCLKFREQ[(WORDBITSZ-2)-1:0], wb_dat_r[1:0]};
 	end
 
 	rx_read_w_sampled <= rx_read_w;

@@ -3,22 +3,22 @@
 
 // Parameters:
 //
-// ARCHBITSZ
-// XARCHBITSZ
+// WORDBITSZ
+// XWORDBITSZ
 // 	TODO: Document ...
-// 	TODO: XARCHBITSZ must be >= ARCHBITSZ.
+// 	TODO: XWORDBITSZ must be >= WORDBITSZ.
 //
 // CLKFREQ
 // 	Frequency of the clock input "clk_i" in Hz.
 //
 // ICACHESETCOUNT
 // 	Number of instruction cache set.
-// 	Each cache set is XARCHBITSZ bits.
+// 	Each cache set is XWORDBITSZ bits.
 // 	It must be at least 2 and a power-of-2.
 //
 // DCACHESETCOUNT
 // 	Number of data cache set.
-// 	Each cache set is XARCHBITSZ bits.
+// 	Each cache set is XWORDBITSZ bits.
 // 	It must be at least 2 and a power-of-2.
 //
 // TLBSETCOUNT
@@ -227,19 +227,19 @@ localparam CLOG2DCACHESETCOUNT = clog2(DCACHESETCOUNT);
 localparam CLOG2ICACHEWAYCOUNT = clog2(ICACHEWAYCOUNT);
 localparam CLOG2TLBWAYCOUNT    = clog2(TLBWAYCOUNT);
 
-parameter ARCHBITSZ  = 32;
-parameter XARCHBITSZ = 32; // TODO: Support all the way up to 1024 ...
+parameter WORDBITSZ  = 32;
+parameter XWORDBITSZ = 32; // TODO: Support all the way up to 1024 ...
 
-localparam CLOG2ARCHBITSZ = clog2(ARCHBITSZ);
-localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
-localparam CLOG2ARCHBITSZBY16 = clog2(ARCHBITSZ/16);
-localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
+localparam CLOG2WORDBITSZ = clog2(WORDBITSZ);
+localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
+localparam CLOG2WORDBITSZBY16 = clog2(WORDBITSZ/16);
+localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
-localparam CLOG2XARCHBITSZBY8 = clog2(XARCHBITSZ/8);
-localparam CLOG2XARCHBITSZBY16 = clog2(XARCHBITSZ/16);
-localparam XADDRBITSZ = (XARCHBITSZ-CLOG2XARCHBITSZBY8);
+localparam CLOG2XWORDBITSZBY8 = clog2(XWORDBITSZ/8);
+localparam CLOG2XWORDBITSZBY16 = clog2(XWORDBITSZ/16);
+localparam XADDRBITSZ = (XWORDBITSZ-CLOG2XWORDBITSZBY8);
 
-localparam CLOG2XARCHBITSZBY8DIFF = (CLOG2XARCHBITSZBY8-CLOG2ARCHBITSZBY8);
+localparam CLOG2XWORDBITSZBY8DIFF = (CLOG2XWORDBITSZBY8-CLOG2WORDBITSZBY8);
 
 localparam CLOG2MAXPENDINGACK = clog2(MAXPENDINGACK);
 
@@ -258,19 +258,19 @@ output reg                          wb_cyc_o;  // ### comb-block-reg.
 output reg                          wb_stb_o;  // ### comb-block-reg.
 output reg                          wb_we_o;   // ### comb-block-reg.
 output reg  [XADDRBITSZ -1 : 0]     wb_addr_o; // ### comb-block-reg.
-output reg  [(XARCHBITSZ/8) -1 : 0] wb_sel_o;  // ### comb-block-reg.
-output reg  [XARCHBITSZ -1 : 0]     wb_dat_o;  // ### comb-block-reg.
+output reg  [(XWORDBITSZ/8) -1 : 0] wb_sel_o;  // ### comb-block-reg.
+output reg  [XWORDBITSZ -1 : 0]     wb_dat_o;  // ### comb-block-reg.
 input  wire                         wb_bsy_i;
 input  wire                         wb_ack_i;
-input  wire [XARCHBITSZ -1 : 0]     wb_dat_i;
+input  wire [XWORDBITSZ -1 : 0]     wb_dat_i;
 
 input  wire irq_stb_i;
 output wire irq_rdy_o;
 output wire halted_o;
 
-input wire[(ARCHBITSZ-1) -1 : 0] rstaddr_i;
+input wire[(WORDBITSZ-1) -1 : 0] rstaddr_i;
 
-input wire[ARCHBITSZ -1 : 0] id_i;
+input wire[WORDBITSZ -1 : 0] id_i;
 
 `ifdef PUDBG
 input  wire            brkonrst_i;
@@ -282,7 +282,7 @@ output wire [8 -1 : 0] dbg_tx_data_o;
 input  wire            dbg_tx_rdy_i;
 `endif
 
-// Total number of ARCHBITSZ bits data that the instruction buffer can contain.
+// Total number of WORDBITSZ bits data that the instruction buffer can contain.
 // This value determine the amount of prefetching done.
 // The value of 2 must not change because it is enough and appropriate,
 // as it allow for fetching the next data while the previously fetched
@@ -304,10 +304,10 @@ localparam GPRCNTTOTAL = (GPRCNTPERCTX*2);
 localparam CLOG2GPRCNTTOTAL = clog2(GPRCNTTOTAL);
 
 // Number of bits in an address within a page.
-localparam ADDRWITHINPAGEBITSZ = (12-CLOG2ARCHBITSZBY8);
+localparam ADDRWITHINPAGEBITSZ = (12-CLOG2WORDBITSZBY8);
 
 // Number of bits in a page number.
-localparam PAGENUMBITSZ = (ARCHBITSZ-12);
+localparam PAGENUMBITSZ = (WORDBITSZ-12);
 
 `include "./opcodes.pu.v"
 `include "./netsandregs.pu.v"
@@ -330,7 +330,7 @@ initial begin
 	if (!fd)
 		$display("could not create \"pc_w.txt\"");
 end
-reg [ARCHBITSZ -1 : 0] pc_w_saved = 0;
+reg [WORDBITSZ -1 : 0] pc_w_saved = 0;
 reg pc_dump_en = 0;
 always @ (posedge clk_i) begin
 	if (rst_i)

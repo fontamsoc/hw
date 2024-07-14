@@ -40,20 +40,20 @@ module bootldr (
 
 `include "lib/clog2.v"
 
-parameter ARCHBITSZ = 32;
+parameter WORDBITSZ = 32;
 
 localparam INITFILE =
-	ARCHBITSZ == 16 ? "bootldr16.hex" :
-	ARCHBITSZ == 32 ? "bootldr32.hex" :
-	ARCHBITSZ == 64 ? "bootldr64.hex" :
-	ARCHBITSZ == 128 ? "bootldr128.hex" :
-	ARCHBITSZ == 256 ? "bootldr256.hex" :
+	WORDBITSZ == 16 ? "bootldr16.hex" :
+	WORDBITSZ == 32 ? "bootldr32.hex" :
+	WORDBITSZ == 64 ? "bootldr64.hex" :
+	WORDBITSZ == 128 ? "bootldr128.hex" :
+	WORDBITSZ == 256 ? "bootldr256.hex" :
 	                   "";
-localparam SIZE = ((32/*instruction count*/*2)/(ARCHBITSZ/8));
+localparam SIZE = ((32/*instruction count*/*2)/(WORDBITSZ/8));
 
-localparam CLOG2ARCHBITSZBY8 = clog2(ARCHBITSZ/8);
+localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
 
-localparam ADDRBITSZ = (ARCHBITSZ-CLOG2ARCHBITSZBY8);
+localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
 input wire rst_i;
 
@@ -63,20 +63,20 @@ input  wire                        wb_cyc_i;
 input  wire                        wb_stb_i;
 input  wire                        wb_we_i;
 input  wire [ADDRBITSZ -1 : 0]     wb_addr_i;
-input  wire [(ARCHBITSZ/8) -1 : 0] wb_sel_i;
-input  wire [ARCHBITSZ -1 : 0]     wb_dat_i;
+input  wire [(WORDBITSZ/8) -1 : 0] wb_sel_i;
+input  wire [WORDBITSZ -1 : 0]     wb_dat_i;
 output wire                        wb_bsy_o;
 output reg                         wb_ack_o;
-output reg  [ARCHBITSZ -1 : 0]     wb_dat_o;
-output wire [ARCHBITSZ -1 : 0]     wb_mapsz_o;
+output reg  [WORDBITSZ -1 : 0]     wb_dat_o;
+output wire [WORDBITSZ -1 : 0]     wb_mapsz_o;
 
 // *2 is used to double the memory mapping to catch cpu
 // prefetch memory accesses that can occur beyond its size.
-localparam MAPSZ = ((SIZE*(ARCHBITSZ/8))*2);
+localparam MAPSZ = ((SIZE*(WORDBITSZ/8))*2);
 // By convention, devices mapsz must be aligned to 128 bytes (1024 bits).
 assign wb_mapsz_o = ((MAPSZ < 128) ? 128 : MAPSZ);
 
-reg [ARCHBITSZ -1 : 0] rom [0 : SIZE -1];
+reg [WORDBITSZ -1 : 0] rom [0 : SIZE -1];
 
 initial begin
 	$readmemh (INITFILE, rom);

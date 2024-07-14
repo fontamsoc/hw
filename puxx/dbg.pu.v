@@ -3,7 +3,7 @@
 
 // The format of a request is as follow:
 // |cmd: 3bits|arg: 5bits|
-// The data returned is always (ARCHBITSZ/8) bytes in little-endian.
+// The data returned is always (WORDBITSZ/8) bytes in little-endian.
 // The valid cmd values are:
 // - DBGCMDSELECT:
 //  Select the pu which must receive subsequent commands.
@@ -27,7 +27,7 @@
 // - DBGCMDGETOPCODE:
 //  arg is meaningless.
 //  The two bytes opcode of the next instruction to execute
-//  are set in the two least significant bytes of the (ARCHBITSZ/8)
+//  are set in the two least significant bytes of the (WORDBITSZ/8)
 //  bytes returned.
 // - DBGCMDGETIP:
 //  arg is meaningless.
@@ -40,8 +40,8 @@
 //  No data is returned.
 // - DBGCMDLOADIARG;
 //  The 4lsb of arg are shifted in the 4msb of an internal register
-//  used as argument; to load all ARCHBITSZ bits of that register,
-//  this commands must be issued (ARCHBITSZ/4) times.
+//  used as argument; to load all WORDBITSZ bits of that register,
+//  this commands must be issued (WORDBITSZ/4) times.
 //  No data is returned.
 
 always @ (posedge clk_i) begin
@@ -73,7 +73,7 @@ always @ (posedge clk_i) begin
 	end else if (dbgcounter && dbgcntren) begin
 		// Decrement dbgcounter for each byte transmitted.
 		if (dbg_tx_rdy_i_negedge) begin
-			dbgiarg <= {{8{1'b0}}, dbgiarg[ARCHBITSZ-1:8]};
+			dbgiarg <= {{8{1'b0}}, dbgiarg[WORDBITSZ-1:8]};
 			dbgcounter <= dbgcounterminusone;
 			dbgcntren <= |dbgcounterminusone;
 		end
@@ -82,7 +82,7 @@ always @ (posedge clk_i) begin
 		dbgcmd <= DBGCMDSTEP;
 		dbgarg <= DBGARGSTEPSTOP;
 		dbgiarg <= {ip, 1'b0};
-		dbgcounter <= (ARCHBITSZ/8);
+		dbgcounter <= (WORDBITSZ/8);
 		dbgcntren <= 1;
 	// Note that dbgrcvrphy.received is high for a single clock cycle.
 	end else if (dbg_rx_rcvd_i && dbgselected) begin
@@ -100,27 +100,27 @@ always @ (posedge clk_i) begin
 		end else if (dbg_rx_data_i[7:5] == DBGCMDLOADIARG) begin
 			dbgcmd <= dbg_rx_data_i[7:5];
 			dbgarg <= dbg_rx_data_i[4:0];
-			dbgiarg <= {dbg_rx_data_i[3:0], dbgiarg[ARCHBITSZ-1:4]};
+			dbgiarg <= {dbg_rx_data_i[3:0], dbgiarg[WORDBITSZ-1:4]};
 		end else if (dbg_rx_data_i[7:5] == DBGCMDGETOPCODE &&
 			(sequencerready && !oplicounter)) begin
 			dbgcmd <= dbg_rx_data_i[7:5];
 			dbgarg <= dbg_rx_data_i[4:0];
-			dbgiarg <= {{(ARCHBITSZ-16){1'b0}}, instrbufdato0, instrbufdato1};
-			dbgcounter <= (ARCHBITSZ/8);
+			dbgiarg <= {{(WORDBITSZ-16){1'b0}}, instrbufdato0, instrbufdato1};
+			dbgcounter <= (WORDBITSZ/8);
 			dbgcntren <= 1;
 		end else if (dbg_rx_data_i[7:5] == DBGCMDGETIP &&
 			(sequencerready && !oplicounter)) begin
 			dbgcmd <= dbg_rx_data_i[7:5];
 			dbgarg <= dbg_rx_data_i[4:0];
 			dbgiarg <= {ip, 1'b0};
-			dbgcounter <= (ARCHBITSZ/8);
+			dbgcounter <= (WORDBITSZ/8);
 			dbgcntren <= 1;
 		end else if (dbg_rx_data_i[7:5] == DBGCMDGETGPR &&
 			(sequencerready && !oplicounter)) begin
 			dbgcmd <= dbg_rx_data_i[7:5];
 			dbgarg <= dbg_rx_data_i[4:0];
 			dbgiarg <= dbggprdata;
-			dbgcounter <= (ARCHBITSZ/8);
+			dbgcounter <= (WORDBITSZ/8);
 			dbgcntren <= 1;
 		end
 	end
