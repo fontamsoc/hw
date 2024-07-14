@@ -232,6 +232,9 @@ generate for (
 		end
 	end
 
+	wire _cache_we = (cache_we &&
+		gen_cache_idx == (cache_tag_hit ? cache_tag_hit_wayidx : cache_we_wayidx));
+
 	always @ (posedge clk_i) begin
 		if (cache_stb) begin
 			cache_tag_o[gen_cache_idx] <= cache_tags[cache_rdidx];
@@ -239,12 +242,6 @@ generate for (
 			cache_dat_o[gen_cache_idx] <= cache_dats[cache_rdidx];
 			cache_drt_o[gen_cache_idx] <= cache_drts[cache_rdidx];
 		end
-	end
-
-	wire _cache_we = (cache_we &&
-		gen_cache_idx == (cache_tag_hit ? cache_tag_hit_wayidx : cache_we_wayidx));
-
-	always @ (posedge clk_i) begin
 		if (_cache_we) begin
 			cache_tags[cache_wridx] <= cache_tag_i;
 			cache_dats[cache_wridx] <= cache_dat_i;
