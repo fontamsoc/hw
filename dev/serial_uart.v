@@ -52,6 +52,9 @@
 // PHYCLKFREQ
 // 	Frequency of the clock input "clk_phy_i" in Hz.
 //
+// DEFAULTBAUD
+// 	Baudrate at reset.
+//
 // BUFSZ
 // 	Size in bytes of the receive and transmit buffer.
 // 	It must be at least 2 and a power of 2.
@@ -143,8 +146,9 @@ module serial_uart (
 
 parameter WORDBITSZ = 32;
 
-parameter PHYCLKFREQ = 1;
-parameter BUFSZ      = 2;
+parameter PHYCLKFREQ  = 1;
+parameter DEFAULTBAUD = 1;
+parameter BUFSZ       = 2;
 
 localparam CLOG2BUFSZ = clog2(BUFSZ);
 
@@ -253,12 +257,16 @@ localparam CLOG2CLOCKCYCLESPERBITLIMIT = (WORDBITSZ-2);
 reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] rxclockcyclesperbit;
 reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] txclockcyclesperbit;
 
+localparam CLOCKCYCLESPERBIT = (PHYCLKFREQ/DEFAULTBAUD);
+
 always @ (posedge clk_i) begin
 	// Logic enabling/disabling interrupt.
 	if (rst_i) begin
 		// On reset, interrupt is disabled, and must be explicitely enabled.
 		// It prevents unwanted interrupt after reset.
 		intrqstthresh <= 0;
+		rxclockcyclesperbit <= (CLOCKCYCLESPERBIT + (CLOCKCYCLESPERBIT>>5));
+		txclockcyclesperbit <= CLOCKCYCLESPERBIT;
 	end else if (cmdsetint) begin
 		intrqstthresh <= wb_dat_r[WORDBITSZ-1:2];
 	end else if (irq_rdy_i_negedge) begin

@@ -167,9 +167,10 @@ cpu #(
 );
 
 serial_uart #(
-	 .WORDBITSZ  (WORDBITSZ)
-	,.PHYCLKFREQ (WBPI_CLKFREQ)
-	,.BUFSZ      (4096)
+	 .WORDBITSZ   (WORDBITSZ)
+	,.PHYCLKFREQ  (WBPI_CLKFREQ)
+	,.DEFAULTBAUD (115200)
+	,.BUFSZ       (4096)
 ) serial (
 
 	 .rst_i (wbpi_rst_w)

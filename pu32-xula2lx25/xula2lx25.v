@@ -385,9 +385,10 @@ assign dev_id_w    [S_WBPI_IRQCTRL] = 3;
 assign dev_useirq_w[S_WBPI_IRQCTRL] = 0;
 
 serial_uart #(
-	 .WORDBITSZ  (WORDBITSZ)
-	,.PHYCLKFREQ (WBPI_CLKFREQ)
-	,.BUFSZ      (2048)
+	 .WORDBITSZ   (WORDBITSZ)
+	,.PHYCLKFREQ  (WBPI_CLKFREQ)
+	,.DEFAULTBAUD (115200)
+	,.BUFSZ       (2048)
 ) serial (
 
 	 .rst_i (!pll_locked || rst_p
