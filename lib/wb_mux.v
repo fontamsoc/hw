@@ -115,8 +115,7 @@ reg [WORDBITSZ -1 : 0] addrspace_slvidx_hi;
 wire slvidx_not_max = (slvidx < (SLAVECOUNT-1));
 
 // Determine whether slvidx needs to be recomputed.
-wire slvidx_invalid = (!addrspace_rdy || (
-	!slvidx_dflt && _m_wb_stb_i &&
+wire slvidx_invalid = (!addrspace_rdy || (!slvidx_dflt &&
 	!(_m_wb_addr_i >= addrspace_slvidx_lo &&
 	  _m_wb_addr_i <= addrspace_slvidx_hi)));
 
@@ -155,7 +154,7 @@ always @ (posedge clk_i) begin
 
 	end else if (!slvidx_rdy) begin
 
-		if (!slvidx_invalid)
+		if (!slvidx_invalid && _m_wb_stb_i)
 			slvidx_rdy <= 1;
 		else if (slvidx_not_max) begin
 			addrspace_slvidx_lo <= addrspace[slvidx] + 1'b1;
@@ -169,7 +168,7 @@ always @ (posedge clk_i) begin
 			slvidx_dflt <= 1;
 		end
 
-	end else if (slvidx_invalid && !ack_pending) begin
+	end else if (slvidx_invalid && _m_wb_stb_i && !ack_pending) begin
 
 		addrspace_slvidx_lo <= FIRSTSLAVEADDR;
 		addrspace_slvidx_hi <= addrspace[0];
