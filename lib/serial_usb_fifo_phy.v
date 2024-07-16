@@ -33,6 +33,7 @@
 // tx_clk_i
 // tx_write_i
 // tx_data_i
+// tx_near_full_o
 // tx_full_o
 // tx_usage_o
 // 	FIFO interface to transmit data.
@@ -63,6 +64,7 @@ module serial_usb_fifo_phy (
 	,tx_clk_i
 	,tx_write_i
 	,tx_data_i
+	,tx_near_full_o
 	,tx_full_o
 	,tx_usage_o
 
@@ -96,6 +98,7 @@ output wire [(CLOG2DEPTH +1) -1 : 0] rx_usage_o;
 input  wire                          tx_clk_i;
 input  wire                          tx_write_i;
 input  wire [8 -1 : 0]               tx_data_i;
+output wire                          tx_near_full_o;
 output wire                          tx_full_o;
 output wire [(CLOG2DEPTH +1) -1 : 0] tx_usage_o;
 
@@ -153,6 +156,7 @@ fifo #(
 	,.clk_write_i (tx_clk_i)
 	,.write_i     (tx_write_i)
 	,.data_i      (tx_data_i)
+	,.near_full_o (tx_near_full_o)
 	,.full_o      (tx_full_o)
 	,.usage_o     (tx_usage_o)
 );

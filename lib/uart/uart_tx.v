@@ -44,6 +44,7 @@
 //
 // write_i
 // data_i
+// near_full_o
 // full_o
 // usage_o
 // 	FIFO interface to buffer the data to transmit.
@@ -65,6 +66,7 @@ module uart_tx (
 
 	,write_i
 	,data_i
+	,near_full_o
 	,full_o
 	,usage_o
 
@@ -88,6 +90,7 @@ input wire [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] clockcyclesperbit_i;
 
 input  wire                          write_i;
 input  wire [8 -1 : 0]               data_i;
+output wire                          near_full_o;
 output wire                          full_o;
 output wire [(CLOG2BUFSZ +1) -1 : 0] usage_o;
 
@@ -120,6 +123,7 @@ fifo #(
 	,.clk_write_i (clk_i)
 	,.write_i     (write_i)
 	,.data_i      (data_i)
+	,.near_full_o (near_full_o)
 	,.full_o      (full_o)
 );
 

@@ -177,8 +177,6 @@ input  wire irq_rdy_i;
 input  wire rx_i;
 output wire tx_o;
 
-assign wb_bsy_o = 1'b0;
-
 // By convention, devices mapsz must be aligned to 128 bytes (1024 bits).
 localparam MAPSZ = 128;
 assign wb_mapsz_o = MAPSZ;
@@ -188,7 +186,7 @@ reg                    wb_we_r;
 reg [ADDRBITSZ -1 : 0] wb_addr_r;
 reg [WORDBITSZ -1 : 0] wb_dat_r;
 
-wire wb_stb_r_ = (wb_cyc_i && wb_stb_i);
+wire wb_stb_r_ = (wb_cyc_i && wb_stb_i && !wb_bsy_o);
 
 always @ (posedge clk_i) begin
 	wb_stb_r <= wb_stb_r_ ;
@@ -334,6 +332,8 @@ uart_tx #(
 	,.write_i (tx_write_w)
 	,.data_i  (tx_data_w1)
 	,.usage_o (tx_usage_w)
+
+	,.near_full_o (wb_bsy_o)
 
 	,.tx_o (tx_o)
 );
