@@ -266,7 +266,7 @@ input  wire irq_stb_i;
 output wire irq_rdy_o;
 output wire halted_o;
 
-input wire[(WORDBITSZ-1) -1 : 0] rstaddr_i;
+input wire [WORDBITSZ -1 : 0] rstaddr_i;
 
 input wire[WORDBITSZ -1 : 0] id_i;
 

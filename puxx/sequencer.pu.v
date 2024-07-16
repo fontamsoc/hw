@@ -236,8 +236,8 @@ always @ (posedge clk_i) begin
 
 			rst_o <= rst_i ? 0 : rst_o;
 
-			kip <= rst_i ? rstaddr_i : kip;
-			ip  <= rst_i ? rstaddr_i : ip;
+			kip <= rst_i ? rstaddr_i[WORDBITSZ -1 : 1] : kip;
+			ip  <= rst_i ? rstaddr_i[WORDBITSZ -1 : 1] : ip;
 
 			inusermode <= rst_i ? |id_i : inusermode;
 			dohalt     <= rst_i ? |id_i : dohalt;

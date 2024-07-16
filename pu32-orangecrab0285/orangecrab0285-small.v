@@ -185,7 +185,7 @@ cpu #(
 	,.wb_ack_i  (m_wbpi_ack_w[M_WBPI_CPU])
 	,.wb_dat_i  (m_wbpi_dato_w[M_WBPI_CPU])
 
-	,.rstaddr_i (('h1000)>>1)
+	,.rstaddr_i ('h1000)
 );
 
 serial_usb #(

@@ -350,10 +350,10 @@ cpu #(
 	,.irq_rdy_o (irq_dst_rdy_w)
 	,.halted_o  (irq_dst_pri_w)
 
-	,.rstaddr_i  ((('h1000)>>1) +
-		(s_wbpi_mapsz_w[S_WBPI_RAM]>>1) +
-		(s_wbpi_mapsz_w[S_WBPI_RAMCTRL]>>1))
-	,.rstaddr2_i (('h8000-(14/*within parkpu()*/))>>1)
+	,.rstaddr_i  ('h1000 +
+		s_wbpi_mapsz_w[S_WBPI_RAM] +
+		s_wbpi_mapsz_w[S_WBPI_RAMCTRL])
+	,.rstaddr2_i ('h8000-(14/*within parkpu()*/))
 
 	,.id_i (0)
 );

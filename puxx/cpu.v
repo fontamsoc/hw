@@ -118,8 +118,8 @@ input  wire [PUCOUNT -1 : 0] irq_stb_i;
 output wire [PUCOUNT -1 : 0] irq_rdy_o;
 output wire [PUCOUNT -1 : 0] halted_o;
 
-input wire [(WORDBITSZ-1) -1 : 0] rstaddr_i;
-input wire [(WORDBITSZ-1) -1 : 0] rstaddr2_i;
+input wire [WORDBITSZ -1 : 0] rstaddr_i;
+input wire [WORDBITSZ -1 : 0] rstaddr2_i;
 
 input wire [WORDBITSZ -1 : 0] id_i;
 
