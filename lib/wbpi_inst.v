@@ -177,6 +177,8 @@ wire                             m_wbpi_bsy_w__;
 wire                             m_wbpi_ack_w__;
 wire [WBPI_WORDBITSZ -1 : 0]     m_wbpi_dato_w__;
 
+generate if (WBPI_MASTERCOUNT > 1) begin: gen_m_wbpi_arbiter
+
 wb_arbiter #(
 
 	 .WORDBITSZ   (WBPI_WORDBITSZ)
@@ -208,6 +210,20 @@ wb_arbiter #(
 	,.s_wb_ack_i  (m_wbpi_ack_w__)
 	,.s_wb_dat_i  (m_wbpi_dato_w__)
 );
+
+end else begin
+
+assign __m_wbpi_cyc_w = _m_wbpi_cyc_w;
+assign __m_wbpi_stb_w = _m_wbpi_stb_w;
+assign __m_wbpi_we_w = _m_wbpi_we_w;
+assign __m_wbpi_addr_w = _m_wbpi_addr_w;
+assign __m_wbpi_sel_w = _m_wbpi_sel_w;
+assign __m_wbpi_dati_w = _m_wbpi_dati_w;
+assign m_wbpi_bsy_w_ = m_wbpi_bsy_w__;
+assign m_wbpi_ack_w_ = m_wbpi_ack_w__;
+assign m_wbpi_dato_w_ = m_wbpi_dato_w__;
+
+end endgenerate
 
 wb_mux #(
 

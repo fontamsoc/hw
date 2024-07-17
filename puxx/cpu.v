@@ -163,11 +163,11 @@ wire                         _wb_bsy_i;
 wire                         _wb_ack_i;
 wire [XWORDBITSZ -1 : 0]     _wb_dat_i;
 
-wb_arbiter #(
+generate if (PUCOUNT > 1) begin: gen_wb_arbiter
 
+wb_arbiter #(
 	 .WORDBITSZ   (XWORDBITSZ)
 	,.MASTERCOUNT (PUCOUNT)
-
 ) wb_arbiter (
 
 	 .rst_i (rst_i)
@@ -195,14 +195,26 @@ wb_arbiter #(
 	,.s_wb_dat_i  (_wb_dat_i)
 );
 
+end else begin
+
+assign wb_cyc_o_ = _arbiter_wb_cyc_i;
+assign wb_stb_o_ = _arbiter_wb_stb_i;
+assign wb_we_o_ = _arbiter_wb_we_i;
+assign wb_addr_o_ = _arbiter_wb_addr_i;
+assign wb_sel_o_ = _arbiter_wb_sel_i;
+assign wb_dat_o_ = _arbiter_wb_dat_i;
+assign arbiter_wb_bsy_o_ = _wb_bsy_i;
+assign arbiter_wb_ack_o_ = _wb_ack_i;
+assign arbiter_wb_dat_o_ = _wb_dat_i;
+
+end endgenerate
+
 // This module insert the necessary clock cycle between
 // (cyc && stb && !bsy) cycle and corresponding ack cycle,
 // needed by pu.opldrqstseqs if there is no dcache.
 wb_cdc #(
-
 	 .WORDBITSZ     (XWORDBITSZ)
 	,.MAXPENDINGACK (MAXPENDINGACK)
-
 ) wb_cdc (
 
 	 .rst_i (rst_i)
@@ -258,7 +270,6 @@ generate for (
 	genpu_idx = genpu_idx + 1) begin :genpu
 
 pu #(
-
 	 .WORDBITSZ      (WORDBITSZ)
 	,.XWORDBITSZ     (XWORDBITSZ)
 	,.CLKFREQ        (CLKFREQ)
@@ -274,7 +285,6 @@ pu #(
 	,.FDIVCNT        (FDIVCNT)
 	,.MAXPENDINGACK  (MAXPENDINGACK)
 	,.VERSION        (VERSION)
-
 ) pu (
 
 	 .rst_i (rst_i)
