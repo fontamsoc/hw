@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
+`ifndef ICACHE_V
+`define ICACHE_V
+
 `include "lib/ram/bram.v"
 
 module icache (
@@ -188,3 +191,5 @@ end
 assign dat_o = dato[hitidx];
 
 endmodule
+
+`endif /* ICACHE_V */
