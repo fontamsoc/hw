@@ -874,49 +874,49 @@ wire doutofrange_;
 reg ioutofrange;
 reg doutofrange;
 
-// TLBWAYCOUNT must be 1, because there is no instruction to return
+// TLBWAYCNT must be 1, because there is no instruction to return
 // its value. Its value is needed when using clrtlb for example.
-localparam TLBWAYCOUNT      = 1;
-localparam CLOG2TLBWAYCOUNT = clog2(TLBWAYCOUNT);
+localparam TLBWAYCNT      = 1;
+localparam CLOG2TLBWAYCNT = clog2(TLBWAYCNT);
 
 `ifdef PUMMU
 
 reg[(1+1+12) -1 : 0] asid;
 
-localparam CLOG2TLBSETCOUNT = clog2(TLBSETCOUNT);
-localparam PAGENUMBITSZMINUSCLOG2TLBSETCOUNT = (PAGENUMBITSZ -CLOG2TLBSETCOUNT);
-localparam TLBENTRYBITSZ = (12 +5 +PAGENUMBITSZ +PAGENUMBITSZMINUSCLOG2TLBSETCOUNT);
+localparam CLOG2TLBSETCNT = clog2(TLBSETCNT);
+localparam PAGENUMBITSZMINUSCLOG2TLBSETCNT = (PAGENUMBITSZ -CLOG2TLBSETCNT);
+localparam TLBENTRYBITSZ = (12 +5 +PAGENUMBITSZ +PAGENUMBITSZMINUSCLOG2TLBSETCNT);
 
 // TLB (Translation Lookaside Buffer).
 // Bit format of a single TLB entry:
-// |asid: 12|user: 1|cached: 1|readable: 1|writable: 1|executable: 1|ppn: PAGENUMBITSZ|vpn: PAGENUMBITSZMINUSCLOG2TLBSETCOUNT|
+// |asid: 12|user: 1|cached: 1|readable: 1|writable: 1|executable: 1|ppn: PAGENUMBITSZ|vpn: PAGENUMBITSZMINUSCLOG2TLBSETCNT|
 
 assign inuserspace = asid[12];
 assign kmodepaging = asid[13];
 
-reg [CLOG2TLBWAYCOUNT -1 : 0] dtlbwayhitidx_; // ### comb-block-reg.
-reg [CLOG2TLBWAYCOUNT -1 : 0] dtlbwayhitidx;
-reg [CLOG2TLBWAYCOUNT -1 : 0] dtlbwaywriteidx; // Register used to hold dtlb-way index to write next.
+reg [CLOG2TLBWAYCNT -1 : 0] dtlbwayhitidx_; // ### comb-block-reg.
+reg [CLOG2TLBWAYCNT -1 : 0] dtlbwayhitidx;
+reg [CLOG2TLBWAYCNT -1 : 0] dtlbwaywriteidx; // Register used to hold dtlb-way index to write next.
 // Nets implementing checking the tlb for data loading/storing.
-wire[CLOG2TLBSETCOUNT -1 : 0] dtlbset = gprdata2[(CLOG2TLBSETCOUNT +12) -1 : 12];
-wire[TLBENTRYBITSZ -1 : 0] dtlbentry [TLBWAYCOUNT -1 : 0];
-wire[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0] dtlbtag [TLBWAYCOUNT -1 : 0];
-wire[PAGENUMBITSZ -1 : 0] dtlbppn [TLBWAYCOUNT -1 : 0];
-wire dtlbwritable [TLBWAYCOUNT -1 : 0];
-wire dtlbnotwritable [TLBWAYCOUNT -1 : 0];
-wire dtlbreadable [TLBWAYCOUNT -1 : 0];
-wire dtlbnotreadable [TLBWAYCOUNT -1 : 0];
-wire dtlbcached [TLBWAYCOUNT -1 : 0];
-//wire dtlbnotcached [TLBWAYCOUNT -1 : 0];
-wire dtlbuser [TLBWAYCOUNT -1 : 0];
-wire dtlbnotuser [TLBWAYCOUNT -1 : 0];
-wire[12 -1 : 0] dtlbasid [TLBWAYCOUNT -1 : 0];
-wire[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0] dvpn = gprdata2[WORDBITSZ -1 : (12 +CLOG2TLBSETCOUNT)];
-wire dtlbmiss__ [TLBWAYCOUNT -1 : 0];
+wire[CLOG2TLBSETCNT -1 : 0] dtlbset = gprdata2[(CLOG2TLBSETCNT +12) -1 : 12];
+wire[TLBENTRYBITSZ -1 : 0] dtlbentry [TLBWAYCNT -1 : 0];
+wire[PAGENUMBITSZMINUSCLOG2TLBSETCNT -1 : 0] dtlbtag [TLBWAYCNT -1 : 0];
+wire[PAGENUMBITSZ -1 : 0] dtlbppn [TLBWAYCNT -1 : 0];
+wire dtlbwritable [TLBWAYCNT -1 : 0];
+wire dtlbnotwritable [TLBWAYCNT -1 : 0];
+wire dtlbreadable [TLBWAYCNT -1 : 0];
+wire dtlbnotreadable [TLBWAYCNT -1 : 0];
+wire dtlbcached [TLBWAYCNT -1 : 0];
+//wire dtlbnotcached [TLBWAYCNT -1 : 0];
+wire dtlbuser [TLBWAYCNT -1 : 0];
+wire dtlbnotuser [TLBWAYCNT -1 : 0];
+wire[12 -1 : 0] dtlbasid [TLBWAYCNT -1 : 0];
+wire[PAGENUMBITSZMINUSCLOG2TLBSETCNT -1 : 0] dvpn = gprdata2[WORDBITSZ -1 : (12 +CLOG2TLBSETCNT)];
+wire dtlbmiss__ [TLBWAYCNT -1 : 0];
 wire dtlben = (
 	(inusermode && (inuserspace || doutofrange)) ||
 	(inkernelmode_kmodepaging && doutofrange));
-reg[CLOG2TLBSETCOUNT -1 : 0] dtlbsetprev;
+reg[CLOG2TLBSETCNT -1 : 0] dtlbsetprev;
 reg dtlbre_;
 `ifdef PUREGMMUOUTPUT
 always @ (posedge clk_i) begin
@@ -943,28 +943,28 @@ wire dtlbwe = (
 	(isopsettlb && (inkernelmode || isflagmmucmds) && (gprdata1 & 'b110)) ||
 	(isopclrtlb && (inkernelmode || isflagmmucmds) && !(({dtlbtag[dtlbwayhitidx], dtlbset, dtlbasid[dtlbwayhitidx]} ^ gprdata2) & gprdata1)))));
 
-reg [CLOG2TLBWAYCOUNT -1 : 0] itlbwayhitidx_; // ### comb-block-reg.
-reg [CLOG2TLBWAYCOUNT -1 : 0] itlbwayhitidx;
-reg [CLOG2TLBWAYCOUNT -1 : 0] itlbwaywriteidx; // Register used to hold itlb-way index to write next.
+reg [CLOG2TLBWAYCNT -1 : 0] itlbwayhitidx_; // ### comb-block-reg.
+reg [CLOG2TLBWAYCNT -1 : 0] itlbwayhitidx;
+reg [CLOG2TLBWAYCNT -1 : 0] itlbwaywriteidx; // Register used to hold itlb-way index to write next.
 // Nets implementing checking the tlb for instruction fetching.
-wire[CLOG2TLBSETCOUNT -1 : 0] itlbset = (_istlbop ? dtlbset :
-	instrfetchnextaddr[(CLOG2TLBSETCOUNT +ADDRWITHINPAGEBITSZ) -1 : ADDRWITHINPAGEBITSZ]);
-wire[TLBENTRYBITSZ -1 : 0] itlbentry [TLBWAYCOUNT -1 : 0];
-wire[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0] itlbtag [TLBWAYCOUNT -1 : 0];
-wire[PAGENUMBITSZ -1 : 0] itlbppn [TLBWAYCOUNT -1 : 0];
-wire itlbexecutable [TLBWAYCOUNT -1 : 0];
-wire itlbnotexecutable [TLBWAYCOUNT -1 : 0];
-wire itlbcached [TLBWAYCOUNT -1 : 0];
-//wire itlbnotcached [TLBWAYCOUNT -1 : 0];
-wire itlbuser [TLBWAYCOUNT -1 : 0];
-wire itlbnotuser [TLBWAYCOUNT -1 : 0];
-wire[12 -1 : 0] itlbasid [TLBWAYCOUNT -1 : 0];
-wire[PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0] ivpn = instrfetchnextaddr[ADDRBITSZ -1 : (ADDRWITHINPAGEBITSZ +CLOG2TLBSETCOUNT)];
-wire itlbmiss__ [TLBWAYCOUNT -1 : 0];
+wire[CLOG2TLBSETCNT -1 : 0] itlbset = (_istlbop ? dtlbset :
+	instrfetchnextaddr[(CLOG2TLBSETCNT +ADDRWITHINPAGEBITSZ) -1 : ADDRWITHINPAGEBITSZ]);
+wire[TLBENTRYBITSZ -1 : 0] itlbentry [TLBWAYCNT -1 : 0];
+wire[PAGENUMBITSZMINUSCLOG2TLBSETCNT -1 : 0] itlbtag [TLBWAYCNT -1 : 0];
+wire[PAGENUMBITSZ -1 : 0] itlbppn [TLBWAYCNT -1 : 0];
+wire itlbexecutable [TLBWAYCNT -1 : 0];
+wire itlbnotexecutable [TLBWAYCNT -1 : 0];
+wire itlbcached [TLBWAYCNT -1 : 0];
+//wire itlbnotcached [TLBWAYCNT -1 : 0];
+wire itlbuser [TLBWAYCNT -1 : 0];
+wire itlbnotuser [TLBWAYCNT -1 : 0];
+wire[12 -1 : 0] itlbasid [TLBWAYCNT -1 : 0];
+wire[PAGENUMBITSZMINUSCLOG2TLBSETCNT -1 : 0] ivpn = instrfetchnextaddr[ADDRBITSZ -1 : (ADDRWITHINPAGEBITSZ +CLOG2TLBSETCNT)];
+wire itlbmiss__ [TLBWAYCNT -1 : 0];
 wire itlben = (
 	(inusermode && (inuserspace || ioutofrange)) ||
 	(inkernelmode_kmodepaging && ioutofrange));
-reg[CLOG2TLBSETCOUNT -1 : 0] itlbsetprev;
+reg[CLOG2TLBSETCNT -1 : 0] itlbsetprev;
 reg itlbre_;
 `ifdef PUREGMMUOUTPUT
 always @ (posedge clk_i) begin
@@ -1006,7 +1006,7 @@ integer gen_itlbhit_idx;
 always @* begin
 	itlbmiss_ = 1;
 	itlbwayhitidx_ = 0;
-	for (gen_itlbhit_idx = 0; gen_itlbhit_idx < TLBWAYCOUNT; gen_itlbhit_idx = gen_itlbhit_idx + 1) begin
+	for (gen_itlbhit_idx = 0; gen_itlbhit_idx < TLBWAYCNT; gen_itlbhit_idx = gen_itlbhit_idx + 1) begin
 		if (itlbmiss_ && !itlbmiss__[gen_itlbhit_idx]) begin
 			itlbmiss_ = 0;
 			itlbwayhitidx_ = gen_itlbhit_idx;
@@ -1031,7 +1031,7 @@ integer gen_dtlbhit_idx;
 always @* begin
 	dtlbmiss_ = 1;
 	dtlbwayhitidx_ = 0;
-	for (gen_dtlbhit_idx = 0; gen_dtlbhit_idx < TLBWAYCOUNT; gen_dtlbhit_idx = gen_dtlbhit_idx + 1) begin
+	for (gen_dtlbhit_idx = 0; gen_dtlbhit_idx < TLBWAYCNT; gen_dtlbhit_idx = gen_dtlbhit_idx + 1) begin
 		if (dtlbmiss_ && !dtlbmiss__[gen_dtlbhit_idx]) begin
 			dtlbmiss_ = 0;
 			dtlbwayhitidx_ = gen_dtlbhit_idx;
@@ -1054,7 +1054,7 @@ always @ (posedge clk_i) begin
 	if (rst_i)
 		itlbwaywriteidx <= 0;
 	else if (itlbwe && !isopclrtlb) begin
-		if (itlbwaywriteidx >= (TLBWAYCOUNT-1))
+		if (itlbwaywriteidx >= (TLBWAYCNT-1))
 			itlbwaywriteidx <= 0;
 		else
 			itlbwaywriteidx <= itlbwaywriteidx + 1'b1;
@@ -1065,7 +1065,7 @@ always @ (posedge clk_i) begin
 	if (rst_i)
 		dtlbwaywriteidx <= 0;
 	else if (dtlbwe && !isopclrtlb) begin
-		if (dtlbwaywriteidx >= (TLBWAYCOUNT-1))
+		if (dtlbwaywriteidx >= (TLBWAYCNT-1))
 			dtlbwaywriteidx <= 0;
 		else
 			dtlbwaywriteidx <= dtlbwaywriteidx + 1'b1;
@@ -1073,11 +1073,11 @@ always @ (posedge clk_i) begin
 end
 
 genvar gen_tlb_idx;
-generate for (gen_tlb_idx = 0; gen_tlb_idx < TLBWAYCOUNT; gen_tlb_idx = gen_tlb_idx + 1) begin :gen_tlb
+generate for (gen_tlb_idx = 0; gen_tlb_idx < TLBWAYCNT; gen_tlb_idx = gen_tlb_idx + 1) begin :gen_tlb
 
 bram #(
 
-	 .SZ (TLBSETCOUNT)
+	 .SZ (TLBSETCNT)
 	,.DW (TLBENTRYBITSZ)
 
 ) itlb (
@@ -1092,7 +1092,7 @@ bram #(
 
 bram #(
 
-	 .SZ (TLBSETCOUNT)
+	 .SZ (TLBSETCNT)
 	,.DW (TLBENTRYBITSZ)
 
 ) dtlb (
@@ -1105,31 +1105,31 @@ bram #(
 	,.o0      (dtlbentry[gen_tlb_idx]) ,.o1      ()
 );
 
-assign itlbtag[gen_tlb_idx] = itlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0];
-assign itlbppn[gen_tlb_idx] = itlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ -1 : PAGENUMBITSZMINUSCLOG2TLBSETCOUNT];
-assign itlbexecutable[gen_tlb_idx] = itlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ];
+assign itlbtag[gen_tlb_idx] = itlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCNT -1 : 0];
+assign itlbppn[gen_tlb_idx] = itlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCNT +PAGENUMBITSZ -1 : PAGENUMBITSZMINUSCLOG2TLBSETCNT];
+assign itlbexecutable[gen_tlb_idx] = itlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCNT +PAGENUMBITSZ];
 assign itlbnotexecutable[gen_tlb_idx] = ~itlbexecutable[gen_tlb_idx];
-assign itlbcached[gen_tlb_idx] = itlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +3];
+assign itlbcached[gen_tlb_idx] = itlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCNT +PAGENUMBITSZ +3];
 //assign itlbnotcached[gen_tlb_idx] = ~itlbcached[gen_tlb_idx];
-assign itlbuser[gen_tlb_idx] = itlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +4];
+assign itlbuser[gen_tlb_idx] = itlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCNT +PAGENUMBITSZ +4];
 assign itlbnotuser[gen_tlb_idx] = ~itlbuser[gen_tlb_idx];
-assign itlbasid[gen_tlb_idx] = itlbentry[gen_tlb_idx][(PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +5) +12 -1 : PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +5];
+assign itlbasid[gen_tlb_idx] = itlbentry[gen_tlb_idx][(PAGENUMBITSZMINUSCLOG2TLBSETCNT +PAGENUMBITSZ +5) +12 -1 : PAGENUMBITSZMINUSCLOG2TLBSETCNT +PAGENUMBITSZ +5];
 assign itlbmiss__[gen_tlb_idx] = (
 	(!inkernelmode_kmodepaging && inuserspace && itlbnotuser[gen_tlb_idx]) ||
 	(asid[12 -1 : 0] != itlbasid[gen_tlb_idx]) ||
 	(ivpn != itlbtag[gen_tlb_idx]));
 
-assign dtlbtag[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT -1 : 0];
-assign dtlbppn[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ -1 : PAGENUMBITSZMINUSCLOG2TLBSETCOUNT];
-assign dtlbwritable[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +1];
+assign dtlbtag[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCNT -1 : 0];
+assign dtlbppn[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCNT +PAGENUMBITSZ -1 : PAGENUMBITSZMINUSCLOG2TLBSETCNT];
+assign dtlbwritable[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCNT +PAGENUMBITSZ +1];
 assign dtlbnotwritable[gen_tlb_idx] = ~dtlbwritable[gen_tlb_idx];
-assign dtlbreadable[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +2];
+assign dtlbreadable[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCNT +PAGENUMBITSZ +2];
 assign dtlbnotreadable[gen_tlb_idx] = ~dtlbreadable[gen_tlb_idx];
-assign dtlbcached[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +3];
+assign dtlbcached[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCNT +PAGENUMBITSZ +3];
 //assign dtlbnotcached[gen_tlb_idx] = ~dtlbcached[gen_tlb_idx];
-assign dtlbuser[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +4];
+assign dtlbuser[gen_tlb_idx] = dtlbentry[gen_tlb_idx][PAGENUMBITSZMINUSCLOG2TLBSETCNT +PAGENUMBITSZ +4];
 assign dtlbnotuser[gen_tlb_idx] = ~dtlbuser[gen_tlb_idx];
-assign dtlbasid[gen_tlb_idx] = dtlbentry[gen_tlb_idx][(PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +5) +12 -1 : PAGENUMBITSZMINUSCLOG2TLBSETCOUNT +PAGENUMBITSZ +5];
+assign dtlbasid[gen_tlb_idx] = dtlbentry[gen_tlb_idx][(PAGENUMBITSZMINUSCLOG2TLBSETCNT +PAGENUMBITSZ +5) +12 -1 : PAGENUMBITSZMINUSCLOG2TLBSETCNT +PAGENUMBITSZ +5];
 assign dtlbmiss__[gen_tlb_idx] = (
 	(!inkernelmode_kmodepaging && inuserspace && dtlbnotuser[gen_tlb_idx]) ||
 	(asid[12 -1 : 0] != dtlbasid[gen_tlb_idx]) ||
@@ -1138,8 +1138,8 @@ assign dtlbmiss__[gen_tlb_idx] = (
 end endgenerate
 
 // Nets used by gettlb.
-wire itlbgettlbhit = ((gprdata2[12 -1 : 0] == itlbasid[itlbwayhitidx]) && (gprdata2[(WORDBITSZ-1) : 12 +CLOG2TLBSETCOUNT] == itlbtag[itlbwayhitidx]));
-wire dtlbgettlbhit = ((gprdata2[12 -1 : 0] == dtlbasid[dtlbwayhitidx]) && (gprdata2[(WORDBITSZ-1) : 12 +CLOG2TLBSETCOUNT] == dtlbtag[dtlbwayhitidx]));
+wire itlbgettlbhit = ((gprdata2[12 -1 : 0] == itlbasid[itlbwayhitidx]) && (gprdata2[(WORDBITSZ-1) : 12 +CLOG2TLBSETCNT] == itlbtag[itlbwayhitidx]));
+wire dtlbgettlbhit = ((gprdata2[12 -1 : 0] == dtlbasid[dtlbwayhitidx]) && (gprdata2[(WORDBITSZ-1) : 12 +CLOG2TLBSETCNT] == dtlbtag[dtlbwayhitidx]));
 reg[WORDBITSZ -1 : 0] opgettlbresult;
 wire[WORDBITSZ -1 : 0] opgettlbresult_ = (
 	(!(itlbgettlbhit | dtlbgettlbhit)) ? {WORDBITSZ{1'b0}} :
@@ -1178,19 +1178,19 @@ always @ (posedge clk_i)
 
 `else
 
-wire [CLOG2TLBWAYCOUNT -1 : 0] dtlbwayhitidx = 0;
-wire [TLBWAYCOUNT -1 : 0] dtlbnotwritable = 0;
-wire [TLBWAYCOUNT -1 : 0] dtlbnotreadable = 0;
-wire [TLBWAYCOUNT -1 : 0] dtlbcached = 0;
+wire [CLOG2TLBWAYCNT -1 : 0] dtlbwayhitidx = 0;
+wire [TLBWAYCNT -1 : 0] dtlbnotwritable = 0;
+wire [TLBWAYCNT -1 : 0] dtlbnotreadable = 0;
+wire [TLBWAYCNT -1 : 0] dtlbcached = 0;
 wire dtlbmiss = 0;
 wire dtlben = 0;
-wire [CLOG2TLBWAYCOUNT -1 : 0] itlbwayhitidx = 0;
-wire [TLBWAYCOUNT -1 : 0] itlbnotexecutable = 0;
-wire [TLBWAYCOUNT -1 : 0] itlbcached = 0;
+wire [CLOG2TLBWAYCNT -1 : 0] itlbwayhitidx = 0;
+wire [TLBWAYCNT -1 : 0] itlbnotexecutable = 0;
+wire [TLBWAYCNT -1 : 0] itlbcached = 0;
 wire itlbmiss = 0;
 genvar gen_tlb_idx;
-wire[PAGENUMBITSZ -1 : 0] itlbppn [TLBWAYCOUNT -1 : 0];
-generate for (gen_tlb_idx = 0; gen_tlb_idx < TLBWAYCOUNT; gen_tlb_idx = gen_tlb_idx + 1) begin :gen_tlb
+wire[PAGENUMBITSZ -1 : 0] itlbppn [TLBWAYCNT -1 : 0];
+generate for (gen_tlb_idx = 0; gen_tlb_idx < TLBWAYCNT; gen_tlb_idx = gen_tlb_idx + 1) begin :gen_tlb
 assign itlbppn[gen_tlb_idx] = 0;
 end endgenerate
 wire itlben = 0;
@@ -1271,16 +1271,16 @@ wire[PAGENUMBITSZ -1 : 0] instrfetchnextppn =
 wire[ADDRBITSZ -1 : 0] instrfetchnextppninstrfetchnextaddr = {instrfetchnextppn, instrfetchnextaddr[ADDRWITHINPAGEBITSZ-1:0]};
 wire[ADDRBITSZ -1 : 0] instrfetchppninstrfetchaddr = {instrfetchppn, instrfetchaddr[ADDRWITHINPAGEBITSZ-1:0]};
 
-wire[CLOG2ICACHESETCOUNT -1 : 0] icachenextset = instrfetchnextppninstrfetchnextaddr[(CLOG2ICACHESETCOUNT+CLOG2XWORDBITSZBY8DIFF)-1:CLOG2XWORDBITSZBY8DIFF];
-wire[CLOG2ICACHESETCOUNT -1 : 0] icacheset = instrfetchppninstrfetchaddr[(CLOG2ICACHESETCOUNT+CLOG2XWORDBITSZBY8DIFF)-1:CLOG2XWORDBITSZBY8DIFF];
+wire[CLOG2ICACHESETCNT -1 : 0] icachenextset = instrfetchnextppninstrfetchnextaddr[(CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8DIFF)-1:CLOG2XWORDBITSZBY8DIFF];
+wire[CLOG2ICACHESETCNT -1 : 0] icacheset = instrfetchppninstrfetchaddr[(CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8DIFF)-1:CLOG2XWORDBITSZBY8DIFF];
 
 // Bitsize of an icache tag.
-localparam ICACHETAGBITSIZE = (ADDRBITSZ - (CLOG2ICACHESETCOUNT+CLOG2XWORDBITSZBY8DIFF));
+localparam ICACHETAGBITSIZE = (ADDRBITSZ - (CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8DIFF));
 
-wire[ICACHETAGBITSIZE -1 : 0] icachenexttag = instrfetchnextppninstrfetchnextaddr[ADDRBITSZ-1:(CLOG2ICACHESETCOUNT+CLOG2XWORDBITSZBY8DIFF)];
+wire[ICACHETAGBITSIZE -1 : 0] icachenexttag = instrfetchnextppninstrfetchnextaddr[ADDRBITSZ-1:(CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8DIFF)];
 
 // Net set to the tag value being compared for an instruction cache hit.
-wire[ICACHETAGBITSIZE -1 : 0] icachetag = instrfetchppninstrfetchaddr[ADDRBITSZ-1:(CLOG2ICACHESETCOUNT+CLOG2XWORDBITSZBY8DIFF)];
+wire[ICACHETAGBITSIZE -1 : 0] icachetag = instrfetchppninstrfetchaddr[ADDRBITSZ-1:(CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8DIFF)];
 
 reg icachehit_; // ### comb-block-reg.
 wire icachehit__;
@@ -1308,25 +1308,25 @@ end
 `endif
 
 icache #(
-	 .WAYCNT (ICACHEWAYCOUNT)
-	,.SETCNT (ICACHESETCOUNT)
+	 .WAYCNT   (ICACHEWAYCNT)
+	,.SETCNT   (ICACHESETCNT)
 	,.TAGBITSZ (ICACHETAGBITSIZE)
 	,.DATBITSZ (XWORDBITSZ)
 ) icache (
-	 .rst_i (rst_i)
-	,.clk_i (clk_i)
-	,.invd_i (doicacherst)
+	 .rst_i    (rst_i)
+	,.clk_i    (clk_i)
+	,.invd_i   (doicacherst)
 	,.nxtway_i (instrbufrst)
-	,.we_i (instrfetchmemrqstdone)
-	,.widx_i (icacheset)
-	,.wtag_i (icachetag)
-	,.dat_i (wb_dat_i)
-	,.re_i (!icachecheck || instrbufrst)
-	,.ridx_i (icachenextset)
-	,.rtag_i (icachenexttag)
-	,.dat_o (icachedato_)
-	,.hit_o (icachehit__)
-	,.rdy_o (icacheactive)
+	,.we_i     (instrfetchmemrqstdone)
+	,.widx_i   (icacheset)
+	,.wtag_i   (icachetag)
+	,.dat_i    (wb_dat_i)
+	,.re_i     (!icachecheck || instrbufrst)
+	,.ridx_i   (icachenextset)
+	,.rtag_i   (icachenexttag)
+	,.dat_o    (icachedato_)
+	,.hit_o    (icachehit__)
+	,.rdy_o    (icacheactive)
 );
 
 reg icachebsy = 0;
@@ -2227,8 +2227,8 @@ always @* begin
 	3:       opgetsysregresult = {{(WORDBITSZ-3){1'b0}}, faultreason};
 	4:       opgetsysregresult = clkcyclecnt[WORDBITSZ -1 : 0];
 	5:       opgetsysregresult = clkcyclecnt[(WORDBITSZ*2) -1 : WORDBITSZ];
-	6:       opgetsysregresult = (TLBSETCOUNT*TLBWAYCOUNT);
-	default: opgetsysregresult = ((ICACHESETCOUNT*ICACHEWAYCOUNT) << CLOG2XWORDBITSZBY8DIFF);
+	6:       opgetsysregresult = (TLBSETCNT*TLBWAYCNT);
+	default: opgetsysregresult = ((ICACHESETCNT*ICACHEWAYCNT) << CLOG2XWORDBITSZBY8DIFF);
 	endcase
 end
 
@@ -2260,7 +2260,7 @@ always @* begin
 	0:       opgetsysreg1result = id_i;
 	1:       opgetsysreg1result = CLKFREQ;
 	`ifdef PUDCACHE
-	2:       opgetsysreg1result = ((DCACHESETCOUNT*DCACHEWAYCOUNT) << CLOG2XWORDBITSZBY8DIFF);
+	2:       opgetsysreg1result = ((DCACHESETCNT*DCACHEWAYCNT) << CLOG2XWORDBITSZBY8DIFF);
 	`endif
 	`ifdef PUMMU
 	3:       opgetsysreg1result = opgettlbresult;
@@ -2806,8 +2806,8 @@ reg dcache_cmiss_r;
 dcache #(
 
 	 .WORDBITSZ     (XWORDBITSZ)
-	,.CACHESETCOUNT (DCACHESETCOUNT)
-	,.CACHEWAYCOUNT (DCACHEWAYCOUNT)
+	,.CACHESETCNT   (DCACHESETCNT)
+	,.CACHEWAYCNT   (DCACHEWAYCNT)
 	,.MAXPENDINGACK (MAXPENDINGACK)
 
 ) dcache (

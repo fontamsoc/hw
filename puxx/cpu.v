@@ -66,19 +66,19 @@ module cpu (
 
 `include "lib/clog2.v"
 
-parameter CLKFREQ        = 1;
-parameter ICACHESETCOUNT = 2;
-parameter DCACHESETCOUNT = 2;
-parameter TLBSETCOUNT    = 2;
-parameter ICACHEWAYCOUNT = 1;
-parameter DCACHEWAYCOUNT = 1;
-parameter IMULCNT        = 2;
-parameter IDIVCNT        = 2;
-parameter FADDFSUBCNT    = 1;
-parameter FMULCNT        = 1;
-parameter FDIVCNT        = 1;
-parameter MAXPENDINGACK  = 16;
-parameter VERSION        = {8'd1/*major-version*/, 8'd0/*minor-version*/};
+parameter CLKFREQ       = 1;
+parameter ICACHESETCNT  = 2;
+parameter DCACHESETCNT  = 2;
+parameter TLBSETCNT     = 2;
+parameter ICACHEWAYCNT  = 1;
+parameter DCACHEWAYCNT  = 1;
+parameter IMULCNT       = 2;
+parameter IDIVCNT       = 2;
+parameter FADDFSUBCNT   = 1;
+parameter FMULCNT       = 1;
+parameter FDIVCNT       = 1;
+parameter MAXPENDINGACK = 16;
+parameter VERSION       = {8'd1/*major-version*/, 8'd0/*minor-version*/};
 
 parameter WORDBITSZ  = 32;
 parameter XWORDBITSZ = 32;
@@ -270,21 +270,21 @@ generate for (
 	genpu_idx = genpu_idx + 1) begin :genpu
 
 pu #(
-	 .WORDBITSZ      (WORDBITSZ)
-	,.XWORDBITSZ     (XWORDBITSZ)
-	,.CLKFREQ        (CLKFREQ)
-	,.ICACHESETCOUNT (ICACHESETCOUNT)
-	,.DCACHESETCOUNT (DCACHESETCOUNT)
-	,.TLBSETCOUNT    (TLBSETCOUNT)
-	,.ICACHEWAYCOUNT (ICACHEWAYCOUNT)
-	,.DCACHEWAYCOUNT (DCACHEWAYCOUNT)
-	,.IMULCNT        (IMULCNT)
-	,.IDIVCNT        (IDIVCNT)
-	,.FADDFSUBCNT    (FADDFSUBCNT)
-	,.FMULCNT        (FMULCNT)
-	,.FDIVCNT        (FDIVCNT)
-	,.MAXPENDINGACK  (MAXPENDINGACK)
-	,.VERSION        (VERSION)
+	 .WORDBITSZ     (WORDBITSZ)
+	,.XWORDBITSZ    (XWORDBITSZ)
+	,.CLKFREQ       (CLKFREQ)
+	,.ICACHESETCNT  (ICACHESETCNT)
+	,.DCACHESETCNT  (DCACHESETCNT)
+	,.TLBSETCNT     (TLBSETCNT)
+	,.ICACHEWAYCNT  (ICACHEWAYCNT)
+	,.DCACHEWAYCNT  (DCACHEWAYCNT)
+	,.IMULCNT       (IMULCNT)
+	,.IDIVCNT       (IDIVCNT)
+	,.FADDFSUBCNT   (FADDFSUBCNT)
+	,.FMULCNT       (FMULCNT)
+	,.FDIVCNT       (FDIVCNT)
+	,.MAXPENDINGACK (MAXPENDINGACK)
+	,.VERSION       (VERSION)
 ) pu (
 
 	 .rst_i (rst_i)

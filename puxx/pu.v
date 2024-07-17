@@ -11,26 +11,26 @@
 // CLKFREQ
 // 	Frequency of the clock input "clk_i" in Hz.
 //
-// ICACHESETCOUNT
+// ICACHESETCNT
 // 	Number of instruction cache set.
 // 	Each cache set is XWORDBITSZ bits.
 // 	It must be at least 2 and a power-of-2.
 //
-// DCACHESETCOUNT
+// DCACHESETCNT
 // 	Number of data cache set.
 // 	Each cache set is XWORDBITSZ bits.
 // 	It must be at least 2 and a power-of-2.
 //
-// TLBSETCOUNT
+// TLBSETCNT
 // 	Number of tlb entries.
 // 	It must be at least 2, a power-of-2,
 // 	and less than or equal to 2^(PAGENUMBITSZ-1).
 //
-// ICACHEWAYCOUNT
+// ICACHEWAYCNT
 // 	Number of icache ways.
 // 	It must be non-null and a power-of-2.
 //
-// DCACHEWAYCOUNT
+// DCACHEWAYCNT
 // 	Number of dcache ways.
 // 	It must be non-null and a power-of-2.
 //
@@ -207,23 +207,23 @@ module pu (
 
 `include "lib/clog2.v"
 
-parameter CLKFREQ        = 1;
-parameter ICACHESETCOUNT = 2;
-parameter DCACHESETCOUNT = 2;
-parameter TLBSETCOUNT    = 2;
-parameter ICACHEWAYCOUNT = 1;
-parameter DCACHEWAYCOUNT = 1;
-parameter IMULCNT        = 2;
-parameter IDIVCNT        = 2;
-parameter FADDFSUBCNT    = 1;
-parameter FMULCNT        = 1;
-parameter FDIVCNT        = 1;
-parameter MAXPENDINGACK  = 16; // Default to number of GPRs for which stores could be done.
-parameter VERSION        = {8'd1/*major-version*/, 8'd0/*minor-version*/};
+parameter CLKFREQ       = 1;
+parameter ICACHESETCNT  = 2;
+parameter DCACHESETCNT  = 2;
+parameter TLBSETCNT     = 2;
+parameter ICACHEWAYCNT  = 1;
+parameter DCACHEWAYCNT  = 1;
+parameter IMULCNT       = 2;
+parameter IDIVCNT       = 2;
+parameter FADDFSUBCNT   = 1;
+parameter FMULCNT       = 1;
+parameter FDIVCNT       = 1;
+parameter MAXPENDINGACK = 16; // Default to number of GPRs for which stores could be done.
+parameter VERSION       = {8'd1/*major-version*/, 8'd0/*minor-version*/};
 
-localparam CLOG2ICACHESETCOUNT = clog2(ICACHESETCOUNT);
-localparam CLOG2DCACHESETCOUNT = clog2(DCACHESETCOUNT);
-localparam CLOG2ICACHEWAYCOUNT = clog2(ICACHEWAYCOUNT);
+localparam CLOG2ICACHESETCNT = clog2(ICACHESETCNT);
+localparam CLOG2DCACHESETCNT = clog2(DCACHESETCNT);
+localparam CLOG2ICACHEWAYCNT = clog2(ICACHEWAYCNT);
 
 parameter WORDBITSZ  = 32;
 parameter XWORDBITSZ = 32; // TODO: Support all the way up to 1024 ...

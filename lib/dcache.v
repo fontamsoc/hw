@@ -42,8 +42,8 @@ module dcache (
 
 parameter WORDBITSZ = 32;
 
-parameter CACHESETCOUNT = 2;
-parameter CACHEWAYCOUNT = 1;
+parameter CACHESETCNT = 2;
+parameter CACHEWAYCNT = 1;
 
 parameter REGCACHEHIT = 0;
 parameter REGSLVINPUT = 0;
@@ -52,8 +52,8 @@ parameter MAXPENDINGACK = 0; // Enables faster eviction when non-null.
 
 parameter INITFILE = "";
 
-localparam CLOG2CACHESETCOUNT = clog2(CACHESETCOUNT);
-localparam CLOG2CACHEWAYCOUNT = clog2(CACHEWAYCOUNT);
+localparam CLOG2CACHESETCNT = clog2(CACHESETCNT);
+localparam CLOG2CACHEWAYCNT = clog2(CACHEWAYCNT);
 
 localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
 
@@ -166,18 +166,18 @@ wire cache_we = (!rst_i && !cmiss_r && (
 	(state == TESTHIT && !cache_bsy && m_wb_we_r) ||
 	(!s_wb_we_o && refill_ack)));
 
-localparam CACHETAGBITSIZE = (ADDRBITSZ - CLOG2CACHESETCOUNT);
+localparam CACHETAGBITSIZE = (ADDRBITSZ - CLOG2CACHESETCNT);
 
-wire [CLOG2CACHESETCOUNT -1 : 0] cache_rdidx = m_wb_addr_i[CLOG2CACHESETCOUNT -1 : 0];
-wire [CLOG2CACHESETCOUNT -1 : 0] cache_wridx = m_wb_addr_r[CLOG2CACHESETCOUNT -1 : 0];
+wire [CLOG2CACHESETCNT -1 : 0] cache_rdidx = m_wb_addr_i[CLOG2CACHESETCNT -1 : 0];
+wire [CLOG2CACHESETCNT -1 : 0] cache_wridx = m_wb_addr_r[CLOG2CACHESETCNT -1 : 0];
 
-reg [CACHETAGBITSIZE -1 : 0] cache_tag_o [CACHEWAYCOUNT -1 : 0];
-reg [(WORDBITSZ/8) -1 : 0]   cache_sel_o [CACHEWAYCOUNT -1 : 0];
-reg [WORDBITSZ -1 : 0]       cache_dat_o [CACHEWAYCOUNT -1 : 0];
-reg                          cache_drt_o [CACHEWAYCOUNT -1 : 0];
+reg [CACHETAGBITSIZE -1 : 0] cache_tag_o [CACHEWAYCNT -1 : 0];
+reg [(WORDBITSZ/8) -1 : 0]   cache_sel_o [CACHEWAYCNT -1 : 0];
+reg [WORDBITSZ -1 : 0]       cache_dat_o [CACHEWAYCNT -1 : 0];
+reg                          cache_drt_o [CACHEWAYCNT -1 : 0];
 
-reg [CLOG2CACHEWAYCOUNT -1 : 0] cache_tag_hit_wayidx_; // ### comb-block-reg.
-reg [CLOG2CACHEWAYCOUNT -1 : 0] cache_tag_hit_wayidx;
+reg [CLOG2CACHEWAYCNT -1 : 0] cache_tag_hit_wayidx_; // ### comb-block-reg.
+reg [CLOG2CACHEWAYCNT -1 : 0] cache_tag_hit_wayidx;
 generate if (REGCACHEHIT) begin
 always @ (posedge clk_i)
 	cache_tag_hit_wayidx <= cache_tag_hit_wayidx_;
@@ -186,9 +186,9 @@ always @*
 	cache_tag_hit_wayidx = cache_tag_hit_wayidx_;
 end endgenerate
 
-reg [CLOG2CACHEWAYCOUNT -1 : 0] cache_we_wayidx;
+reg [CLOG2CACHEWAYCNT -1 : 0] cache_we_wayidx;
 
-wire [CACHETAGBITSIZE -1 : 0] cache_tag_i = m_wb_addr_r[ADDRBITSZ -1 : CLOG2CACHESETCOUNT];
+wire [CACHETAGBITSIZE -1 : 0] cache_tag_i = m_wb_addr_r[ADDRBITSZ -1 : CLOG2CACHESETCNT];
 
 wire [(WORDBITSZ/8) -1 : 0] cache_sel_o_tag_hit = cache_sel_o[cache_tag_hit_wayidx];
 wire [(WORDBITSZ/8) -1 : 0] cache_sel_i = (
@@ -212,13 +212,13 @@ wire cache_drt_i = (!rst_r && !conly_r && !cmiss_r && (m_wb_we_r || cache_tag_hi
 genvar gen_cache_idx;
 generate for (
 	gen_cache_idx = 0;
-	gen_cache_idx < CACHEWAYCOUNT;
+	gen_cache_idx < CACHEWAYCNT;
 	gen_cache_idx = gen_cache_idx + 1) begin :gen_cache
 
-	reg [CACHETAGBITSIZE -1 : 0] cache_tags [CACHESETCOUNT -1 : 0];
-	reg [(WORDBITSZ/8) -1 : 0]   cache_sels [CACHESETCOUNT -1 : 0];
-	reg [WORDBITSZ -1 : 0]       cache_dats [CACHESETCOUNT -1 : 0];
-	reg                          cache_drts [CACHESETCOUNT -1 : 0];
+	reg [CACHETAGBITSIZE -1 : 0] cache_tags [CACHESETCNT -1 : 0];
+	reg [(WORDBITSZ/8) -1 : 0]   cache_sels [CACHESETCNT -1 : 0];
+	reg [WORDBITSZ -1 : 0]       cache_dats [CACHESETCNT -1 : 0];
+	reg                          cache_drts [CACHESETCNT -1 : 0];
 
 	initial begin
 		if (INITFILE != "" && gen_cache_idx == 0 /* TODO: check whether worst logic */) begin
@@ -260,10 +260,10 @@ always @* begin
 	cache_tag_hit_wayidx_ = 0;
 	for (
 		gen_cachehit_idx = 0;
-		gen_cachehit_idx < CACHEWAYCOUNT;
+		gen_cachehit_idx < CACHEWAYCNT;
 		gen_cachehit_idx = gen_cachehit_idx + 1) begin
 		if (!cache_tag_hit_ && !conly_r && cache_sel_o[gen_cachehit_idx] &&
-			m_wb_addr_r[ADDRBITSZ -1 : CLOG2CACHESETCOUNT] == cache_tag_o[gen_cachehit_idx]) begin
+			m_wb_addr_r[ADDRBITSZ -1 : CLOG2CACHESETCNT] == cache_tag_o[gen_cachehit_idx]) begin
 			cache_tag_hit_ = 1;
 			cache_tag_hit_wayidx_ = gen_cachehit_idx;
 		end
@@ -273,7 +273,7 @@ end
 wire cache_hit = (cache_tag_hit && ((m_wb_sel_r & cache_sel_o_tag_hit) == m_wb_sel_r));
 
 always @ (posedge clk_i) begin
-	if (CACHEWAYCOUNT == 1 || (cache_stb && conly_i) || conly_r) begin
+	if (CACHEWAYCNT == 1 || (cache_stb && conly_i) || conly_r) begin
 		cache_we_wayidx <= 0;
 	end else if (cache_we && !cache_tag_hit) begin
 		cache_we_wayidx <= cache_we_wayidx + 1'b1;
@@ -302,7 +302,7 @@ always @ (posedge clk_i) begin
 
 		if (rst_r) begin
 
-			if (m_wb_addr_r == (CACHESETCOUNT - 1)) begin
+			if (m_wb_addr_r == (CACHESETCNT - 1)) begin
 				m_wb_bsy_o_ <= 0;
 				rst_r <= 0;
 			end else
