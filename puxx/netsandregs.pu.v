@@ -1083,7 +1083,7 @@ bram #(
 ) itlb (
 
 	 .clk0_i  (clk_i)                  ,.clk1_i  (clk_i)
-	,.en0_i   (itlbre)         ,.en1_i   (1'b1)
+	,.en0_i   (itlbre)                 ,.en1_i   (1'b1)
 	                                   ,.we1_i   (itlbwe && ((itlbwaywriteidx == gen_tlb_idx) || isopclrtlb))
 	,.addr0_i (itlbset)                ,.addr1_i (itlbset)
 	                                   ,.i1      (tlbwritedata)
@@ -1098,7 +1098,7 @@ bram #(
 ) dtlb (
 
 	 .clk0_i  (clk_i)                  ,.clk1_i  (clk_i)
-	,.en0_i   (dtlbre)         ,.en1_i   (1'b1)
+	,.en0_i   (dtlbre)                 ,.en1_i   (1'b1)
 	                                   ,.we1_i   (dtlbwe && ((dtlbwaywriteidx == gen_tlb_idx) || isopclrtlb))
 	,.addr0_i (dtlbset)                ,.addr1_i (dtlbset)
 	                                   ,.i1      (tlbwritedata)
@@ -1664,6 +1664,16 @@ end endgenerate
 wire [16 -1 : 0] sc2insn2 = (|sc2instrbufusage2 ? _sc2instrbufipnxt : _sc2instrbufi2);
 wire [16 -1 : 0] sc2insn3 = (|sc2instrbufusage3 ? _sc2instrbufip3   : _sc2instrbufi3);
 
+wire [WORDBITSZ -1 : 0] sc2gprdata1;
+wire [WORDBITSZ -1 : 0] sc2gprdata2;
+
+wire sc2gprrdy1;
+wire sc2gprrdy2;
+
+reg [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx;
+reg [WORDBITSZ -1 : 0] sc2gprdata;
+reg sc2gprwe;
+
 reg [16 -1 : 0] sc2instrbufdato;
 
 wire [8 -1 : 0] sc2instrbufdato0 = sc2instrbufdato[7:0];
@@ -1691,16 +1701,6 @@ wire sc2isopjtrue = (sc2isopj && (sc2isoptype2 || (|sc2gprdata1 == sc2instrbufda
 
 wire [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx1 = {inusermode, sc2instrbufdato1[7:4]};
 wire [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx2 = {inusermode, sc2instrbufdato1[3:0]};
-
-wire [WORDBITSZ -1 : 0] sc2gprdata1;
-wire [WORDBITSZ -1 : 0] sc2gprdata2;
-
-wire sc2gprrdy1;
-wire sc2gprrdy2;
-
-reg [CLOG2GPRCNTTOTAL -1 : 0] sc2gpridx;
-reg [WORDBITSZ -1 : 0] sc2gprdata;
-reg sc2gprwe;
 
 wire sc2usegpr2 = (sc2isopalu0 || sc2isopalu1 || sc2isopalu2 || sc2isopj);
 wire sc2usegpr1 = ( // ### sc2usegpr1 is to be true for all SC2 operations.
