@@ -307,10 +307,12 @@ wire instrfetchmemrqstdone = instrfetchmemrqstdone_ && !instrbufrst;
 
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] wb_pending_acks;
 
+wire wb_max_pending = (wb_pending_acks == MAXPENDINGACK);
+
 // This net is 1 when a memory request was made,
 // but the actual memory access is pending execution.
 wire instrfetchmemaccesspending = (instrfetchmemrqst && instrbufnotfull && !instrbufrst &&
-	!instrfetchmemrqstseqvalid && !instrfetchmemrqstabortseqvalid && wb_pending_acks != MAXPENDINGACK);
+	!instrfetchmemrqstseqvalid && !instrfetchmemrqstabortseqvalid);
 
 // ---------- Registers and nets used by opli ----------
 
@@ -407,9 +409,7 @@ wire [XWORDBITSZ -1 : 0]     dcache_s_dat_o;
 
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] dcache_m_pending_acks;
 
-wire _dcache_m_bsy_o = (dcache_m_bsy_o || dcache_m_pending_acks == MAXPENDINGACK);
-
-wire _dcache_m_stb_i = (dcache_m_stb_i && !_dcache_m_bsy_o);
+wire _dcache_m_stb_i = (dcache_m_stb_i && !dcache_m_bsy_o);
 
 reg [CLOG2MAXPENDINGACK -1 : 0] dcache_m_rqst_cnt;
 reg [CLOG2MAXPENDINGACK -1 : 0] dcache_m_rsp_cnt;
@@ -438,7 +438,7 @@ end
 assign dcache_m_cyc_i = (dcache_m_stb_i || dcache_m_we_i_ || (|dcache_m_pending_acks));
 
 // Signal set to 1 when the logic setting dcache_m_stb_i is busy.
-wire __dcache_m_bsy = ((dcache_m_stb_i && _dcache_m_bsy_o) || dcache_m_we_i_);
+wire __dcache_m_bsy = ((dcache_m_stb_i && dcache_m_bsy_o) || dcache_m_we_i_);
 
 // ---------- Registers and nets used by Hardware-Page-Table-Walker ----------
 
@@ -2503,7 +2503,7 @@ wire opldstb = (miscrdyandsequencerreadyandgprrdy12 &&
 
 reg opldstb_r;
 always @ (posedge clk_i) begin
-	if (rst_i || !opldstb_r || !_dcache_m_bsy_o)
+	if (rst_i || !opldstb_r || !dcache_m_bsy_o)
 		opldstb_r <= opldstb;
 end
 
@@ -2748,24 +2748,23 @@ end
 
 // ---------- Registers and nets used by data caching ----------
 
-wire                         upsizr_dcache_m_cyc_i;
-wire                         upsizr_dcache_m_stb_i;
-wire                         upsizr_dcache_m_we_i;
-wire [XADDRBITSZ -1 : 0]     upsizr_dcache_m_addr_i;
-wire [(XWORDBITSZ/8) -1 : 0] upsizr_dcache_m_sel_i;
-wire [XWORDBITSZ -1 : 0]     upsizr_dcache_m_dat_i;
-wire                         upsizr_dcache_m_bsy_o;
-wire                         upsizr_dcache_m_ack_o;
-wire [XWORDBITSZ -1 : 0]     upsizr_dcache_m_dat_o;
+wire                        skidBuf_dCache_s_cyc_o;
+wire                        skidBuf_dCache_s_stb_o;
+wire                        skidBuf_dCache_s_we_o;
+wire [ADDRBITSZ -1 : 0]     skidBuf_dCache_s_addr_o;
+wire [(WORDBITSZ/8) -1 : 0] skidBuf_dCache_s_sel_o;
+wire [WORDBITSZ -1 : 0]     skidBuf_dCache_s_dat_o;
+wire                        skidBuf_dCache_s_bsy_i;
+wire                        skidBuf_dCache_s_ack_i;
+wire [WORDBITSZ -1 : 0]     skidBuf_dCache_s_dat_i;
 
-wb_upsizr #(
+`ifdef PUDCACHE
 
-	 .MWORDBITSZ    (WORDBITSZ)
-	,.SWORDBITSZ    (XWORDBITSZ)
+wb_skidbuf #(
+	 .WORDBITSZ     (WORDBITSZ)
 	,.MAXPENDINGACK (MAXPENDINGACK)
 	,.USEFWFTFIFO   (1)
-
-) upsizr_dcache (
+) skidBuf_dCache (
 
 	 .rst_i (rst_i)
 
@@ -2781,18 +2780,76 @@ wb_upsizr #(
 	,.m_wb_ack_o  (dcache_m_ack_o)
 	,.m_wb_dat_o  (dcache_m_dat_o)
 
-	,.s_wb_cyc_o  (upsizr_dcache_m_cyc_i)
-	,.s_wb_stb_o  (upsizr_dcache_m_stb_i)
-	,.s_wb_we_o   (upsizr_dcache_m_we_i)
-	,.s_wb_addr_o (upsizr_dcache_m_addr_i)
-	,.s_wb_sel_o  (upsizr_dcache_m_sel_i)
-	,.s_wb_dat_o  (upsizr_dcache_m_dat_i)
-	,.s_wb_bsy_i  (upsizr_dcache_m_bsy_o)
-	,.s_wb_ack_i  (upsizr_dcache_m_ack_o)
-	,.s_wb_dat_i  (upsizr_dcache_m_dat_o)
+	,.s_wb_cyc_o  (skidBuf_dCache_s_cyc_o)
+	,.s_wb_stb_o  (skidBuf_dCache_s_stb_o)
+	,.s_wb_we_o   (skidBuf_dCache_s_we_o)
+	,.s_wb_addr_o (skidBuf_dCache_s_addr_o)
+	,.s_wb_sel_o  (skidBuf_dCache_s_sel_o)
+	,.s_wb_dat_o  (skidBuf_dCache_s_dat_o)
+	,.s_wb_bsy_i  (skidBuf_dCache_s_bsy_i)
+	,.s_wb_ack_i  (skidBuf_dCache_s_ack_i)
+	,.s_wb_dat_i  (skidBuf_dCache_s_dat_i)
 );
 
-wire _wb_bsy_i = (wb_bsy_i || wb_pending_acks == MAXPENDINGACK);
+`else
+
+assign skidBuf_dCache_s_cyc_o = dcache_m_cyc_i;
+assign skidBuf_dCache_s_stb_o = dcache_m_stb_i;
+assign skidBuf_dCache_s_we_o = dcache_m_we_i;
+assign skidBuf_dCache_s_addr_o = dcache_m_addr_i;
+assign skidBuf_dCache_s_sel_o = dcache_m_sel_i;
+assign skidBuf_dCache_s_dat_o = dcache_m_dat_i;
+assign dcache_m_bsy_o = skidBuf_dCache_s_bsy_i;
+assign dcache_m_ack_o = skidBuf_dCache_s_ack_i;
+assign dcache_m_dat_o = skidBuf_dCache_s_dat_i;
+
+`endif
+
+wire                         upsizr_dcache_s_cyc_o;
+wire                         upsizr_dcache_s_stb_o;
+wire                         upsizr_dcache_s_we_o;
+wire [XADDRBITSZ -1 : 0]     upsizr_dcache_s_addr_o;
+wire [(XWORDBITSZ/8) -1 : 0] upsizr_dcache_s_sel_o;
+wire [XWORDBITSZ -1 : 0]     upsizr_dcache_s_dat_o;
+wire                         upsizr_dcache_s_bsy_i;
+wire                         upsizr_dcache_s_ack_i;
+wire [XWORDBITSZ -1 : 0]     upsizr_dcache_s_dat_i;
+
+wb_upsizr #(
+
+	 .MWORDBITSZ    (WORDBITSZ)
+	,.SWORDBITSZ    (XWORDBITSZ)
+	,.MAXPENDINGACK (MAXPENDINGACK)
+	,.USEFWFTFIFO   (1)
+
+) upsizr_dcache (
+
+	 .rst_i (rst_i)
+
+	,.clk_i (clk_i)
+
+	,.m_wb_cyc_i  (skidBuf_dCache_s_cyc_o)
+	,.m_wb_stb_i  (skidBuf_dCache_s_stb_o)
+	,.m_wb_we_i   (skidBuf_dCache_s_we_o)
+	,.m_wb_addr_i (skidBuf_dCache_s_addr_o)
+	,.m_wb_sel_i  (skidBuf_dCache_s_sel_o)
+	,.m_wb_dat_i  (skidBuf_dCache_s_dat_o)
+	,.m_wb_bsy_o  (skidBuf_dCache_s_bsy_i)
+	,.m_wb_ack_o  (skidBuf_dCache_s_ack_i)
+	,.m_wb_dat_o  (skidBuf_dCache_s_dat_i)
+
+	,.s_wb_cyc_o  (upsizr_dcache_s_cyc_o)
+	,.s_wb_stb_o  (upsizr_dcache_s_stb_o)
+	,.s_wb_we_o   (upsizr_dcache_s_we_o)
+	,.s_wb_addr_o (upsizr_dcache_s_addr_o)
+	,.s_wb_sel_o  (upsizr_dcache_s_sel_o)
+	,.s_wb_dat_o  (upsizr_dcache_s_dat_o)
+	,.s_wb_bsy_i  (upsizr_dcache_s_bsy_i)
+	,.s_wb_ack_i  (upsizr_dcache_s_ack_i)
+	,.s_wb_dat_i  (upsizr_dcache_s_dat_i)
+);
+
+wire _wb_bsy_i = (wb_bsy_i || wb_max_pending);
 
 wire dcache_s_ack_i = (wb_ack_i &&
 	(!instrfetchmemrqstseqvalid || wb_rsp_cnt != instrfetchmemrqstseq) && !instrfetchmemrqstabort);
@@ -2819,15 +2876,15 @@ dcache #(
 	,.conly_i (1'b0)
 	,.cmiss_i (dcache_cmiss_r)
 
-	,.m_wb_cyc_i  (upsizr_dcache_m_cyc_i)
-	,.m_wb_stb_i  (upsizr_dcache_m_stb_i)
-	,.m_wb_we_i   (upsizr_dcache_m_we_i)
-	,.m_wb_addr_i (upsizr_dcache_m_addr_i)
-	,.m_wb_sel_i  (upsizr_dcache_m_sel_i)
-	,.m_wb_dat_i  (upsizr_dcache_m_dat_i)
-	,.m_wb_bsy_o  (upsizr_dcache_m_bsy_o)
-	,.m_wb_ack_o  (upsizr_dcache_m_ack_o)
-	,.m_wb_dat_o  (upsizr_dcache_m_dat_o)
+	,.m_wb_cyc_i  (upsizr_dcache_s_cyc_o)
+	,.m_wb_stb_i  (upsizr_dcache_s_stb_o)
+	,.m_wb_we_i   (upsizr_dcache_s_we_o)
+	,.m_wb_addr_i (upsizr_dcache_s_addr_o)
+	,.m_wb_sel_i  (upsizr_dcache_s_sel_o)
+	,.m_wb_dat_i  (upsizr_dcache_s_dat_o)
+	,.m_wb_bsy_o  (upsizr_dcache_s_bsy_i)
+	,.m_wb_ack_o  (upsizr_dcache_s_ack_i)
+	,.m_wb_dat_o  (upsizr_dcache_s_dat_i)
 
 	,.s_wb_cyc_o  (dcache_s_cyc_o)
 	,.s_wb_stb_o  (dcache_s_stb_o)
@@ -2842,16 +2899,16 @@ dcache #(
 
 `else
 
-assign dcache_s_cyc_o = upsizr_dcache_m_cyc_i;
-assign dcache_s_stb_o = upsizr_dcache_m_stb_i;
-assign dcache_s_we_o = upsizr_dcache_m_we_i;
-assign dcache_s_addr_o = upsizr_dcache_m_addr_i;
-assign dcache_s_sel_o = upsizr_dcache_m_sel_i;
-assign dcache_s_dat_o = upsizr_dcache_m_dat_i;
+assign dcache_s_cyc_o = upsizr_dcache_s_cyc_o;
+assign dcache_s_stb_o = upsizr_dcache_s_stb_o;
+assign dcache_s_we_o = upsizr_dcache_s_we_o;
+assign dcache_s_addr_o = upsizr_dcache_s_addr_o;
+assign dcache_s_sel_o = upsizr_dcache_s_sel_o;
+assign dcache_s_dat_o = upsizr_dcache_s_dat_o;
 
-assign upsizr_dcache_m_bsy_o = _wb_bsy_i;
-assign upsizr_dcache_m_ack_o = dcache_s_ack_i;
-assign upsizr_dcache_m_dat_o = wb_dat_i;
+assign upsizr_dcache_s_bsy_i = _wb_bsy_i;
+assign upsizr_dcache_s_ack_i = dcache_s_ack_i;
+assign upsizr_dcache_s_dat_i = wb_dat_i;
 
 `endif
 

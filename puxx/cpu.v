@@ -133,15 +133,15 @@ output reg  [8 -1 : 0] dbg_tx_data_o; // ### comb-block-reg.
 input  wire            dbg_tx_rdy_i;
 `endif
 
-wire                         arbiter_wb_cyc_i  [PUCOUNT -1 : 0];
-wire                         arbiter_wb_stb_i  [PUCOUNT -1 : 0];
-wire                         arbiter_wb_we_i   [PUCOUNT -1 : 0];
-wire [XADDRBITSZ -1 : 0]     arbiter_wb_addr_i [PUCOUNT -1 : 0];
-wire [(XWORDBITSZ/8) -1 : 0] arbiter_wb_sel_i  [PUCOUNT -1 : 0];
-wire [XWORDBITSZ -1 : 0]     arbiter_wb_dat_i  [PUCOUNT -1 : 0];
-wire                         arbiter_wb_bsy_o  [PUCOUNT -1 : 0];
-wire                         arbiter_wb_ack_o  [PUCOUNT -1 : 0];
-wire [XWORDBITSZ -1 : 0]     arbiter_wb_dat_o  [PUCOUNT -1 : 0];
+wire                         arbiter_wb_cyc_i  [0 : PUCOUNT -1];
+wire                         arbiter_wb_stb_i  [0 : PUCOUNT -1];
+wire                         arbiter_wb_we_i   [0 : PUCOUNT -1];
+wire [XADDRBITSZ -1 : 0]     arbiter_wb_addr_i [0 : PUCOUNT -1];
+wire [(XWORDBITSZ/8) -1 : 0] arbiter_wb_sel_i  [0 : PUCOUNT -1];
+wire [XWORDBITSZ -1 : 0]     arbiter_wb_dat_i  [0 : PUCOUNT -1];
+wire                         arbiter_wb_bsy_o  [0 : PUCOUNT -1];
+wire                         arbiter_wb_ack_o  [0 : PUCOUNT -1];
+wire [XWORDBITSZ -1 : 0]     arbiter_wb_dat_o  [0 : PUCOUNT -1];
 
 wire [(1 * PUCOUNT) -1 : 0]              _arbiter_wb_cyc_i;
 wire [(1 * PUCOUNT) -1 : 0]              _arbiter_wb_stb_i;

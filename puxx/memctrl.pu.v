@@ -16,6 +16,8 @@ always @* begin
 	wb_dat_o = 0;
 
 	if (rst_i);
+	else if (wb_max_pending)
+		wb_cyc_o = 1;
 	else if (dcache_s_stb_o) begin
 		wb_cyc_o = 1;
 		wb_stb_o = 1;
@@ -37,6 +39,15 @@ always @ (posedge clk_i) begin
 	if (rst_i) begin
 		instrfetchmemrqstseqvalid <= 0;
 		instrfetchmemrqstabortseqvalid <= 0;
+	end else if (wb_max_pending) begin
+		if (instrfetchmemrqstdone_ || (instrfetchmemrqstabort && wb_ack_i)) begin
+			instrfetchmemrqstseqvalid <= 0;
+			instrfetchmemrqstabortseqvalid <= 0;
+		end else if (instrbufrst && instrfetchmemrqstseqvalid) begin
+			instrfetchmemrqstseqvalid <= 0;
+			instrfetchmemrqstabortseq <= instrfetchmemrqstseq;
+			instrfetchmemrqstabortseqvalid <= instrfetchmemrqstseqvalid;
+		end
 	end else if (dcache_s_stb_o) begin
 		if (instrfetchmemrqstdone_ || (instrfetchmemrqstabort && wb_ack_i)) begin
 			instrfetchmemrqstseqvalid <= 0;
@@ -106,9 +117,9 @@ always @ (posedge clk_i) begin
 					//dcache_m_stb_i <= 1'b0; // Should already be null by now.
 					dcache_m_we_i_ <= 1'b0;
 				end
-			end else if (!_dcache_m_bsy_o)
+			end else if (!dcache_m_bsy_o)
 				dcache_m_stb_i <= 1'b0;
-		end else if (!_dcache_m_bsy_o) begin
+		end else if (!dcache_m_bsy_o) begin
 			dcache_m_we_i <= 1'b1;
 			dcache_m_we_i_ <= 1'b0;
 		end
@@ -148,7 +159,7 @@ always @ (posedge clk_i) begin
 					`ifdef PUDCACHE
 					dcache_cmiss_r <= 1'b1;
 					`endif
-				end else begin /* When I get here (!_dcache_m_bsy_o) is true */
+				end else begin /* When I get here (!dcache_m_bsy_o) is true */
 
 					hptwmemrqst <= HPTWMEMREQNONE;
 
@@ -206,7 +217,7 @@ always @ (posedge clk_i) begin
 					`ifdef PUDCACHE
 					dcache_cmiss_r <= 1'b1;
 					`endif
-				end else begin /* When I get here (!_dcache_m_bsy_o) is true */
+				end else begin /* When I get here (!dcache_m_bsy_o) is true */
 
 					hptwmemrqst <= HPTWMEMREQNONE;
 
@@ -265,7 +276,7 @@ always @ (posedge clk_i) begin
 					`ifdef PUDCACHE
 					dcache_cmiss_r <= 1'b1;
 					`endif
-				end else begin /* When I get here (!_dcache_m_bsy_o) is true */
+				end else begin /* When I get here (!dcache_m_bsy_o) is true */
 
 					hptwmemrqst <= HPTWMEMREQNONE;
 
@@ -293,7 +304,7 @@ always @ (posedge clk_i) begin
 			end
 			`endif
 			`endif
-		end else if (!_dcache_m_bsy_o) begin
+		end else if (!dcache_m_bsy_o) begin
 			`ifdef PUMMU
 			`ifdef PUHPTW
 			hptwmemrqst <= HPTWMEMREQNONE;
@@ -308,7 +319,7 @@ always @ (posedge clk_i) begin
 		!(icachecheck && !instrbufrst) &&
 		((instrbufrst || !instrfetchfaulted) &&
 		(!inhalt && itlb_and_instrbuf_rdy && !itlbfault__hptwidone)) &&
-		(!dcache_m_stb_i || !_dcache_m_bsy_o)) begin
+		(!dcache_m_stb_i || !dcache_m_bsy_o)) begin
 
 		if (hptwmemrqst == HPTWMEMREQNONE && hptwistate_eq_HPTWSTATEPGD0) begin
 
@@ -332,7 +343,7 @@ always @ (posedge clk_i) begin
 			`ifdef PUDCACHE
 			dcache_cmiss_r <= 1'b1;
 			`endif
-		end else begin /* When I get here (!_dcache_m_bsy_o) is true */
+		end else begin /* When I get here (!dcache_m_bsy_o) is true */
 
 			hptwmemrqst <= HPTWMEMREQNONE;
 
@@ -340,7 +351,7 @@ always @ (posedge clk_i) begin
 		end
 	`endif
 	`endif
-	end else if (!_dcache_m_bsy_o) begin
+	end else if (!dcache_m_bsy_o) begin
 		`ifdef PUMMU
 		`ifdef PUHPTW
 		hptwmemrqst <= HPTWMEMREQNONE;

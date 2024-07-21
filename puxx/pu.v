@@ -160,6 +160,7 @@
 `include "lib/icache.v"
 
 `ifdef PUDCACHE
+`include "lib/wb_skidbuf.v"
 `include "lib/dcache.v"
 `endif
 
