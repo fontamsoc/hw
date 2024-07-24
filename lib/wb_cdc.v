@@ -41,7 +41,7 @@ parameter WORDBITSZ = 32;
 
 parameter MAXPENDINGACK = 2;
 
-parameter ASYNC = 1;
+parameter ASYNC = 0;
 
 localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
 localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
@@ -71,9 +71,13 @@ input  wire                        s_wb_bsy_i;
 input  wire                        s_wb_ack_i;
 input  wire [WORDBITSZ -1 : 0]     s_wb_dat_i;
 
-wire rqst_write_w = (m_wb_cyc_i && m_wb_stb_i && !m_wb_bsy_o);
+wire m_wb_bsy_o_;
 
 reg [(clog2(MAXPENDINGACK) +1) -1 : 0] m_wb_pending_acks;
+
+assign m_wb_bsy_o = (m_wb_bsy_o_ || m_wb_pending_acks == MAXPENDINGACK);
+
+wire rqst_write_w = (m_wb_cyc_i && m_wb_stb_i && !m_wb_bsy_o);
 
 always @ (posedge m_clk_i) begin
 	if (rst_i)
@@ -84,8 +88,6 @@ always @ (posedge m_clk_i) begin
 	else if (rqst_write_w)
 		m_wb_pending_acks <= m_wb_pending_acks + 1'b1;
 end
-
-assign m_wb_bsy_o = (m_wb_pending_acks == MAXPENDINGACK);
 
 wire rqst_read_w = (!s_wb_stb_o || !s_wb_bsy_i);
 
@@ -101,24 +103,7 @@ always @ (posedge s_clk_i) begin
 		s_wb_stb_o <= !rqst_empty_w;
 end
 
-generate if (ASYNC != 0) begin
-fifo #(
-	 .WIDTH (1 + ADDRBITSZ + (WORDBITSZ/8) + WORDBITSZ)
-	,.DEPTH (MAXPENDINGACK)
-) rqst (
-
-	 .rst_i (rst_i)
-
-	,.clk_write_i (m_clk_i)
-	,.write_i     (rqst_write_w)
-	,.data_i      ({m_wb_we_i, m_wb_addr_i, m_wb_sel_i, m_wb_dat_i})
-
-	,.clk_read_i (s_clk_i)
-	,.read_i     (rqst_read_w)
-	,.data_o     ({s_wb_we_o, s_wb_addr_o, s_wb_sel_o, s_wb_dat_o})
-	,.empty_o    (rqst_empty_w)
-);
-end else begin
+generate if (ASYNC) begin
 fifo_async #(
 	 .WIDTH (1 + ADDRBITSZ + (WORDBITSZ/8) + WORDBITSZ)
 	,.DEPTH (MAXPENDINGACK)
@@ -129,6 +114,25 @@ fifo_async #(
 	,.clk_write_i (m_clk_i)
 	,.write_i     (rqst_write_w)
 	,.data_i      ({m_wb_we_i, m_wb_addr_i, m_wb_sel_i, m_wb_dat_i})
+	,.full_o      (m_wb_bsy_o_)
+
+	,.clk_read_i (s_clk_i)
+	,.read_i     (rqst_read_w)
+	,.data_o     ({s_wb_we_o, s_wb_addr_o, s_wb_sel_o, s_wb_dat_o})
+	,.empty_o    (rqst_empty_w)
+);
+end else begin
+fifo #(
+	 .WIDTH (1 + ADDRBITSZ + (WORDBITSZ/8) + WORDBITSZ)
+	,.DEPTH (MAXPENDINGACK)
+) rqst (
+
+	 .rst_i (rst_i)
+
+	,.clk_write_i (m_clk_i)
+	,.write_i     (rqst_write_w)
+	,.data_i      ({m_wb_we_i, m_wb_addr_i, m_wb_sel_i, m_wb_dat_i})
+	,.full_o      (m_wb_bsy_o_)
 
 	,.clk_read_i (s_clk_i)
 	,.read_i     (rqst_read_w)
@@ -146,8 +150,8 @@ always @ (posedge m_clk_i) begin
 		m_wb_ack_o <= !rsp_empty_w;
 end
 
-generate if (ASYNC != 0) begin
-fifo #(
+generate if (ASYNC) begin
+fifo_async #(
 	 .WIDTH (WORDBITSZ)
 	,.DEPTH (MAXPENDINGACK)
 ) rsp (
@@ -164,7 +168,7 @@ fifo #(
 	,.empty_o    (rsp_empty_w)
 );
 end else begin
-fifo_async #(
+fifo #(
 	 .WIDTH (WORDBITSZ)
 	,.DEPTH (MAXPENDINGACK)
 ) rsp (
