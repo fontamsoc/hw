@@ -59,8 +59,8 @@ output wire                      hit_o;
 
 output reg rdy_o;
 
-reg hit_o_; // ### comb-block-reg.
-assign hit_o = (hit_o_ && rdy_o);
+wire [WAYCNT -1 : 0] hit_o_;
+assign hit_o = ((|hit_o_) && rdy_o);
 
 wire _we_i = (we_i && rdy_o);
 
@@ -111,6 +111,13 @@ always @ (posedge clk_i) begin
 		end else
 			wecnt <= wecnt + 1'b1;
 	end
+end
+
+reg [TAGBITSZ -1 : 0] rtag_r;
+
+always @ (posedge clk_i) begin
+	if (re_i)
+		rtag_r <= rtag_i;
 end
 
 wire [TAGBITSZ -1 : 0] tago [0 : WAYCNT -1];
@@ -170,29 +177,20 @@ bram #(
 	,.i1      (rdy_o)
 );
 
+assign hit_o_[gen_ways_idx] = (vldo[gen_ways_idx] && (rtag_r == tago[gen_ways_idx]));
+
 end endgenerate
 
-reg [TAGBITSZ -1 : 0] rtag_r;
-
-always @ (posedge clk_i) begin
-	if (re_i)
-		rtag_r <= rtag_i;
-end
-
 reg [CLOG2WAYCNT -1 : 0] hitidx; // ### comb-block-reg.
-
-integer gen_hit_idx;
+integer gen_hitidx_idx;
 always @* begin
-	hit_o_ = 0;
 	hitidx = 0;
 	for (
-		gen_hit_idx = 0;
-		gen_hit_idx < WAYCNT;
-		gen_hit_idx = gen_hit_idx + 1) begin :gen_hit
-		if (!hit_o_ && (vldo[gen_hit_idx] && (rtag_r == tago[gen_hit_idx]))) begin
-			hit_o_ = 1;
-			hitidx = gen_hit_idx;
-		end
+		gen_hitidx_idx = WAYCNT;
+		gen_hitidx_idx > 0;
+		gen_hitidx_idx = gen_hitidx_idx-1) begin
+		if (hit_o_[gen_hitidx_idx-1])
+			hitidx = (gen_hitidx_idx-1);
 	end
 end
 
