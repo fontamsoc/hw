@@ -121,14 +121,14 @@ endgenerate
 (* direct_enable = "true" *)
 wire cache_stb = (!rst_i && state == IDLE && _m_wb_stb_i);
 
-reg cache_tag_hit_; // ### comb-block-reg.
+wire [CACHEWAYCNT -1 : 0] cache_tag_hit_;
 reg cache_tag_hit;
 generate if (REGCACHEHIT) begin
 always @ (posedge clk_i)
-	cache_tag_hit <= cache_tag_hit_;
+	cache_tag_hit <= (|cache_tag_hit_);
 end else begin
 always @*
-	cache_tag_hit = cache_tag_hit_;
+	cache_tag_hit = (|cache_tag_hit_);
 end endgenerate
 
 // (MAXPENDINGACK+2) is used instead of just MAXPENDINGACK
@@ -186,6 +186,18 @@ always @*
 	cache_tag_hit_wayidx = cache_tag_hit_wayidx_;
 end endgenerate
 
+integer gen_hitidx_idx;
+always @* begin
+	cache_tag_hit_wayidx_ = 0;
+	for (
+		gen_hitidx_idx = CACHEWAYCNT;
+		gen_hitidx_idx > 0;
+		gen_hitidx_idx = gen_hitidx_idx-1) begin
+		if (cache_tag_hit_[gen_hitidx_idx-1])
+			cache_tag_hit_wayidx_ = (gen_hitidx_idx-1);
+	end
+end
+
 reg [CLOG2CACHEWAYCNT -1 : 0] cache_we_wayidx;
 
 wire [CACHETAGBITSIZE -1 : 0] cache_tag_i = m_wb_addr_r[ADDRBITSZ -1 : CLOG2CACHESETCNT];
@@ -215,60 +227,48 @@ generate for (
 	gen_cache_idx < CACHEWAYCNT;
 	gen_cache_idx = gen_cache_idx + 1) begin :gen_cache
 
-	reg [CACHETAGBITSIZE -1 : 0] cache_tags [CACHESETCNT -1 : 0];
-	reg [(WORDBITSZ/8) -1 : 0]   cache_sels [CACHESETCNT -1 : 0];
-	reg [WORDBITSZ -1 : 0]       cache_dats [CACHESETCNT -1 : 0];
-	reg                          cache_drts [CACHESETCNT -1 : 0];
+reg [CACHETAGBITSIZE -1 : 0] cache_tags [CACHESETCNT -1 : 0];
+reg [(WORDBITSZ/8) -1 : 0]   cache_sels [CACHESETCNT -1 : 0];
+reg [WORDBITSZ -1 : 0]       cache_dats [CACHESETCNT -1 : 0];
+reg                          cache_drts [CACHESETCNT -1 : 0];
 
-	initial begin
-		if (INITFILE != "" && gen_cache_idx == 0 /* TODO: check whether worst logic */) begin
-			$readmemh (INITFILE, cache_dats);
-			`ifdef SIMULATION
-			$display ("%s loaded", INITFILE);
-			`endif
-			// Initial state initialized here, otherwise
-			// block ram fails to be inferred by yosys.
-			cache_dat_o[gen_cache_idx] = 0;
-		end
+initial begin
+	if (INITFILE != "" && gen_cache_idx == 0 /* TODO: check whether worst logic */) begin
+		$readmemh (INITFILE, cache_dats);
+		`ifdef SIMULATION
+		$display ("%s loaded", INITFILE);
+		`endif
+		// Initial state initialized here, otherwise
+		// block ram fails to be inferred by yosys.
+		cache_dat_o[gen_cache_idx] = 0;
 	end
+end
 
-	wire _cache_we = (cache_we &&
-		gen_cache_idx == (cache_tag_hit ? cache_tag_hit_wayidx : cache_we_wayidx));
+wire _cache_we = (cache_we &&
+	gen_cache_idx == (cache_tag_hit ? cache_tag_hit_wayidx : cache_we_wayidx));
 
-	always @ (posedge clk_i) begin
-		if (cache_stb) begin
-			cache_tag_o[gen_cache_idx] <= cache_tags[cache_rdidx];
-			cache_sel_o[gen_cache_idx] <= cache_sels[cache_rdidx];
-			cache_dat_o[gen_cache_idx] <= cache_dats[cache_rdidx];
-			cache_drt_o[gen_cache_idx] <= cache_drts[cache_rdidx];
-		end
-		if (_cache_we) begin
-			cache_tags[cache_wridx] <= cache_tag_i;
-			cache_dats[cache_wridx] <= cache_dat_i;
-		end
-		if (rst_r || _cache_we) begin
-			cache_sels[cache_wridx] <= cache_sel_i;
-			cache_drts[cache_wridx] <= cache_drt_i;
-		end
+always @ (posedge clk_i) begin
+	if (cache_stb) begin
+		cache_tag_o[gen_cache_idx] <= cache_tags[cache_rdidx];
+		cache_sel_o[gen_cache_idx] <= cache_sels[cache_rdidx];
+		cache_dat_o[gen_cache_idx] <= cache_dats[cache_rdidx];
+		cache_drt_o[gen_cache_idx] <= cache_drts[cache_rdidx];
 	end
+	if (_cache_we) begin
+		cache_tags[cache_wridx] <= cache_tag_i;
+		cache_dats[cache_wridx] <= cache_dat_i;
+	end
+	if (rst_r || _cache_we) begin
+		cache_sels[cache_wridx] <= cache_sel_i;
+		cache_drts[cache_wridx] <= cache_drt_i;
+	end
+end
+
+assign cache_tag_hit_[gen_cache_idx] = (!conly_r && (|cache_sel_o[gen_cache_idx]) &&
+	m_wb_addr_r[ADDRBITSZ -1 : CLOG2CACHESETCNT] == cache_tag_o[gen_cache_idx]);
 
 end endgenerate
 
-integer gen_cachehit_idx;
-always @* begin
-	cache_tag_hit_ = 0;
-	cache_tag_hit_wayidx_ = 0;
-	for (
-		gen_cachehit_idx = 0;
-		gen_cachehit_idx < CACHEWAYCNT;
-		gen_cachehit_idx = gen_cachehit_idx + 1) begin
-		if (!cache_tag_hit_ && !conly_r && cache_sel_o[gen_cachehit_idx] &&
-			m_wb_addr_r[ADDRBITSZ -1 : CLOG2CACHESETCNT] == cache_tag_o[gen_cachehit_idx]) begin
-			cache_tag_hit_ = 1;
-			cache_tag_hit_wayidx_ = gen_cachehit_idx;
-		end
-	end
-end
 // There is a cachehit when there is a cache tag hit and the selected bits are in the cache.
 wire cache_hit = (cache_tag_hit && ((m_wb_sel_r & cache_sel_o_tag_hit) == m_wb_sel_r));
 
