@@ -15,7 +15,7 @@ always @ (posedge clk_i) begin
 		`ifdef PURV32M
 		|| opImul_done || opIdiv_done
 		`endif
-		|| (!eX_flushed && !eX_multiCycleInsn && !halted_o)
+		|| (!eX0_flushed && !eX0_multiCycleInsn && !halted_o)
 		) begin
 		csrInstret <= (csrInstret + 1'b1);
 		`ifdef _SIMULATION
@@ -39,8 +39,8 @@ always @ (posedge clk_i) begin
 	if (rst_i) begin
 		csrBranchPredictHit <= 0;
 		csrBranchPredictMiss <= 0;
-	end else if (iD_isBranch && eX_insn_valid_i) begin
-		if (_eX_takeBranch_i)
+	end else if (iD0_isBranch && eX0_insn_valid_i) begin
+		if (_eX0_takeBranch_i)
 			csrBranchPredictMiss <= csrBranchPredictMiss + 1'b1;
 		else
 			csrBranchPredictHit <= csrBranchPredictHit + 1'b1;
@@ -52,7 +52,7 @@ reg [WORDBITSZ -1 : 0] csrRetPredictMiss;
 always @ (posedge clk_i) begin
 	if (rst_i)
 		csrRetPredictMiss <= 0;
-	else if (iD_isRet && eX_predictRetMiss_i && eX_insn_valid_i)
+	else if (iD0_isRet && eX0_predictRetMiss_i && eX0_insn_valid_i)
 		csrRetPredictMiss <= csrRetPredictMiss + 1'b1;
 end
 `endif
@@ -61,7 +61,7 @@ end
 always @ (posedge clk_i) begin
 	if (rst_i)
 		halted_o <= 0;
-	else if (iD_isSystem && iD_func3 == 3'b000 && iD_Iimm[11:0] == 12'd1 && /* ebreak */ eX_insn_valid_i)
+	else if (iD0_isSystem && iD0_func3 == 3'b000 && iD0_Iimm[11:0] == 12'd1 && /* ebreak */ eX0_insn_valid_i)
 		halted_o <= 1;
 	`ifdef SIMULATION
 	if (halted_o && !wb_pending_acks) begin
@@ -81,26 +81,26 @@ end
 
 generate if (WORDBITSZ == 32) begin
 always @* begin
-	case (iD_Iimm[11:0])
-	12'hc00: eX_csrOut_i = csrCycle[WORDBITSZ-1:0];
-	12'hc01: eX_csrOut_i = csrCycle[WORDBITSZ-1:0]; // TODO: return CSR time lsb instead.
-	12'hc02: eX_csrOut_i = csrInstret[WORDBITSZ-1:0];
-	12'hc80: eX_csrOut_i = csrCycle[64-1:WORDBITSZ];
-	12'hc81: eX_csrOut_i = csrCycle[64-1:WORDBITSZ]; // TODO: return CSR time msb instead.
-	12'hc82: eX_csrOut_i = csrInstret[64-1:WORDBITSZ];
-	12'hcc0: eX_csrOut_i = csrClkFreq; // Using User CSRs Non-standard read-only.
-	default: eX_csrOut_i = {WORDBITSZ{1'b0}};
+	case (iD0_Iimm[11:0])
+	12'hc00: eX0_csrOut_i = csrCycle[WORDBITSZ-1:0];
+	12'hc01: eX0_csrOut_i = csrCycle[WORDBITSZ-1:0]; // TODO: return CSR time lsb instead.
+	12'hc02: eX0_csrOut_i = csrInstret[WORDBITSZ-1:0];
+	12'hc80: eX0_csrOut_i = csrCycle[64-1:WORDBITSZ];
+	12'hc81: eX0_csrOut_i = csrCycle[64-1:WORDBITSZ]; // TODO: return CSR time msb instead.
+	12'hc82: eX0_csrOut_i = csrInstret[64-1:WORDBITSZ];
+	12'hcc0: eX0_csrOut_i = csrClkFreq; // Using User CSRs Non-standard read-only.
+	default: eX0_csrOut_i = {WORDBITSZ{1'b0}};
 	endcase
 end
 end endgenerate
 generate if (WORDBITSZ == 64) begin
 always @* begin
-	case (iD_Iimm[11:0])
-	12'hc00: eX_csrOut_i = csrCycle;
-	12'hc01: eX_csrOut_i = csrCycle; // TODO: return CSR time lsb instead.
-	12'hc02: eX_csrOut_i = csrInstret;
-	12'hcc0: eX_csrOut_i = csrClkFreq; // Using User CSRs Non-standard read-only.
-	default: eX_csrOut_i = {WORDBITSZ{1'b0}};
+	case (iD0_Iimm[11:0])
+	12'hc00: eX0_csrOut_i = csrCycle;
+	12'hc01: eX0_csrOut_i = csrCycle; // TODO: return CSR time lsb instead.
+	12'hc02: eX0_csrOut_i = csrInstret;
+	12'hcc0: eX0_csrOut_i = csrClkFreq; // Using User CSRs Non-standard read-only.
+	default: eX0_csrOut_i = {WORDBITSZ{1'b0}};
 	endcase
 end
 end endgenerate
