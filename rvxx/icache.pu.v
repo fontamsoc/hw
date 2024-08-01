@@ -36,3 +36,32 @@ icache #(
 	,.hit_o    (iCache0_hit_w)
 	,.rdy_o    (iCache0_rdy_w)
 );
+
+`ifdef PU2NDISSUE
+wire [CLOG2ICACHESETCNT -1 : 0] iCache1_ridx_w;
+wire [ICACHETAGBITSZ -1 : 0]    iCache1_rtag_w;
+wire [XWORDBITSZ -1 : 0]        iCache1_dato_w;
+wire                            iCache1_hit_w;
+wire                            iCache1_rdy_w;
+icache #(
+	 .WAYCNT   (ICACHEWAYCNT)
+	,.SETCNT   (ICACHESETCNT)
+	,.TAGBITSZ (ICACHETAGBITSZ)
+	,.DATBITSZ (XWORDBITSZ)
+) iCache1 (
+	 .rst_i    (rst_i)
+	,.clk_i    (clk_i)
+	,.invd_i   (1'b0)
+	,.nxtway_i (iCache_nxtway_w)
+	,.we_i     (iCache_we_w)
+	,.widx_i   (iCache_widx_w)
+	,.wtag_i   (iCache_wtag_w)
+	,.dat_i    (iCache_dati_w)
+	,.re_i     (iCache_re_w)
+	,.ridx_i   (iCache1_ridx_w)
+	,.rtag_i   (iCache1_rtag_w)
+	,.dat_o    (iCache1_dato_w)
+	,.hit_o    (iCache1_hit_w)
+	,.rdy_o    (iCache1_rdy_w)
+);
+`endif
