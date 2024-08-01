@@ -124,6 +124,10 @@ wire slvidx_invalid = (!addrspace_rdy || (!slvidx_dflt &&
 wire _slvidx_invalid = (slvidx_invalid && !ack_pending);
 
 wire [WORDBITSZ -1 : 0] addrspace_slvidx_nxt = (addrspace_slvidx_lo + _s_wb_mapsz_i[slvidx]);
+wire [WORDBITSZ -1 : 0] _addrspace_slvidx_nxt = (addrspace_slvidx_nxt - 1'b1);
+
+reg [WORDBITSZ -1 : 0] slvidx_dflt_lo;
+reg [WORDBITSZ -1 : 0] slvidx_dflt_hi;
 
 always @ (posedge clk_i) begin
 
@@ -154,7 +158,12 @@ always @ (posedge clk_i) begin
 			// this state set addrspace_slvidx_lo for the next state.
 		end
 
-		addrspace[slvidx] <= addrspace_slvidx_nxt - 1'b1;
+		addrspace[slvidx] <= _addrspace_slvidx_nxt;
+
+		if (slvidx == DEFAULTSLAVEINDEX) begin
+			slvidx_dflt_lo <= addrspace_slvidx_lo;
+			slvidx_dflt_hi <= _addrspace_slvidx_nxt;
+		end
 
 	end else if (!slvidx_rdy) begin
 
@@ -165,8 +174,8 @@ always @ (posedge clk_i) begin
 			addrspace_slvidx_hi <= addrspace[slvidx + 1'b1];
 			slvidx <= slvidx + 1'b1;
 		end else begin
-			addrspace_slvidx_lo <= _m_wb_addr_i;
-			addrspace_slvidx_hi <= addrspace[DEFAULTSLAVEINDEX];
+			addrspace_slvidx_lo <= slvidx_dflt_lo;
+			addrspace_slvidx_hi <= slvidx_dflt_hi;
 			slvidx <= DEFAULTSLAVEINDEX;
 			slvidx_rdy <= 1;
 			slvidx_dflt <= 1;
