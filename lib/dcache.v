@@ -119,7 +119,7 @@ end
 endgenerate
 
 (* direct_enable = "true" *)
-wire cache_stb = (!rst_i && state == IDLE && _m_wb_stb_i);
+wire cache_stb = (state == IDLE && _m_wb_stb_i);
 
 wire [CACHEWAYCNT -1 : 0] cache_tag_hit_;
 reg cache_tag_hit;
@@ -162,7 +162,7 @@ wire refill_ack = (_s_wb_ack_i && (!MAXPENDINGACK || (!s_wb_stb_o && ack_pending
 
 reg cache_bsy;
 
-wire cache_we = (!rst_i && !cmiss_r && (
+wire cache_we = (!cmiss_r && (
 	(state == TESTHIT && !cache_bsy && m_wb_we_r) ||
 	(!s_wb_we_o && refill_ack)));
 
@@ -212,14 +212,19 @@ wire [WORDBITSZ -1 : 0] _m_wb_sel_r;
 wire [WORDBITSZ -1 : 0] _m_wb_sel_r_n = ~_m_wb_sel_r;
 wire [WORDBITSZ -1 : 0] _cache_sel_o_tag_hit;
 wire [WORDBITSZ -1 : 0] _cache_sel_o_tag_hit_n = ~_cache_sel_o_tag_hit;
+wire [WORDBITSZ -1 : 0] cache_dat_o_tag_hit = cache_dat_o[cache_tag_hit_wayidx];
 wire [WORDBITSZ -1 : 0] cache_dat_i = ((state == TESTHIT) ?
-	((m_wb_dat_r & _m_wb_sel_r) | (cache_dat_o[cache_tag_hit_wayidx] & _m_wb_sel_r_n)) :
+	((m_wb_dat_r & _m_wb_sel_r) | (cache_dat_o_tag_hit & _m_wb_sel_r_n)) :
 	(cache_tag_hit ?
-		((cache_dat_o[cache_tag_hit_wayidx] & _cache_sel_o_tag_hit) |
+		((cache_dat_o_tag_hit & _cache_sel_o_tag_hit) |
 			(_s_wb_dat_i & _cache_sel_o_tag_hit_n)) :
 		_s_wb_dat_i));
 
-wire cache_drt_i = (!rst_r && !conly_r && !cmiss_r && (m_wb_we_r || cache_tag_hit));
+//wire cache_drt_o_tag_hit = cache_drt_o[cache_tag_hit_wayidx];
+// There is no need to use cache_drt_o_tag_hit because
+// on cache REFILL, cache_tag_hit is true for a dirty cache entry.
+wire cache_drt_i = (!rst_r && !conly_r && !cmiss_r &&
+	(m_wb_we_r || (cache_tag_hit/* && cache_drt_o_tag_hit*/)));
 
 genvar gen_cache_idx;
 generate for (
@@ -254,10 +259,16 @@ always @ (posedge clk_i) begin
 		cache_dat_o[gen_cache_idx] <= cache_dats[cache_rdidx];
 		cache_drt_o[gen_cache_idx] <= cache_drts[cache_rdidx];
 	end
+end
+
+always @ (posedge clk_i) begin
 	if (_cache_we) begin
 		cache_tags[cache_wridx] <= cache_tag_i;
 		cache_dats[cache_wridx] <= cache_dat_i;
 	end
+end
+
+always @ (posedge clk_i) begin
 	if (rst_r || _cache_we) begin
 		cache_sels[cache_wridx] <= cache_sel_i;
 		cache_drts[cache_wridx] <= cache_drt_i;
@@ -341,7 +352,7 @@ always @ (posedge clk_i) begin
 			m_wb_ack_o <= 1;
 
 			if (!m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
-				m_wb_dat_o <= cache_dat_o[cache_tag_hit_wayidx];
+				m_wb_dat_o <= cache_dat_o_tag_hit;
 
 			state <= IDLE;
 
