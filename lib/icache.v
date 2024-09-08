@@ -123,6 +123,8 @@ generate for (
 	gen_ways_idx < WAYCNT;
 	gen_ways_idx = gen_ways_idx + 1) begin :gen_ways
 
+wire __we_i = (_we_i && waywidx == gen_ways_idx);
+
 bram #(
 	 .SZ (SETCNT)
 	,.DW (TAGBITSZ)
@@ -132,8 +134,8 @@ bram #(
 	,.addr0_i (ridx_i)
 	,.o0      (tago[gen_ways_idx])
 	,.clk1_i  (clk_i)
-	,.en1_i   (_we_i && waywidx == gen_ways_idx)
-	,.we1_i   (_we_i && waywidx == gen_ways_idx)
+	,.en1_i   (__we_i)
+	,.we1_i   (__we_i)
 	,.addr1_i (widx_i)
 	,.i1      (wtag_i)
 );
@@ -147,8 +149,8 @@ bram #(
 	,.addr0_i (ridx_i)
 	,.o0      (dato[gen_ways_idx])
 	,.clk1_i  (clk_i)
-	,.en1_i   (_we_i && waywidx == gen_ways_idx)
-	,.we1_i   (_we_i && waywidx == gen_ways_idx)
+	,.en1_i   (__we_i)
+	,.we1_i   (__we_i)
 	,.addr1_i (widx_i)
 	,.i1      (dat_i)
 );
@@ -162,8 +164,8 @@ bram #(
 	,.addr0_i (ridx_i)
 	,.o0      (vldo[gen_ways_idx])
 	,.clk1_i  (clk_i)
-	,.en1_i   ((_we_i && waywidx == gen_ways_idx) || !rdy_o)
-	,.we1_i   ((_we_i && waywidx == gen_ways_idx) || !rdy_o)
+	,.en1_i   (__we_i || !rdy_o)
+	,.we1_i   (__we_i || !rdy_o)
 	,.addr1_i (rdy_o ? widx_i : rstidx)
 	,.i1      (rdy_o)
 );
