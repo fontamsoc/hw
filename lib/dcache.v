@@ -2,8 +2,8 @@
 // (c) William Fonkou Tambe
 
 // TODO: Comments to use:
-// TODO: conly_i; // Make cache behave like an sram; invalidate any cachehit entry; no slave memory operation occur.
-// TODO: cmiss_i; // cache-miss to force slave memory operation; invalidate any cachehit entry.
+// TODO: conly_i; // Make cache behave like an sram; no slave memory operation occur.
+// TODO: cmiss_i; // cache-miss to force slave memory operation; any cachehit entry is left untouched.
 
 `ifndef DCACHE_V
 `define DCACHE_V
@@ -97,6 +97,16 @@ reg rst_r;
 reg conly_r;
 reg cmiss_r;
 
+reg m_wb_cyc_i_and_cmiss_r;
+// Logic used to keep s_wb_cyc_o high for sequence such as
+// load-store which must be volatile by asserting cmiss_i.
+always @ (posedge clk_i) begin
+	if (m_wb_cyc_i)
+		m_wb_cyc_i_and_cmiss_r <= cmiss_r;
+	else
+		m_wb_cyc_i_and_cmiss_r <= 1'b0;
+end
+
 localparam IDLE    = 0;
 localparam TESTHIT = 1;
 localparam EVICT   = 2;
@@ -118,7 +128,6 @@ end else begin
 end
 endgenerate
 
-(* direct_enable = "true" *)
 wire cache_stb = (state == IDLE && _m_wb_stb_i);
 
 wire [CACHEWAYCNT -1 : 0] cache_tag_hit_;
@@ -150,7 +159,7 @@ end
 endgenerate
 reg s_wb_cyc_o_;
 always @*
-	s_wb_cyc_o = (s_wb_cyc_o_ || (MAXPENDINGACK && ack_pending));
+	s_wb_cyc_o = (m_wb_cyc_i_and_cmiss_r || s_wb_cyc_o_ || (MAXPENDINGACK && ack_pending));
 reg m_wb_bsy_o_;
 always @*
 	m_wb_bsy_o = (m_wb_bsy_o_ || (MAXPENDINGACK && (ack_pending > ((MAXPENDINGACK+2)-2))));
@@ -162,9 +171,8 @@ wire refill_ack = (_s_wb_ack_i && (!MAXPENDINGACK || (!s_wb_stb_o && ack_pending
 
 reg cache_bsy;
 
-wire cache_we = (!cmiss_r && (
-	(state == TESTHIT && !cache_bsy && m_wb_we_r) ||
-	(!s_wb_we_o && refill_ack)));
+wire cache_we = (!cmiss_r &&
+	((state == TESTHIT && !cache_bsy && m_wb_we_r) || (!s_wb_we_o && refill_ack)));
 
 localparam CACHETAGBITSIZE = (ADDRBITSZ - CLOG2CACHESETCNT);
 
@@ -204,7 +212,7 @@ wire [CACHETAGBITSIZE -1 : 0] cache_tag_i = m_wb_addr_r[ADDRBITSZ -1 : CLOG2CACH
 
 wire [(WORDBITSZ/8) -1 : 0] cache_sel_o_tag_hit = cache_sel_o[cache_tag_hit_wayidx];
 wire [(WORDBITSZ/8) -1 : 0] cache_sel_i = (
-	(conly_r || cmiss_r) ? {(WORDBITSZ/8){1'b0}} :
+	conly_r ? {(WORDBITSZ/8){1'b0}} :
 	(state == TESTHIT) ? (cache_tag_hit ? (m_wb_sel_r | cache_sel_o_tag_hit) : m_wb_sel_r) :
 	(state == REFILL) ? {(WORDBITSZ/8){1'b1}} : {(WORDBITSZ/8){1'b0}});
 
@@ -223,7 +231,7 @@ wire [WORDBITSZ -1 : 0] cache_dat_i = ((state == TESTHIT) ?
 //wire cache_drt_o_tag_hit = cache_drt_o[cache_tag_hit_wayidx];
 // There is no need to use cache_drt_o_tag_hit because
 // on cache REFILL, cache_tag_hit is true for a dirty cache entry.
-wire cache_drt_i = (!rst_r && !conly_r && !cmiss_r &&
+wire cache_drt_i = (!rst_r && !conly_r &&
 	(m_wb_we_r || (cache_tag_hit/* && cache_drt_o_tag_hit*/)));
 
 genvar gen_cache_idx;
@@ -275,7 +283,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-assign cache_tag_hit_[gen_cache_idx] = (!conly_r && (|cache_sel_o[gen_cache_idx]) &&
+assign cache_tag_hit_[gen_cache_idx] = ((|cache_sel_o[gen_cache_idx]) &&
 	m_wb_addr_r[ADDRBITSZ -1 : CLOG2CACHESETCNT] == cache_tag_o[gen_cache_idx]);
 
 end endgenerate
@@ -354,6 +362,9 @@ always @ (posedge clk_i) begin
 			if (!m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
 				m_wb_dat_o <= cache_dat_o_tag_hit;
 
+			conly_r <= 0;
+			cmiss_r <= 0;
+
 			state <= IDLE;
 
 		end else if (cache_drt_o[cache_we_wayidx] && !cache_tag_hit && !cmiss_r) begin
@@ -371,6 +382,9 @@ always @ (posedge clk_i) begin
 
 			m_wb_bsy_o_ <= 0;
 			m_wb_ack_o <= 1;
+
+			conly_r <= 0;
+			cmiss_r <= 0;
 
 			state <= IDLE;
 
@@ -399,6 +413,9 @@ always @ (posedge clk_i) begin
 				s_wb_cyc_o_ <= 0;
 				s_wb_stb_o <= 0;
 
+				conly_r <= 0;
+				cmiss_r <= 0;
+
 				state <= IDLE;
 
 			end else begin
@@ -426,6 +443,9 @@ always @ (posedge clk_i) begin
 
 			s_wb_cyc_o_ <= 0;
 			s_wb_stb_o <= 0;
+
+			conly_r <= 0;
+			cmiss_r <= 0;
 
 			state <= IDLE;
 

@@ -2,8 +2,8 @@
 // (c) William Fonkou Tambe
 
 // TODO: Comments to use:
-// TODO: conly_i; // Make cache behave like an sram; invalidate any cachehit entry; no slave memory operation occur.
-// TODO: cmiss_i; // cache-miss to force slave memory operation; invalidate any cachehit entry.
+// TODO: conly_i; // Make cache behave like an sram; no slave memory operation occur.
+// TODO: cmiss_i; // cache-miss to force slave memory operation; any cachehit entry is left untouched.
 
 `ifndef DCACHE_V
 `define DCACHE_V
@@ -97,6 +97,16 @@ reg rst_r;
 reg conly_r;
 reg cmiss_r;
 
+reg m_wb_cyc_i_and_cmiss_r;
+// Logic used to keep s_wb_cyc_o high for sequence such as
+// load-store which must be volatile by asserting cmiss_i.
+always @ (posedge clk_i) begin
+	if (m_wb_cyc_i)
+		m_wb_cyc_i_and_cmiss_r <= cmiss_r;
+	else
+		m_wb_cyc_i_and_cmiss_r <= 1'b0;
+end
+
 localparam IDLE    = 0;
 localparam EVICT   = 2;
 localparam REFILL  = 3;
@@ -135,7 +145,7 @@ end
 end
 endgenerate
 reg s_wb_cyc_o_;
-assign s_wb_cyc_o = (s_wb_cyc_o_ || (MAXPENDINGACK && ack_pending));
+assign s_wb_cyc_o = (m_wb_cyc_i_and_cmiss_r || s_wb_cyc_o_ || (MAXPENDINGACK && ack_pending));
 
 // When MAXPENDINGACK is non-null, and the sequencing of EVICT followed by REFILL
 // occurs, the expression (!s_wb_stb_o && ack_pending == 1) identifies the ack of
@@ -144,13 +154,15 @@ wire refill_ack = (_s_wb_ack_i && (!MAXPENDINGACK || (!s_wb_stb_o && ack_pending
 
 reg m_wb_ack;
 
-wire cache_we = (!cmiss_r && (
-	(m_wb_ack && m_wb_we_r) || (!s_wb_we_o && refill_ack)));
+wire cache_we = (!cmiss_r &&
+	((m_wb_ack && m_wb_we_r) || (!s_wb_we_o && refill_ack)));
 
 localparam CACHETAGBITSIZE = (ADDRBITSZ - CLOG2CACHESETCNT);
 
 wire [CLOG2CACHESETCNT -1 : 0] cache_rdidx = m_wb_addr_i[CLOG2CACHESETCNT -1 : 0];
 wire [CLOG2CACHESETCNT -1 : 0] cache_wridx = m_wb_addr_r[CLOG2CACHESETCNT -1 : 0];
+
+wire [CLOG2CACHESETCNT -1 : 0] _cache_rdidx = (_m_wb_stb_i ? cache_rdidx : cache_wridx);
 
 reg [CACHETAGBITSIZE -1 : 0] cache_tag_o [CACHEWAYCNT -1 : 0];
 reg [(WORDBITSZ/8) -1 : 0]   cache_sel_o [CACHEWAYCNT -1 : 0];
@@ -180,7 +192,7 @@ wire [CACHETAGBITSIZE -1 : 0] cache_tag_i = m_wb_addr_r[ADDRBITSZ -1 : CLOG2CACH
 wire [(WORDBITSZ/8) -1 : 0] cache_sel_o_tag_hit = cache_sel_o[cache_tag_hit_wayidx];
 wire [(WORDBITSZ/8) -1 : 0] _cache_sel_o;
 wire [(WORDBITSZ/8) -1 : 0] cache_sel_i = (
-	(conly_r || cmiss_r) ? {(WORDBITSZ/8){1'b0}} :
+	conly_r ? {(WORDBITSZ/8){1'b0}} :
 	m_wb_ack ? (cache_tag_hit ? (m_wb_sel_r | _cache_sel_o) : m_wb_sel_r) :
 	(state == REFILL) ? {(WORDBITSZ/8){1'b1}} : {(WORDBITSZ/8){1'b0}});
 
@@ -201,8 +213,10 @@ wire [WORDBITSZ -1 : 0] cache_dat_i = (m_wb_ack ?
 //wire cache_drt_o_tag_hit = cache_drt_o[cache_tag_hit_wayidx];
 // There is no need to use cache_drt_o_tag_hit because
 // on cache REFILL, cache_tag_hit is true for a dirty cache entry.
-wire cache_drt_i = (!rst_r && !conly_r && !cmiss_r &&
+wire cache_drt_i = (!rst_r && !conly_r &&
 	(m_wb_we_r || (cache_tag_hit/* && cache_drt_o_tag_hit*/)));
+
+reg use_cache_dat_r;
 
 genvar gen_cache_idx;
 generate for (
@@ -227,15 +241,16 @@ initial begin
 	end
 end
 
-wire _cache_we = (cache_we &&
-	gen_cache_idx == (cache_tag_hit ? cache_tag_hit_wayidx : cache_we_wayidx));
+wire _cache_we = (cache_we && gen_cache_idx == (cache_tag_hit ? cache_tag_hit_wayidx : cache_we_wayidx));
 
 always @ (posedge clk_i) begin
-	if (_m_wb_stb_i) begin
-		cache_tag_o[gen_cache_idx] <= cache_tags[cache_rdidx];
-		cache_sel_o[gen_cache_idx] <= cache_sels[cache_rdidx];
-		cache_dat_o[gen_cache_idx] <= cache_dats[cache_rdidx];
-		cache_drt_o[gen_cache_idx] <= cache_drts[cache_rdidx];
+	// use_cache_dat_r is used below to update the cache output
+	// needed for a cache refill write, when there is a cache miss.
+	if (_m_wb_stb_i || use_cache_dat_r) begin
+		cache_tag_o[gen_cache_idx] <= cache_tags[_cache_rdidx];
+		cache_sel_o[gen_cache_idx] <= cache_sels[_cache_rdidx];
+		cache_dat_o[gen_cache_idx] <= cache_dats[_cache_rdidx];
+		cache_drt_o[gen_cache_idx] <= cache_drts[_cache_rdidx];
 	end
 end
 
@@ -253,7 +268,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-assign cache_tag_hit_[gen_cache_idx] = (!conly_r && (|cache_sel_o[gen_cache_idx]) &&
+assign cache_tag_hit_[gen_cache_idx] = ((|cache_sel_o[gen_cache_idx]) &&
 	m_wb_addr_r[ADDRBITSZ -1 : CLOG2CACHESETCNT] == cache_tag_o[gen_cache_idx]);
 
 end endgenerate
@@ -269,7 +284,6 @@ always @ (posedge clk_i) begin
 	end
 end
 
-reg use_cache_dat_r;
 reg [WORDBITSZ -1 : 0] cache_dat_r;
 reg [(WORDBITSZ/8) -1 : 0] cache_sel_r;
 always @ (posedge clk_i) begin
@@ -278,7 +292,7 @@ always @ (posedge clk_i) begin
 		// to update the cache, but only to set m_wb_dat_o_.
 		use_cache_dat_r <= 1'b1;
 		cache_dat_r <= cache_dat_i;
-	end else if (_m_wb_stb_i) begin
+	end else if (_m_wb_stb_i && !cmiss_i) begin
 		use_cache_dat_r <= (m_wb_we_r && m_wb_addr_i == m_wb_addr_r);
 		cache_dat_r <= cache_dat_i;
 		cache_sel_r <= cache_sel_i;
@@ -348,7 +362,7 @@ always @ (posedge clk_i) begin
 			end else
 				m_wb_addr_r <= m_wb_addr_r + 1'b1;
 
-		end else if (_m_wb_stb_i || (cache_miss && m_wb_ack)) begin
+		end else if (_m_wb_stb_i || cache_miss) begin
 
 			if (cache_miss) begin
 
@@ -396,6 +410,9 @@ always @ (posedge clk_i) begin
 					m_wb_ack <= 0;
 
 					m_wb_we_r <= 0;
+
+					conly_r <= 0;
+					cmiss_r <= 0;
 				end
 
 			end else begin
@@ -416,6 +433,9 @@ always @ (posedge clk_i) begin
 			m_wb_ack <= 0;
 
 			m_wb_we_r <= 0;
+
+			conly_r <= 0;
+			cmiss_r <= 0;
 		end
 
 	end else if (state == EVICT) begin
@@ -428,6 +448,9 @@ always @ (posedge clk_i) begin
 
 				s_wb_cyc_o_ <= 0;
 				s_wb_stb_o <= 0;
+
+				conly_r <= 0;
+				cmiss_r <= 0;
 
 				state <= IDLE;
 
@@ -452,6 +475,9 @@ always @ (posedge clk_i) begin
 
 			s_wb_cyc_o_ <= 0;
 			s_wb_stb_o <= 0;
+
+			conly_r <= 0;
+			cmiss_r <= 0;
 
 			state <= IDLE;
 
