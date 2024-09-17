@@ -65,7 +65,7 @@ end
 always @ (posedge clk_i) begin
 	if (rst_i)
 		halted_o <= 0;
-	else if (iD0_isSystem && iD0_func3 == 3'b000 && iD0_Iimm[11:0] == 12'd1 && /* ebreak */ eX0_insn_valid_i)
+	else if (iD0_isEbreak && eX0_insn_valid_i)
 		halted_o <= 1;
 	`ifdef SIMULATION
 	if (halted_o && !wb_pending_acks) begin

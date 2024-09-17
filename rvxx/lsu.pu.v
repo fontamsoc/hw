@@ -74,7 +74,7 @@ wire ldUnit_rqsts_full;
 
 assign iD0_ldUnit_bsy = (ldUnit_rqsts_full || __dCache_m_bsy);
 
-wire ldUnit_stb = ((iD0_isLoad || (iD0_isAMO && iD0_func5 != 5'b00011)) && eX0_insn_valid_i);
+wire ldUnit_stb = (iD0_ldUnit_stb && eX0_insn_valid_i);
 
 wire [CLOG2GPRCNT -1 : 0] ldUnit_rqsts_rIdx;
 wire                      ldUnit_rqsts_isAMO;

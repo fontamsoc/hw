@@ -214,8 +214,7 @@ end
 
 assign dCache_m_cyc_i = (dCache_m_stb_i || dCache_m_we_i_ || (|dCache_m_pending_acks));
 
-wire [WORDBITSZ -1 : 0] dCache_m_addr_i_ = (iD0_rs1 +
-	(iD0_isLoad ? iD0_Iimm : iD0_isStore ? iD0_Simm : {WORDBITSZ{1'b0}}));
+wire [WORDBITSZ -1 : 0] dCache_m_addr_i_ = (iD0_rs1 + iD0_addrImm);
 
 wire            amoUnit_memAck;
 reg  [5 -1 : 0] amoUnit_opType;
