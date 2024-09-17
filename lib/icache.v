@@ -83,6 +83,11 @@ always @ (posedge clk_i) begin
 	end
 end
 
+// Register used to hold the way index to write next.
+reg [CLOG2WAYCNT -1 : 0] waywidx = 0;
+generate if (WAYCNT > 1) begin
+// Register used to hold clock cycle count of _we_i high.
+reg [CLOG2SETCNT -1 : 0] wecnt = 0;
 // Since there will be multiple clock cycles between
 // posedge of nxtway_i and we_i, we can register nxtway_i
 // for better timing if it is combinational.
@@ -92,16 +97,11 @@ always @ (posedge clk_i) begin
 	_nxtway_r <= nxtway_r;
 end
 wire nxtway_posedge = (!_nxtway_r && nxtway_r);
-
-// Register used to hold clock cycle count of _we_i high.
-reg [CLOG2SETCNT -1 : 0] wecnt = 0;
-// Register used to hold the way index to write next.
-reg [CLOG2WAYCNT -1 : 0] waywidx = 0;
 // Eventhough there can be more than one way containing same tags,
 // it wouldn't be a problem because instruction data are read-only;
 // the data associated with two same tags would always be the same.
 always @ (posedge clk_i) begin
-	if (WAYCNT > 1 && (_we_i || nxtway_posedge)) begin
+	if (_we_i || nxtway_posedge) begin
 		if ((wecnt >= (SETCNT-1)) || (nxtway_posedge && wecnt)) begin
 			wecnt <= 0;
 			if (waywidx >= (WAYCNT-1))
@@ -112,6 +112,7 @@ always @ (posedge clk_i) begin
 			wecnt <= wecnt + 1'b1;
 	end
 end
+end endgenerate
 
 reg [TAGBITSZ -1 : 0] rtag_r;
 
@@ -181,6 +182,7 @@ assign hit_o_[gen_ways_idx] = (vldo[gen_ways_idx] && (rtag_r == tago[gen_ways_id
 
 end endgenerate
 
+generate if (WAYCNT > 1) begin
 reg [CLOG2WAYCNT -1 : 0] hitidx; // ### comb-block-reg.
 integer gen_hitidx_idx;
 always @* begin
@@ -193,8 +195,10 @@ always @* begin
 			hitidx = (gen_hitidx_idx-1);
 	end
 end
-
 assign dat_o = dato[hitidx];
+end else begin
+assign dat_o = dato[0];
+end endgenerate
 
 endmodule
 
