@@ -1382,42 +1382,51 @@ end
 `endif
 
 always @ (posedge clk_i) begin
-
 	if (rW0_we_i)
 		gprDat[rW0_idx_i] <= rW0_dat_i;
 	`ifdef PU2NDISSUE
 	if (rW1_we_i)
 		gprDat[rW1_idx_i] <= rW1_dat_i;
 	`endif
+end
 
+wire gprRdy0Lock = (_iF0_use_rdId && !_iF0_flushed);
+`ifdef PU2NDISSUE
+wire gprRdy1Lock = (_iF1_rdId && !_iF1_flushed);
+`endif
+
+wire gprRdy0Unlock = (
+	rW0_we_i && /* Do not unlock a gpr if it is about to be locked
+	or if it has just been locked; note that we are at the eXecuted stage,
+	hence the reason why only *_rdId from previous stages are checked. */
+	!(gprRdy0Lock && _iF0_rdId == rW0_idx_i) &&
+	`ifdef PU2NDISSUE
+	!(gprRdy1Lock && _iF1_rdId == rW0_idx_i) &&
+	`endif
+	!(!iD0_flushed && iD0_rdId == rW0_idx_i));
+`ifdef PU2NDISSUE
+wire gprRdy1Unlock = (
+	rW1_we_i && /* Do not unlock a gpr if it is about to be locked
+	or if it has just been locked; note that we are at the eXecuted stage,
+	hence the reason why only *_rdId from previous stages are checked. */
+	!(gprRdy0Lock && _iF0_rdId == rW1_idx_i) &&
+	!(gprRdy1Lock && _iF1_rdId == rW1_idx_i) &&
+	!(!iD0_flushed && iD0_rdId == rW1_idx_i));
+`endif
+
+always @ (posedge clk_i) begin
 	if (rst_i)
 		gprRdy <= {GPRCNT{1'b1}};
 	else begin
-
-		if (_iF0_use_rdId && !_iF0_flushed)
-			gprRdy[_iF0_rdId] <= 0;
+		if (gprRdy0Lock)
+			gprRdy[_iF0_rdId] <= 1'b0;
+		if (gprRdy0Unlock)
+			gprRdy[rW0_idx_i] <= 1'b1;
 		`ifdef PU2NDISSUE
-		if (_iF1_rdId && !_iF1_flushed)
-			gprRdy[_iF1_rdId] <= 0;
-		`endif
-
-		if (rW0_we_i && /* Do not unlock a gpr if it is about to be locked
-			or if it has just been locked; note that we are at the eXecuted stage,
-			hence the reason why only *_rdId from previous stages are checked. */
-			!(_iF0_use_rdId && !_iF0_flushed && _iF0_rdId == rW0_idx_i) &&
-			`ifdef PU2NDISSUE
-			!(!_iF1_flushed && _iF1_rdId == rW0_idx_i) &&
-			`endif
-			!(                   !iD0_flushed    &&    iD0_rdId == rW0_idx_i))
-			gprRdy[rW0_idx_i] <= 1;
-		`ifdef PU2NDISSUE
-		if (rW1_we_i && /* Do not unlock a gpr if it is about to be locked
-			or if it has just been locked; note that we are at the eXecuted stage,
-			hence the reason why only *_rdId from previous stages are checked. */
-			!(_iF0_use_rdId && !_iF0_flushed && _iF0_rdId == rW1_idx_i) &&
-			!(!_iF1_flushed && _iF1_rdId == rW1_idx_i) &&
-			!(                   !iD0_flushed    &&    iD0_rdId == rW1_idx_i))
-			gprRdy[rW1_idx_i] <= 1;
+		if (gprRdy1Lock)
+			gprRdy[_iF1_rdId] <= 1'b0;
+		if (gprRdy1Unlock)
+			gprRdy[rW1_idx_i] <= 1'b1;
 		`endif
 	end
 end
