@@ -217,34 +217,61 @@ assign dCache_m_cyc_i = (dCache_m_stb_i || dCache_m_we_i_ || (|dCache_m_pending_
 wire [WORDBITSZ -1 : 0] dCache_m_addr_i_ = (iD_rs1 +
 	(iD_isLoad ? iD_Iimm : iD_isStore ? iD_Simm : {WORDBITSZ{1'b0}}));
 
+wire            amoUnit_memAck;
+reg  [5 -1 : 0] amoUnit_opType;
+
+wire [(WORDBITSZ+1) -1 : 0] dCache_m_dat_i_minus_dCache_m_dat_o = (
+	({1'b1, ~dCache_m_dat_o} + {1'b0, dCache_m_dat_i}) + 1'b1);
+wire dCache_m_dat_i_lt_dCache_m_dat_o = (
+	(dCache_m_dat_i[WORDBITSZ-1] ^ dCache_m_dat_o[WORDBITSZ-1]) ?
+		dCache_m_dat_i[WORDBITSZ-1] : dCache_m_dat_i_minus_dCache_m_dat_o[WORDBITSZ]);
+wire dCache_m_dat_i_ltu_dCache_m_dat_o = dCache_m_dat_i_minus_dCache_m_dat_o[WORDBITSZ];
+
 always @ (posedge clk_i) begin
 	if (rst_i) begin
 		dCache_m_stb_i <= 1'b0;
 		dCache_m_we_i_ <= 1'b0;
 	end else if (dCache_m_we_i_) begin
-		if (!dCache_m_bsy_o) begin
+		if (amoUnit_memAck) begin
+			dCache_m_stb_i <= 1'b1;
 			dCache_m_we_i <= 1'b1;
 			dCache_m_we_i_ <= 1'b0;
-		end
-	end else if (!(iD_flushed || iD_stalled)) begin
+			dCache_m_dat_i <= (
+				(amoUnit_opType == 5'b00000) ? (dCache_m_dat_i + dCache_m_dat_o) :
+				(amoUnit_opType == 5'b00100) ? (dCache_m_dat_i ^ dCache_m_dat_o) :
+				(amoUnit_opType == 5'b01100) ? (dCache_m_dat_i & dCache_m_dat_o) :
+				(amoUnit_opType == 5'b01000) ? (dCache_m_dat_i | dCache_m_dat_o) :
+				(amoUnit_opType == 5'b10000) ? // amomin.w
+					(dCache_m_dat_i_lt_dCache_m_dat_o ? dCache_m_dat_i : dCache_m_dat_o) :
+				(amoUnit_opType == 5'b10100) ? // amomax.w
+					(!dCache_m_dat_i_lt_dCache_m_dat_o ? dCache_m_dat_i : dCache_m_dat_o) :
+				(amoUnit_opType == 5'b11000) ? // amominu.w
+					(dCache_m_dat_i_ltu_dCache_m_dat_o ? dCache_m_dat_i : dCache_m_dat_o) :
+				(amoUnit_opType == 5'b11100) ? // amomaxu.w
+					(!dCache_m_dat_i_ltu_dCache_m_dat_o ? dCache_m_dat_i : dCache_m_dat_o) :
+				dCache_m_dat_i);
+		end else if (!dCache_m_bsy_o)
+			dCache_m_stb_i <= 1'b0;
+	end else if (eX_insn_valid_i) begin
 		if (iD_isLoad) begin
-				dCache_m_stb_i <= 1'b1;
-				dCache_m_we_i <= 0;
-				dCache_m_addr_i <= dCache_m_addr_i_[WORDBITSZ-1:CLOG2WORDBITSZBY8];
-				dCache_m_sel_i <= dCache_m_sel_i_;
+			dCache_m_stb_i <= 1'b1;
+			dCache_m_we_i <= 0;
+			dCache_m_addr_i <= dCache_m_addr_i_[WORDBITSZ-1:CLOG2WORDBITSZBY8];
+			dCache_m_sel_i <= dCache_m_sel_i_;
 		end else if (iD_isStore) begin
-				dCache_m_stb_i <= 1'b1;
-				dCache_m_we_i <= 1;
-				dCache_m_addr_i <= dCache_m_addr_i_[WORDBITSZ-1:CLOG2WORDBITSZBY8];
-				dCache_m_sel_i <= dCache_m_sel_i_;
-				dCache_m_dat_i <= dCache_m_dat_i_;
+			dCache_m_stb_i <= 1'b1;
+			dCache_m_we_i <= 1;
+			dCache_m_addr_i <= dCache_m_addr_i_[WORDBITSZ-1:CLOG2WORDBITSZBY8];
+			dCache_m_sel_i <= dCache_m_sel_i_;
+			dCache_m_dat_i <= dCache_m_dat_i_;
 		end else if (iD_isAMO) begin
-				dCache_m_stb_i <= 1'b1;
-				dCache_m_we_i <= 1'b0;
-				dCache_m_we_i_ <= 1'b1;
-				dCache_m_addr_i <= dCache_m_addr_i_[WORDBITSZ-1:CLOG2WORDBITSZBY8];
-				dCache_m_sel_i <= dCache_m_sel_i_;
-				dCache_m_dat_i <= dCache_m_dat_i_;
+			amoUnit_opType <= iD_func5;
+			dCache_m_stb_i <= 1'b1;
+			dCache_m_we_i <= 1'b0;
+			dCache_m_we_i_ <= 1'b1;
+			dCache_m_addr_i <= dCache_m_addr_i_[WORDBITSZ-1:CLOG2WORDBITSZBY8];
+			dCache_m_sel_i <= dCache_m_sel_i_;
+			dCache_m_dat_i <= dCache_m_dat_i_;
 		end else if (!dCache_m_bsy_o) begin
 			dCache_m_stb_i <= 1'b0;
 		end

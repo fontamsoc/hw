@@ -61,10 +61,10 @@ end
 always @ (posedge clk_i) begin
 	if (rst_i)
 		halted_o <= 0;
-	else if (iD_isSystem && iD_func3 == 3'b000 && iD_Iimm[11:0] == 12'd1 && // ebreak
-		eX_insn_valid_i) begin
+	else if (iD_isSystem && iD_func3 == 3'b000 && iD_Iimm[11:0] == 12'd1 && /* ebreak */ eX_insn_valid_i)
 		halted_o <= 1;
-		`ifdef SIMULATION
+	`ifdef SIMULATION
+	if (halted_o && !wb_pending_acks) begin
 		`ifdef PUPREDICTBRANCH
 		$write ("BranchPredictHit: %1.2f%%\n",
 			($bitstoreal(csrBranchPredictHit * 100) / $bitstoreal(csrBranchPredictHit + csrBranchPredictMiss)));
@@ -75,8 +75,8 @@ always @ (posedge clk_i) begin
 		$write ("CPI: %1.2f\n", ($bitstoreal(csrCycle) / $bitstoreal(csrInstret)));
 		$fflush();
 		$finish;
-		`endif
 	end
+	`endif
 end
 
 generate if (WORDBITSZ == 32) begin

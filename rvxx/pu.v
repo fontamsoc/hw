@@ -283,13 +283,15 @@ reg [WORDBITSZ -1 : 0] iD_predictRet;
 // TODO: only add JALR for which (rs1Id != 1).
 `endif
 
+wire iF_flushed_or_not_iF_iD_carryon = (iF_flushed || !iF_iD_carryon);
+
 reg [WORDBITSZ -1 : 0] iF_pc;
 wire [WORDBITSZ -1 : 0] iF_pc_i = ((
 	`ifdef PUPREDICTRET
-	(iF_isRet && !iF_flushed && iF_iD_carryon) ? {WORDBITSZ{1'b0}} :
+	(iF_isRet && !iF_flushed_or_not_iF_iD_carryon) ? {WORDBITSZ{1'b0}} :
 	`endif
 	iF_pc) + (
-	(iF_flushed || !iF_iD_carryon) ? {WORDBITSZ{1'b0}} :
+	iF_flushed_or_not_iF_iD_carryon ? {WORDBITSZ{1'b0}} :
 	`ifdef PUPREDICTBRANCH
 	_iF_isBranch ? iF_Bimm_i :
 	`endif
@@ -389,6 +391,7 @@ wire [WORDBITSZ -1 : 0] iD_Uimm_i = {iF_insn[31:12], {12{1'b0}}};
 wire [WORDBITSZ -1 : 0] iD_Jimm_i = {{12{iF_insn[31]}}, iF_insn[19:12], iF_insn[20], iF_insn[30:21], 1'b0};
 
 wire [3 -1 : 0] iD_func3_i = iF_insn[14:12];
+wire [5 -1 : 0] iD_func5_i = iF_insn[31:27];
 wire [7 -1 : 0] iD_func7_i = iF_insn[31:25];
 
 wire iD_use_rdId_i = (iD_rdId_i &&
@@ -419,9 +422,9 @@ reg iD_isBranch;
 reg iD_isJALR;
 reg iD_isJAL;
 `ifdef PUPREDICTRET
-reg iD_isRet;
-reg iD_isJALRnotRet;
-reg iD_isCall;
+wire iD_isRet = (iD_isJALR && iD_rdId == 5'd0 && iD_rs1Id == 5'd1);
+wire iD_isJALRnotRet = (iD_isJALR && !(iD_rdId == 5'd0 && iD_rs1Id == 5'd1));
+wire iD_isCall = ((iD_isJALR || iD_isJAL) && iD_rdId == 5'd1);
 `endif
 reg iD_isAUIPC;
 reg iD_isLUI;
@@ -439,6 +442,7 @@ reg [WORDBITSZ -1 : 0] iD_Jimm;
 //reg [CLOG2GPRCNT -1 : 0] iD_shamt;
 
 reg [3 -1 : 0] iD_func3;
+reg [5 -1 : 0] iD_func5;
 reg [7 -1 : 0] iD_func7;
 
 `ifdef PURV32M
@@ -466,8 +470,8 @@ wire iD_stalled = (!iD_eX_carryon ||
 	(iD_isRV32M && !iD_func3[2] ? iD_opImul_bsy : 1'b0) ||
 	(iD_isRV32M &&  iD_func3[2] ? iD_opIdiv_bsy : 1'b0) ||
 	`endif
-	(iD_isLoad  ? iD_ldUnit_bsy : 1'b0) ||
-	(iD_isStore ? iD_stUnit_bsy : 1'b0) || (
+	((iD_isLoad || (iD_isAMO && iD_func5 != 5'b00011)) ? iD_ldUnit_bsy : 1'b0) ||
+	((iD_isStore || (iD_isAMO && iD_func5 == 5'b00011)) ? iD_stUnit_bsy : 1'b0) || (
 	// Stall if any of the operand is locked.
 	iD_isALUreg ? !(iD_rdRdy && iD_rs1Rdy && iD_rs2Rdy) :
 	(iD_isALUimm || iD_isJALR || iD_isLoad) ? !(iD_rdRdy && iD_rs1Rdy) :
@@ -592,11 +596,6 @@ always @ (posedge clk_i) begin
 		iD_isBranch <= iD_isBranch_i;
 		iD_isJALR   <= iD_isJALR_i;
 		iD_isJAL    <= iD_isJAL_i;
-		`ifdef PUPREDICTRET
-		iD_isRet <= (iD_isJALR_i && iD_rdId_i == 5'd0 && iD_rs1Id_i == 5'd1);
-		iD_isJALRnotRet <= (iD_isJALR_i && !(iD_rdId_i == 5'd0 && iD_rs1Id_i == 5'd1));
-		iD_isCall <= ((iD_isJALR_i || iD_isJAL_i) && iD_rdId_i == 5'd1);
-		`endif
 		iD_isAUIPC  <= iD_isAUIPC_i;
 		iD_isLUI    <= iD_isLUI_i;
 		iD_isLoad   <= iD_isLoad_i;
@@ -611,6 +610,7 @@ always @ (posedge clk_i) begin
 		iD_Jimm <= iD_Jimm_i;
 
 		iD_func3 <= iD_func3_i;
+		iD_func5 <= iD_func5_i;
 		iD_func7 <= iD_func7_i;
 	end
 end
@@ -629,13 +629,12 @@ wire [WORDBITSZ -1 : 0] eX_aluArg2_i = ((iD_isALUreg || iD_isBranch) ? iD_rs2 : 
 wire [WORDBITSZ -1 : 0] eX_aluPlus_i = (eX_aluArg1_i + eX_aluArg2_i);
 
 // Use a single (WORDBITSZ+1) bits subtract to do subtraction and all comparisons.
-wire [(WORDBITSZ+1) -1 : 0] eX_aluMinus_i = (
-	{1'b1, ~eX_aluArg2_i} + {1'b0, eX_aluArg1_i} + {{WORDBITSZ{1'b0}}, 1'b1});
+wire [(WORDBITSZ+1) -1 : 0] eX_aluMinus_i = (({1'b1, ~eX_aluArg2_i} + {1'b0, eX_aluArg1_i}) + 1'b1);
 wire eX_lt_i = (
 	(eX_aluArg1_i[WORDBITSZ-1] ^ eX_aluArg2_i[WORDBITSZ-1]) ?
 		eX_aluArg1_i[WORDBITSZ-1] : eX_aluMinus_i[WORDBITSZ]);
 wire eX_ltu_i = eX_aluMinus_i[WORDBITSZ];
-wire eX_eq_i = (eX_aluMinus_i[WORDBITSZ-1:0] == 0);
+wire eX_eq_i = (eX_aluMinus_i[WORDBITSZ-1:0] == {WORDBITSZ{1'b0}});
 
 wire [(WORDBITSZ+1) -1 : 0] _eX_aluArg1_i = {iD_func7[5] & eX_aluArg1_i[WORDBITSZ-1], eX_aluArg1_i};
 
@@ -781,8 +780,7 @@ wire eX_multiCycleInsn_i = (
 	`ifdef PURV32M
 	iD_isRV32M ||
 	`endif
-	iD_isLoad || iD_isStore);
-/* TODO Include amo ... */
+	iD_isLoad || iD_isStore || iD_isAMO);
 reg eX_multiCycleInsn;
 
 always @ (posedge clk_i) begin
