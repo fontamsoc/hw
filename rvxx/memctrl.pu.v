@@ -11,17 +11,20 @@ reg [CLOG2MAXPENDINGACK -1 : 0] wb_rqst_cnt;
 reg [CLOG2MAXPENDINGACK -1 : 0] wb_rsp_cnt;
 
 always @ (posedge clk_i) begin
-
 	if (rst_i)
 		wb_rqst_cnt <= 0;
 	else if (wb_stb_o && !_wb_bsy_i)
 		wb_rqst_cnt <= wb_rqst_cnt + 1'b1;
+end
 
+always @ (posedge clk_i) begin
 	if (rst_i)
 		wb_rsp_cnt <= 0;
 	else if (wb_ack_i)
 		wb_rsp_cnt <= wb_rsp_cnt + 1'b1;
+end
 
+always @ (posedge clk_i) begin
 	if (rst_i)
 		wb_pending_acks <= 0;
 	else if (wb_stb_o && !_wb_bsy_i && wb_ack_i);

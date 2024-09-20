@@ -295,29 +295,36 @@ always @ (posedge clk_i)
 	bht_o <= bht[iF0_pc_i[CLOG2BHTSETCNT+CLOG2INSNBITSZBY8-1:CLOG2INSNBITSZBY8]];
 `endif
 
+`ifdef PUPREDICTBRANCH
 always @ (posedge clk_i) begin
-
-	`ifdef PUPREDICTBRANCH
 	if (iF0_iD0_carryon)
 		iD0_predictBranch <= bht_o;
-	`endif
+end
+`endif
 
-	`ifdef PUPREDICTRET
+`ifdef PUPREDICTRET
+always @ (posedge clk_i) begin
 	if (iF0_iD0_carryon)
 		iD0_predictRet <= ras0;
-	`endif
+end
+`endif
 
+always @ (posedge clk_i) begin
 	if (rst_i) begin
 		iF0_flushed_ <= 1;
 		iF0_pc <= rstaddr_i;
 	end else if (iF0_en) begin
 		iF0_flushed_ <= iF0_eX0_JumpOrBranch_i;
 		iF0_pc <= iF0_eX0_JumpOrBranch_i ? iF0_eX0_JumpOrBranchAddr_i : iF0_pc_i;
-		`ifdef PU2NDISSUE
-		iF1_pc <= iF1_pc_i;
-		`endif
 	end
 end
+
+`ifdef PU2NDISSUE
+always @ (posedge clk_i) begin
+	if (iF0_en)
+		iF1_pc <= iF1_pc_i;
+end
+`endif
 
 wire [INSNBITSZ -1 : 0] iF0_insn;
 wire [XWORDBITSZ -1 : 0] iF0_insn_ = iCache0_dato_w;
@@ -365,11 +372,9 @@ wire [WORDBITSZ -1 : 0] iF1_Uimm = {iF1_insn[31:12], {12{1'b0}}};
 wire [3 -1 : 0] iF1_func3 = iF1_insn[14:12];
 wire [7 -1 : 0] iF1_func7 = iF1_insn[31:25];
 
-`ifdef PU2NDISSUE
 wire iF1_rdId_eq_iF0_rdId  = (iF1_rdId && iF1_rdId == iF0_rdId);
 wire iF1_rs1Id_eq_iF0_rdId = (iF1_rs1Id && iF1_rs1Id == iF0_rdId);
 wire iF1_rs2Id_eq_iF0_rdId = (iF1_rs2Id && iF1_rs2Id == iF0_rdId);
-`endif
 `endif
 
 wire [WORDBITSZ -1 : 0] iF0_pc_plus_INSNBITSzBy8 = (iF0_pc + (INSNBITSZ/8));
@@ -815,14 +820,12 @@ wire _iF1_flushed = ((iD0_en ? iF1_hazard : iD1_flushed) || iD0_eX0_JumpOrBranch
 `endif
 
 always @ (posedge clk_i) begin
-
 	iD0_rs1_ <= gprDat[_iF0_rs1Id];
 	iD0_rs2_ <= gprDat[_iF0_rs2Id];
 	`ifdef PU2NDISSUE
 	iD1_rs1_ <= gprDat[_iF1_rs1Id];
 	iD1_rs2_ <= gprDat[_iF1_rs2Id];
 	`endif
-
 	iD0_rdRdy_  <= gprRdy[_iF0_rdId];
 	iD0_rs1Rdy_ <= gprRdy[_iF0_rs1Id];
 	iD0_rs2Rdy_ <= gprRdy[_iF0_rs2Id];
@@ -831,39 +834,53 @@ always @ (posedge clk_i) begin
 	iD1_rs1Rdy_ <= gprRdy[_iF1_rs1Id];
 	iD1_rs2Rdy_ <= gprRdy[_iF1_rs2Id];
 	`endif
+end
 
+always @ (posedge clk_i) begin
 	if (iD0_en)
 		iD0_rdRdy__ <= 1'b0;
 	else if (iD0_rdRdy)
 		iD0_rdRdy__ <= 1'b1;
+end
 
+always @ (posedge clk_i) begin
 	if (iD0_en)
 		iD0_rs1Rdy__ <= 1'b0;
 	else if (iD0_rs1Rdy)
 		iD0_rs1Rdy__ <= 1'b1;
+end
 
+always @ (posedge clk_i) begin
 	if (iD0_en)
 		iD0_rs2Rdy__ <= 1'b0;
 	else if (iD0_rs2Rdy)
 		iD0_rs2Rdy__ <= 1'b1;
+end
 
-	`ifdef PU2NDISSUE
+`ifdef PU2NDISSUE
+always @ (posedge clk_i) begin
 	if (iD0_en)
 		iD1_rdRdy__ <= 1'b0;
 	else if (iD1_rdRdy)
 		iD1_rdRdy__ <= 1'b1;
+end
 
+always @ (posedge clk_i) begin
 	if (iD0_en)
 		iD1_rs1Rdy__ <= 1'b0;
 	else if (iD1_rs1Rdy)
 		iD1_rs1Rdy__ <= 1'b1;
+end
 
+always @ (posedge clk_i) begin
 	if (iD0_en)
 		iD1_rs2Rdy__ <= 1'b0;
 	else if (iD1_rs2Rdy)
 		iD1_rs2Rdy__ <= 1'b1;
-	`endif
+end
+`endif
 
+always @ (posedge clk_i) begin
 	if (rst_i) begin
 		iD0_flushed <= 1;
 		`ifdef PU2NDISSUE
@@ -875,6 +892,9 @@ always @ (posedge clk_i) begin
 		iD1_flushed <= (iF1_hazard || iD0_eX0_JumpOrBranch_i);
 		`endif
 	end
+end
+
+always @ (posedge clk_i) begin
 
 	if (iD0_en) begin
 
@@ -1194,29 +1214,29 @@ wire [WORDBITSZ -1 : 0] eX1_rslt_i = (
 	              eX1_aluOut_i        );
 `endif
 
-reg eX0_multiCycleInsn;
-
 always @ (posedge clk_i) begin
-
 	if (rst_i) begin
 		eX0_flushed <= 1;
 		`ifdef PU2NDISSUE
 		eX1_flushed <= 1;
 		`endif
-		eX0_multiCycleInsn <= 1;
 	end else if (eX0_en) begin
 		eX0_flushed <= eX0_flushed_i;
 		`ifdef PU2NDISSUE
 		eX1_flushed <= eX1_flushed_i;
 		`endif
-		eX0_multiCycleInsn <= iD0_multiCycleInsn;
 	end
+end
 
+reg eX0_multiCycleInsn;
+
+always @ (posedge clk_i) begin
 	if (eX0_en) begin
 		`ifdef SIMULATION
 		eX0_pc   <= iD0_pc;
 		eX0_insn <= iD0_insn;
 		`endif
+		eX0_multiCycleInsn <= iD0_multiCycleInsn;
 		iD0_eX0_rdId <= ((iD0_multiCycleInsn || eX0_flushed_i) ? 5'd0 : iD0_rdId);
 		iD0_eX0_rslt <= eX0_rslt_i;
 		`ifdef PU2NDISSUE
@@ -1306,7 +1326,6 @@ always @* begin
 end
 
 always @ (posedge clk_i) begin
-
 	if (ldUnit_memAck) begin
 		iD0_rW0_rdId <= ldUnit_rqsts_rIdx;
 		iD0_rW0_rslt <= ldUnit_rqsts_dato;
@@ -1384,11 +1403,14 @@ end
 always @ (posedge clk_i) begin
 	if (rW0_we_i)
 		gprDat[rW0_idx_i] <= rW0_dat_i;
-	`ifdef PU2NDISSUE
+end
+
+`ifdef PU2NDISSUE
+always @ (posedge clk_i) begin
 	if (rW1_we_i)
 		gprDat[rW1_idx_i] <= rW1_dat_i;
-	`endif
 end
+`endif
 
 wire gprRdy0Lock = (_iF0_use_rdId && !_iF0_flushed);
 `ifdef PU2NDISSUE

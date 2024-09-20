@@ -192,17 +192,20 @@ reg [CLOG2MAXPENDINGACK -1 : 0] dCache_m_rqst_cnt;
 reg [CLOG2MAXPENDINGACK -1 : 0] dCache_m_rsp_cnt;
 
 always @ (posedge clk_i) begin
-
 	if (rst_i)
 		dCache_m_rqst_cnt <= 0;
 	else if (_dCache_m_stb_i)
 		dCache_m_rqst_cnt <= dCache_m_rqst_cnt + 1'b1;
+end
 
+always @ (posedge clk_i) begin
 	if (rst_i)
 		dCache_m_rsp_cnt <= 0;
 	else if (dCache_m_ack_o)
 		dCache_m_rsp_cnt <= dCache_m_rsp_cnt + 1'b1;
+end
 
+always @ (posedge clk_i) begin
 	if (rst_i)
 		dCache_m_pending_acks <= 0;
 	else if (_dCache_m_stb_i && dCache_m_ack_o);

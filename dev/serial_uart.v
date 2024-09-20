@@ -265,8 +265,6 @@ always @ (posedge clk_i) begin
 		// On reset, interrupt is disabled, and must be explicitely enabled.
 		// It prevents unwanted interrupt after reset.
 		intrqstthresh <= 0;
-		rxclockcyclesperbit <= (CLOCKCYCLESPERBIT + (CLOCKCYCLESPERBIT>>5));
-		txclockcyclesperbit <= CLOCKCYCLESPERBIT;
 	end else if (cmdsetint) begin
 		intrqstthresh <= wb_dat_r[WORDBITSZ-1:2];
 	end else if (irq_rdy_i_negedge) begin
@@ -285,12 +283,20 @@ always @ (posedge clk_i) begin
 			(wb_dat_r[2] ? tx_usage_w : rx_usage_w),
 			wb_dat_r[1:0]};
 	end else if (cmdsetspd) begin
+		wb_dat_o_ <= {PHYCLKFREQ[(WORDBITSZ-2)-1:0], wb_dat_r[1:0]};
+	end
+end
+
+always @ (posedge clk_i) begin
+	if (rst_i) begin
+		rxclockcyclesperbit <= (CLOCKCYCLESPERBIT + (CLOCKCYCLESPERBIT>>5));
+		txclockcyclesperbit <= CLOCKCYCLESPERBIT;
+	end else if (cmdsetspd) begin
 		// Normally the formula to use is:
 		// ((PHYCLKFREQ/bitrate) + ((PHYCLKFREQ/bitrate)/10/2));
 		// so this is an approximation.
 		rxclockcyclesperbit <= (wb_dat_r[WORDBITSZ-1:2] + (wb_dat_r[WORDBITSZ-1:2] >> 5));
 		txclockcyclesperbit <=  wb_dat_r[WORDBITSZ-1:2];
-		wb_dat_o_ <= {PHYCLKFREQ[(WORDBITSZ-2)-1:0], wb_dat_r[1:0]};
 	end
 end
 
