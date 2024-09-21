@@ -18,8 +18,6 @@
 `define PUPREDICTJAL
 `define PUPREDICTBRANCH
 `define PUPREDICTRET
-`define PU2NDISSUE
-`define PU2NDISSUE_
 `include "rvxx/cpu.v"
 /* makefile defined *///`define CPU_COUNT 1
 

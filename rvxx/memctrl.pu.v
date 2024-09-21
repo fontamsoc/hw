@@ -75,11 +75,6 @@ always @ (posedge clk_i) begin
 	end else if (!iCache0_hit_w) begin
 		iF0_mem_stb <= iCache0_rdy_w;
 		iF0_mem_addr <= iF0_pc[WORDBITSZ-1:CLOG2XWORDBITSZBY8];
-	`ifdef PU2NDISSUE
-	end else if (!iCache1_hit_w) begin
-		iF0_mem_stb <= iCache1_rdy_w;
-		iF0_mem_addr <= iF1_pc[WORDBITSZ-1:CLOG2XWORDBITSZBY8];
-	`endif
 	end
 end
 

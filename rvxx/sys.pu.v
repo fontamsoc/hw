@@ -17,11 +17,7 @@ always @ (posedge clk_i) begin
 		`endif
 		|| (!eX0_flushed && !eX0_multiCycleInsn && !halted_o)
 		) begin
-		csrInstret <= (csrInstret + 1'b1
-		`ifdef PU2NDISSUE
-		+ !eX1_flushed
-		`endif
-		);
+		csrInstret <= (csrInstret + 1'b1);
 		`ifdef _SIMULATION
 		if (!csrInstret[20:0]) begin
 			$write("."); $fflush();
