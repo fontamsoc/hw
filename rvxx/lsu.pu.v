@@ -72,9 +72,9 @@ end endgenerate
 // before ldUnit_rqsts.
 wire ldUnit_rqsts_full;
 
-assign iD0_ldUnit_bsy = (ldUnit_rqsts_full || __dCache_m_bsy);
+assign iD_ldUnit_bsy = (ldUnit_rqsts_full || __dCache_m_bsy);
 
-wire ldUnit_stb = (iD0_ldUnit_stb && eX0_insn_valid_i);
+wire ldUnit_stb = (iD_ldUnit_stb && eX_insn_valid_i);
 
 wire [CLOG2GPRCNT -1 : 0] ldUnit_rqsts_rIdx;
 wire                      ldUnit_rqsts_isAMO;
@@ -86,7 +86,7 @@ fifo #(
 	 .rst_i       (rst_i)
 	,.clk_write_i (clk_i)
 	,.write_i     (ldUnit_stb)
-	,.data_i      ({iD0_isAMO, iD0_func3[2], iD0_rdId, dCache_m_sel_i_})
+	,.data_i      ({iD_isAMO, iD_func3[2], iD_rdId, dCache_m_sel_i_})
 	,.near_full_o (ldUnit_rqsts_full)
 	,.clk_read_i  (clk_i)
 	,.read_i      (ldUnit_rqsts_empty_r || ldUnit_memAck)
@@ -118,7 +118,7 @@ assign ldUnit_memAck = (
 
 // Store Unit.
 
-assign iD0_stUnit_bsy = __dCache_m_bsy;
+assign iD_stUnit_bsy = __dCache_m_bsy;
 
 // AMO Unit.
 

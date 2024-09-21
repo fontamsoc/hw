@@ -233,23 +233,23 @@ wire _wb_bsy_i;
 
 `include "./icache.pu.v"
 
-reg iF0_flushed_;
-wire iF0_flushed = (iF0_flushed_ || !iCache0_hit_w);
+reg iF_flushed_;
+wire iF_flushed = (iF_flushed_ || !iCache_hit_w);
 
-wire iF0_iD0_flushed;
-wire iF0_iD0_stalled;
-wire iF0_iD0_carryon;
+wire iF_iD_flushed;
+wire iF_iD_stalled;
+wire iF_iD_carryon;
 
-wire iF0_carryon = (iF0_flushed || iF0_iD0_carryon);
+wire iF_carryon = (iF_flushed || iF_iD_carryon);
 
-wire iF0_en = (iF0_carryon && !halted_o);
+wire iF_en = (iF_carryon && !halted_o);
 
-wire                    iF0_eX0_JumpOrBranch_i;
-wire [WORDBITSZ -1 : 0] iF0_eX0_JumpOrBranchAddr_i;
+wire                    iF_eX_JumpOrBranch_i;
+wire [WORDBITSZ -1 : 0] iF_eX_JumpOrBranchAddr_i;
 
-assign iCache_nxtway_w = iF0_eX0_JumpOrBranch_i;
+assign iCache_nxtway_w = iF_eX_JumpOrBranch_i;
 
-assign iCache_re_w = iF0_en;
+assign iCache_re_w = iF_en;
 
 `ifdef PUPREDICTRET
 reg [WORDBITSZ -1 : 0] ras0;
@@ -260,7 +260,7 @@ reg [WORDBITSZ -1 : 0] ras4;
 reg [WORDBITSZ -1 : 0] ras5;
 reg [WORDBITSZ -1 : 0] ras6;
 reg [WORDBITSZ -1 : 0] ras7;
-reg [WORDBITSZ -1 : 0] iD0_predictRet;
+reg [WORDBITSZ -1 : 0] iD_predictRet;
 `endif
 
 `ifdef PUPREDICTJALR
@@ -269,543 +269,543 @@ reg [WORDBITSZ -1 : 0] iD0_predictRet;
 // TODO: only add JALR for which (rs1Id != 1).
 `endif
 
-reg  [WORDBITSZ -1 : 0] iF0_pc;
-wire [WORDBITSZ -1 : 0] iF0_pc_i;
+reg  [WORDBITSZ -1 : 0] iF_pc;
+wire [WORDBITSZ -1 : 0] iF_pc_i;
 
-assign iCache0_ridx_w = iF0_pc_i[CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8-1:CLOG2XWORDBITSZBY8];
-assign iCache0_rtag_w = iF0_pc_i[WORDBITSZ-1:CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8];
+assign iCache_ridx_w = iF_pc_i[CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8-1:CLOG2XWORDBITSZBY8];
+assign iCache_rtag_w = iF_pc_i[WORDBITSZ-1:CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8];
 
 `ifdef PUPREDICTBRANCH
-reg [2 -1 : 0] iD0_predictBranch;
+reg [2 -1 : 0] iD_predictBranch;
 localparam BHTSETCNT = 4096;
 localparam CLOG2BHTSETCNT = clog2(BHTSETCNT);
 reg [2 -1 : 0] bht [0 : BHTSETCNT - 1]; // Branch History Table.
 reg [2 -1 : 0] bht_o;
 always @ (posedge clk_i)
-	bht_o <= bht[iF0_pc_i[CLOG2BHTSETCNT+CLOG2INSNBITSZBY8-1:CLOG2INSNBITSZBY8]];
+	bht_o <= bht[iF_pc_i[CLOG2BHTSETCNT+CLOG2INSNBITSZBY8-1:CLOG2INSNBITSZBY8]];
 `endif
 
 `ifdef PUPREDICTBRANCH
 always @ (posedge clk_i) begin
-	if (iF0_iD0_carryon)
-		iD0_predictBranch <= bht_o;
+	if (iF_iD_carryon)
+		iD_predictBranch <= bht_o;
 end
 `endif
 
 `ifdef PUPREDICTRET
 always @ (posedge clk_i) begin
-	if (iF0_iD0_carryon)
-		iD0_predictRet <= ras0;
+	if (iF_iD_carryon)
+		iD_predictRet <= ras0;
 end
 `endif
 
 always @ (posedge clk_i) begin
 	if (rst_i) begin
-		iF0_flushed_ <= 1;
-		iF0_pc <= rstaddr_i;
-	end else if (iF0_en) begin
-		iF0_flushed_ <= iF0_eX0_JumpOrBranch_i;
-		iF0_pc <= iF0_eX0_JumpOrBranch_i ? iF0_eX0_JumpOrBranchAddr_i : iF0_pc_i;
+		iF_flushed_ <= 1;
+		iF_pc <= rstaddr_i;
+	end else if (iF_en) begin
+		iF_flushed_ <= iF_eX_JumpOrBranch_i;
+		iF_pc <= iF_eX_JumpOrBranch_i ? iF_eX_JumpOrBranchAddr_i : iF_pc_i;
 	end
 end
 
-wire [INSNBITSZ -1 : 0] iF0_insn;
-wire [XWORDBITSZ -1 : 0] iF0_insn_ = iCache0_dato_w;
-generate if (XWORDBITSZ > INSNBITSZ) begin :gen_iF0_insn
-assign iF0_insn = (iF0_insn_ >> (INSNBITSZ*iF0_pc[CLOG2XWORDBITSZBY8-1:CLOG2INSNBITSZBY8]));
+wire [INSNBITSZ -1 : 0] iF_insn;
+wire [XWORDBITSZ -1 : 0] iF_insn_ = iCache_dato_w;
+generate if (XWORDBITSZ > INSNBITSZ) begin :gen_iF_insn
+assign iF_insn = (iF_insn_ >> (INSNBITSZ*iF_pc[CLOG2XWORDBITSZBY8-1:CLOG2INSNBITSZBY8]));
 end else begin
-assign iF0_insn = iF0_insn_;
+assign iF_insn = iF_insn_;
 end endgenerate
 
-wire [CLOG2GPRCNT -1 : 0] iF0_rdId  = iF0_insn[11:7];
-wire [CLOG2GPRCNT -1 : 0] iF0_rs1Id = iF0_insn[19:15];
-wire [CLOG2GPRCNT -1 : 0] iF0_rs2Id = iF0_insn[24:20];
+wire [CLOG2GPRCNT -1 : 0] iF_rdId  = iF_insn[11:7];
+wire [CLOG2GPRCNT -1 : 0] iF_rs1Id = iF_insn[19:15];
+wire [CLOG2GPRCNT -1 : 0] iF_rs2Id = iF_insn[24:20];
 
-wire [WORDBITSZ -1 : 0] iF0_Iimm = {{21{iF0_insn[31]}}, iF0_insn[30:20]};
-wire [WORDBITSZ -1 : 0] iF0_Simm = {{21{iF0_insn[31]}}, iF0_insn[30:25], iF0_insn[11:7]};
-wire [WORDBITSZ -1 : 0] iF0_Bimm = {{20{iF0_insn[31]}}, iF0_insn[7], iF0_insn[30:25], iF0_insn[11:8], 1'b0};
-wire [WORDBITSZ -1 : 0] iF0_Uimm = {iF0_insn[31:12], {12{1'b0}}};
-wire [WORDBITSZ -1 : 0] iF0_Jimm = {{12{iF0_insn[31]}}, iF0_insn[19:12], iF0_insn[20], iF0_insn[30:21], 1'b0};
+wire [WORDBITSZ -1 : 0] iF_Iimm = {{21{iF_insn[31]}}, iF_insn[30:20]};
+wire [WORDBITSZ -1 : 0] iF_Simm = {{21{iF_insn[31]}}, iF_insn[30:25], iF_insn[11:7]};
+wire [WORDBITSZ -1 : 0] iF_Bimm = {{20{iF_insn[31]}}, iF_insn[7], iF_insn[30:25], iF_insn[11:8], 1'b0};
+wire [WORDBITSZ -1 : 0] iF_Uimm = {iF_insn[31:12], {12{1'b0}}};
+wire [WORDBITSZ -1 : 0] iF_Jimm = {{12{iF_insn[31]}}, iF_insn[19:12], iF_insn[20], iF_insn[30:21], 1'b0};
 
-wire [3 -1 : 0] iF0_func3 = iF0_insn[14:12];
-wire [5 -1 : 0] iF0_func5 = iF0_insn[31:27];
-wire [7 -1 : 0] iF0_func7 = iF0_insn[31:25];
+wire [3 -1 : 0] iF_func3 = iF_insn[14:12];
+wire [5 -1 : 0] iF_func5 = iF_insn[31:27];
+wire [7 -1 : 0] iF_func7 = iF_insn[31:25];
 
-wire [WORDBITSZ -1 : 0] iF0_pc_plus_INSNBITSzBy8 = (iF0_pc + (INSNBITSZ/8));
-wire [WORDBITSZ -1 : 0] iF0_pc_plus_iF0_Bimm     = (iF0_pc + iF0_Bimm);
-wire [WORDBITSZ -1 : 0] iF0_pc_plus_iF0_Uimm     = (iF0_pc + iF0_Uimm);
-wire [WORDBITSZ -1 : 0] iF0_pc_plus_iF0_Jimm     = (iF0_pc + iF0_Jimm);
+wire [WORDBITSZ -1 : 0] iF_pc_plus_INSNBITSzBy8 = (iF_pc + (INSNBITSZ/8));
+wire [WORDBITSZ -1 : 0] iF_pc_plus_iF_Bimm      = (iF_pc + iF_Bimm);
+wire [WORDBITSZ -1 : 0] iF_pc_plus_iF_Uimm      = (iF_pc + iF_Uimm);
+wire [WORDBITSZ -1 : 0] iF_pc_plus_iF_Jimm      = (iF_pc + iF_Jimm);
 
-wire iF0_isALUreg = (iF0_insn[6:2] == 5'b01100);
-wire iF0_isALUimm = (iF0_insn[6:2] == 5'b00100);
-wire iF0_isBranch = (iF0_insn[6:2] == 5'b11000);
-wire iF0_isJALR   = (iF0_insn[6:2] == 5'b11001);
-wire iF0_isJAL    = (iF0_insn[6:2] == 5'b11011);
+wire iF_isALUreg = (iF_insn[6:2] == 5'b01100);
+wire iF_isALUimm = (iF_insn[6:2] == 5'b00100);
+wire iF_isBranch = (iF_insn[6:2] == 5'b11000);
+wire iF_isJALR   = (iF_insn[6:2] == 5'b11001);
+wire iF_isJAL    = (iF_insn[6:2] == 5'b11011);
 `ifdef PUPREDICTRET
-wire iF0_isRet = (iF0_isJALR && iF0_rdId == 5'd0 && iF0_rs1Id == 5'd1);
-wire iF0_isJALRnotRet = (iF0_isJALR && !(iF0_rdId == 5'd0 && iF0_rs1Id == 5'd1));
-wire iF0_isCall = ((iF0_isJALR || iF0_isJAL) && iF0_rdId == 5'd1);
+wire iF_isRet = (iF_isJALR && iF_rdId == 5'd0 && iF_rs1Id == 5'd1);
+wire iF_isJALRnotRet = (iF_isJALR && !(iF_rdId == 5'd0 && iF_rs1Id == 5'd1));
+wire iF_isCall = ((iF_isJALR || iF_isJAL) && iF_rdId == 5'd1);
 `endif
-wire iF0_isAUIPC  = (iF0_insn[6:2] == 5'b00101);
-wire iF0_isLUI    = (iF0_insn[6:2] == 5'b01101);
-wire iF0_isLoad   = (iF0_insn[6:2] == 5'b00000);
-wire iF0_isStore  = (iF0_insn[6:2] == 5'b01000);
-wire iF0_isSystem = (iF0_insn[6:2] == 5'b11100);
-wire iF0_isAMO    = (iF0_insn[6:2] == 5'b01011);
+wire iF_isAUIPC  = (iF_insn[6:2] == 5'b00101);
+wire iF_isLUI    = (iF_insn[6:2] == 5'b01101);
+wire iF_isLoad   = (iF_insn[6:2] == 5'b00000);
+wire iF_isStore  = (iF_insn[6:2] == 5'b01000);
+wire iF_isSystem = (iF_insn[6:2] == 5'b11100);
+wire iF_isAMO    = (iF_insn[6:2] == 5'b01011);
 
-wire [WORDBITSZ -1 : 0] iF0_addrImm = (iF0_isLoad ? iF0_Iimm : iF0_isStore ? iF0_Simm : {WORDBITSZ{1'b0}});
+wire [WORDBITSZ -1 : 0] iF_addrImm = (iF_isLoad ? iF_Iimm : iF_isStore ? iF_Simm : {WORDBITSZ{1'b0}});
 
-wire iF0_isSystemAndFunc3Null = (iF0_isSystem && iF0_func3 == 3'b000);
-wire iF0_isEcall  = (iF0_isSystemAndFunc3Null && iF0_Iimm[11:0] == 12'd0);
-wire iF0_isEbreak = (iF0_isSystemAndFunc3Null && iF0_Iimm[11:0] == 12'd1);
+wire iF_isSystemAndFunc3Null = (iF_isSystem && iF_func3 == 3'b000);
+wire iF_isEcall  = (iF_isSystemAndFunc3Null && iF_Iimm[11:0] == 12'd0);
+wire iF_isEbreak = (iF_isSystemAndFunc3Null && iF_Iimm[11:0] == 12'd1);
 
-wire iF0_isCSR = (iF0_isSystem && iF0_func3[1:0]);
+wire iF_isCSR = (iF_isSystem && iF_func3[1:0]);
 
 `ifdef PURV32M
-wire iF0_isRV32M    = (iF0_isALUreg && iF0_func7[0]);
-wire iF0_opImul_stb = (iF0_isRV32M && !iF0_func3[2] && iF0_rdId);
-wire iF0_opIdiv_stb = (iF0_isRV32M &&  iF0_func3[2] && iF0_rdId);
+wire iF_isRV32M    = (iF_isALUreg && iF_func7[0]);
+wire iF_opImul_stb = (iF_isRV32M && !iF_func3[2] && iF_rdId);
+wire iF_opIdiv_stb = (iF_isRV32M &&  iF_func3[2] && iF_rdId);
 `endif
 
-wire iF0_ldUnit_stb = (iF0_isLoad || (iF0_isAMO && iF0_func5 != 5'b00011));
-wire iF0_stUnit_stb = (iF0_isStore || (iF0_isAMO && iF0_func5 == 5'b00011));
+wire iF_ldUnit_stb = (iF_isLoad || (iF_isAMO && iF_func5 != 5'b00011));
+wire iF_stUnit_stb = (iF_isStore || (iF_isAMO && iF_func5 == 5'b00011));
 
-wire iF0_isALUimmOrJALrOrLoad = (iF0_isALUimm || iF0_isJALR || iF0_isLoad);
-wire iF0_isBranchOrStore = (iF0_isBranch || iF0_isStore);
-wire iF0_isJAlOrAUIPcOrLUI = (iF0_isJAL || iF0_isAUIPC || iF0_isLUI);
-wire iF0_isALUregOrBranch = (iF0_isALUreg || iF0_isBranch);
-wire iF0_isJAlOrJALR = (iF0_isJAL || iF0_isJALR);
+wire iF_isALUimmOrJALrOrLoad = (iF_isALUimm || iF_isJALR || iF_isLoad);
+wire iF_isBranchOrStore = (iF_isBranch || iF_isStore);
+wire iF_isJAlOrAUIPcOrLUI = (iF_isJAL || iF_isAUIPC || iF_isLUI);
+wire iF_isALUregOrBranch = (iF_isALUreg || iF_isBranch);
+wire iF_isJAlOrJALR = (iF_isJAL || iF_isJALR);
 
-wire iF0_multiCycleInsn = (
+wire iF_multiCycleInsn = (
 	`ifdef PURV32M
-	iF0_isRV32M ||
+	iF_isRV32M ||
 	`endif
-	iF0_isLoad || iF0_isStore || iF0_isAMO);
+	iF_isLoad || iF_isStore || iF_isAMO);
 
-wire iF0_use_rdId = (iF0_rdId &&
-	!(iF0_isBranchOrStore ||
-		(iF0_isSystem && !iF0_func3[1:0] /* non-CSR instructions */)));
+wire iF_use_rdId = (iF_rdId &&
+	!(iF_isBranchOrStore ||
+		(iF_isSystem && !iF_func3[1:0] /* non-CSR instructions */)));
 
 `ifdef SIMULATION
-reg iF0_eX0_JumpOrBranch; // Used by sim.pc_w .
+reg iF_eX_JumpOrBranch; // Used by sim.pc_w .
 always @ (posedge clk_i)
-	iF0_eX0_JumpOrBranch <= (rst_i ? 1'b1 : iF0_eX0_JumpOrBranch_i);
+	iF_eX_JumpOrBranch <= (rst_i ? 1'b1 : iF_eX_JumpOrBranch_i);
 `endif
 
-wire iF0_flushed_or_not_iF0_iD0_carryon = (iF0_flushed || !iF0_iD0_carryon);
+wire iF_flushed_or_not_iF_iD_carryon = (iF_flushed || !iF_iD_carryon);
 
-assign iF0_pc_i = ((
+assign iF_pc_i = ((
 	`ifdef PUPREDICTRET
-	(iF0_isRet && !iF0_flushed_or_not_iF0_iD0_carryon) ? {WORDBITSZ{1'b0}} :
+	(iF_isRet && !iF_flushed_or_not_iF_iD_carryon) ? {WORDBITSZ{1'b0}} :
 	`endif
-	iF0_pc) + (
-	iF0_flushed_or_not_iF0_iD0_carryon ? {WORDBITSZ{1'b0}} :
+	iF_pc) + (
+	iF_flushed_or_not_iF_iD_carryon ? {WORDBITSZ{1'b0}} :
 	`ifdef PUPREDICTBRANCH
-	(iF0_isBranch && bht_o[1]) ? iF0_Bimm :
+	(iF_isBranch && bht_o[1]) ? iF_Bimm :
 	`endif
 	`ifdef PUPREDICTJAL
-	iF0_isJAL ? iF0_Jimm :
+	iF_isJAL ? iF_Jimm :
 	`endif
 	`ifdef PUPREDICTRET
-	iF0_isRet ? ras0 :
+	iF_isRet ? ras0 :
 	`endif
 	(INSNBITSZ/8)));
 
 ////////////////////////////////////// ID (Instruction Decode) stage ///////////////////////////////////////
 
-reg [WORDBITSZ -1 : 0] iD0_pc;
+reg [WORDBITSZ -1 : 0] iD_pc;
 `ifdef SIMULATION
-reg [INSNBITSZ -1 : 0] iD0_insn;
+reg [INSNBITSZ -1 : 0] iD_insn;
 `endif
 
-reg [CLOG2GPRCNT -1 : 0] iD0_rdId; // Get set to null if instruction will not set a GPR.
-reg [CLOG2GPRCNT -1 : 0] iD0_rs1Id;
-reg [CLOG2GPRCNT -1 : 0] iD0_rs2Id;
+reg [CLOG2GPRCNT -1 : 0] iD_rdId; // Get set to null if instruction will not set a GPR.
+reg [CLOG2GPRCNT -1 : 0] iD_rs1Id;
+reg [CLOG2GPRCNT -1 : 0] iD_rs2Id;
 
-reg [WORDBITSZ -1 : 0] iD0_Iimm;
-reg [WORDBITSZ -1 : 0] iD0_Simm;
-reg [WORDBITSZ -1 : 0] iD0_Bimm;
-reg [WORDBITSZ -1 : 0] iD0_Uimm;
-reg [WORDBITSZ -1 : 0] iD0_Jimm;
+reg [WORDBITSZ -1 : 0] iD_Iimm;
+reg [WORDBITSZ -1 : 0] iD_Simm;
+reg [WORDBITSZ -1 : 0] iD_Bimm;
+reg [WORDBITSZ -1 : 0] iD_Uimm;
+reg [WORDBITSZ -1 : 0] iD_Jimm;
 
-reg [3 -1 : 0] iD0_func3;
-reg [5 -1 : 0] iD0_func5;
-reg [7 -1 : 0] iD0_func7;
+reg [3 -1 : 0] iD_func3;
+reg [5 -1 : 0] iD_func5;
+reg [7 -1 : 0] iD_func7;
 
-reg [WORDBITSZ -1 : 0] iD0_pc_plus_INSNBITSzBy8;
-reg [WORDBITSZ -1 : 0] iD0_pc_plus_iD0_Bimm;
-reg [WORDBITSZ -1 : 0] iD0_pc_plus_iD0_Uimm;
-reg [WORDBITSZ -1 : 0] iD0_pc_plus_iD0_Jimm;
+reg [WORDBITSZ -1 : 0] iD_pc_plus_INSNBITSzBy8;
+reg [WORDBITSZ -1 : 0] iD_pc_plus_iD_Bimm;
+reg [WORDBITSZ -1 : 0] iD_pc_plus_iD_Uimm;
+reg [WORDBITSZ -1 : 0] iD_pc_plus_iD_Jimm;
 
-reg iD0_isALUreg;
-reg iD0_isALUimm;
-reg iD0_isBranch;
-reg iD0_isJALR;
-reg iD0_isJAL;
+reg iD_isALUreg;
+reg iD_isALUimm;
+reg iD_isBranch;
+reg iD_isJALR;
+reg iD_isJAL;
 `ifdef PUPREDICTRET
-reg iD0_isRet;
-reg iD0_isJALRnotRet;
-reg iD0_isCall;
+reg iD_isRet;
+reg iD_isJALRnotRet;
+reg iD_isCall;
 `endif
-reg iD0_isAUIPC;
-reg iD0_isLUI;
-reg iD0_isLoad;
-reg iD0_isStore;
-reg iD0_isSystem;
-reg iD0_isAMO;
+reg iD_isAUIPC;
+reg iD_isLUI;
+reg iD_isLoad;
+reg iD_isStore;
+reg iD_isSystem;
+reg iD_isAMO;
 
-reg [WORDBITSZ -1 : 0] iD0_addrImm;
+reg [WORDBITSZ -1 : 0] iD_addrImm;
 
-reg iD0_isEcall;
-reg iD0_isEbreak;
+reg iD_isEcall;
+reg iD_isEbreak;
 
-reg iD0_isCSR;
+reg iD_isCSR;
 
 `ifdef PURV32M
-reg iD0_opImul_stb;
-reg iD0_opIdiv_stb;
+reg iD_opImul_stb;
+reg iD_opIdiv_stb;
 `endif
 
-reg iD0_ldUnit_stb;
-reg iD0_stUnit_stb;
+reg iD_ldUnit_stb;
+reg iD_stUnit_stb;
 
-reg iD0_isALUimmOrJALrOrLoad;
-reg iD0_isBranchOrStore;
-reg iD0_isJAlOrAUIPcOrLUI;
-reg iD0_isALUregOrBranch;
-reg iD0_isJAlOrJALR;
+reg iD_isALUimmOrJALrOrLoad;
+reg iD_isBranchOrStore;
+reg iD_isJAlOrAUIPcOrLUI;
+reg iD_isALUregOrBranch;
+reg iD_isJAlOrJALR;
 
-reg iD0_multiCycleInsn;
+reg iD_multiCycleInsn;
 
-reg iD0_use_rdId;
+reg iD_use_rdId;
 
-wire [WORDBITSZ -1 : 0] iD0_rs1;
-wire [WORDBITSZ -1 : 0] iD0_rs2;
+wire [WORDBITSZ -1 : 0] iD_rs1;
+wire [WORDBITSZ -1 : 0] iD_rs2;
 
-wire iD0_rdRdy;
-wire iD0_rs1Rdy;
-wire iD0_rs2Rdy;
+wire iD_rdRdy;
+wire iD_rs1Rdy;
+wire iD_rs2Rdy;
 
 reg [WORDBITSZ -1 : 0] gprDat [0 : GPRCNT -1];
 reg [GPRCNT    -1 : 0] gprRdy;
 
 `ifdef PURV32M
-wire iD0_opImul_bsy;
-wire iD0_opIdiv_bsy;
+wire iD_opImul_bsy;
+wire iD_opIdiv_bsy;
 `endif
-wire iD0_ldUnit_bsy;
-wire iD0_stUnit_bsy;
+wire iD_ldUnit_bsy;
+wire iD_stUnit_bsy;
 
-wire iD0_eX0_flushed;
-wire iD0_eX0_stalled;
-wire iD0_eX0_carryon;
+wire iD_eX_flushed;
+wire iD_eX_stalled;
+wire iD_eX_carryon;
 
-wire iD0_stalled = (!iD0_eX0_carryon ||
+wire iD_stalled = (!iD_eX_carryon ||
 	`ifdef PURV32M
-	(iD0_opImul_stb ? iD0_opImul_bsy : 1'b0) ||
-	(iD0_opIdiv_stb ? iD0_opIdiv_bsy : 1'b0) ||
+	(iD_opImul_stb ? iD_opImul_bsy : 1'b0) ||
+	(iD_opIdiv_stb ? iD_opIdiv_bsy : 1'b0) ||
 	`endif
-	(iD0_ldUnit_stb ? iD0_ldUnit_bsy : 1'b0) ||
-	(iD0_stUnit_stb ? iD0_stUnit_bsy : 1'b0) || (
+	(iD_ldUnit_stb ? iD_ldUnit_bsy : 1'b0) ||
+	(iD_stUnit_stb ? iD_stUnit_bsy : 1'b0) || (
 	// Stall if any of the operand is locked.
-	iD0_isALUreg ? !(iD0_rdRdy && iD0_rs1Rdy && iD0_rs2Rdy) :
-	iD0_isALUimmOrJALrOrLoad ? !(iD0_rdRdy && iD0_rs1Rdy) :
-	iD0_isBranchOrStore ? !(iD0_rs1Rdy && iD0_rs2Rdy) :
-	iD0_isJAlOrAUIPcOrLUI ? !iD0_rdRdy : 0));
+	iD_isALUreg ? !(iD_rdRdy && iD_rs1Rdy && iD_rs2Rdy) :
+	iD_isALUimmOrJALrOrLoad ? !(iD_rdRdy && iD_rs1Rdy) :
+	iD_isBranchOrStore ? !(iD_rs1Rdy && iD_rs2Rdy) :
+	iD_isJAlOrAUIPcOrLUI ? !iD_rdRdy : 0));
 
-assign iF0_iD0_stalled = iD0_stalled;
+assign iF_iD_stalled = iD_stalled;
 
-reg iD0_flushed;
+reg iD_flushed;
 
-assign iF0_iD0_flushed = iD0_flushed;
+assign iF_iD_flushed = iD_flushed;
 
-wire iD0_carryon = (iD0_flushed || !iD0_stalled);
+wire iD_carryon = (iD_flushed || !iD_stalled);
 
-assign iF0_iD0_carryon = iD0_carryon;
+assign iF_iD_carryon = iD_carryon;
 
-wire iD0_en = (iD0_carryon && !halted_o);
+wire iD_en = (iD_carryon && !halted_o);
 
-wire [CLOG2GPRCNT -1 : 0] _iF0_rdId  = (iD0_en ? iF0_rdId  : iD0_rdId);
-wire [CLOG2GPRCNT -1 : 0] _iF0_rs1Id = (iD0_en ? iF0_rs1Id : iD0_rs1Id);
-wire [CLOG2GPRCNT -1 : 0] _iF0_rs2Id = (iD0_en ? iF0_rs2Id : iD0_rs2Id);
+wire [CLOG2GPRCNT -1 : 0] _iF_rdId  = (iD_en ? iF_rdId  : iD_rdId);
+wire [CLOG2GPRCNT -1 : 0] _iF_rs1Id = (iD_en ? iF_rs1Id : iD_rs1Id);
+wire [CLOG2GPRCNT -1 : 0] _iF_rs2Id = (iD_en ? iF_rs2Id : iD_rs2Id);
 
-wire _iF0_use_rdId = (iD0_en ? iF0_use_rdId : iD0_use_rdId);
+wire _iF_use_rdId = (iD_en ? iF_use_rdId : iD_use_rdId);
 
-reg [CLOG2GPRCNT -1 : 0] iD0_eX0_rdId;
-reg [WORDBITSZ -1 : 0]   iD0_eX0_rslt;
+reg [CLOG2GPRCNT -1 : 0] iD_eX_rdId;
+reg [WORDBITSZ -1 : 0]   iD_eX_rslt;
 
-wire iD0_rdId_eq_iD0_eX0_rdId  = ((iD0_rdId  == iD0_eX0_rdId) && iD0_eX0_rdId);
-wire iD0_rs1Id_eq_iD0_eX0_rdId = ((iD0_rs1Id == iD0_eX0_rdId) && iD0_eX0_rdId);
-wire iD0_rs2Id_eq_iD0_eX0_rdId = ((iD0_rs2Id == iD0_eX0_rdId) && iD0_eX0_rdId);
+wire iD_rdId_eq_iD_eX_rdId  = ((iD_rdId  == iD_eX_rdId) && iD_eX_rdId);
+wire iD_rs1Id_eq_iD_eX_rdId = ((iD_rs1Id == iD_eX_rdId) && iD_eX_rdId);
+wire iD_rs2Id_eq_iD_eX_rdId = ((iD_rs2Id == iD_eX_rdId) && iD_eX_rdId);
 
-reg [CLOG2GPRCNT -1 : 0] iD0_rW0_rdId;
-reg [WORDBITSZ -1 : 0]   iD0_rW0_rslt;
+reg [CLOG2GPRCNT -1 : 0] iD_rW_rdId;
+reg [WORDBITSZ -1 : 0]   iD_rW_rslt;
 
-wire iD0_rdId_eq_iD0_rW0_rdId  = ((iD0_rdId  == iD0_rW0_rdId) && iD0_rW0_rdId);
-wire iD0_rs1Id_eq_iD0_rW0_rdId = ((iD0_rs1Id == iD0_rW0_rdId) && iD0_rW0_rdId);
-wire iD0_rs2Id_eq_iD0_rW0_rdId = ((iD0_rs2Id == iD0_rW0_rdId) && iD0_rW0_rdId);
+wire iD_rdId_eq_iD_rW_rdId  = ((iD_rdId  == iD_rW_rdId) && iD_rW_rdId);
+wire iD_rs1Id_eq_iD_rW_rdId = ((iD_rs1Id == iD_rW_rdId) && iD_rW_rdId);
+wire iD_rs2Id_eq_iD_rW_rdId = ((iD_rs2Id == iD_rW_rdId) && iD_rW_rdId);
 
-reg [WORDBITSZ -1 : 0] iD0_rs1_;
-reg [WORDBITSZ -1 : 0] iD0_rs2_;
-assign iD0_rs1 = (
-	iD0_rs1Id_eq_iD0_eX0_rdId ? iD0_eX0_rslt :
-	iD0_rs1Id_eq_iD0_rW0_rdId ? iD0_rW0_rslt :
-	iD0_rs1Id ? iD0_rs1_ : {WORDBITSZ{1'b0}});
-assign iD0_rs2 = (
-	iD0_rs2Id_eq_iD0_eX0_rdId ? iD0_eX0_rslt :
-	iD0_rs2Id_eq_iD0_rW0_rdId ? iD0_rW0_rslt :
-	iD0_rs2Id ? iD0_rs2_ : {WORDBITSZ{1'b0}});
+reg [WORDBITSZ -1 : 0] iD_rs1_;
+reg [WORDBITSZ -1 : 0] iD_rs2_;
+assign iD_rs1 = (
+	iD_rs1Id_eq_iD_eX_rdId ? iD_eX_rslt :
+	iD_rs1Id_eq_iD_rW_rdId ? iD_rW_rslt :
+	iD_rs1Id ? iD_rs1_ : {WORDBITSZ{1'b0}});
+assign iD_rs2 = (
+	iD_rs2Id_eq_iD_eX_rdId ? iD_eX_rslt :
+	iD_rs2Id_eq_iD_rW_rdId ? iD_rW_rslt :
+	iD_rs2Id ? iD_rs2_ : {WORDBITSZ{1'b0}});
 // iD*_r*Rdy_ registers capture the availability of rd, rs1 and rs2
 // registers only when an instruction enters the iDecoded stage.
 // iD*_r*Rdy__ registers become true when rd, rs1 and rs2 registers become
 // available while the instruction is stalled at the iDecoded stage.
-reg iD0_rdRdy_,  iD0_rdRdy__;
-reg iD0_rs1Rdy_, iD0_rs1Rdy__;
-reg iD0_rs2Rdy_, iD0_rs2Rdy__;
-assign iD0_rdRdy = ((
-	iD0_rdId_eq_iD0_eX0_rdId ? 1'b1 :
-	iD0_rdId_eq_iD0_rW0_rdId ? 1'b1 :
-	iD0_rdRdy_) || iD0_rdRdy__);
-assign iD0_rs1Rdy = ((
-	iD0_rs1Id_eq_iD0_eX0_rdId ? 1'b1 :
-	iD0_rs1Id_eq_iD0_rW0_rdId ? 1'b1 :
-	iD0_rs1Rdy_) || iD0_rs1Rdy__);
-assign iD0_rs2Rdy = ((
-	iD0_rs2Id_eq_iD0_eX0_rdId ? 1'b1 :
-	iD0_rs2Id_eq_iD0_rW0_rdId ? 1'b1 :
-	iD0_rs2Rdy_) || iD0_rs2Rdy__);
+reg iD_rdRdy_,  iD_rdRdy__;
+reg iD_rs1Rdy_, iD_rs1Rdy__;
+reg iD_rs2Rdy_, iD_rs2Rdy__;
+assign iD_rdRdy = ((
+	iD_rdId_eq_iD_eX_rdId ? 1'b1 :
+	iD_rdId_eq_iD_rW_rdId ? 1'b1 :
+	iD_rdRdy_) || iD_rdRdy__);
+assign iD_rs1Rdy = ((
+	iD_rs1Id_eq_iD_eX_rdId ? 1'b1 :
+	iD_rs1Id_eq_iD_rW_rdId ? 1'b1 :
+	iD_rs1Rdy_) || iD_rs1Rdy__);
+assign iD_rs2Rdy = ((
+	iD_rs2Id_eq_iD_eX_rdId ? 1'b1 :
+	iD_rs2Id_eq_iD_rW_rdId ? 1'b1 :
+	iD_rs2Rdy_) || iD_rs2Rdy__);
 
 `include "./dcache.pu.v"
 
 `include "./memctrl.pu.v"
 
-wire iD0_eX0_JumpOrBranch_i;
+wire iD_eX_JumpOrBranch_i;
 
-wire _iF0_flushed = ((iD0_en ? iF0_flushed : iD0_flushed) || iD0_eX0_JumpOrBranch_i);
+wire _iF_flushed = ((iD_en ? iF_flushed : iD_flushed) || iD_eX_JumpOrBranch_i);
 
 always @ (posedge clk_i) begin
-	iD0_rs1_ <= gprDat[_iF0_rs1Id];
-	iD0_rs2_ <= gprDat[_iF0_rs2Id];
-	iD0_rdRdy_  <= gprRdy[_iF0_rdId];
-	iD0_rs1Rdy_ <= gprRdy[_iF0_rs1Id];
-	iD0_rs2Rdy_ <= gprRdy[_iF0_rs2Id];
+	iD_rs1_ <= gprDat[_iF_rs1Id];
+	iD_rs2_ <= gprDat[_iF_rs2Id];
+	iD_rdRdy_  <= gprRdy[_iF_rdId];
+	iD_rs1Rdy_ <= gprRdy[_iF_rs1Id];
+	iD_rs2Rdy_ <= gprRdy[_iF_rs2Id];
 end
 
 always @ (posedge clk_i) begin
-	if (iD0_en)
-		iD0_rdRdy__ <= 1'b0;
-	else if (iD0_rdRdy)
-		iD0_rdRdy__ <= 1'b1;
+	if (iD_en)
+		iD_rdRdy__ <= 1'b0;
+	else if (iD_rdRdy)
+		iD_rdRdy__ <= 1'b1;
 end
 
 always @ (posedge clk_i) begin
-	if (iD0_en)
-		iD0_rs1Rdy__ <= 1'b0;
-	else if (iD0_rs1Rdy)
-		iD0_rs1Rdy__ <= 1'b1;
+	if (iD_en)
+		iD_rs1Rdy__ <= 1'b0;
+	else if (iD_rs1Rdy)
+		iD_rs1Rdy__ <= 1'b1;
 end
 
 always @ (posedge clk_i) begin
-	if (iD0_en)
-		iD0_rs2Rdy__ <= 1'b0;
-	else if (iD0_rs2Rdy)
-		iD0_rs2Rdy__ <= 1'b1;
+	if (iD_en)
+		iD_rs2Rdy__ <= 1'b0;
+	else if (iD_rs2Rdy)
+		iD_rs2Rdy__ <= 1'b1;
 end
 
 always @ (posedge clk_i) begin
 	if (rst_i) begin
-		iD0_flushed <= 1;
-	end else if (iD0_en) begin
-		iD0_flushed <= (iF0_flushed || iD0_eX0_JumpOrBranch_i);
+		iD_flushed <= 1;
+	end else if (iD_en) begin
+		iD_flushed <= (iF_flushed || iD_eX_JumpOrBranch_i);
 	end
 end
 
 always @ (posedge clk_i) begin
 
-	if (iD0_en) begin
+	if (iD_en) begin
 
-		iD0_pc <= iF0_pc;
+		iD_pc <= iF_pc;
 		`ifdef SIMULATION
-		iD0_insn <= iF0_insn;
+		iD_insn <= iF_insn;
 		`endif
 
-		iD0_rdId  <= (iF0_use_rdId ? iF0_rdId : 5'd0);
-		iD0_rs1Id <= iF0_rs1Id;
-		iD0_rs2Id <= iF0_rs2Id;
+		iD_rdId  <= (iF_use_rdId ? iF_rdId : 5'd0);
+		iD_rs1Id <= iF_rs1Id;
+		iD_rs2Id <= iF_rs2Id;
 
-		iD0_Iimm <= iF0_Iimm;
-		iD0_Simm <= iF0_Simm;
-		iD0_Bimm <= iF0_Bimm;
-		iD0_Uimm <= iF0_Uimm;
-		iD0_Jimm <= iF0_Jimm;
+		iD_Iimm <= iF_Iimm;
+		iD_Simm <= iF_Simm;
+		iD_Bimm <= iF_Bimm;
+		iD_Uimm <= iF_Uimm;
+		iD_Jimm <= iF_Jimm;
 
-		iD0_func3 <= iF0_func3;
-		iD0_func5 <= iF0_func5;
-		iD0_func7 <= iF0_func7;
+		iD_func3 <= iF_func3;
+		iD_func5 <= iF_func5;
+		iD_func7 <= iF_func7;
 
-		iD0_pc_plus_INSNBITSzBy8 <= iF0_pc_plus_INSNBITSzBy8;
-		iD0_pc_plus_iD0_Bimm     <= iF0_pc_plus_iF0_Bimm;
-		iD0_pc_plus_iD0_Uimm     <= iF0_pc_plus_iF0_Uimm;
-		iD0_pc_plus_iD0_Jimm     <= iF0_pc_plus_iF0_Jimm;
+		iD_pc_plus_INSNBITSzBy8 <= iF_pc_plus_INSNBITSzBy8;
+		iD_pc_plus_iD_Bimm      <= iF_pc_plus_iF_Bimm;
+		iD_pc_plus_iD_Uimm      <= iF_pc_plus_iF_Uimm;
+		iD_pc_plus_iD_Jimm      <= iF_pc_plus_iF_Jimm;
 
-		iD0_isALUreg <= iF0_isALUreg;
-		iD0_isALUimm <= iF0_isALUimm;
-		iD0_isBranch <= iF0_isBranch;
-		iD0_isJALR   <= iF0_isJALR;
-		iD0_isJAL    <= iF0_isJAL;
+		iD_isALUreg <= iF_isALUreg;
+		iD_isALUimm <= iF_isALUimm;
+		iD_isBranch <= iF_isBranch;
+		iD_isJALR   <= iF_isJALR;
+		iD_isJAL    <= iF_isJAL;
 		`ifdef PUPREDICTRET
-		iD0_isRet        <= iF0_isRet;
-		iD0_isJALRnotRet <= iF0_isJALRnotRet;
-		iD0_isCall       <= iF0_isCall;
+		iD_isRet        <= iF_isRet;
+		iD_isJALRnotRet <= iF_isJALRnotRet;
+		iD_isCall       <= iF_isCall;
 		`endif
-		iD0_isAUIPC  <= iF0_isAUIPC;
-		iD0_isLUI    <= iF0_isLUI;
-		iD0_isLoad   <= iF0_isLoad;
-		iD0_isStore  <= iF0_isStore;
-		iD0_isSystem <= iF0_isSystem;
-		iD0_isAMO    <= iF0_isAMO;
+		iD_isAUIPC  <= iF_isAUIPC;
+		iD_isLUI    <= iF_isLUI;
+		iD_isLoad   <= iF_isLoad;
+		iD_isStore  <= iF_isStore;
+		iD_isSystem <= iF_isSystem;
+		iD_isAMO    <= iF_isAMO;
 
-		iD0_addrImm <= iF0_addrImm;
+		iD_addrImm <= iF_addrImm;
 
-		iD0_isEcall  <= iF0_isEcall;
-		iD0_isEbreak <= iF0_isEbreak;
+		iD_isEcall  <= iF_isEcall;
+		iD_isEbreak <= iF_isEbreak;
 
-		iD0_isCSR <= iF0_isCSR;
+		iD_isCSR <= iF_isCSR;
 
 		`ifdef PURV32M
-		iD0_opImul_stb <= iF0_opImul_stb;
-		iD0_opIdiv_stb <= iF0_opIdiv_stb;
+		iD_opImul_stb <= iF_opImul_stb;
+		iD_opIdiv_stb <= iF_opIdiv_stb;
 		`endif
 
-		iD0_ldUnit_stb <= iF0_ldUnit_stb;
-		iD0_stUnit_stb <= iF0_stUnit_stb;
+		iD_ldUnit_stb <= iF_ldUnit_stb;
+		iD_stUnit_stb <= iF_stUnit_stb;
 
-		iD0_isALUimmOrJALrOrLoad <= iF0_isALUimmOrJALrOrLoad;
-		iD0_isBranchOrStore      <= iF0_isBranchOrStore;
-		iD0_isJAlOrAUIPcOrLUI    <= iF0_isJAlOrAUIPcOrLUI;
-		iD0_isALUregOrBranch     <= iF0_isALUregOrBranch;
-		iD0_isJAlOrJALR          <= iF0_isJAlOrJALR;
+		iD_isALUimmOrJALrOrLoad <= iF_isALUimmOrJALrOrLoad;
+		iD_isBranchOrStore      <= iF_isBranchOrStore;
+		iD_isJAlOrAUIPcOrLUI    <= iF_isJAlOrAUIPcOrLUI;
+		iD_isALUregOrBranch     <= iF_isALUregOrBranch;
+		iD_isJAlOrJALR          <= iF_isJAlOrJALR;
 
-		iD0_multiCycleInsn <= iF0_multiCycleInsn;
+		iD_multiCycleInsn <= iF_multiCycleInsn;
 
-		iD0_use_rdId <= iF0_use_rdId;
+		iD_use_rdId <= iF_use_rdId;
 	end
 end
 
 ////////////////////////////////////// EX (Execute) stage //////////////////////////////////////////////////
 
 `ifdef SIMULATION
-reg [WORDBITSZ -1 : 0] eX0_pc;
-reg [INSNBITSZ -1 : 0] eX0_insn;
+reg [WORDBITSZ -1 : 0] eX_pc;
+reg [INSNBITSZ -1 : 0] eX_insn;
 `endif
 
-wire [WORDBITSZ -1 : 0] eX0_aluArg1_i = iD0_rs1;
-wire [WORDBITSZ -1 : 0] eX0_aluArg2_i = (iD0_isALUregOrBranch ? iD0_rs2 : iD0_Iimm);
+wire [WORDBITSZ -1 : 0] eX_aluArg1_i = iD_rs1;
+wire [WORDBITSZ -1 : 0] eX_aluArg2_i = (iD_isALUregOrBranch ? iD_rs2 : iD_Iimm);
 
 // The adder is used by both arithmetic instructions and JALR.
-wire [WORDBITSZ -1 : 0] eX0_aluPlus_i = (eX0_aluArg1_i + eX0_aluArg2_i);
+wire [WORDBITSZ -1 : 0] eX_aluPlus_i = (eX_aluArg1_i + eX_aluArg2_i);
 
 // Use a single (WORDBITSZ+1) bits subtract to do subtraction and all comparisons.
-wire [(WORDBITSZ+1) -1 : 0] eX0_aluMinus_i = (({1'b1, ~eX0_aluArg2_i} + {1'b0, eX0_aluArg1_i}) + 1'b1);
-wire eX0_lt_i = (
-	(eX0_aluArg1_i[WORDBITSZ-1] ^ eX0_aluArg2_i[WORDBITSZ-1]) ?
-		eX0_aluArg1_i[WORDBITSZ-1] : eX0_aluMinus_i[WORDBITSZ]);
-wire eX0_ltu_i = eX0_aluMinus_i[WORDBITSZ];
-wire eX0_eq_i = (eX0_aluMinus_i[WORDBITSZ-1:0] == {WORDBITSZ{1'b0}});
+wire [(WORDBITSZ+1) -1 : 0] eX_aluMinus_i = (({1'b1, ~eX_aluArg2_i} + {1'b0, eX_aluArg1_i}) + 1'b1);
+wire eX_lt_i = (
+	(eX_aluArg1_i[WORDBITSZ-1] ^ eX_aluArg2_i[WORDBITSZ-1]) ?
+		eX_aluArg1_i[WORDBITSZ-1] : eX_aluMinus_i[WORDBITSZ]);
+wire eX_ltu_i = eX_aluMinus_i[WORDBITSZ];
+wire eX_eq_i = (eX_aluMinus_i[WORDBITSZ-1:0] == {WORDBITSZ{1'b0}});
 
-wire [(WORDBITSZ+1) -1 : 0] _eX0_aluArg1_i = {iD0_func7[5] & eX0_aluArg1_i[WORDBITSZ-1], eX0_aluArg1_i};
+wire [(WORDBITSZ+1) -1 : 0] _eX_aluArg1_i = {iD_func7[5] & eX_aluArg1_i[WORDBITSZ-1], eX_aluArg1_i};
 
-reg [WORDBITSZ -1 : 0] eX0_aluOut_i; // ### comb-block-reg.
+reg [WORDBITSZ -1 : 0] eX_aluOut_i; // ### comb-block-reg.
 always @* begin
-	case(iD0_func3)
-	3'b000: eX0_aluOut_i = ((iD0_isALUreg && iD0_func7[5]) ? eX0_aluMinus_i[WORDBITSZ-1:0] : eX0_aluPlus_i);
-	3'b001: eX0_aluOut_i = (eX0_aluArg1_i << eX0_aluArg2_i[4:0]);
-	3'b010: eX0_aluOut_i = {{(WORDBITSZ-1){1'b0}}, eX0_lt_i};
-	3'b011: eX0_aluOut_i = {{(WORDBITSZ-1){1'b0}}, eX0_ltu_i};
-	3'b100: eX0_aluOut_i = (eX0_aluArg1_i ^ eX0_aluArg2_i);
-	3'b101: eX0_aluOut_i = ($signed(_eX0_aluArg1_i) >>> eX0_aluArg2_i[4:0]);
-	3'b110: eX0_aluOut_i = (eX0_aluArg1_i | eX0_aluArg2_i);
-	3'b111: eX0_aluOut_i = (eX0_aluArg1_i & eX0_aluArg2_i);
+	case(iD_func3)
+	3'b000: eX_aluOut_i = ((iD_isALUreg && iD_func7[5]) ? eX_aluMinus_i[WORDBITSZ-1:0] : eX_aluPlus_i);
+	3'b001: eX_aluOut_i = (eX_aluArg1_i << eX_aluArg2_i[4:0]);
+	3'b010: eX_aluOut_i = {{(WORDBITSZ-1){1'b0}}, eX_lt_i};
+	3'b011: eX_aluOut_i = {{(WORDBITSZ-1){1'b0}}, eX_ltu_i};
+	3'b100: eX_aluOut_i = (eX_aluArg1_i ^ eX_aluArg2_i);
+	3'b101: eX_aluOut_i = ($signed(_eX_aluArg1_i) >>> eX_aluArg2_i[4:0]);
+	3'b110: eX_aluOut_i = (eX_aluArg1_i | eX_aluArg2_i);
+	3'b111: eX_aluOut_i = (eX_aluArg1_i & eX_aluArg2_i);
 	endcase
 end
 
-reg [WORDBITSZ -1 : 0] eX0_csrOut_i; // ### comb-block-reg.
+reg [WORDBITSZ -1 : 0] eX_csrOut_i; // ### comb-block-reg.
 
-wire [WORDBITSZ -1 : 0] eX0_rslt_i = (
-	iD0_isJAlOrJALR ? (iD0_pc_plus_INSNBITSzBy8) :
-	iD0_isLUI       ? iD0_Uimm                   :
-	iD0_isAUIPC     ? iD0_pc_plus_iD0_Uimm       :
-	iD0_isCSR       ? eX0_csrOut_i               :
-	                  eX0_aluOut_i              );
+wire [WORDBITSZ -1 : 0] eX_rslt_i = (
+	iD_isJAlOrJALR ? (iD_pc_plus_INSNBITSzBy8) :
+	iD_isLUI       ? iD_Uimm                   :
+	iD_isAUIPC     ? iD_pc_plus_iD_Uimm        :
+	iD_isCSR       ? eX_csrOut_i               :
+	                 eX_aluOut_i              );
 
-reg eX0_takeBranch_i; // ### comb-block-reg.
+reg eX_takeBranch_i; // ### comb-block-reg.
 always @* begin
-	case (iD0_func3)
-	3'b000:  eX0_takeBranch_i = eX0_eq_i;
-	3'b001:  eX0_takeBranch_i = !eX0_eq_i;
-	3'b100:  eX0_takeBranch_i = eX0_lt_i;
-	3'b101:  eX0_takeBranch_i = !eX0_lt_i;
-	3'b110:  eX0_takeBranch_i = eX0_ltu_i;
-	3'b111:  eX0_takeBranch_i = !eX0_ltu_i;
-	default: eX0_takeBranch_i = 1'b0;
+	case (iD_func3)
+	3'b000:  eX_takeBranch_i = eX_eq_i;
+	3'b001:  eX_takeBranch_i = !eX_eq_i;
+	3'b100:  eX_takeBranch_i = eX_lt_i;
+	3'b101:  eX_takeBranch_i = !eX_lt_i;
+	3'b110:  eX_takeBranch_i = eX_ltu_i;
+	3'b111:  eX_takeBranch_i = !eX_ltu_i;
+	default: eX_takeBranch_i = 1'b0;
 	endcase
 end
 
 `ifdef PUPREDICTBRANCH
-wire [2 -1 : 0] eX0_predictBranch_i = iD0_predictBranch;
+wire [2 -1 : 0] eX_predictBranch_i = iD_predictBranch;
 `else
-wire [2 -1 : 0] eX0_predictBranch_i = 2'b00;
+wire [2 -1 : 0] eX_predictBranch_i = 2'b00;
 `endif
-wire _eX0_takeBranch_i = (eX0_takeBranch_i ^ eX0_predictBranch_i[1]);
+wire _eX_takeBranch_i = (eX_takeBranch_i ^ eX_predictBranch_i[1]);
 
 `ifdef PUPREDICTRET
-wire eX0_predictRetMiss_i = (iD0_predictRet != {eX0_aluPlus_i[WORDBITSZ-1:1], 1'b0});
+wire eX_predictRetMiss_i = (iD_predictRet != {eX_aluPlus_i[WORDBITSZ-1:1], 1'b0});
 `endif
 
-wire eX0_rW0_flushed;
-wire eX0_rW0_stalled;
-wire eX0_rW0_carryon;
+wire eX_rW_flushed;
+wire eX_rW_stalled;
+wire eX_rW_carryon;
 
-wire eX0_stalled = !eX0_rW0_carryon;
+wire eX_stalled = !eX_rW_carryon;
 
-assign iD0_eX0_stalled = eX0_stalled;
+assign iD_eX_stalled = eX_stalled;
 
 // Jumps or Branchs are triggered only at the iDecoded stage.
-// Interrupts and exceptions set eX0_flushed_i to prevent eXecution.
-wire eX0_flushed_i = (iD0_flushed || iD0_stalled);
-reg eX0_flushed;
+// Interrupts and exceptions set eX_flushed_i to prevent eXecution.
+wire eX_flushed_i = (iD_flushed || iD_stalled);
+reg eX_flushed;
 
-assign iD0_eX0_flushed = eX0_flushed;
+assign iD_eX_flushed = eX_flushed;
 
-wire eX0_carryon = (eX0_flushed || !eX0_stalled);
+wire eX_carryon = (eX_flushed || !eX_stalled);
 
-assign iD0_eX0_carryon = eX0_carryon;
+assign iD_eX_carryon = eX_carryon;
 
-wire eX0_en = (eX0_carryon && !halted_o);
+wire eX_en = (eX_carryon && !halted_o);
 
-wire eX0_insn_valid_i = (!eX0_flushed_i && eX0_en);
+wire eX_insn_valid_i = (!eX_flushed_i && eX_en);
 
 `ifdef PUPREDICTBRANCH
 wire [2 -1 : 0] bht_i = (
-	{eX0_takeBranch_i, eX0_predictBranch_i} == 3'b000 ? 2'b00 :
-	{eX0_takeBranch_i, eX0_predictBranch_i} == 3'b001 ? 2'b00 :
-	{eX0_takeBranch_i, eX0_predictBranch_i} == 3'b010 ? 2'b01 :
-	{eX0_takeBranch_i, eX0_predictBranch_i} == 3'b011 ? 2'b10 :
-	{eX0_takeBranch_i, eX0_predictBranch_i} == 3'b100 ? 2'b01 :
-	{eX0_takeBranch_i, eX0_predictBranch_i} == 3'b101 ? 2'b10 :
-	{eX0_takeBranch_i, eX0_predictBranch_i} == 3'b110 ? 2'b11 :
-	                                                    2'b11 );
+	{eX_takeBranch_i, eX_predictBranch_i} == 3'b000 ? 2'b00 :
+	{eX_takeBranch_i, eX_predictBranch_i} == 3'b001 ? 2'b00 :
+	{eX_takeBranch_i, eX_predictBranch_i} == 3'b010 ? 2'b01 :
+	{eX_takeBranch_i, eX_predictBranch_i} == 3'b011 ? 2'b10 :
+	{eX_takeBranch_i, eX_predictBranch_i} == 3'b100 ? 2'b01 :
+	{eX_takeBranch_i, eX_predictBranch_i} == 3'b101 ? 2'b10 :
+	{eX_takeBranch_i, eX_predictBranch_i} == 3'b110 ? 2'b11 :
+	                                                  2'b11 );
 always @ (posedge clk_i) begin
-	if (iD0_isBranch && eX0_insn_valid_i)
-		bht[iD0_pc[CLOG2BHTSETCNT+CLOG2INSNBITSZBY8-1:CLOG2INSNBITSZBY8]] <= bht_i;
+	if (iD_isBranch && eX_insn_valid_i)
+		bht[iD_pc[CLOG2BHTSETCNT+CLOG2INSNBITSZBY8-1:CLOG2INSNBITSZBY8]] <= bht_i;
 end
 `endif
 
 `ifdef PUPREDICTRET
 always @ (posedge clk_i) begin
-	if (eX0_insn_valid_i) begin
-		if (iD0_isCall) begin
-			ras0 <= iD0_pc_plus_INSNBITSzBy8;
+	if (eX_insn_valid_i) begin
+		if (iD_isCall) begin
+			ras0 <= iD_pc_plus_INSNBITSzBy8;
 			ras1 <= ras0;
 			ras2 <= ras1;
 			ras3 <= ras2;
@@ -813,7 +813,7 @@ always @ (posedge clk_i) begin
 			ras5 <= ras4;
 			ras6 <= ras5;
 			ras7 <= ras6;
-		end else if (iD0_isRet) begin
+		end else if (iD_isRet) begin
 			ras0 <= ras1;
 			ras1 <= ras2;
 			ras2 <= ras3;
@@ -828,67 +828,67 @@ end
 `endif
 
 // TODO: Use irq and exc signals ...
-wire eX0_JumpOrBranch_i = ((
+wire eX_JumpOrBranch_i = ((
 	`ifndef PUPREDICTJAL
-	iD0_isJAL ||
+	iD_isJAL ||
 	`endif
 	`ifdef PUPREDICTRET
-	(iD0_isRet && eX0_predictRetMiss_i) ||
-	iD0_isJALRnotRet ||
+	(iD_isRet && eX_predictRetMiss_i) ||
+	iD_isJALRnotRet ||
 	`else
-	iD0_isJALR ||
+	iD_isJALR ||
 	`endif
-	(iD0_isBranch && _eX0_takeBranch_i)) && eX0_insn_valid_i);
+	(iD_isBranch && _eX_takeBranch_i)) && eX_insn_valid_i);
 
-assign iF0_eX0_JumpOrBranch_i = eX0_JumpOrBranch_i;
-assign iD0_eX0_JumpOrBranch_i = eX0_JumpOrBranch_i;
+assign iF_eX_JumpOrBranch_i = eX_JumpOrBranch_i;
+assign iD_eX_JumpOrBranch_i = eX_JumpOrBranch_i;
 
 // TODO: Use irq and exc signals ...
-wire [WORDBITSZ -1 : 0] eX0_JumpOrBranchAddr_i = (
-	iD0_isBranch ? (eX0_takeBranch_i ? iD0_pc_plus_iD0_Bimm : iD0_pc_plus_INSNBITSzBy8) :
+wire [WORDBITSZ -1 : 0] eX_JumpOrBranchAddr_i = (
+	iD_isBranch ? (eX_takeBranch_i ? iD_pc_plus_iD_Bimm : iD_pc_plus_INSNBITSzBy8) :
 	`ifndef PUPREDICTJAL
-	iD0_isJAL ? iD0_pc_plus_iD0_Jimm :
+	iD_isJAL ? iD_pc_plus_iD_Jimm :
 	`endif
-	/* iD0_isJALR */ {eX0_aluPlus_i[WORDBITSZ-1:1], 1'b0});
+	/* iD_isJALR */ {eX_aluPlus_i[WORDBITSZ-1:1], 1'b0});
 
-assign iF0_eX0_JumpOrBranchAddr_i = eX0_JumpOrBranchAddr_i;
+assign iF_eX_JumpOrBranchAddr_i = eX_JumpOrBranchAddr_i;
 
 always @ (posedge clk_i) begin
 	if (rst_i) begin
-		eX0_flushed <= 1;
-	end else if (eX0_en) begin
-		eX0_flushed <= eX0_flushed_i;
+		eX_flushed <= 1;
+	end else if (eX_en) begin
+		eX_flushed <= eX_flushed_i;
 	end
 end
 
-reg eX0_multiCycleInsn;
+reg eX_multiCycleInsn;
 
 always @ (posedge clk_i) begin
-	if (eX0_en) begin
+	if (eX_en) begin
 		`ifdef SIMULATION
-		eX0_pc   <= iD0_pc;
-		eX0_insn <= iD0_insn;
+		eX_pc   <= iD_pc;
+		eX_insn <= iD_insn;
 		`endif
-		eX0_multiCycleInsn <= iD0_multiCycleInsn;
-		iD0_eX0_rdId <= ((iD0_multiCycleInsn || eX0_flushed_i) ? 5'd0 : iD0_rdId);
-		iD0_eX0_rslt <= eX0_rslt_i;
+		eX_multiCycleInsn <= iD_multiCycleInsn;
+		iD_eX_rdId <= ((iD_multiCycleInsn || eX_flushed_i) ? 5'd0 : iD_rdId);
+		iD_eX_rslt <= eX_rslt_i;
 	end
 end
 
 ////////////////////////////////////// RWB (Register WriteBack) stage //////////////////////////////////////
 
 `ifdef SIMULATION
-reg [WORDBITSZ -1 : 0] rW0_pc;
-reg [INSNBITSZ -1 : 0] rW0_insn;
+reg [WORDBITSZ -1 : 0] rW_pc;
+reg [INSNBITSZ -1 : 0] rW_insn;
 `endif
 
-reg                      rW0_we_i;  // ### comb-block-reg.
-reg [CLOG2GPRCNT -1 : 0] rW0_idx_i; // ### comb-block-reg.
-reg [WORDBITSZ -1 : 0]   rW0_dat_i; // ### comb-block-reg.
+reg                      rW_we_i;  // ### comb-block-reg.
+reg [CLOG2GPRCNT -1 : 0] rW_idx_i; // ### comb-block-reg.
+reg [WORDBITSZ -1 : 0]   rW_dat_i; // ### comb-block-reg.
 
 `ifdef PURV32M
-reg rW0_opImul_done; // ### comb-block-reg.
-reg rW0_opIdiv_done; // ### comb-block-reg.
+reg rW_opImul_done; // ### comb-block-reg.
+reg rW_opIdiv_done; // ### comb-block-reg.
 `endif
 
 `ifdef PURV32M
@@ -898,74 +898,74 @@ reg rW0_opIdiv_done; // ### comb-block-reg.
 `include "./lsu.pu.v"
 `include "./sys.pu.v"
 
-wire rW0_stalled = (
+wire rW_stalled = (
 	ldUnit_memAck
 	`ifdef PURV32M
 	|| opImul_done || opIdiv_done
 	`endif
 	);
 
-assign eX0_rW0_stalled = rW0_stalled;
+assign eX_rW_stalled = rW_stalled;
 
-reg rW0_flushed;
+reg rW_flushed;
 always @ (posedge clk_i)
-	rW0_flushed <= (eX0_flushed || eX0_stalled);
+	rW_flushed <= (eX_flushed || eX_stalled);
 
-assign eX0_rW0_flushed = (rW0_flushed && !rW0_stalled);
+assign eX_rW_flushed = (rW_flushed && !rW_stalled);
 
-assign eX0_rW0_carryon = (eX0_rW0_flushed || !eX0_rW0_stalled);
+assign eX_rW_carryon = (eX_rW_flushed || !eX_rW_stalled);
 
 always @* begin
 
-	rW0_we_i  = 0;
-	rW0_idx_i = 0;
-	rW0_dat_i = 0;
+	rW_we_i  = 0;
+	rW_idx_i = 0;
+	rW_dat_i = 0;
 
 	`ifdef PURV32M
-	rW0_opImul_done = 0;
-	rW0_opIdiv_done = 0;
+	rW_opImul_done = 0;
+	rW_opIdiv_done = 0;
 	`endif
 
 	if (ldUnit_memAck) begin
-		rW0_we_i  = 1;
-		rW0_idx_i = ldUnit_rqsts_rIdx;
-		rW0_dat_i = ldUnit_rqsts_dato;
+		rW_we_i  = 1;
+		rW_idx_i = ldUnit_rqsts_rIdx;
+		rW_dat_i = ldUnit_rqsts_dato;
 	`ifdef PURV32M
 	end else if (opImul_done) begin
-		rW0_we_i  = 1;
-		rW0_idx_i = opImul_rIdx;
-		rW0_dat_i = opImul_rslt;
-		rW0_opImul_done = 1;
+		rW_we_i  = 1;
+		rW_idx_i = opImul_rIdx;
+		rW_dat_i = opImul_rslt;
+		rW_opImul_done = 1;
 	end else if (opIdiv_done) begin
-		rW0_we_i  = 1;
-		rW0_idx_i = opIdiv_rIdx;
-		rW0_dat_i = opIdiv_rslt;
-		rW0_opIdiv_done = 1;
+		rW_we_i  = 1;
+		rW_idx_i = opIdiv_rIdx;
+		rW_dat_i = opIdiv_rslt;
+		rW_opIdiv_done = 1;
 	`endif
 	end else if (halted_o) begin
-	end else if (iD0_eX0_rdId /*&& !eX0_flushed*/) begin
-		rW0_we_i  = 1;
-		rW0_idx_i = iD0_eX0_rdId;
-		rW0_dat_i = iD0_eX0_rslt;
+	end else if (iD_eX_rdId /*&& !eX_flushed*/) begin
+		rW_we_i  = 1;
+		rW_idx_i = iD_eX_rdId;
+		rW_dat_i = iD_eX_rslt;
 	end
 end
 
 always @ (posedge clk_i) begin
 	if (ldUnit_memAck) begin
-		iD0_rW0_rdId <= ldUnit_rqsts_rIdx;
-		iD0_rW0_rslt <= ldUnit_rqsts_dato;
+		iD_rW_rdId <= ldUnit_rqsts_rIdx;
+		iD_rW_rslt <= ldUnit_rqsts_dato;
 	`ifdef PURV32M
 	end else if (opImul_done) begin
-		iD0_rW0_rdId <= opImul_rIdx;
-		iD0_rW0_rslt <= opImul_rslt;
+		iD_rW_rdId <= opImul_rIdx;
+		iD_rW_rslt <= opImul_rslt;
 	end else if (opIdiv_done) begin
-		iD0_rW0_rdId <= opIdiv_rIdx;
-		iD0_rW0_rslt <= opIdiv_rslt;
+		iD_rW_rdId <= opIdiv_rIdx;
+		iD_rW_rslt <= opIdiv_rslt;
 	`endif
 	end else if (halted_o) begin
-	end else if (iD0_eX0_rdId /*&& !eX0_flushed*/) begin
-		iD0_rW0_rdId <= (
-			(!iD0_flushed && iD0_multiCycleInsn && iD0_eX0_rdId == iD0_rdId) ?
+	end else if (iD_eX_rdId /*&& !eX_flushed*/) begin
+		iD_rW_rdId <= (
+			(!iD_flushed && iD_multiCycleInsn && iD_eX_rdId == iD_rdId) ?
 			/* Considering the instruction sequence below, this above check
 			prevents the result of `add a3,a3,a1` to be forwarded to `jr a3`,
 			when the result of `lw a3,0(a3)` should be used but has been deferred
@@ -973,41 +973,41 @@ always @ (posedge clk_i) begin
 			add     a3,a3,a1
 			lw      a3,0(a3)       (Multi-cycle instruction)
 			jr      a3                                                        */
-			{CLOG2GPRCNT{1'b0}} : iD0_eX0_rdId);
-		iD0_rW0_rslt <= iD0_eX0_rslt;
+			{CLOG2GPRCNT{1'b0}} : iD_eX_rdId);
+		iD_rW_rslt <= iD_eX_rslt;
 	end else
-		iD0_rW0_rdId <= 0;
+		iD_rW_rdId <= 0;
 end
 
 always @ (posedge clk_i) begin
-	if (rW0_we_i)
-		gprDat[rW0_idx_i] <= rW0_dat_i;
+	if (rW_we_i)
+		gprDat[rW_idx_i] <= rW_dat_i;
 end
 
-wire gprRdy0Lock = (_iF0_use_rdId && !_iF0_flushed);
+wire gprLock = (_iF_use_rdId && !_iF_flushed);
 
-wire gprRdy0Unlock = (
-	rW0_we_i && /* Do not unlock a gpr if it is about to be locked
+wire gprUnlock = (
+	rW_we_i && /* Do not unlock a gpr if it is about to be locked
 	or if it has just been locked; note that we are at the eXecuted stage,
 	hence the reason why only *_rdId from previous stages are checked. */
-	!(gprRdy0Lock && _iF0_rdId == rW0_idx_i) &&
-	!(!iD0_flushed && iD0_rdId == rW0_idx_i));
+	!(gprLock && _iF_rdId == rW_idx_i) &&
+	!(!iD_flushed && iD_rdId == rW_idx_i));
 
 always @ (posedge clk_i) begin
 	if (rst_i)
 		gprRdy <= {GPRCNT{1'b1}};
 	else begin
-		if (gprRdy0Lock)
-			gprRdy[_iF0_rdId] <= 1'b0;
-		if (gprRdy0Unlock)
-			gprRdy[rW0_idx_i] <= 1'b1;
+		if (gprLock)
+			gprRdy[_iF_rdId] <= 1'b0;
+		if (gprUnlock)
+			gprRdy[rW_idx_i] <= 1'b1;
 	end
 end
 
 `ifdef SIMULATION
 always @ (posedge clk_i) begin
-	rW0_pc   <= eX0_pc;
-	rW0_insn <= eX0_insn;
+	rW_pc   <= eX_pc;
+	rW_insn <= eX_insn;
 end
 `endif
 

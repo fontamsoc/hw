@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-wire opIdiv_stb = (iD0_opIdiv_stb && eX0_insn_valid_i);
+wire opIdiv_stb = (iD_opIdiv_stb && eX_insn_valid_i);
 
 // Significance of each bit in the field within
 // opIdiv_args storing the type of division to perform.
@@ -9,10 +9,10 @@ wire opIdiv_stb = (iD0_opIdiv_stb && eX0_insn_valid_i);
 // [0]: 0/1 means quotient/remainder of result.
 localparam OPIDIVTYPEBITSZ = 2;
 wire [(((WORDBITSZ*2)+CLOG2GPRCNT)+OPIDIVTYPEBITSZ) -1 : 0] opIdiv_args =
-	{!iD0_func3[0], iD0_func3[1], iD0_rdId, iD0_rs1, iD0_rs2};
+	{!iD_func3[0], iD_func3[1], iD_rdId, iD_rs1, iD_rs2};
 
 wire opIdiv_rdy;
-assign iD0_opIdiv_bsy = !opIdiv_rdy;
+assign iD_opIdiv_bsy = !opIdiv_rdy;
 
 wire [WORDBITSZ -1 : 0]   opIdiv_rslt;
 wire [CLOG2GPRCNT -1 : 0] opIdiv_rIdx;
@@ -36,7 +36,7 @@ opidiv #(
 	,.args_i (opIdiv_args)
 	,.rdy_o  (opIdiv_rdy)
 
-	,.ostb_i  (rW0_opIdiv_done)
+	,.ostb_i  (rW_opIdiv_done)
 	,.rslt_o  (opIdiv_rslt)
 	,.gprid_o (opIdiv_rIdx)
 	,.ordy_o  (opIdiv_done)

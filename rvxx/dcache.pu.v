@@ -217,7 +217,7 @@ end
 
 assign dCache_m_cyc_i = (dCache_m_stb_i || dCache_m_we_i_ || (|dCache_m_pending_acks));
 
-wire [WORDBITSZ -1 : 0] dCache_m_addr_i_ = (iD0_rs1 + iD0_addrImm);
+wire [WORDBITSZ -1 : 0] dCache_m_addr_i_ = (iD_rs1 + iD_addrImm);
 
 wire            amoUnit_memAck;
 reg  [5 -1 : 0] amoUnit_opType;
@@ -254,20 +254,20 @@ always @ (posedge clk_i) begin
 				dCache_m_dat_i);
 		end else if (!dCache_m_bsy_o)
 			dCache_m_stb_i <= 1'b0;
-	end else if (eX0_insn_valid_i) begin
-		if (iD0_isLoad) begin
+	end else if (eX_insn_valid_i) begin
+		if (iD_isLoad) begin
 			dCache_m_stb_i <= 1'b1;
 			dCache_m_we_i <= 0;
 			dCache_m_addr_i <= dCache_m_addr_i_[WORDBITSZ-1:CLOG2WORDBITSZBY8];
 			dCache_m_sel_i <= dCache_m_sel_i_;
-		end else if (iD0_isStore) begin
+		end else if (iD_isStore) begin
 			dCache_m_stb_i <= 1'b1;
 			dCache_m_we_i <= 1;
 			dCache_m_addr_i <= dCache_m_addr_i_[WORDBITSZ-1:CLOG2WORDBITSZBY8];
 			dCache_m_sel_i <= dCache_m_sel_i_;
 			dCache_m_dat_i <= dCache_m_dat_i_;
-		end else if (iD0_isAMO) begin
-			amoUnit_opType <= iD0_func5;
+		end else if (iD_isAMO) begin
+			amoUnit_opType <= iD_func5;
 			dCache_m_stb_i <= 1'b1;
 			dCache_m_we_i <= 1'b0;
 			dCache_m_we_i_ <= 1'b1;
@@ -286,31 +286,31 @@ generate if (WORDBITSZ == 32) begin
 always @* begin
 	dCache_m_sel_i_ = {(WORDBITSZ/8){1'b0}};
 	dCache_m_dat_i_ = {WORDBITSZ{1'b0}};
-	if (iD0_func3[1:0] == 0) begin
+	if (iD_func3[1:0] == 0) begin
 		if (dCache_m_addr_i_[1:0] == 0) begin
 			dCache_m_sel_i_ = 4'b0001;
-			dCache_m_dat_i_ = {{24{1'b0}}, iD0_rs2[7:0]};
+			dCache_m_dat_i_ = {{24{1'b0}}, iD_rs2[7:0]};
 		end else if (dCache_m_addr_i_[1:0] == 1) begin
 			dCache_m_sel_i_ = 4'b0010;
-			dCache_m_dat_i_ = {{16{1'b0}}, iD0_rs2[7:0], {8{1'b0}}};
+			dCache_m_dat_i_ = {{16{1'b0}}, iD_rs2[7:0], {8{1'b0}}};
 		end else if (dCache_m_addr_i_[1:0] == 2) begin
 			dCache_m_sel_i_ = 4'b0100;
-			dCache_m_dat_i_ = {{8{1'b0}}, iD0_rs2[7:0], {16{1'b0}}};
+			dCache_m_dat_i_ = {{8{1'b0}}, iD_rs2[7:0], {16{1'b0}}};
 		end else /* if (dCache_m_addr_i_[1:0] == 3) */ begin
 			dCache_m_sel_i_ = 4'b1000;
-			dCache_m_dat_i_ = {iD0_rs2[7:0], {24{1'b0}}};
+			dCache_m_dat_i_ = {iD_rs2[7:0], {24{1'b0}}};
 		end
-	end else if (iD0_func3[1:0] == 1) begin
+	end else if (iD_func3[1:0] == 1) begin
 		if (dCache_m_addr_i_[1]) begin
 			dCache_m_sel_i_ = 4'b1100;
-			dCache_m_dat_i_ = {iD0_rs2[15:0], {16{1'b0}}};
+			dCache_m_dat_i_ = {iD_rs2[15:0], {16{1'b0}}};
 		end else begin
 			dCache_m_sel_i_ = 4'b0011;
-			dCache_m_dat_i_ = {{16{1'b0}}, iD0_rs2[15:0]};
+			dCache_m_dat_i_ = {{16{1'b0}}, iD_rs2[15:0]};
 		end
-	end else /* if (iD0_func3[1:0] == 2) */ begin
+	end else /* if (iD_func3[1:0] == 2) */ begin
 		dCache_m_sel_i_ = 4'b1111;
-		dCache_m_dat_i_ = iD0_rs2;
+		dCache_m_dat_i_ = iD_rs2;
 	end
 end
 end endgenerate
@@ -318,57 +318,57 @@ generate if (WORDBITSZ == 64) begin
 always @* begin
 	dCache_m_sel_i_ = {(WORDBITSZ/8){1'b0}};
 	dCache_m_dat_i_ = {WORDBITSZ{1'b0}};
-	if (iD0_func3[1:0] == 0) begin
+	if (iD_func3[1:0] == 0) begin
 		if (dCache_m_addr_i_[2:0] == 0) begin
 			dCache_m_sel_i_ = 8'b00000001;
-			dCache_m_dat_i_ = {{56{1'b0}}, iD0_rs2[7:0]};
+			dCache_m_dat_i_ = {{56{1'b0}}, iD_rs2[7:0]};
 		end else if (dCache_m_addr_i_[2:0] == 1) begin
 			dCache_m_sel_i_ = 8'b00000010;
-			dCache_m_dat_i_ = {{48{1'b0}}, iD0_rs2[7:0], {8{1'b0}}};
+			dCache_m_dat_i_ = {{48{1'b0}}, iD_rs2[7:0], {8{1'b0}}};
 		end else if (dCache_m_addr_i_[2:0] == 2) begin
 			dCache_m_sel_i_ = 8'b00000100;
-			dCache_m_dat_i_ = {{40{1'b0}}, iD0_rs2[7:0], {16{1'b0}}};
+			dCache_m_dat_i_ = {{40{1'b0}}, iD_rs2[7:0], {16{1'b0}}};
 		end else if (dCache_m_addr_i_[2:0] == 3) begin
 			dCache_m_sel_i_ = 8'b00001000;
-			dCache_m_dat_i_ = {{32{1'b0}}, iD0_rs2[7:0], {24{1'b0}}};
+			dCache_m_dat_i_ = {{32{1'b0}}, iD_rs2[7:0], {24{1'b0}}};
 		end else if (dCache_m_addr_i_[2:0] == 4) begin
 			dCache_m_sel_i_ = 8'b00010000;
-			dCache_m_dat_i_ = {{24{1'b0}}, iD0_rs2[7:0], {32{1'b0}}};
+			dCache_m_dat_i_ = {{24{1'b0}}, iD_rs2[7:0], {32{1'b0}}};
 		end else if (dCache_m_addr_i_[2:0] == 5) begin
 			dCache_m_sel_i_ = 8'b00100000;
-			dCache_m_dat_i_ = {{16{1'b0}}, iD0_rs2[7:0], {40{1'b0}}};
+			dCache_m_dat_i_ = {{16{1'b0}}, iD_rs2[7:0], {40{1'b0}}};
 		end else if (dCache_m_addr_i_[2:0] == 6) begin
 			dCache_m_sel_i_ = 8'b01000000;
-			dCache_m_dat_i_ = {{8{1'b0}}, iD0_rs2[7:0], {48{1'b0}}};
+			dCache_m_dat_i_ = {{8{1'b0}}, iD_rs2[7:0], {48{1'b0}}};
 		end else /* if (dCache_m_addr_i_[2:0] == 7) */ begin
 			dCache_m_sel_i_ = 8'b10000000;
-			dCache_m_dat_i_ = {iD0_rs2[7:0], {56{1'b0}}};
+			dCache_m_dat_i_ = {iD_rs2[7:0], {56{1'b0}}};
 		end
-	end else if (iD0_func3[1:0] == 1) begin
+	end else if (iD_func3[1:0] == 1) begin
 		if (dCache_m_addr_i_[2:1] == 0) begin
 			dCache_m_sel_i_ = 8'b00000011;
-			dCache_m_dat_i_ = {{48{1'b0}}, iD0_rs2[15:0]};
+			dCache_m_dat_i_ = {{48{1'b0}}, iD_rs2[15:0]};
 		end else if (dCache_m_addr_i_[2:1] == 1) begin
 			dCache_m_sel_i_ = 8'b00001100;
-			dCache_m_dat_i_ = {{32{1'b0}}, iD0_rs2[15:0], {16{1'b0}}};
+			dCache_m_dat_i_ = {{32{1'b0}}, iD_rs2[15:0], {16{1'b0}}};
 		end else if (dCache_m_addr_i_[2:1] == 2) begin
 			dCache_m_sel_i_ = 8'b00110000;
-			dCache_m_dat_i_ = {{16{1'b0}}, iD0_rs2[15:0], {32{1'b0}}};
+			dCache_m_dat_i_ = {{16{1'b0}}, iD_rs2[15:0], {32{1'b0}}};
 		end else /* if (dCache_m_addr_i_[2:1] == 3) */ begin
 			dCache_m_sel_i_ = 8'b11000000;
-			dCache_m_dat_i_ = {iD0_rs2[15:0], {48{1'b0}}};
+			dCache_m_dat_i_ = {iD_rs2[15:0], {48{1'b0}}};
 		end
-	end else if (iD0_func3[1:0] == 2) begin
+	end else if (iD_func3[1:0] == 2) begin
 		if (dCache_m_addr_i_[2]) begin
 			dCache_m_sel_i_ = 8'b11110000;
-			dCache_m_dat_i_ = {iD0_rs2[31:0], {32{1'b0}}};
+			dCache_m_dat_i_ = {iD_rs2[31:0], {32{1'b0}}};
 		end else begin
 			dCache_m_sel_i_ = 8'b00001111;
-			dCache_m_dat_i_ = {{32{1'b0}}, iD0_rs2[31:0]};
+			dCache_m_dat_i_ = {{32{1'b0}}, iD_rs2[31:0]};
 		end
-	end else /* if (iD0_func3[1:0] == 3) */ begin
+	end else /* if (iD_func3[1:0] == 3) */ begin
 		dCache_m_sel_i_ = 8'b11111111;
-		dCache_m_dat_i_ = iD0_rs2;
+		dCache_m_dat_i_ = iD_rs2;
 	end
 end
 end endgenerate
