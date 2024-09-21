@@ -182,6 +182,9 @@ always @ (posedge clk_i) begin
 		wb_we_r <= wb_we_i;
 		wb_dat_r <= wb_dat_i;
 	end
+end
+
+always @ (posedge clk_i) begin
 	wb_ack_o <= wb_stb_r;
 end
 

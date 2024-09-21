@@ -91,10 +91,11 @@ end
 wire _wb_stb_i = (wb_cyc_i && wb_stb_i);
 
 always @ (posedge clk_i) begin
-
 	if (_wb_stb_i)
 		wb_dat_o <= rom[wb_addr_i];
+end
 
+always @ (posedge clk_i) begin
 	wb_ack_o <= (!rst_i && _wb_stb_i);
 end
 

@@ -107,8 +107,11 @@ always @ (posedge clk_i) begin
 	// Logic updating the register cntr.
 	if (rst_i || rxstate == RXIDLE || cntr >= clockcyclesperbit_i)
 		cntr <= 0;
-	else cntr <= cntr + 1'b1;
+	else
+		cntr <= cntr + 1'b1;
+end
 
+always @ (posedge clk_i) begin
 	// Logic updating the register bitcnt and data_o.
 	if (rxstate == RXRCVD) begin
 		if (cntr >= clockcyclesperbit_i) begin
@@ -118,8 +121,11 @@ always @ (posedge clk_i) begin
 			// Logic that stores each bit.
 			data_o <= {rx_i, data_o[7:1]};
 		end
-	end else bitcnt <= 7;
+	end else
+		bitcnt <= 7;
+end
 
+always @ (posedge clk_i) begin
 	// Logic updating the registers rxstate and rcvd_o.
 	if (rst_i)
 		rxstate <= RXIDLE;

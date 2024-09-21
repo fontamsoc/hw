@@ -118,12 +118,15 @@ wire wb_stb_r_ = (wb_cyc_i && wb_stb_i);
 
 always @ (posedge clk_i) begin
 	wb_stb_r <= wb_stb_r_ ;
+	wb_ack_o <= wb_stb_r;
+end
+
+always @ (posedge clk_i) begin
 	if (wb_stb_r_) begin
 		wb_we_r <= wb_we_i;
 		wb_addr_r <= wb_addr_i;
 		wb_dat_r <= wb_dat_i;
 	end
-	wb_ack_o <= wb_stb_r;
 end
 
 `include "version.v"
@@ -184,6 +187,9 @@ always @ (posedge clk_i) begin
 			end
 		end
 	end
+end
+
+always @ (posedge clk_i) begin
 	rst2_o <= (!rst_i && wb_stb_r && wb_we_r && wb_dat_r == 3/* RRESET */);
 end
 

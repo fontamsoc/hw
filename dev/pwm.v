@@ -297,11 +297,15 @@ always @(posedge clk_i) begin
 		ioflag[pi1b_addr_i] <= pi1b_data_i[1];
 		`endif
 	end
+end
 
+always @ (posedge clk_i) begin
 	// Logic that set operiod.
 	if (pi1b_op_i == PIRWOP && pi1b_data_i[WORDBITSZ-1:WORDBITSZ-2] == CMDSETPERIOD)
 		operiod[pi1b_addr_i] <= pi1b_data_i[WORDBITSZ-3:0];
+end
 
+always @ (posedge clk_i) begin
 	// Logic that set pi1b_data_o.
 	if (pi1b_op_i == PIRDOP) begin
 		pi1b_data_o <= pdfifodato[pi1b_addr_i];
@@ -317,7 +321,9 @@ always @(posedge clk_i) begin
 		else
 			pi1b_data_o <= 0;
 	end
+end
 
+always @ (posedge clk_i) begin
 	// Logic that update ocounter.
 	for (gen_ocounter_idx = 0; gen_ocounter_idx < IOCOUNT; gen_ocounter_idx = gen_ocounter_idx + 1) begin: gen_ocounter // gen_ocounter is just a label that verilog want to see; and it is not used anywhere.
 		if (operiodreached[gen_ocounter_idx])
@@ -325,7 +331,9 @@ always @(posedge clk_i) begin
 		else
 			ocounter[gen_ocounter_idx] <= (ocounter[gen_ocounter_idx] + 1'b1);
 	end
+end
 
+always @ (posedge clk_i) begin
 	// Logic that update pdfifowasread.
 	for (gen_pdfifowasread_idx = 0; gen_pdfifowasread_idx < IOCOUNT; gen_pdfifowasread_idx = gen_pdfifowasread_idx + 1) begin: gen_pdfifowasread // gen_pdfifowasread is just a label that verilog want to see; and it is not used anywhere.
 		if (pdfiforeaden[gen_pdfifowasread_idx])
@@ -333,7 +341,9 @@ always @(posedge clk_i) begin
 		else if (pi1b_op_i == PIRDOP && pi1b_addr_i == gen_pdfifowasread_idx)
 			pdfifowasread[gen_pdfifowasread_idx] <= 0;
 	end
+end
 
+always @ (posedge clk_i) begin
 	// Logic that update accumulator.
 	for (gen_accumulator_idx = 0; gen_accumulator_idx < IOCOUNT; gen_accumulator_idx = gen_accumulator_idx + 1) begin: gen_accumulator // gen_accumulator is just a label that verilog want to see; and it is not used anywhere.
 		if (rst_i)

@@ -162,12 +162,13 @@ always @* begin
 end
 
 always @ (posedge clk_i) begin
-
 	if (rst_i)
 		trig_r <= 1'b0;
 	else if (trig_i)
 		trig_r <= 1'b1;
+end
 
+always @ (posedge clk_i) begin
 	// Logic sequencing the transmission
 	// of the nible of each probed value.
 	if (rst_i)
@@ -191,7 +192,9 @@ always @ (posedge clk_i) begin
 		// have been transmitted.
 		nibleidx <= ((((PROBEWIDTH -1) >> 2) +NLCRSZ) +1);
 	end
+end
 
+always @ (posedge clk_i) begin
 	// Save the current value of "probe_i".
 	// On reset, set "probesampled" to a value different from "probe_i"
 	// so that after reset, the value of "probe_i" get buffered.
@@ -199,7 +202,9 @@ always @ (posedge clk_i) begin
 		probesampled <= ~probe_i;
 	else
 		probesampled <= probe_i;
+end
 
+always @ (posedge clk_i) begin
 	// Logic that set doneprobing.
 	if (rst_i)
 		doneprobing <= 0;

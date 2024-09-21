@@ -683,6 +683,11 @@ end
 
 wire wb_stb_r_ = (wb_cyc_i && wb_stb_i);
 
+always @ (posedge clk_i) begin
+	wb_stb_r <= wb_stb_r_ ;
+	wb_ack_o <= wb_stb_r;
+end
+
 wire [(CLOG2XWORDBITSZBY8DIFF+CLOG2WORDBITSZ)-1:0] wb_dat_shift;
 generate if (XWORDBITSZ == WORDBITSZ) begin
 assign wb_dat_shift = 0;
@@ -691,19 +696,21 @@ assign wb_dat_shift = {_wb_addr_r[CLOG2XWORDBITSZBY8-1:CLOG2WORDBITSZBY8], {CLOG
 end endgenerate
 
 always @ (posedge clk_i) begin
-
-	wb_stb_r <= wb_stb_r_ ;
 	if (wb_stb_r_) begin
 		wb_we_r <= wb_we_i;
 		wb_addr_r <= wb_addr_i;
 		wb_sel_r <= wb_sel_i;
 		wb_dat_r <= wb_dat_i;
 	end
+end
 
+always @ (posedge clk_i) begin
 	// Logic that flips the value of cachesel when CMDSWAP is issued.
 	if (wb_stb_r && wb_we_r && cmd_swap)
 		cachesel <= ~cachesel;
+end
 
+always @ (posedge clk_i) begin
 	if (rst_i || (phy_cmd_pop_o && !phy_cmd_empty_i))
 		phy_cmd_empty_i <= 1'b1;
 	else if (wb_we_r && (cmd_read || cmd_write)) begin
@@ -711,14 +718,16 @@ always @ (posedge clk_i) begin
 		phy_cmd_data_i <= cmd_write;
 		phy_cmd_addr_i <= (wb_dat_r >> wb_dat_shift);
 	end
+end
 
-	wb_ack_o <= wb_stb_r;
-
+always @ (posedge clk_i) begin
 	if (cache_rdop)
 		wb_dat_o <= cachedato;
 	else if (wb_stb_r && !wb_we_r)
 		wb_dat_o <= (wb_dat_o_ << wb_dat_shift);
+end
 
+always @ (posedge clk_i) begin
 	// Logic that sets cachephyaddr.
 	// Increment cachephyaddr whenever the PHY is not busy and requesting
 	// a read/write; reset cachephyaddr to 0 whenever "phy_bsy_w" is low.
@@ -726,7 +735,9 @@ always @ (posedge clk_i) begin
 		cachephyaddr <= 0;
 	else if (cachesel ? (cache1rd | cache1wr) : (cache0rd | cache0wr))
 		cachephyaddr <= cachephyaddr + 1'b1;
+end
 
+always @ (posedge clk_i) begin
 	// Logic to set/clear irq_stb_o.
 	// A rising edge of "phy_err_o" means that an error occured
 	// while the controller was processing the previous
@@ -743,7 +754,9 @@ always @ (posedge clk_i) begin
 		irq_stb_o <= !irq_rdy_i_negedge;
 	else
 		irq_stb_o <= (phy_err_o_posedge || phy_bsy_w_negedge);
+end
 
+always @ (posedge clk_i) begin
 	// Sampling used for edge detection.
 	irq_rdy_i_r <= irq_rdy_i;
 	phy_err_o_r <= phy_err_o;

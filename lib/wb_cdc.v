@@ -94,9 +94,10 @@ wire rqst_read_w = (!s_wb_stb_o || !s_wb_bsy_i);
 wire rqst_empty_w;
 
 always @ (posedge s_clk_i) begin
-
 	s_wb_cyc_o <= (m_wb_cyc_i || (|m_wb_pending_acks));
+end
 
+always @ (posedge s_clk_i) begin
 	if (rst_i)
 		s_wb_stb_o <= 0;
 	else if (rqst_read_w)

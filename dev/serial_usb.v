@@ -157,6 +157,9 @@ always @ (posedge clk_i) begin
 		wb_addr_r <= wb_addr_i;
 		wb_dat_r <= wb_dat_i;
 	end
+end
+
+always @ (posedge clk_i) begin
 	wb_ack_o <= wb_stb_r;
 end
 
@@ -221,7 +224,9 @@ always @ (posedge clk_i) begin
 	end else if (irq_rdy_i_negedge) begin
 		intrqstthresh <= 0;
 	end
+end
 
+always @ (posedge clk_i) begin
 	if (rst_i || cmddevrdy) begin
 		wb_dat_o_ <= {WORDBITSZ{1'b0}};
 	end else if (cmdsetint) begin
@@ -234,9 +239,10 @@ always @ (posedge clk_i) begin
 	end else if (cmdsetspd) begin
 		wb_dat_o_ <= {PHYCLKFREQ[(WORDBITSZ-2)-1:0], wb_dat_r[1:0]};
 	end
+end
 
+always @ (posedge clk_i) begin
 	rx_read_w_sampled <= rx_read_w;
-
 	irq_rdy_i_r <= irq_rdy_i; // Sampling used for edge detection.
 end
 

@@ -141,10 +141,11 @@ wire cs_o_posedge = (cs_o > cs_o_sampled);
 assign rcvd_o = ((rdy_o_negedge && !cs_o_negedge) || cs_o_posedge);
 
 always @ (posedge clk_i) begin
-
 	if (!cs_o && (cntr == (({{SCLKDIVLIMIT{1'b0}}, 1'b1} << sclkdiv_w_minus_one) -1)))
 		data_o <= {data_o[DATABITSZ -2 : 0], miso_i};
+end
 
+always @ (posedge clk_i) begin
 	// When the output "cs_o" is low, this block executes only
 	// after every clock cycle count of ((1 << sclkdiv_w) -1);
 	// when the output "cs_o" is high, this block executes every clock cycle.
@@ -169,9 +170,10 @@ always @ (posedge clk_i) begin
 
 	end else
 		cntr <= cntr + 1'b1;
+end
 
+always @ (posedge clk_i) begin
 	rdy_o_sampled <= rdy_o;
-
 	cs_o_sampled <= cs_o;
 end
 

@@ -149,7 +149,7 @@ reg [WORDBITSZ -1 : 0] pxdat_addr_r = {WORDBITSZ{1'b1}};
 
 assign vga_rst_o = (rst_i || (&pxdat_addr_r));
 
-always @ (posedge clk_i)
+always @ (posedge clk_i) begin
 	if (vga_rst_o || h_pos_r == (H_MAX-1)) begin
 		h_pos_r <= 0;
 		if (vga_rst_o || v_pos_r == (V_MAX-1))
@@ -158,6 +158,7 @@ always @ (posedge clk_i)
 			v_pos_r <= v_pos_r + 1'b1;
 	end else
 		h_pos_r <= h_pos_r + 1'b1;
+end
 
 wire vga_hblank_w_ = (h_pos_r >= H_REZ);
 wire vga_vblank_w_ = (v_pos_r >= V_REZ);
@@ -237,15 +238,18 @@ wire pxbuf_read_w = pxbuf_read_en_posedge || (
 		(h_pos_r == (H_REZ-1) && v_pos_r == (V_REZ-1))));
 
 always @ (posedge clk_i) begin
-
 	pxbuf_read_en_sampled <= pxbuf_read_en;
+end
 
+always @ (posedge clk_i) begin
 	if (!pxbuf_read_en || vga_vblank_w_ || (!vga_hblank_w_ && px_repeat_done) || pxbuf_read_w)
 		px_repeat_idx <= 0;
 	else if (vga_hblank_w_); // Do nothing.
 	else if (px_repeat_last)
 		px_repeat_idx <= px_repeat_idx + 1'b1;
+end
 
+always @ (posedge clk_i) begin
 	if (!pxbuf_read_en || vga_vblank_w_ || pxbuf_read_w)
 		datidx <= 0;
 	else if (vga_hblank_w_); // Do nothing.
@@ -294,10 +298,11 @@ reg vga_vblank_w__sampled = 0;
 reg wait_for_vblank_trigger = 0;
 
 always @ (posedge pi1_clk_i) begin
-
 	if (s_pi1_rdy_o)
 		s_pi1_addr_w_hold <= s_pi1_addr_w;
+end
 
+always @ (posedge pi1_clk_i) begin
 	if (rst_i)
 		pxdat_addr_r <= {WORDBITSZ{1'b1}};
 	else if (s_pi1_op_i == PIRWOP && s_pi1_rdy_o) begin
@@ -320,7 +325,9 @@ always @ (posedge pi1_clk_i) begin
 				data_w0 <= 0;
 		end
 	end
+end
 
+always @ (posedge pi1_clk_i) begin
 	if (vga_rst_o)
 		_m_pi1_op_o <= PINOOP;
 	else if (m_pi1_rdy_i) begin
@@ -328,7 +335,9 @@ always @ (posedge pi1_clk_i) begin
 		pxbuf_empty_w_posedge_sampled <= (pxbuf_empty_w_posedge && (m_pi1_op_o == PIRDOP && m_pi1_addr_o != pxdat_first_addr_o));
 		pxbuf_empty_w_sampled <= pxbuf_empty_w;
 	end
+end
 
+always @ (posedge pi1_clk_i) begin
 	if (vga_rst_o) begin
 		m_pi1_op_o <= PINOOP;
 		m_pi1_addr_o <= 0;
@@ -384,8 +393,13 @@ always @ (posedge pi1_clk_i) begin
 			end
 		end
 	end
+end
 
+always @ (posedge pi1_clk_i) begin
 	vga_vblank_w__sampled <= vga_vblank_w_; // To detect posedge.
+end
+
+always @ (posedge pi1_clk_i) begin
 	if (vga_rst_o || pxbuf_empty_w || (vga_vblank_w_ && !vga_vblank_w__sampled)) begin
 		wait_for_vblank <= 0;
 		wait_for_vblank_trigger <= 0;
@@ -395,7 +409,9 @@ always @ (posedge pi1_clk_i) begin
 			wait_for_vblank <= 1;
 		wait_for_vblank_trigger <= 1;
 	end
+end
 
+always @ (posedge pi1_clk_i) begin
 	if (vga_rst_o || pxbuf_empty_w)
 		pxbuf_read_en <= 0;
 	else if (vga_vblank_w_)
