@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-wire opImul_stb = (iD_opImul_stb && eX_insn_valid_i);
+wire opImul_stb = (iD_opImul_stb && iD_insn_valid);
 
 // Significance of each bit in the field within
 // opImul_args storing the type of multiplication to perform.

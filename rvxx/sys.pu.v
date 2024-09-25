@@ -39,7 +39,7 @@ always @ (posedge clk_i) begin
 	if (rst_i) begin
 		csrBranchPredictHit <= 0;
 		csrBranchPredictMiss <= 0;
-	end else if (iD_isBranch && eX_insn_valid_i) begin
+	end else if (iD_isBranch && iD_insn_valid) begin
 		if (_eX_takeBranch_i)
 			csrBranchPredictMiss <= csrBranchPredictMiss + 1'b1;
 		else
@@ -52,7 +52,7 @@ reg [WORDBITSZ -1 : 0] csrRetPredictMiss;
 always @ (posedge clk_i) begin
 	if (rst_i)
 		csrRetPredictMiss <= 0;
-	else if (iD_isRet && eX_predictRetMiss_i && eX_insn_valid_i)
+	else if (iD_isRet && eX_predictRetMiss_i && iD_insn_valid)
 		csrRetPredictMiss <= csrRetPredictMiss + 1'b1;
 end
 `endif
@@ -61,7 +61,7 @@ end
 always @ (posedge clk_i) begin
 	if (rst_i)
 		halted_o <= 0;
-	else if (iD_isEbreak && eX_insn_valid_i)
+	else if (iD_isEbreak && iD_insn_valid)
 		halted_o <= 1;
 	`ifdef SIMULATION
 	if (halted_o && !wb_pending_acks) begin

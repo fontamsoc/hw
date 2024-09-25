@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-wire opIdiv_stb = (iD_opIdiv_stb && eX_insn_valid_i);
+wire opIdiv_stb = (iD_opIdiv_stb && iD_insn_valid);
 
 // Significance of each bit in the field within
 // opIdiv_args storing the type of division to perform.

@@ -74,7 +74,7 @@ wire ldUnit_rqsts_full;
 
 assign iD_ldUnit_bsy = (ldUnit_rqsts_full || __dCache_m_bsy);
 
-wire ldUnit_stb = (iD_ldUnit_stb && eX_insn_valid_i);
+wire ldUnit_stb = (iD_ldUnit_stb && iD_insn_valid);
 
 wire [CLOG2GPRCNT -1 : 0] ldUnit_rqsts_rIdx;
 wire                      ldUnit_rqsts_isAMO;

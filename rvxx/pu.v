@@ -575,6 +575,8 @@ assign iD_rs2Rdy = ((
 	iD_rs2Id_eq_iD_rW_rdId ? 1'b1 :
 	iD_rs2Rdy_) || iD_rs2Rdy__);
 
+wire iD_insn_valid;
+
 `include "./dcache.pu.v"
 
 `include "./memctrl.pu.v"
@@ -783,7 +785,7 @@ assign iD_eX_carryon = eX_carryon;
 
 wire eX_en = (eX_carryon && !halted_o);
 
-wire eX_insn_valid_i = (!eX_flushed_i && eX_en);
+assign iD_insn_valid = (!eX_flushed_i && eX_en);
 
 `ifdef PUPREDICTBRANCH
 wire [2 -1 : 0] bht_i = (
@@ -796,14 +798,14 @@ wire [2 -1 : 0] bht_i = (
 	{eX_takeBranch_i, eX_predictBranch_i} == 3'b110 ? 2'b11 :
 	                                                  2'b11 );
 always @ (posedge clk_i) begin
-	if (iD_isBranch && eX_insn_valid_i)
+	if (iD_isBranch && iD_insn_valid)
 		bht[iD_pc[CLOG2BHTSETCNT+CLOG2INSNBITSZBY8-1:CLOG2INSNBITSZBY8]] <= bht_i;
 end
 `endif
 
 `ifdef PUPREDICTRET
 always @ (posedge clk_i) begin
-	if (eX_insn_valid_i) begin
+	if (iD_insn_valid) begin
 		if (iD_isCall) begin
 			ras0 <= iD_pc_plus_INSNBITSzBy8;
 			ras1 <= ras0;
@@ -838,7 +840,7 @@ wire eX_JumpOrBranch_i = ((
 	`else
 	iD_isJALR ||
 	`endif
-	(iD_isBranch && _eX_takeBranch_i)) && eX_insn_valid_i);
+	(iD_isBranch && _eX_takeBranch_i)) && iD_insn_valid);
 
 assign iF_eX_JumpOrBranch_i = eX_JumpOrBranch_i;
 assign iD_eX_JumpOrBranch_i = eX_JumpOrBranch_i;

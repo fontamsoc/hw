@@ -254,7 +254,7 @@ always @ (posedge clk_i) begin
 				dCache_m_dat_i);
 		end else if (!dCache_m_bsy_o)
 			dCache_m_stb_i <= 1'b0;
-	end else if (eX_insn_valid_i) begin
+	end else if (iD_insn_valid) begin
 		if (iD_isLoad) begin
 			dCache_m_stb_i <= 1'b1;
 			dCache_m_we_i <= 0;
