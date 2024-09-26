@@ -10,13 +10,7 @@ reg [64 -1 : 0] csrInstret;
 always @ (posedge clk_i) begin
 	if (rst_i) begin
 		csrInstret <= 0;
-	end else if (
-		ldUnit_memAck
-		`ifdef PURV32M
-		|| opImul_done || opIdiv_done
-		`endif
-		|| (!eX_flushed && !eX_multiCycleInsn && !halted_o)
-		) begin
+	end else if (eX_rW_stalled || (!eX_flushed && !eX_multiCycleInsn && !halted_o)) begin
 		csrInstret <= (csrInstret + 1'b1);
 		`ifdef _SIMULATION
 		if (!csrInstret[20:0]) begin
