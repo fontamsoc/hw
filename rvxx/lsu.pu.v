@@ -123,3 +123,26 @@ assign iD_stUnit_bsy = __dCache_m_bsy;
 // AMO Unit.
 
 assign amoUnit_memAck = (ldUnit_memAck && ldUnit_rqsts_isAMO);
+
+wire iD_isLr_and_insn_valid = (iD_isLr && iD_insn_valid);
+
+always @ (posedge clk_i) begin
+	if (rst_i || eX_JumpOrBranch || (iD_cancelLr && iD_insn_valid)) begin
+		// Per spec, cancel load reservation on taken branch,
+		// jump, system, fence, loads, stores instructions.
+		amoUnit_lrValid <= 1'b0;
+	end else if (iD_isLr_and_insn_valid) begin
+		amoUnit_lrValid <= 1'b1;
+	end
+end
+
+reg [WORDBITSZ -1 : 0] amoUnit_LrAddr;
+
+always @ (posedge clk_i) begin
+	if (iD_isLr_and_insn_valid)
+		amoUnit_LrAddr <= dCache_m_addr_i_;
+end
+
+assign _amoUnit_lrValid = (amoUnit_lrValid && (amoUnit_LrAddr == dCache_m_addr_i_));
+
+assign eX_StoreCondOut_i = {{(WORDBITSZ-1){1'b0}}, !amoUnit_lrValid};

@@ -215,7 +215,9 @@ always @ (posedge clk_i) begin
 		dCache_m_pending_acks <= dCache_m_pending_acks + 1'b1;
 end
 
-assign dCache_m_cyc_i = (dCache_m_stb_i || dCache_m_we_i_ || (|dCache_m_pending_acks));
+reg amoUnit_lrValid;
+
+assign dCache_m_cyc_i = (amoUnit_lrValid || dCache_m_stb_i || dCache_m_we_i_ || (|dCache_m_pending_acks));
 
 wire [WORDBITSZ -1 : 0] dCache_m_addr_i_ = (iD_rs1 + iD_addrImm);
 
@@ -228,6 +230,8 @@ wire dCache_m_dat_i_lt_dCache_m_dat_o = (
 	(dCache_m_dat_i[WORDBITSZ-1] ^ dCache_m_dat_o[WORDBITSZ-1]) ?
 		dCache_m_dat_i[WORDBITSZ-1] : dCache_m_dat_i_minus_dCache_m_dat_o[WORDBITSZ]);
 wire dCache_m_dat_i_ltu_dCache_m_dat_o = dCache_m_dat_i_minus_dCache_m_dat_o[WORDBITSZ];
+
+wire _amoUnit_lrValid;
 
 always @ (posedge clk_i) begin
 	if (rst_i) begin
@@ -255,18 +259,18 @@ always @ (posedge clk_i) begin
 		end else if (!dCache_m_bsy_o)
 			dCache_m_stb_i <= 1'b0;
 	end else if (iD_insn_valid) begin
-		if (iD_isLoad) begin
+		if (iD_isLoad || iD_isLr) begin
 			dCache_m_stb_i <= 1'b1;
 			dCache_m_we_i <= 0;
 			dCache_m_addr_i <= dCache_m_addr_i_[WORDBITSZ-1:CLOG2WORDBITSZBY8];
 			dCache_m_sel_i <= dCache_m_sel_i_;
-		end else if (iD_isStore) begin
+		end else if (iD_isStore || (iD_isSc && _amoUnit_lrValid)) begin
 			dCache_m_stb_i <= 1'b1;
 			dCache_m_we_i <= 1;
 			dCache_m_addr_i <= dCache_m_addr_i_[WORDBITSZ-1:CLOG2WORDBITSZBY8];
 			dCache_m_sel_i <= dCache_m_sel_i_;
 			dCache_m_dat_i <= dCache_m_dat_i_;
-		end else if (iD_isAMO) begin
+		end else if (iD_isAMO && !(iD_isLr || iD_isSc)) begin
 			amoUnit_opType <= iD_func5;
 			dCache_m_stb_i <= 1'b1;
 			dCache_m_we_i <= 1'b0;

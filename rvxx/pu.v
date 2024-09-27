@@ -353,6 +353,8 @@ wire iF_isStore  = (iF_insn[6:2] == 5'b01000);
 wire iF_isSystem = (iF_insn[6:2] == 5'b11100);
 wire iF_isAMO    = (iF_insn[6:2] == 5'b01011);
 
+wire iF_isMiscMem = (iF_insn[6:2] == 5'b00011);
+
 wire [WORDBITSZ -1 : 0] iF_addrImm = (iF_isLoad ? iF_Iimm : iF_isStore ? iF_Simm : {WORDBITSZ{1'b0}});
 
 wire iF_isSystemAndFunc3Null = (iF_isSystem && iF_func3 == 3'b000);
@@ -367,23 +369,34 @@ wire iF_opImul_stb = (iF_isRV32M && !iF_func3[2] && iF_rdId);
 wire iF_opIdiv_stb = (iF_isRV32M &&  iF_func3[2] && iF_rdId);
 `endif
 
-wire iF_ldUnit_stb = (iF_isLoad || (iF_isAMO && iF_func5 != 5'b00011));
-wire iF_stUnit_stb = (iF_isStore || (iF_isAMO && iF_func5 == 5'b00011));
+wire iF_isLr = (iF_isAMO && iF_func5 == 5'b00010);
+wire iF_isSc = (iF_isAMO && iF_func5 == 5'b00011);
 
-wire iF_isALUimmOrJALrOrLoad = (iF_isALUimm || iF_isJALR || iF_isLoad);
+wire iF_ldUnit_stb = (iF_isLoad || (iF_isAMO && iF_func5 != 5'b00011));
+wire iF_stUnit_stb = (iF_isStore || iF_isSc);
+
+wire iF_isAMOandSc = (iF_isAMO && iF_func5 != 5'b00010);
+
+wire iF_cancelLr = (iF_isSystem || iF_isMiscMem || iF_isLoad || iF_isStore || iF_isAMOandSc);
+
+wire iF_isALUimmOrJALrOrLoad = (iF_isALUimm || iF_isJALR || iF_ldUnit_stb);
 wire iF_isBranchOrStore = (iF_isBranch || iF_isStore);
 wire iF_isJAlOrAUIPcOrLUI = (iF_isJAL || iF_isAUIPC || iF_isLUI);
 wire iF_isALUregOrBranch = (iF_isALUreg || iF_isBranch);
+wire iF_isALUregOrAMOandSc = (iF_isALUreg || iF_isAMOandSc);
 wire iF_isJAlOrJALR = (iF_isJAL || iF_isJALR);
 
+// iF_isSc is also a multiCycleInsn like iF_isStore,
+// but it is not included in this logic because it uses
+// early register writeback.
 wire iF_multiCycleInsn = (
 	`ifdef PURV32M
 	iF_isRV32M ||
 	`endif
-	iF_isLoad || iF_isStore || iF_isAMO);
+	iF_ldUnit_stb || iF_isStore);
 
-wire iF_use_rdId = (iF_rdId &&
-	!(iF_isBranchOrStore ||
+wire iF_use_rdId = (iF_rdId && // iF_rdId is null when iF_isMiscMem true.
+	!(iF_isBranchOrStore || /*iF_isMiscMem ||*/
 		(iF_isSystem && !iF_func3[1:0] /* non-CSR instructions */)));
 
 `ifdef SIMULATION
@@ -466,13 +479,19 @@ reg iD_opImul_stb;
 reg iD_opIdiv_stb;
 `endif
 
+reg iD_isLr;
+reg iD_isSc;
+
 reg iD_ldUnit_stb;
 reg iD_stUnit_stb;
+
+reg iD_cancelLr;
 
 reg iD_isALUimmOrJALrOrLoad;
 reg iD_isBranchOrStore;
 reg iD_isJAlOrAUIPcOrLUI;
 reg iD_isALUregOrBranch;
+reg iD_isALUregOrAMOandSc;
 reg iD_isJAlOrJALR;
 
 reg iD_multiCycleInsn;
@@ -508,7 +527,7 @@ wire iD_stalled = (!iD_eX_carryon ||
 	(iD_ldUnit_stb ? iD_ldUnit_bsy : 1'b0) ||
 	(iD_stUnit_stb ? iD_stUnit_bsy : 1'b0) || (
 	// Stall if any of the operand is locked.
-	iD_isALUreg ? !(iD_rdRdy && iD_rs1Rdy && iD_rs2Rdy) :
+	iD_isALUregOrAMOandSc ? !(iD_rdRdy && iD_rs1Rdy && iD_rs2Rdy) :
 	iD_isALUimmOrJALrOrLoad ? !(iD_rdRdy && iD_rs1Rdy) :
 	iD_isBranchOrStore ? !(iD_rs1Rdy && iD_rs2Rdy) :
 	iD_isJAlOrAUIPcOrLUI ? !iD_rdRdy : 0));
@@ -679,13 +698,19 @@ always @ (posedge clk_i) begin
 		iD_opIdiv_stb <= iF_opIdiv_stb;
 		`endif
 
+		iD_isLr <= iF_isLr;
+		iD_isSc <= iF_isSc;
+
 		iD_ldUnit_stb <= iF_ldUnit_stb;
 		iD_stUnit_stb <= iF_stUnit_stb;
+
+		iD_cancelLr <= iF_cancelLr;
 
 		iD_isALUimmOrJALrOrLoad <= iF_isALUimmOrJALrOrLoad;
 		iD_isBranchOrStore      <= iF_isBranchOrStore;
 		iD_isJAlOrAUIPcOrLUI    <= iF_isJAlOrAUIPcOrLUI;
 		iD_isALUregOrBranch     <= iF_isALUregOrBranch;
+		iD_isALUregOrAMOandSc   <= iF_isALUregOrAMOandSc;
 		iD_isJAlOrJALR          <= iF_isJAlOrJALR;
 
 		iD_multiCycleInsn <= iF_multiCycleInsn;
@@ -733,11 +758,14 @@ end
 
 reg [WORDBITSZ -1 : 0] eX_csrOut_i; // ### comb-block-reg.
 
+wire [WORDBITSZ -1 : 0] eX_StoreCondOut_i;
+
 wire [WORDBITSZ -1 : 0] eX_rslt_i = (
 	iD_isJAlOrJALR ? (iD_pc_plus_INSNBITSzBy8) :
 	iD_isLUI       ? iD_Uimm                   :
 	iD_isAUIPC     ? iD_pc_plus_iD_Uimm        :
 	iD_isCSR       ? eX_csrOut_i               :
+	iD_isSc        ? eX_StoreCondOut_i         :
 	                 eX_aluOut_i              );
 
 reg eX_takeBranch_i; // ### comb-block-reg.
@@ -855,11 +883,14 @@ wire [WORDBITSZ -1 : 0] eX_JumpOrBranchAddr_i = (
 
 assign iF_eX_JumpOrBranchAddr_i = eX_JumpOrBranchAddr_i;
 
+reg eX_JumpOrBranch;
 always @ (posedge clk_i) begin
 	if (rst_i) begin
 		eX_flushed <= 1;
+		eX_JumpOrBranch <= 1;
 	end else if (eX_en) begin
 		eX_flushed <= eX_flushed_i;
+		eX_JumpOrBranch <= eX_JumpOrBranch_i;
 	end
 end
 
