@@ -550,19 +550,21 @@ wire [CLOG2GPRCNT -1 : 0] _iF_rs2Id = (iD_en ? iF_rs2Id : iD_rs2Id);
 
 wire _iF_use_rdId = (iD_en ? iF_use_rdId : iD_use_rdId);
 
+reg iD_eX_rdId_isTrue;
 reg [CLOG2GPRCNT -1 : 0] iD_eX_rdId;
 reg [WORDBITSZ -1 : 0]   iD_eX_rslt;
 
-wire iD_rdId_eq_iD_eX_rdId  = ((iD_rdId  == iD_eX_rdId) && iD_eX_rdId);
-wire iD_rs1Id_eq_iD_eX_rdId = ((iD_rs1Id == iD_eX_rdId) && iD_eX_rdId);
-wire iD_rs2Id_eq_iD_eX_rdId = ((iD_rs2Id == iD_eX_rdId) && iD_eX_rdId);
+wire iD_rdId_eq_iD_eX_rdId  = ((iD_rdId  == iD_eX_rdId) && iD_eX_rdId_isTrue);
+wire iD_rs1Id_eq_iD_eX_rdId = ((iD_rs1Id == iD_eX_rdId) && iD_eX_rdId_isTrue);
+wire iD_rs2Id_eq_iD_eX_rdId = ((iD_rs2Id == iD_eX_rdId) && iD_eX_rdId_isTrue);
 
+reg iD_rW_rdId_isTrue;
 reg [CLOG2GPRCNT -1 : 0] iD_rW_rdId;
 reg [WORDBITSZ -1 : 0]   iD_rW_rslt;
 
-wire iD_rdId_eq_iD_rW_rdId  = ((iD_rdId  == iD_rW_rdId) && iD_rW_rdId);
-wire iD_rs1Id_eq_iD_rW_rdId = ((iD_rs1Id == iD_rW_rdId) && iD_rW_rdId);
-wire iD_rs2Id_eq_iD_rW_rdId = ((iD_rs2Id == iD_rW_rdId) && iD_rW_rdId);
+wire iD_rdId_eq_iD_rW_rdId  = ((iD_rdId  == iD_rW_rdId) && iD_rW_rdId_isTrue);
+wire iD_rs1Id_eq_iD_rW_rdId = ((iD_rs1Id == iD_rW_rdId) && iD_rW_rdId_isTrue);
+wire iD_rs2Id_eq_iD_rW_rdId = ((iD_rs2Id == iD_rW_rdId) && iD_rW_rdId_isTrue);
 
 reg [WORDBITSZ -1 : 0] iD_rs1_;
 reg [WORDBITSZ -1 : 0] iD_rs2_;
@@ -903,7 +905,13 @@ always @ (posedge clk_i) begin
 		eX_insn <= iD_insn;
 		`endif
 		eX_multiCycleInsn <= iD_multiCycleInsn;
-		iD_eX_rdId <= ((iD_multiCycleInsn || eX_flushed_i) ? 5'd0 : iD_rdId);
+		if (iD_multiCycleInsn || eX_flushed_i) begin
+			iD_eX_rdId_isTrue <= 1'b0;
+			iD_eX_rdId <= 5'd0;
+		end else begin
+			iD_eX_rdId_isTrue <= (|iD_rdId);
+			iD_eX_rdId <= iD_rdId;
+		end
 		iD_eX_rslt <= eX_rslt_i;
 	end
 end
@@ -976,7 +984,7 @@ always @* begin
 		rW_opIdiv_done = 1;
 	`endif
 	end else if (halted_o) begin
-	end else if (iD_eX_rdId /*&& !eX_flushed*/) begin
+	end else if (iD_eX_rdId_isTrue /*&& !eX_flushed*/) begin
 		rW_we_i  = 1;
 		rW_idx_i = iD_eX_rdId;
 		rW_dat_i = iD_eX_rslt;
@@ -985,31 +993,40 @@ end
 
 always @ (posedge clk_i) begin
 	if (ldUnit_memAck) begin
+		iD_rW_rdId_isTrue <= (|ldUnit_rqsts_rIdx);
 		iD_rW_rdId <= ldUnit_rqsts_rIdx;
 		iD_rW_rslt <= ldUnit_rqsts_dato;
 	`ifdef PURV32M
 	end else if (opImul_done) begin
+		iD_rW_rdId_isTrue <= (|opImul_rIdx);
 		iD_rW_rdId <= opImul_rIdx;
 		iD_rW_rslt <= opImul_rslt;
 	end else if (opIdiv_done) begin
+		iD_rW_rdId_isTrue <= (|opIdiv_rIdx);
 		iD_rW_rdId <= opIdiv_rIdx;
 		iD_rW_rslt <= opIdiv_rslt;
 	`endif
 	end else if (halted_o) begin
-	end else if (iD_eX_rdId /*&& !eX_flushed*/) begin
-		iD_rW_rdId <= (
-			(!iD_flushed && iD_multiCycleInsn && iD_eX_rdId == iD_rdId) ?
-			/* Considering the instruction sequence below, this above check
-			prevents the result of `add a3,a3,a1` to be forwarded to `jr a3`,
-			when the result of `lw a3,0(a3)` should be used but has been deferred
-			due to being from a multi-cycle instruction.
-			add     a3,a3,a1
-			lw      a3,0(a3)       (Multi-cycle instruction)
-			jr      a3                                                        */
-			{CLOG2GPRCNT{1'b0}} : iD_eX_rdId);
+	end else if (iD_eX_rdId_isTrue /*&& !eX_flushed*/) begin
+		/* Considering the instruction sequence below, the check below
+		prevents the result of `add a3,a3,a1` to be forwarded to `jr a3`,
+		when the result of `lw a3,0(a3)` should be used but has been deferred
+		due to being from a multi-cycle instruction.
+		add     a3,a3,a1
+		lw      a3,0(a3)       (Multi-cycle instruction)
+		jr      a3                                                        */
+		if (!iD_flushed && iD_multiCycleInsn && iD_eX_rdId == iD_rdId) begin
+			iD_rW_rdId_isTrue <= 1'b0;
+			iD_rW_rdId <= {CLOG2GPRCNT{1'b0}};
+		end else begin
+			iD_rW_rdId_isTrue <= (|iD_eX_rdId);
+			iD_rW_rdId <= iD_eX_rdId;
+		end
 		iD_rW_rslt <= iD_eX_rslt;
-	end else
-		iD_rW_rdId <= 0;
+	end else begin
+		iD_rW_rdId_isTrue <= 1'b0;
+		iD_rW_rdId <= {CLOG2GPRCNT{1'b0}};
+	end
 end
 
 always @ (posedge clk_i) begin
