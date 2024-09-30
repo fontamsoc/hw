@@ -386,14 +386,11 @@ wire iF_isALUregOrBranch = (iF_isALUreg || iF_isBranch);
 wire iF_isALUregOrAMOandSc = (iF_isALUreg || iF_isAMOandSc);
 wire iF_isJAlOrJALR = (iF_isJAL || iF_isJALR);
 
-// iF_isSc is also a multiCycleInsn like iF_isStore,
-// but it is not included in this logic because it uses
-// early register writeback.
-wire iF_multiCycleInsn = (
+wire iF_lateWritebackInsn = (
 	`ifdef PURV32M
 	iF_isRV32M ||
 	`endif
-	iF_ldUnit_stb || iF_isStore);
+	iF_ldUnit_stb);
 
 wire iF_use_rdId = (iF_rdId && // iF_rdId is null when iF_isMiscMem true.
 	!(iF_isBranchOrStore || /*iF_isMiscMem ||*/
@@ -494,7 +491,7 @@ reg iD_isALUregOrBranch;
 reg iD_isALUregOrAMOandSc;
 reg iD_isJAlOrJALR;
 
-reg iD_multiCycleInsn;
+reg iD_lateWritebackInsn;
 
 reg iD_use_rdId;
 
@@ -715,7 +712,7 @@ always @ (posedge clk_i) begin
 		iD_isALUregOrAMOandSc   <= iF_isALUregOrAMOandSc;
 		iD_isJAlOrJALR          <= iF_isJAlOrJALR;
 
-		iD_multiCycleInsn <= iF_multiCycleInsn;
+		iD_lateWritebackInsn <= iF_lateWritebackInsn;
 
 		iD_use_rdId <= iF_use_rdId;
 	end
@@ -896,16 +893,15 @@ always @ (posedge clk_i) begin
 	end
 end
 
-reg eX_multiCycleInsn;
-
+reg eX_lateWritebackInsn;
 always @ (posedge clk_i) begin
 	if (eX_en) begin
 		`ifdef SIMULATION
 		eX_pc   <= iD_pc;
 		eX_insn <= iD_insn;
 		`endif
-		eX_multiCycleInsn <= iD_multiCycleInsn;
-		if (iD_multiCycleInsn || eX_flushed_i) begin
+		eX_lateWritebackInsn <= iD_lateWritebackInsn;
+		if (iD_lateWritebackInsn || eX_flushed_i) begin
 			iD_eX_rdId_isTrue <= 1'b0;
 			iD_eX_rdId <= 5'd0;
 		end else begin
@@ -1015,7 +1011,7 @@ always @ (posedge clk_i) begin
 		add     a3,a3,a1
 		lw      a3,0(a3)       (Multi-cycle instruction)
 		jr      a3                                                        */
-		if (!iD_flushed && iD_multiCycleInsn && iD_eX_rdId == iD_rdId) begin
+		if (!iD_flushed && iD_lateWritebackInsn && iD_eX_rdId == iD_rdId) begin
 			iD_rW_rdId_isTrue <= 1'b0;
 			iD_rW_rdId <= {CLOG2GPRCNT{1'b0}};
 		end else begin
