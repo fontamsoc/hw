@@ -45,6 +45,7 @@ module cpu (
 	,dcache_miss_i
 
 	,irq_stb_i
+	,irq_stb_o
 	,irq_rdy_o
 	,halted_o
 
@@ -94,6 +95,7 @@ output wire [(XWORDBITSZ*PUCNT) -1 : 0] dcache_addr_o;
 input  wire [PUCNT -1 : 0]              dcache_miss_i;
 
 input  wire [PUCNT -1 : 0] irq_stb_i;
+output wire [PUCNT -1 : 0] irq_stb_o;
 output wire [PUCNT -1 : 0] irq_rdy_o;
 output wire [PUCNT -1 : 0] halted_o;
 
@@ -253,6 +255,7 @@ pu #(
 	,.dcache_miss_i (dcache_miss_i[genpu_idx])
 
 	,.irq_stb_i (irq_stb_i[genpu_idx])
+	,.irq_stb_o (irq_stb_o[genpu_idx])
 	,.irq_rdy_o (irq_rdy_o[genpu_idx])
 	,.halted_o  (halted_o[genpu_idx])
 

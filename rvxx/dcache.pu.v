@@ -259,7 +259,7 @@ always @ (posedge clk_i) begin
 		end else if (!dCache_m_bsy_o)
 			dCache_m_stb_i <= 1'b0;
 	end else if (iD_insn_valid) begin
-		if (iD_isLoad || iD_isLr) begin
+		if (iD_isLoadOrLr) begin
 			dCache_m_stb_i <= 1'b1;
 			dCache_m_we_i <= 0;
 			dCache_m_addr_i <= dCache_m_addr_i_[WORDBITSZ-1:CLOG2WORDBITSZBY8];
@@ -286,10 +286,13 @@ always @ (posedge clk_i) begin
 	end
 end
 
+reg dcache_m_addr_misaligned; // ### comb-block-reg.
+
 generate if (WORDBITSZ == 32) begin
 always @* begin
 	dCache_m_sel_i_ = {(WORDBITSZ/8){1'b0}};
 	dCache_m_dat_i_ = {WORDBITSZ{1'b0}};
+	dcache_m_addr_misaligned = 0;
 	if (iD_func3[1:0] == 0) begin
 		if (dCache_m_addr_i_[1:0] == 0) begin
 			dCache_m_sel_i_ = 4'b0001;
@@ -312,9 +315,11 @@ always @* begin
 			dCache_m_sel_i_ = 4'b0011;
 			dCache_m_dat_i_ = {{16{1'b0}}, iD_rs2[15:0]};
 		end
+		dcache_m_addr_misaligned = dCache_m_addr_i_[0];
 	end else /* if (iD_func3[1:0] == 2) */ begin
 		dCache_m_sel_i_ = 4'b1111;
 		dCache_m_dat_i_ = iD_rs2;
+		dcache_m_addr_misaligned = (|dCache_m_addr_i_[1:0]);
 	end
 end
 end endgenerate
@@ -322,6 +327,7 @@ generate if (WORDBITSZ == 64) begin
 always @* begin
 	dCache_m_sel_i_ = {(WORDBITSZ/8){1'b0}};
 	dCache_m_dat_i_ = {WORDBITSZ{1'b0}};
+	dcache_m_addr_misaligned = 0;
 	if (iD_func3[1:0] == 0) begin
 		if (dCache_m_addr_i_[2:0] == 0) begin
 			dCache_m_sel_i_ = 8'b00000001;
@@ -362,6 +368,7 @@ always @* begin
 			dCache_m_sel_i_ = 8'b11000000;
 			dCache_m_dat_i_ = {iD_rs2[15:0], {48{1'b0}}};
 		end
+		dcache_m_addr_misaligned = dCache_m_addr_i_[0];
 	end else if (iD_func3[1:0] == 2) begin
 		if (dCache_m_addr_i_[2]) begin
 			dCache_m_sel_i_ = 8'b11110000;
@@ -370,9 +377,11 @@ always @* begin
 			dCache_m_sel_i_ = 8'b00001111;
 			dCache_m_dat_i_ = {{32{1'b0}}, iD_rs2[31:0]};
 		end
+		dcache_m_addr_misaligned = (|dCache_m_addr_i_[1:0]);
 	end else /* if (iD_func3[1:0] == 3) */ begin
 		dCache_m_sel_i_ = 8'b11111111;
 		dCache_m_dat_i_ = iD_rs2;
+		dcache_m_addr_misaligned = (|dCache_m_addr_i_[2:0]);
 	end
 end
 end endgenerate

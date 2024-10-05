@@ -66,6 +66,8 @@
 // rst_i
 // 	When held high at the the clock signal posedge, the pu reset.
 // 	It must be held low for the pu to begin executing instructions.
+// 	Non-zero pu index are halted on reset waiting for an external
+// 	interrupt.
 //
 // clk_i
 // 	Clock signal.
@@ -98,22 +100,22 @@
 // 	bit has been discarded.
 //
 // irq_stb_i
-// 	When this signal is held high and the output irq_rdy_o is low,
-// 	the pu execute an EXTINTR context-switch.
+// irq_stb_o
+// 	The signal irq_stb_i must be held high until irq_stb_o
+// 	becomes high in order to request an interrupt; which is
+// 	taken when irq_rdy_o is high.
 //
 // irq_rdy_o
-// 	When this signal is high, the pu is in usermode with interrupt
-// 	enabled (ie: isflagdisextintr is false), and will execute
-// 	an EXTINTR context-switch if the signal irq_stb_i become high.
+// 	When this signal is high, the pu is available to take
+// 	an external interrupt, which is taken when irq_stb_o is high.
 //
 // halted_o
-// 	When this signal is high, the pu is halted with interrupt
-// 	enabled (ie: isflagdisextintr is false), and will execute
-// 	an EXTINTR context-switch if the signal irq_stb_i become high.
+// 	When this signal is high, the pu is halted.
 //
 // id_i
 // 	Index of the pu when used in a multi-pu configuration,
-// 	otherwise must be 0.
+// 	otherwise must be 0. Non-zero pu index are halted on reset
+// 	waiting for an external interrupt.
 
 `include "lib/fifo.v"
 `include "lib/fifo_fwft.v"
@@ -151,6 +153,7 @@ module pu (
 	,dcache_miss_i
 
 	,irq_stb_i
+	,irq_stb_o
 	,irq_rdy_o
 	,halted_o
 
@@ -220,7 +223,8 @@ output wire [XWORDBITSZ -1 : 0] dcache_addr_o;
 input  wire                     dcache_miss_i;
 
 input  wire irq_stb_i;
-output wire irq_rdy_o;
+output reg  irq_stb_o;
+output reg  irq_rdy_o;
 output reg  halted_o;
 
 input wire [WORDBITSZ -1 : 0] rstaddr_i;
@@ -228,6 +232,8 @@ input wire [WORDBITSZ -1 : 0] rstaddr_i;
 input wire [WORDBITSZ -1 : 0] id_i;
 
 wire _wb_bsy_i;
+
+wire excTriggered;
 
 ////////////////////////////////////// IF (Instruction Fetch) stage /////////////////////////////////////
 
@@ -267,6 +273,7 @@ reg [WORDBITSZ -1 : 0] iD_predictRet;
 // TODO: To be implemented like PUPREDICTRET using a BTB (Branch Target Buffer).
 // TODO: When adding an entry to the BTB, skip RET which is "jalr x0, x1, 0",
 // TODO: only add JALR for which (rs1Id != 1).
+// TODO: Discard 2lsb of addresses so that only aligned addresses get added to the BTB.
 `endif
 
 reg  [WORDBITSZ -1 : 0] iF_pc;
@@ -303,7 +310,7 @@ always @ (posedge clk_i) begin
 	if (rst_i) begin
 		iF_flushed_ <= 1;
 		iF_pc <= rstaddr_i;
-	end else if (iF_en) begin
+	end else if (iF_en || excTriggered) begin
 		iF_flushed_ <= iF_eX_JumpOrBranch_i;
 		iF_pc <= iF_eX_JumpOrBranch_i ? iF_eX_JumpOrBranchAddr_i : iF_pc_i;
 	end
@@ -355,11 +362,16 @@ wire iF_isAMO    = (iF_insn[6:2] == 5'b01011);
 
 wire iF_isMiscMem = (iF_insn[6:2] == 5'b00011);
 
+wire iF_isIllInsn = !(iF_isALUreg || iF_isALUimm || iF_isBranch || iF_isJALR || iF_isJAL ||
+	iF_isAUIPC || iF_isLUI || iF_isLoad || iF_isStore || iF_isSystem || iF_isAMO || iF_isMiscMem);
+
 wire [WORDBITSZ -1 : 0] iF_addrImm = (iF_isLoad ? iF_Iimm : iF_isStore ? iF_Simm : {WORDBITSZ{1'b0}});
 
 wire iF_isSystemAndFunc3Null = (iF_isSystem && iF_func3 == 3'b000);
 wire iF_isEcall  = (iF_isSystemAndFunc3Null && iF_Iimm[11:0] == 12'd0);
 wire iF_isEbreak = (iF_isSystemAndFunc3Null && iF_Iimm[11:0] == 12'd1);
+wire iF_isEret   = (iF_isSystemAndFunc3Null && iF_Iimm[4:0] == 5'b00010);
+wire iF_isWfi    = (iF_isSystemAndFunc3Null && iF_Iimm[11:0] == 12'b000100000101);
 
 wire iF_isCSR = (iF_isSystem && iF_func3[1:0]);
 
@@ -371,6 +383,9 @@ wire iF_opIdiv_stb = (iF_isRV32M &&  iF_func3[2] && iF_rdId);
 
 wire iF_isLr = (iF_isAMO && iF_func5 == 5'b00010);
 wire iF_isSc = (iF_isAMO && iF_func5 == 5'b00011);
+
+wire iF_isLoadOrLr = (iF_isLoad || iF_isLr);
+wire iF_isStoreOrScOrAMO = (iF_isStore || (iF_isAMO && iF_func5 != 5'b00010));
 
 wire iF_ldUnit_stb = (iF_isLoad || (iF_isAMO && iF_func5 != 5'b00011));
 wire iF_stUnit_stb = (iF_isStore || iF_isSc);
@@ -417,10 +432,47 @@ assign iF_pc_i = ((
 
 ////////////////////////////////////// ID (Instruction Decode) stage ///////////////////////////////////////
 
-reg [WORDBITSZ -1 : 0] iD_pc;
+reg [2 -1 : 0] csrCurPriv;
+wire csrCurPrivIsU = (csrCurPriv == 2'b00);
+wire csrCurPrivIsS = (csrCurPriv == 2'b01);
+wire csrCurPrivIsM = (csrCurPriv == 2'b11);
+reg [16 -1 : 0] csrMedeleg;
+reg [16 -1 : 0] csrMideleg;
+reg [WORDBITSZ -1 : 0] csrMstatus;
+reg [16 -1 : 0] csrMip;
+reg [16 -1 : 0] csrMie;
+reg [64 -1 : 0] csrMtimecmp;
+reg [64 -1 : 0] csrStimecmp;
+reg [WORDBITSZ -1 : 0] csrMtvec;
+reg [WORDBITSZ -1 : 0] csrStvec;
+reg [WORDBITSZ -1 : 0] csrMepc;
+reg [WORDBITSZ -1 : 0] csrSepc;
+reg [WORDBITSZ -1 : 0] csrMcause;
+reg [WORDBITSZ -1 : 0] csrScause;
+reg [WORDBITSZ -1 : 0] csrMtval;
+reg [WORDBITSZ -1 : 0] csrStval;
+reg [WORDBITSZ -1 : 0] csrMtval2;
+reg [WORDBITSZ -1 : 0] csrStval2;
+reg [WORDBITSZ -1 : 0] csrMscratch;
+reg [WORDBITSZ -1 : 0] csrSscratch;
+reg [WORDBITSZ -1 : 0] csrMisa; // ### comb-block-reg.
+reg [WORDBITSZ -1 : 0] csrMhartid;
+wire csrMhartidIsNonNull = (csrMhartid != 0);
+reg [64 -1 : 0] csrCycle;
+reg [64 -1 : 0] csrInstret;
+reg [WORDBITSZ -1 : 0] csrClkFreq;
 `ifdef SIMULATION
-reg [INSNBITSZ -1 : 0] iD_insn;
+`ifdef PUPREDICTBRANCH
+reg [WORDBITSZ -1 : 0] csrBranchPredictHit;
+reg [WORDBITSZ -1 : 0] csrBranchPredictMiss;
 `endif
+`ifdef PUPREDICTRET
+reg [WORDBITSZ -1 : 0] csrRetPredictMiss;
+`endif
+`endif
+
+reg [WORDBITSZ -1 : 0] iD_pc;
+reg [INSNBITSZ -1 : 0] iD_insn;
 
 reg [CLOG2GPRCNT -1 : 0] iD_rdId; // Get set to null if instruction will not set a GPR.
 reg [CLOG2GPRCNT -1 : 0] iD_rs1Id;
@@ -458,10 +510,14 @@ reg iD_isStore;
 reg iD_isSystem;
 reg iD_isAMO;
 
+reg iD_isIllInsn;
+
 reg [WORDBITSZ -1 : 0] iD_addrImm;
 
 reg iD_isEcall;
 reg iD_isEbreak;
+reg iD_isEret;
+reg iD_isWfi;
 
 reg iD_isCSR;
 
@@ -472,6 +528,9 @@ reg iD_opIdiv_stb;
 
 reg iD_isLr;
 reg iD_isSc;
+
+reg iD_isLoadOrLr;
+reg iD_isStoreOrScOrAMO;
 
 reg iD_ldUnit_stb;
 reg iD_stUnit_stb;
@@ -489,6 +548,7 @@ reg iD_lateWritebackInsn;
 
 reg iD_use_rdId;
 
+wire [WORDBITSZ -1 : 0] iD_rd;
 wire [WORDBITSZ -1 : 0] iD_rs1;
 wire [WORDBITSZ -1 : 0] iD_rs2;
 
@@ -557,8 +617,13 @@ wire iD_rdId_eq_iD_rW_rdId  = ((iD_rdId  == iD_rW_rdId) && iD_rW_rdId_isTrue);
 wire iD_rs1Id_eq_iD_rW_rdId = ((iD_rs1Id == iD_rW_rdId) && iD_rW_rdId_isTrue);
 wire iD_rs2Id_eq_iD_rW_rdId = ((iD_rs2Id == iD_rW_rdId) && iD_rW_rdId_isTrue);
 
+reg [WORDBITSZ -1 : 0] iD_rd_;
 reg [WORDBITSZ -1 : 0] iD_rs1_;
 reg [WORDBITSZ -1 : 0] iD_rs2_;
+assign iD_rd = (
+	iD_rdId_eq_iD_eX_rdId ? iD_eX_rslt :
+	iD_rdId_eq_iD_rW_rdId ? iD_rW_rslt :
+	iD_rdId ? iD_rd_ : {WORDBITSZ{1'b0}});
 assign iD_rs1 = (
 	iD_rs1Id_eq_iD_eX_rdId ? iD_eX_rslt :
 	iD_rs1Id_eq_iD_rW_rdId ? iD_rW_rslt :
@@ -596,6 +661,7 @@ wire iD_insn_valid;
 wire _iF_flushed = ((iD_en ? iF_flushed : iD_flushed) || iF_eX_JumpOrBranch_i);
 
 always @ (posedge clk_i) begin
+	iD_rd_  <= gprDat[_iF_rdId];
 	iD_rs1_ <= gprDat[_iF_rs1Id];
 	iD_rs2_ <= gprDat[_iF_rs2Id];
 	iD_rdRdy_  <= gprRdy[_iF_rdId];
@@ -627,7 +693,7 @@ end
 always @ (posedge clk_i) begin
 	if (rst_i) begin
 		iD_flushed <= 1;
-	end else if (iD_en) begin
+	end else if (iD_en || excTriggered) begin
 		iD_flushed <= (iF_flushed || iF_eX_JumpOrBranch_i);
 	end
 end
@@ -637,9 +703,7 @@ always @ (posedge clk_i) begin
 	if (iD_en) begin
 
 		iD_pc <= iF_pc;
-		`ifdef SIMULATION
 		iD_insn <= iF_insn;
-		`endif
 
 		iD_rdId  <= (iF_use_rdId ? iF_rdId : 5'd0);
 		iD_rs1Id <= iF_rs1Id;
@@ -677,10 +741,14 @@ always @ (posedge clk_i) begin
 		iD_isSystem <= iF_isSystem;
 		iD_isAMO    <= iF_isAMO;
 
+		iD_isIllInsn <= iF_isIllInsn;
+
 		iD_addrImm <= iF_addrImm;
 
 		iD_isEcall  <= iF_isEcall;
 		iD_isEbreak <= iF_isEbreak;
+		iD_isEret   <= iF_isEret;
+		iD_isWfi    <= iF_isWfi;
 
 		iD_isCSR <= iF_isCSR;
 
@@ -691,6 +759,9 @@ always @ (posedge clk_i) begin
 
 		iD_isLr <= iF_isLr;
 		iD_isSc <= iF_isSc;
+
+		iD_isLoadOrLr <= iF_isLoadOrLr;
+		iD_isStoreOrScOrAMO <= iF_isStoreOrScOrAMO;
 
 		iD_ldUnit_stb <= iF_ldUnit_stb;
 		iD_stUnit_stb <= iF_stUnit_stb;
@@ -712,10 +783,8 @@ end
 
 ////////////////////////////////////// EX (Execute) stage //////////////////////////////////////////////////
 
-`ifdef SIMULATION
 reg [WORDBITSZ -1 : 0] eX_pc;
 reg [INSNBITSZ -1 : 0] eX_insn;
-`endif
 
 wire [WORDBITSZ -1 : 0] eX_aluArg1_i = iD_rs1;
 wire [WORDBITSZ -1 : 0] eX_aluArg2_i = (iD_isALUregOrBranch ? iD_rs2 : iD_Iimm);
@@ -804,7 +873,8 @@ assign iD_eX_carryon = eX_carryon;
 
 wire eX_en = (eX_carryon && !halted_o);
 
-assign iD_insn_valid = (!eX_flushed_i && eX_en);
+wire iD_insn_valid_ = (!eX_flushed_i && eX_en);
+assign iD_insn_valid = (iD_insn_valid_ && !excTriggered);
 
 `ifdef PUPREDICTBRANCH
 wire [2 -1 : 0] bht_i = (
@@ -848,8 +918,8 @@ always @ (posedge clk_i) begin
 end
 `endif
 
-// TODO: Use irq and exc signals ...
-wire eX_JumpOrBranch_i = ((
+wire eX_JumpOrBranch_i = (excTriggered || ((
+	iD_isEret ||
 	`ifndef PUPREDICTJAL
 	iD_isJAL ||
 	`endif
@@ -859,12 +929,14 @@ wire eX_JumpOrBranch_i = ((
 	`else
 	iD_isJALR ||
 	`endif
-	(iD_isBranch && _eX_takeBranch_i)) && iD_insn_valid);
+	(iD_isBranch && _eX_takeBranch_i)) && iD_insn_valid));
 
 assign iF_eX_JumpOrBranch_i = eX_JumpOrBranch_i;
 
-// TODO: Use irq and exc signals ...
+wire [WORDBITSZ -1 : 0] excTvec;
 wire [WORDBITSZ -1 : 0] eX_JumpOrBranchAddr_i = (
+	excTriggered ? excTvec :
+	iD_isEret ? (csrCurPrivIsS ? csrSepc : csrMepc) :
 	iD_isBranch ? (eX_takeBranch_i ? iD_pc_plus_iD_Bimm : iD_pc_plus_INSNBITSzBy8) :
 	`ifndef PUPREDICTJAL
 	iD_isJAL ? iD_pc_plus_iD_Jimm :
@@ -875,7 +947,7 @@ assign iF_eX_JumpOrBranchAddr_i = eX_JumpOrBranchAddr_i;
 
 reg eX_JumpOrBranch;
 always @ (posedge clk_i) begin
-	if (rst_i) begin
+	if (rst_i || excTriggered) begin
 		eX_flushed <= 1;
 		eX_JumpOrBranch <= 1;
 	end else if (eX_en) begin
@@ -884,22 +956,32 @@ always @ (posedge clk_i) begin
 	end
 end
 
+reg rdWasLocked;
+
+reg eX_isExc;
 reg eX_lateWritebackInsn;
 always @ (posedge clk_i) begin
-	if (eX_en) begin
-		`ifdef SIMULATION
+	if (eX_en || excTriggered) begin
 		eX_pc   <= iD_pc;
 		eX_insn <= iD_insn;
-		`endif
+		eX_isExc <= excTriggered;
 		eX_lateWritebackInsn <= iD_lateWritebackInsn;
-		if (iD_lateWritebackInsn || eX_flushed_i) begin
+		// For a late writeback instruction being interrupted by an exception,
+		// iD_eX_rdId_isTrue must be set true so that the gpr can be unlocked.
+		// Also, when there is an exception and the gpr was already locked when
+		// it got locked, iD_eX_rdId_isTrue must be set null so that the gpr gets
+		// unlocked by the late writeback instruction that locked it.
+		if (iD_flushed || ((iD_lateWritebackInsn || iD_stalled) && !excTriggered) ||
+			(excTriggered && rdWasLocked)) begin
 			iD_eX_rdId_isTrue <= 1'b0;
 			iD_eX_rdId <= 5'd0;
 		end else begin
 			iD_eX_rdId_isTrue <= (|iD_rdId);
 			iD_eX_rdId <= iD_rdId;
 		end
-		iD_eX_rslt <= eX_rslt_i;
+		// When there is an exception, iD_eX_rslt value is taken from
+		// the gpr being locked so that iD_rW_rslt can be properly set.
+		iD_eX_rslt <= (excTriggered ? iD_rd : eX_rslt_i);
 	end
 end
 
@@ -971,12 +1053,23 @@ always @* begin
 		rW_opIdiv_done = 1;
 	`endif
 	end else if (halted_o) begin
-	end else if (iD_eX_rdId_isTrue /*&& !eX_flushed*/) begin
+	end else if (iD_eX_rdId_isTrue) begin
 		rW_we_i  = 1;
 		rW_idx_i = iD_eX_rdId;
 		rW_dat_i = iD_eX_rslt;
 	end
 end
+
+// Used to prevent jalr and jal (without PUPREDICTJAL) from writing
+// their return address when they generated a misaligned exception.
+wire eX_isExc0_i = (excTriggered && excCause == {1'b0, 16'd0} && eX_JumpOrBranch);
+// Wherever eX_isExc0_i is used, eX_isExc is used to prevent csr and
+// jal (with PUPREDICTJAL) from writing their destination register
+// when they generated a misaligned exception.
+// eX_isExc is raised when iD_pc was at the exception causing instruction
+// when excTriggered was high.
+// eX_isExc0_i is raised when iD_pc was at the instruction following
+// the exception causing instruction when excTriggered was high.
 
 always @ (posedge clk_i) begin
 	if (ldUnit_memAck) begin
@@ -994,7 +1087,7 @@ always @ (posedge clk_i) begin
 		iD_rW_rslt <= opIdiv_rslt;
 	`endif
 	end else if (halted_o) begin
-	end else if (iD_eX_rdId_isTrue /*&& !eX_flushed*/) begin
+	end else if (iD_eX_rdId_isTrue && !eX_isExc && !eX_isExc0_i) begin
 		/* Considering the instruction sequence below, the check below
 		prevents the result of `add a3,a3,a1` to be forwarded to `jr a3`,
 		when the result of `lw a3,0(a3)` should be used but has been deferred
@@ -1010,6 +1103,14 @@ always @ (posedge clk_i) begin
 			iD_rW_rdId <= iD_eX_rdId;
 		end
 		iD_rW_rslt <= iD_eX_rslt;
+	end else if (eX_isExc) begin
+		// iD_rW_rdId_isTrue and iD_rW_rdId values are needed
+		// to properly unlock the gpr of the interrupted instruction.
+		// iD_rW_rslt is the result value of the interrupted instruction,
+		// which can be needed right after the exception.
+		iD_rW_rdId_isTrue <= (|iD_eX_rdId);
+		iD_rW_rdId <= iD_eX_rdId;
+		iD_rW_rslt <= iD_eX_rslt;
 	end else begin
 		iD_rW_rdId_isTrue <= 1'b0;
 		iD_rW_rdId <= {CLOG2GPRCNT{1'b0}};
@@ -1017,7 +1118,7 @@ always @ (posedge clk_i) begin
 end
 
 always @ (posedge clk_i) begin
-	if (rW_we_i)
+	if (rW_we_i && !eX_isExc && !eX_isExc0_i)
 		gprDat[rW_idx_i] <= rW_dat_i;
 end
 
@@ -1028,7 +1129,7 @@ wire gprUnlock = (
 	or if it has just been locked; note that we are at the eXecuted stage,
 	hence the reason why only *_rdId from previous stages are checked. */
 	!(gprLock && _iF_rdId == rW_idx_i) &&
-	!(!iD_flushed && iD_rdId == rW_idx_i));
+	!(!iD_flushed && iD_rdId == rW_idx_i && !excTriggered));
 
 always @ (posedge clk_i) begin
 	if (rst_i)
@@ -1039,6 +1140,14 @@ always @ (posedge clk_i) begin
 		if (gprUnlock)
 			gprRdy[rW_idx_i] <= 1'b1;
 	end
+end
+
+// Capture whether a gpr was already locked when it got locked.
+always @ (posedge clk_i) begin
+	if (iD_en && gprLock)
+		rdWasLocked <= (!gprRdy[_iF_rdId] && (!rW_we_i || (_iF_rdId != rW_idx_i)));
+	else if (rdWasLocked && rW_we_i && iD_rdId == rW_idx_i)
+		rdWasLocked <= 1'b0;
 end
 
 `ifdef SIMULATION
