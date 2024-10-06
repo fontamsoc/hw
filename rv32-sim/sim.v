@@ -147,8 +147,8 @@ wire [WORDBITSZ -1 : 0] pc_w [CPU_COUNT -1 : 0] /* verilator public */;
 genvar gen_pc_w_idx;
 generate for (gen_pc_w_idx = 0; gen_pc_w_idx < CPU_COUNT; gen_pc_w_idx = gen_pc_w_idx + 1) begin :gen_pc_w
 assign pc_w[gen_pc_w_idx] =
-	cpu.genpu[gen_pc_w_idx].pu.iF_eX_JumpOrBranch ? cpu.genpu[gen_pc_w_idx].pu.iF_pc :
-	                                                cpu.genpu[gen_pc_w_idx].pu.iD_pc;
+	cpu.genpu[gen_pc_w_idx].pu.eX_JumpOrBranch ? cpu.genpu[gen_pc_w_idx].pu.iF_pc :
+	                                             cpu.genpu[gen_pc_w_idx].pu.iD_pc;
 end endgenerate
 
 serial_sim #(

@@ -396,12 +396,6 @@ wire iF_use_rdId = (iF_rdId && // iF_rdId is null when iF_isMiscMem true.
 	!(iF_isBranchOrStore || /*iF_isMiscMem ||*/
 		(iF_isSystem && !iF_func3[1:0] /* non-CSR instructions */)));
 
-`ifdef SIMULATION
-reg iF_eX_JumpOrBranch; // Used by sim.pc_w .
-always @ (posedge clk_i)
-	iF_eX_JumpOrBranch <= (rst_i ? 1'b1 : iF_eX_JumpOrBranch_i);
-`endif
-
 wire iF_flushed_or_not_iF_iD_carryon = (iF_flushed || !iF_iD_carryon);
 
 assign iF_pc_i = ((
@@ -599,9 +593,7 @@ wire iD_insn_valid;
 
 `include "./memctrl.pu.v"
 
-wire iD_eX_JumpOrBranch_i;
-
-wire _iF_flushed = ((iD_en ? iF_flushed : iD_flushed) || iD_eX_JumpOrBranch_i);
+wire _iF_flushed = ((iD_en ? iF_flushed : iD_flushed) || iF_eX_JumpOrBranch_i);
 
 always @ (posedge clk_i) begin
 	iD_rs1_ <= gprDat[_iF_rs1Id];
@@ -636,7 +628,7 @@ always @ (posedge clk_i) begin
 	if (rst_i) begin
 		iD_flushed <= 1;
 	end else if (iD_en) begin
-		iD_flushed <= (iF_flushed || iD_eX_JumpOrBranch_i);
+		iD_flushed <= (iF_flushed || iF_eX_JumpOrBranch_i);
 	end
 end
 
@@ -870,7 +862,6 @@ wire eX_JumpOrBranch_i = ((
 	(iD_isBranch && _eX_takeBranch_i)) && iD_insn_valid);
 
 assign iF_eX_JumpOrBranch_i = eX_JumpOrBranch_i;
-assign iD_eX_JumpOrBranch_i = eX_JumpOrBranch_i;
 
 // TODO: Use irq and exc signals ...
 wire [WORDBITSZ -1 : 0] eX_JumpOrBranchAddr_i = (
