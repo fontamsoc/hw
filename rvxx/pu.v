@@ -379,9 +379,9 @@ wire iF_isAMOandSc = (iF_isAMO && iF_func5 != 5'b00010);
 
 wire iF_cancelLr = (iF_isSystem || iF_isMiscMem || iF_isLoad || iF_isStore || iF_isAMOandSc);
 
-wire iF_isALUimmOrJALrOrLoad = (iF_isALUimm || iF_isJALR || iF_ldUnit_stb);
+wire iF_isALUimmOrJALrOrLoadOrCSR = (iF_isALUimm || iF_isJALR || iF_ldUnit_stb || (iF_isCSR && !iF_func3[2]));
 wire iF_isBranchOrStore = (iF_isBranch || iF_isStore);
-wire iF_isJAlOrAUIPcOrLUI = (iF_isJAL || iF_isAUIPC || iF_isLUI);
+wire iF_isJAlOrAUIPcOrLUIorCSR = (iF_isJAL || iF_isAUIPC || iF_isLUI || (iF_isCSR && iF_func3[2]));
 wire iF_isALUregOrBranch = (iF_isALUreg || iF_isBranch);
 wire iF_isALUregOrAMOandSc = (iF_isALUreg || iF_isAMOandSc);
 wire iF_isJAlOrJALR = (iF_isJAL || iF_isJALR);
@@ -478,9 +478,9 @@ reg iD_stUnit_stb;
 
 reg iD_cancelLr;
 
-reg iD_isALUimmOrJALrOrLoad;
+reg iD_isALUimmOrJALrOrLoadOrCSR;
 reg iD_isBranchOrStore;
-reg iD_isJAlOrAUIPcOrLUI;
+reg iD_isJAlOrAUIPcOrLUIorCSR;
 reg iD_isALUregOrBranch;
 reg iD_isALUregOrAMOandSc;
 reg iD_isJAlOrJALR;
@@ -519,9 +519,9 @@ wire iD_stalled = (!iD_eX_carryon ||
 	(iD_stUnit_stb ? iD_stUnit_bsy : 1'b0) || (
 	// Stall if any of the operand is locked.
 	iD_isALUregOrAMOandSc ? !(iD_rdRdy && iD_rs1Rdy && iD_rs2Rdy) :
-	iD_isALUimmOrJALrOrLoad ? !(iD_rdRdy && iD_rs1Rdy) :
+	iD_isALUimmOrJALrOrLoadOrCSR ? !(iD_rdRdy && iD_rs1Rdy) :
 	iD_isBranchOrStore ? !(iD_rs1Rdy && iD_rs2Rdy) :
-	iD_isJAlOrAUIPcOrLUI ? !iD_rdRdy : 0));
+	iD_isJAlOrAUIPcOrLUIorCSR ? !iD_rdRdy : 0));
 
 assign iF_iD_stalled = iD_stalled;
 
@@ -697,12 +697,12 @@ always @ (posedge clk_i) begin
 
 		iD_cancelLr <= iF_cancelLr;
 
-		iD_isALUimmOrJALrOrLoad <= iF_isALUimmOrJALrOrLoad;
-		iD_isBranchOrStore      <= iF_isBranchOrStore;
-		iD_isJAlOrAUIPcOrLUI    <= iF_isJAlOrAUIPcOrLUI;
-		iD_isALUregOrBranch     <= iF_isALUregOrBranch;
-		iD_isALUregOrAMOandSc   <= iF_isALUregOrAMOandSc;
-		iD_isJAlOrJALR          <= iF_isJAlOrJALR;
+		iD_isALUimmOrJALrOrLoadOrCSR <= iF_isALUimmOrJALrOrLoadOrCSR;
+		iD_isBranchOrStore           <= iF_isBranchOrStore;
+		iD_isJAlOrAUIPcOrLUIorCSR    <= iF_isJAlOrAUIPcOrLUIorCSR;
+		iD_isALUregOrBranch          <= iF_isALUregOrBranch;
+		iD_isALUregOrAMOandSc        <= iF_isALUregOrAMOandSc;
+		iD_isJAlOrJALR               <= iF_isJAlOrJALR;
 
 		iD_lateWritebackInsn <= iF_lateWritebackInsn;
 
