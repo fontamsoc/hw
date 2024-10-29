@@ -43,13 +43,17 @@
 // 	Memory map size in bytes.
 //
 // irq_dst_stb_o
+// irq_dst_stb_i
 // irq_dst_rdy_i
 // irq_dst_pri_i
 // 	Destination interrupt signals.
 // 	irq_dst_stb_o is raised to request an interrupt from the destination.
-// 	The destination drives irq_dst_rdy_i high when it is ready to take
-// 	on a requested interrupt; it keeps irq_dst_pri_i low when it wouldn't
-// 	be the best choice to service the interrupt; irq_dst_pri_i is used
+// 	irq_dst_stb_i is raised when the interrupt request is now being
+// 	considered by the destination.
+// 	When the destination drives irq_dst_rdy_i low while irq_dst_stb_i
+// 	is high, it means that it has taken on the requested interrupt.
+// 	The destination keeps irq_dst_pri_i low when it wouldn't be
+// 	the best choice to service the interrupt; irq_dst_pri_i is used
 // 	in a multi-pu system where it is driven by PUs output "halted_o"
 // 	in order to give a preference to PUs that are halted when looking
 // 	for an interrupt destination.
@@ -123,6 +127,7 @@ module irqctrl (
 	,wb_mapsz_o
 
 	,irq_dst_stb_o
+	,irq_dst_stb_i
 	,irq_dst_rdy_i
 	,irq_dst_pri_i
 
@@ -159,6 +164,7 @@ output reg  [WORDBITSZ -1 : 0]     wb_dat_o;
 output wire [WORDBITSZ -1 : 0]     wb_mapsz_o;
 
 output wire [IRQDSTCOUNT -1 : 0] irq_dst_stb_o;
+input  wire [IRQDSTCOUNT -1 : 0] irq_dst_stb_i;
 input  wire [IRQDSTCOUNT -1 : 0] irq_dst_rdy_i;
 input  wire [IRQDSTCOUNT -1 : 0] irq_dst_pri_i;
 
@@ -213,23 +219,31 @@ wire irqdstseek = (
 
 reg irqpending; /* set to 1 when an interrupt request is waiting to be acknowledged */
 
+reg [IRQDSTCOUNT -1 : 0] irq_dst_rdy_i_and_not_irq_dst_stb_i_r;
+always @ (posedge clk_i)
+	irq_dst_rdy_i_and_not_irq_dst_stb_i_r <= (irq_dst_rdy_i & ~irq_dst_stb_i);
+wire [IRQDSTCOUNT -1 : 0] irqpending_abort = (~irq_dst_rdy_i & irq_dst_rdy_i_and_not_irq_dst_stb_i_r);
+
+wire irqpending_abort_dstidx = irqpending_abort[dstidx];
+
 genvar gen_irq_src_rdy_o_idx;
-generate for ( // Logic that drives the irq_rdy_i of a source.
+generate for (
 	gen_irq_src_rdy_o_idx = 0;
 	gen_irq_src_rdy_o_idx < IRQSRCCOUNT;
 	gen_irq_src_rdy_o_idx = gen_irq_src_rdy_o_idx + 1) begin :gen_irq_src_rdy_o
 	assign irq_src_rdy_o[gen_irq_src_rdy_o_idx] = (
-		srcidx != gen_irq_src_rdy_o_idx || !irqpending || irqdstdat[1:0] == CMDINTDST);
+		srcidx != gen_irq_src_rdy_o_idx || irqdstdat[1:0] == CMDINTDST ||
+			irqpending_abort_dstidx || !cmdackirq);
 end endgenerate
 
 genvar gen_irq_dst_stb_o_idx;
-generate for ( // Logic that drives the irq_stb_i of a destination.
+generate for (
 	gen_irq_dst_stb_o_idx = 0;
 	gen_irq_dst_stb_o_idx < IRQDSTCOUNT;
 	gen_irq_dst_stb_o_idx = gen_irq_dst_stb_o_idx + 1) begin :gen_irq_dst_stb_o
 	assign irq_dst_stb_o[gen_irq_dst_stb_o_idx] = (
 		dstidx == gen_irq_dst_stb_o_idx && irqpending && !irqdstseek &&
-		// Raise irq_stb_i only when the controller is ready for the next command,
+		// Raise irq_dst_stb_o only when the controller is ready for the next command,
 		// otherwise an interrupt would cause software to send the controller a new
 		// command while it is not ready, waiting indefinitely for it to be ready.
 		prevcmdisdevrdy);
@@ -281,8 +295,9 @@ always @ (posedge clk_i) begin
 		// Keep incrementing dstidx until the targeted interrupt destination is indexed.
 		dstidx <= nextdstidx;
 	end else if (irqpending || cmdackirq) begin
-		// Logic that acknowledges a triggered interrupt.
-		if (cmdackirq) begin
+		if (irqpending_abort_dstidx) begin
+			irqpending <= 1'b0;
+		end else if (cmdackirq) begin // Logic that acknowledges a triggered interrupt.
 			if (wb_dat_r[WORDBITSZ -1 : 3] == dstidx) begin
 				wb_dat_o <= ((irqdstdat[1:0] == CMDINTDST) ?
 					{{(WORDBITSZ-2){1'b1}}, wb_dat_r[1:0]} :
@@ -305,11 +320,10 @@ always @ (posedge clk_i) begin
 		// If there is a preferred interrupt destination available,
 		// dstidx keeps incrementing until the preferred interrupt
 		// destination is indexed.
-		if (irqdsten[dstidx] &&
-			((!(irq_dst_pri_i & irqdsten) && irq_dst_rdy_i[dstidx]) ||
-				irq_dst_pri_i[dstidx])) begin
+		if (irqdsten[dstidx] && irq_dst_rdy_i[dstidx] &&
+			(!(irq_dst_pri_i & irqdsten) || irq_dst_pri_i[dstidx])) begin
 			// Only when the controller is ready for the next command,
-			// since irq_stb_i is raised only then.
+			// since irq_dst_stb_o is raised only then.
 			if (prevcmdisdevrdy)
 				irqpending <= 1'b1;
 		end else

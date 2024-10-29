@@ -532,6 +532,7 @@ irqctrl #(
 	,.wb_mapsz_o (s_wbpi_mapsz_w[S_WBPI_IRQCTRL])
 
 	,.irq_dst_stb_o (irq_dst_stb_w)
+	,.irq_dst_stb_i ({IRQDSTCOUNT{1'b1}})
 	,.irq_dst_rdy_i (irq_dst_rdy_w)
 	,.irq_dst_pri_i (irq_dst_pri_w)
 
