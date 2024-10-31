@@ -1,0 +1,5 @@
+*.json
+*.config
+*.dfu
+*.log
+*.hex
