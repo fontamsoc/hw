@@ -292,20 +292,20 @@ localparam BHTSETCNT = 4096;
 localparam CLOG2BHTSETCNT = clog2(BHTSETCNT);
 reg [2 -1 : 0] bht [0 : BHTSETCNT - 1]; // Branch History Table.
 reg [2 -1 : 0] bht_o;
-always @ (posedge clk_i)
-	bht_o <= bht[iF_pc_i[CLOG2BHTSETCNT+CLOG2INSNBITSZBY8-1:CLOG2INSNBITSZBY8]];
-`endif
-
-`ifdef PUPREDICTBRANCH
 always @ (posedge clk_i) begin
-	if (iF_iD_carryon)
+	if (iF_en)
+		bht_o <= bht[iF_pc_i[CLOG2BHTSETCNT+CLOG2INSNBITSZBY8-1:CLOG2INSNBITSZBY8]];
+end
+
+always @ (posedge clk_i) begin
+	if (iF_iD_carryon && !halted_o)
 		iD_predictBranch <= bht_o;
 end
 `endif
 
 `ifdef PUPREDICTRET
 always @ (posedge clk_i) begin
-	if (iF_iD_carryon)
+	if (iF_iD_carryon && !halted_o)
 		iD_predictRet <= ras0;
 end
 `endif
