@@ -808,7 +808,7 @@ wire [(WORDBITSZ+1) -1 : 0] _eX_aluArg1_i = {iD_func7[5] & eX_aluArg1_i[WORDBITS
 
 reg [WORDBITSZ -1 : 0] eX_aluOut_i; // ### comb-block-reg.
 always @* begin
-	case(iD_func3)
+	(* parallel_case *) case (iD_func3)
 	3'b000: eX_aluOut_i = ((iD_isALUreg && iD_func7[5]) ? eX_aluMinus_i[WORDBITSZ-1:0] : eX_aluPlus_i);
 	3'b001: eX_aluOut_i = (eX_aluArg1_i << eX_aluArg2_i[4:0]);
 	3'b010: eX_aluOut_i = {{(WORDBITSZ-1){1'b0}}, eX_lt_i};
@@ -834,7 +834,7 @@ wire [WORDBITSZ -1 : 0] eX_rslt_i = (
 
 reg eX_takeBranch_i; // ### comb-block-reg.
 always @* begin
-	case (iD_func3)
+	(* parallel_case *) case (iD_func3)
 	3'b000:  eX_takeBranch_i = eX_eq_i;
 	3'b001:  eX_takeBranch_i = !eX_eq_i;
 	3'b100:  eX_takeBranch_i = eX_lt_i;
@@ -881,15 +881,19 @@ wire iD_insn_valid_ = (!eX_flushed_i && eX_en);
 assign iD_insn_valid = (iD_insn_valid_ && !excTriggered);
 
 `ifdef PUPREDICTBRANCH
-wire [2 -1 : 0] bht_i = (
-	{eX_takeBranch_i, eX_predictBranch_i} == 3'b000 ? 2'b00 :
-	{eX_takeBranch_i, eX_predictBranch_i} == 3'b001 ? 2'b00 :
-	{eX_takeBranch_i, eX_predictBranch_i} == 3'b010 ? 2'b01 :
-	{eX_takeBranch_i, eX_predictBranch_i} == 3'b011 ? 2'b10 :
-	{eX_takeBranch_i, eX_predictBranch_i} == 3'b100 ? 2'b01 :
-	{eX_takeBranch_i, eX_predictBranch_i} == 3'b101 ? 2'b10 :
-	{eX_takeBranch_i, eX_predictBranch_i} == 3'b110 ? 2'b11 :
-	                                                  2'b11 );
+reg [2 -1 : 0] bht_i; // ### comb-block-reg.
+always @* begin
+	(* parallel_case *) case ({eX_takeBranch_i, eX_predictBranch_i})
+	3'b000:  bht_i = 2'b00;
+	3'b001:  bht_i = 2'b00;
+	3'b010:  bht_i = 2'b01;
+	3'b011:  bht_i = 2'b10;
+	3'b100:  bht_i = 2'b01;
+	3'b101:  bht_i = 2'b10;
+	3'b110:  bht_i = 2'b11;
+	default: bht_i = 2'b11;
+	endcase
+end
 always @ (posedge clk_i) begin
 	if (iD_isBranch && iD_insn_valid)
 		bht[iD_pc[CLOG2BHTSETCNT+CLOG2INSNBITSZBY8-1:CLOG2INSNBITSZBY8]] <= bht_i;

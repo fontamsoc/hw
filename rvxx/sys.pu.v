@@ -637,7 +637,7 @@ always @*
 
 generate if (WORDBITSZ == 32) begin
 always @* begin
-	case (iD_Iimm[11:0])
+	(* parallel_case *) case (iD_Iimm[11:0])
 	12'h100: eX_csrOut_i = (csrMstatus & 'b00000000000011000000000100110010);
 	12'h104: eX_csrOut_i = (csrMie & 16'b0000001000100010);
 	12'h105: eX_csrOut_i = csrStvec;
@@ -677,7 +677,7 @@ end
 end endgenerate
 generate if (WORDBITSZ == 64) begin
 always @* begin
-	case (iD_Iimm[11:0])
+	(* parallel_case *) case (iD_Iimm[11:0])
 	12'h100: eX_csrOut_i = (csrMstatus & 'b00000000000011000000000100110010);
 	12'h104: eX_csrOut_i = (csrMie & 16'b0000001000100010);
 	12'h105: eX_csrOut_i = csrStvec;
