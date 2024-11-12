@@ -52,6 +52,8 @@ module cpu (
 	,rstaddr_i
 	,rstaddr2_i
 
+	,spval_i
+
 	,id_i
 );
 
@@ -101,6 +103,8 @@ output wire [PUCNT -1 : 0] halted_o;
 
 input wire [WORDBITSZ -1 : 0] rstaddr_i;
 input wire [WORDBITSZ -1 : 0] rstaddr2_i;
+
+input wire [WORDBITSZ -1 : 0] spval_i;
 
 input wire [WORDBITSZ -1 : 0] id_i;
 
@@ -260,6 +264,8 @@ pu #(
 	,.halted_o  (halted_o[genpu_idx])
 
 	,.rstaddr_i (genpu_idx ? rstaddr2_i : rstaddr_i)
+
+	,.spval_i (spval_i)
 
 	,.id_i (id_i + genpu_idx)
 );

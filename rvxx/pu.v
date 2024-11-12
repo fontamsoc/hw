@@ -159,6 +159,8 @@ module pu (
 
 	,rstaddr_i
 
+	,spval_i
+
 	,id_i
 );
 
@@ -228,6 +230,8 @@ output reg  irq_rdy_o;
 output reg  halted_o;
 
 input wire [WORDBITSZ -1 : 0] rstaddr_i;
+
+input wire [WORDBITSZ -1 : 0] spval_i;
 
 input wire [WORDBITSZ -1 : 0] id_i;
 
@@ -1118,8 +1122,8 @@ always @ (posedge clk_i) begin
 end
 
 always @ (posedge clk_i) begin
-	if (rW_we_i && !eX_isExc && !eX_isExc0_i)
-		gprDat[rW_idx_i] <= rW_dat_i;
+	if (rst_i || (rW_we_i && !eX_isExc && !eX_isExc0_i))
+		gprDat[rst_i ? 2 : rW_idx_i] <= (rst_i ? spval_i : rW_dat_i);
 end
 
 wire gprLock = (_iF_use_rdId && !_iF_flushed);
