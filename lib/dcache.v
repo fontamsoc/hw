@@ -97,16 +97,6 @@ reg rst_r;
 reg conly_r;
 reg cmiss_r;
 
-reg m_wb_cyc_i_and_cmiss_r;
-// Logic used to keep s_wb_cyc_o high for sequence such as
-// load-store which must be volatile by asserting cmiss_i.
-always @ (posedge clk_i) begin
-	if (m_wb_cyc_i)
-		m_wb_cyc_i_and_cmiss_r <= cmiss_r;
-	else
-		m_wb_cyc_i_and_cmiss_r <= 1'b0;
-end
-
 localparam IDLE    = 0;
 localparam TESTHIT = 1;
 localparam EVICT   = 2;
@@ -159,7 +149,7 @@ end
 endgenerate
 reg s_wb_cyc_o_;
 always @*
-	s_wb_cyc_o = (m_wb_cyc_i_and_cmiss_r || s_wb_cyc_o_ || (MAXPENDINGACK && ack_pending));
+	s_wb_cyc_o = (s_wb_cyc_o_ || (MAXPENDINGACK && ack_pending));
 reg m_wb_bsy_o_;
 always @*
 	m_wb_bsy_o = (m_wb_bsy_o_ || (MAXPENDINGACK && (ack_pending > ((MAXPENDINGACK+2)-2))));
