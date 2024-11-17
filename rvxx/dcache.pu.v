@@ -385,3 +385,18 @@ always @* begin
 	end
 end
 end endgenerate
+
+reg amoUnit_lrValid_r;
+always @ (posedge clk_i)
+	amoUnit_lrValid_r <= amoUnit_lrValid;
+wire amoUnit_lrValid_negedge = (!amoUnit_lrValid && amoUnit_lrValid_r);
+
+reg keep_wb_cyc_o_high; // Used by AMO and Lr instructions to keep wb_cyc_o high.
+always @ (posedge clk_i) begin
+	// Note that keep_wb_cyc_o_high is not cleared by dCache_s_ack_i because it
+	// needs to be cleared when the write portion of the AMO instruction is captured.
+	if (dCache_s_stb_o)
+		keep_wb_cyc_o_high <= (amoUnit_lrValid || dCache_m_we_i_);
+	else if (amoUnit_lrValid_negedge)
+		keep_wb_cyc_o_high <= 0;
+end

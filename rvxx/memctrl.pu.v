@@ -109,5 +109,5 @@ always @* begin
 		wb_addr_o = iF_mem_addr;
 		wb_sel_o = {(XWORDBITSZ/8){1'b1}};
 	end else
-		wb_cyc_o = (|wb_pending_acks);
+		wb_cyc_o = (keep_wb_cyc_o_high || (|wb_pending_acks));
 end
