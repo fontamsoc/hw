@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
+wire dCache_invd_w;
+
 wire                        dCache_m_cyc_i;
 reg                         dCache_m_stb_i;
 reg                         dCache_m_we_i;
@@ -133,6 +135,8 @@ dcache #(
 
 	,.clk_i (clk_i)
 
+	//,.invd_i (dCache_invd_w) TODO: evict all dirty caches ...
+
 	,.conly_i (1'b0)
 	,.cmiss_i (dcache_miss_i)
 
@@ -214,6 +218,8 @@ always @ (posedge clk_i) begin
 	else if (_dCache_m_stb_i)
 		dCache_m_pending_acks <= dCache_m_pending_acks + 1'b1;
 end
+
+assign dCache_m_pending = (dCache_m_stb_i || dCache_m_pending_acks);
 
 reg amoUnit_lrValid;
 

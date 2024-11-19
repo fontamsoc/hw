@@ -366,6 +366,10 @@ wire iF_isAMO    = (iF_insn[6:2] == 5'b01011);
 
 wire iF_isMiscMem = (iF_insn[6:2] == 5'b00011);
 
+wire iF_isFence         = (iF_isMiscMem && iF_func3 == 3'b000);
+wire iF_isFencei        = (iF_isMiscMem && iF_func3 == 3'b001);
+wire iF_isFenceOrFencei = (iF_isMiscMem && iF_func3[2:1] == 2'b00);
+
 wire iF_isIllInsn = !(iF_isALUreg || iF_isALUimm || iF_isBranch || iF_isJALR || iF_isJAL ||
 	iF_isAUIPC || iF_isLUI || iF_isLoad || iF_isStore || iF_isSystem || iF_isAMO || iF_isMiscMem);
 
@@ -514,6 +518,10 @@ reg iD_isStore;
 reg iD_isSystem;
 reg iD_isAMO;
 
+reg iD_isFence;
+reg iD_isFencei;
+reg iD_isFenceOrFencei;
+
 reg iD_isIllInsn;
 
 reg [WORDBITSZ -1 : 0] iD_addrImm;
@@ -574,7 +582,10 @@ wire iD_eX_flushed;
 wire iD_eX_stalled;
 wire iD_eX_carryon;
 
+wire dCache_m_pending;
+
 wire iD_stalled = (!iD_eX_carryon ||
+	(iD_isFenceOrFencei && dCache_m_pending) ||
 	`ifdef PURV32M
 	(iD_opImul_stb ? iD_opImul_bsy : 1'b0) ||
 	(iD_opIdiv_stb ? iD_opIdiv_bsy : 1'b0) ||
@@ -744,6 +755,10 @@ always @ (posedge clk_i) begin
 		iD_isStore  <= iF_isStore;
 		iD_isSystem <= iF_isSystem;
 		iD_isAMO    <= iF_isAMO;
+
+		iD_isFence         <= iF_isFence;
+		iD_isFencei        <= iF_isFencei;
+		iD_isFenceOrFencei <= iF_isFenceOrFencei;
 
 		iD_isIllInsn <= iF_isIllInsn;
 
@@ -927,7 +942,7 @@ end
 `endif
 
 wire eX_JumpOrBranch_i = (excTriggered || ((
-	iD_isEret ||
+	iD_isFencei || iD_isEret ||
 	`ifndef PUPREDICTJAL
 	iD_isJAL ||
 	`endif
@@ -949,9 +964,13 @@ wire [WORDBITSZ -1 : 0] eX_JumpOrBranchAddr_i = (
 	`ifndef PUPREDICTJAL
 	iD_isJAL ? iD_pc_plus_iD_Jimm :
 	`endif
-	/* iD_isJALR */ {eX_aluPlus_i[WORDBITSZ-1:1], 1'b0});
+	iD_isJALR ? {eX_aluPlus_i[WORDBITSZ-1:1], 1'b0} :
+	/* iD_isFencei */ iD_pc_plus_INSNBITSzBy8);
 
 assign iF_eX_JumpOrBranchAddr_i = eX_JumpOrBranchAddr_i;
+
+assign dCache_invd_w = (iD_isFence  && iD_insn_valid);
+assign iCache_invd_w = (iD_isFencei && iD_insn_valid);
 
 reg eX_JumpOrBranch;
 always @ (posedge clk_i) begin
