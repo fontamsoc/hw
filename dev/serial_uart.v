@@ -109,11 +109,6 @@
 // usage interrupt threshold is reached; interrupt get disabled when
 // the raised interrupt get acknowledged.
 
-// Writing a byte when there is no space left
-// in the transmit buffer silently fail.
-// Similarly, reading a byte when there is no byte left
-// in the receive buffer return garbage.
-
 `include "lib/uart/uart_rx.v"
 `include "lib/uart/uart_tx.v"
 
@@ -235,6 +230,10 @@ wire [8 -1 : 0] tx_data_w1 = wb_dat_r[8 -1 : 0];
 wire [(CLOG2BUFSZ +1) -1 : 0] rx_usage_w;
 wire [(CLOG2BUFSZ +1) -1 : 0] tx_usage_w;
 
+wire tx_near_full_w;
+
+assign wb_bsy_o = (!wb_addr_i[ISCMDBIT] && (wb_we_i ? tx_near_full_w : (rx_usage_w == 0)));
+
 reg [(WORDBITSZ-2) -1 : 0] intrqstthresh;
 
 assign irq_stb_o = (|intrqstthresh && (rx_usage_w >= intrqstthresh) &&
@@ -339,7 +338,7 @@ uart_tx #(
 	,.data_i  (tx_data_w1)
 	,.usage_o (tx_usage_w)
 
-	,.near_full_o (wb_bsy_o)
+	,.near_full_o (tx_near_full_w)
 
 	,.tx_o (tx_o)
 );

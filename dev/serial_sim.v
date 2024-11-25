@@ -55,8 +55,6 @@ output wire [WORDBITSZ -1 : 0]     wb_mapsz_o;
 output wire irq_stb_o;
 input  wire irq_rdy_i;
 
-assign wb_bsy_o = 1'b0;
-
 // By convention, devices mapsz must be aligned to 128 bytes (1024 bits).
 localparam MAPSZ = 128;
 assign wb_mapsz_o = MAPSZ;
@@ -66,7 +64,7 @@ reg                    wb_we_r;
 reg [ADDRBITSZ -1 : 0] wb_addr_r;
 reg [WORDBITSZ -1 : 0] wb_dat_r;
 
-wire wb_stb_r_ = (wb_cyc_i && wb_stb_i);
+wire wb_stb_r_ = (wb_cyc_i && wb_stb_i && !wb_bsy_o);
 
 always @ (posedge clk_i) begin
 	wb_stb_r <= wb_stb_r_ ;
@@ -107,9 +105,11 @@ wire devrd = (!rst_i && wb_stb_r && !wb_we_r && !wb_addr_r[ISCMDBIT] && prevcmdi
 wire devwr = (!rst_i && wb_stb_r &&  wb_we_r && !wb_addr_r[ISCMDBIT] && prevcmdisdevrdy);
 
 wire            rx_read_w = devrd;
-wire [8 -1 : 0] rx_data_w0 = "\n";
+reg  [8 -1 : 0] rx_data_w0;
 
 reg [(CLOG2BUFSZ +1) -1 : 0] rx_usage_r;
+
+assign wb_bsy_o = (!wb_addr_i[ISCMDBIT] && (wb_we_i ? 1'b0 : (rx_usage_r == 0)));
 
 reg [(WORDBITSZ-2) -1 : 0] intrqstthresh;
 
@@ -127,8 +127,6 @@ reg rx_read_w_sampled;
 
 assign wb_dat_o = (rx_read_w_sampled ? rx_data_w0 : wb_dat_o_);
 
-reg [WORDBITSZ -1 : 0] cntr = 0;
-
 always @ (posedge clk_i) begin
 	// Logic enabling/disabling interrupt.
 	if (rst_i) begin
@@ -136,7 +134,7 @@ always @ (posedge clk_i) begin
 		// It prevents unwanted interrupt after reset.
 		intrqstthresh <= 0;
 	end else if (cmdsetint) begin
-		//intrqstthresh <= wb_dat_r[WORDBITSZ-1:2]; /* ### Uncomment to generate interrupts */
+		intrqstthresh <= wb_dat_r[WORDBITSZ-1:2];
 	end else if (irq_rdy_i_negedge) begin
 		intrqstthresh <= 0;
 	end
@@ -157,10 +155,11 @@ always @ (posedge clk_i) begin
 	end
 end
 
+reg [WORDBITSZ -1 : 0] cntr = 0;
 always @ (posedge clk_i) begin
-	if (rst_i || cntr >= 100000000) begin
+	if (rst_i || cntr >= 1000) begin
 		cntr <= 0;
-		rx_usage_r <= BUFSZ;
+		rx_usage_r <= !$feof(0);
 	end else if (rx_usage_r) begin
 		if (devrd)
 			rx_usage_r <= rx_usage_r - 1'b1;
@@ -169,8 +168,14 @@ always @ (posedge clk_i) begin
 end
 
 always @ (posedge clk_i) begin
+	if (devrd && rx_data_w0) begin
+		$fread(rx_data_w0, 0);
+	end
+end
+
+always @ (posedge clk_i) begin
 	if (devwr) begin
-		$write("%c", wb_dat_r[8 -1 : 0]); $fflush(1);
+		$fwrite(1, "%c", wb_dat_r[8 -1 : 0]); $fflush(1);
 	end
 end
 
