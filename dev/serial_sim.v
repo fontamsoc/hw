@@ -30,9 +30,7 @@ module serial_sim (
 
 parameter WORDBITSZ = 32;
 
-parameter BUFSZ = 2;
-
-localparam CLOG2BUFSZ = clog2(BUFSZ);
+parameter PTY = "";
 
 localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
 localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
@@ -58,6 +56,9 @@ input  wire irq_rdy_i;
 // By convention, devices mapsz must be aligned to 128 bytes (1024 bits).
 localparam MAPSZ = 128;
 assign wb_mapsz_o = MAPSZ;
+
+localparam BUFSZ = 2;
+localparam CLOG2BUFSZ = clog2(BUFSZ);
 
 reg                    wb_stb_r;
 reg                    wb_we_r;
@@ -105,15 +106,15 @@ wire devrd = (!rst_i && wb_stb_r && !wb_we_r && !wb_addr_r[ISCMDBIT] && prevcmdi
 wire devwr = (!rst_i && wb_stb_r &&  wb_we_r && !wb_addr_r[ISCMDBIT] && prevcmdisdevrdy);
 
 wire            rx_read_w = devrd;
-reg  [8 -1 : 0] rx_data_w0;
+wire [8 -1 : 0] rx_data_w0;
 
-reg [(CLOG2BUFSZ +1) -1 : 0] rx_usage_r;
+wire [(CLOG2BUFSZ +1) -1 : 0] rx_usage_w;
 
-assign wb_bsy_o = (!wb_addr_i[ISCMDBIT] && (wb_we_i ? 1'b0 : (rx_usage_r == 0)));
+assign wb_bsy_o = (!wb_addr_i[ISCMDBIT] && (wb_we_i ? 1'b0 : (rx_usage_w == 0)));
 
 reg [(WORDBITSZ-2) -1 : 0] intrqstthresh;
 
-assign irq_stb_o = (|intrqstthresh && (rx_usage_r >= intrqstthresh) &&
+assign irq_stb_o = (|intrqstthresh && (rx_usage_w >= intrqstthresh) &&
 	// Raise intrqst only when the device is ready for the next command,
 	// otherwise an interrupt would cause software to send the device a new
 	// command while it is not ready, waiting indefinitely for it to be ready.
@@ -148,40 +149,90 @@ always @ (posedge clk_i) begin
 	end else if (cmdgetbuf) begin
 		wb_dat_o_ <= {
 			{((WORDBITSZ-2)-(CLOG2BUFSZ+1)){1'b0}},
-			(wb_dat_r[2] ? {(CLOG2BUFSZ+1){1'b0}} : rx_usage_r),
+			(wb_dat_r[2] ? {(CLOG2BUFSZ+1){1'b0}} : rx_usage_w),
 			wb_dat_r[1:0]};
 	end else if (cmdsetspd) begin
 		wb_dat_o_ <= {{(WORDBITSZ-2){1'b0}}, wb_dat_r[1:0]};
 	end
 end
 
-reg [WORDBITSZ -1 : 0] cntr = 0;
 always @ (posedge clk_i) begin
-	if (rst_i || cntr >= 1000) begin
-		cntr <= 0;
-		rx_usage_r <= !$feof(0);
-	end else if (rx_usage_r) begin
-		if (devrd)
-			rx_usage_r <= rx_usage_r - 1'b1;
-	end else
-		cntr <= cntr + 1'b1;
+	rx_read_w_sampled <= rx_read_w;
+	irq_rdy_i_r <= irq_rdy_i; // Sampling used for edge detection.
 end
 
+`systemc_header
+#include <fcntl.h>
+#include <termios.h>
+`verilog
+
+integer stdIn, stdOut;
+
+reg [15 : 0] devdat;
+assign rx_data_w0 = devdat[7:0];
+assign rx_usage_w = devdat[15:8];
 always @ (posedge clk_i) begin
-	if (devrd && rx_data_w0) begin
-		$fread(rx_data_w0, 0);
+	if (rst_i) begin
+		devdat <= 0;
+	end else if (rx_usage_w) begin
+		if (devrd) // Reset rx_usage_w null.
+			devdat <= {{8{1'b0}}, devdat[7:0]};
+	end else begin
+		devdat <= $c("({",
+		"union {struct {char buf; char cnt; } s; short dat; } ret;",
+		"ret.s.cnt = read(", stdIn, ", &ret.s.buf, 1);",
+		"if (ret.s.cnt < 0) ret.s.cnt = 0;",
+		"ret.dat; })");
 	end
 end
 
 always @ (posedge clk_i) begin
 	if (devwr) begin
-		$fwrite(1, "%c", wb_dat_r[8 -1 : 0]); $fflush(1);
+		$c("({ char c = ", wb_dat_r[8 -1 : 0], "; write(", stdOut, ", &c, 1); });");
 	end
 end
 
-always @ (posedge clk_i) begin
-	rx_read_w_sampled <= rx_read_w;
-	irq_rdy_i_r <= irq_rdy_i; // Sampling used for edge detection.
+initial begin
+	if (PTY != "") begin
+		stdIn = $c("({",
+		"auto ptystr = ", PTY, ";",
+		"auto swapStrEndianness = [](char *str) -> void {",
+		"	int len = 0;",
+		"	while (str[len]) ++len;",
+		"	for (int i = 0; i < (len / 2); ++i) {",
+		"		char c = str[i];",
+		"		str[i] = str[len - i - 1];",
+		"		str[len - i - 1] = c;",
+		"	}",
+		"}; swapStrEndianness((char*)&ptystr);",
+		"open((const char*)&ptystr, O_RDWR | O_DSYNC | O_NONBLOCK); })");
+		if (stdIn < 0)
+			$finish;
+		stdOut = stdIn;
+	end else begin
+		stdIn = 0;
+		stdOut = 1;
+		$c("({",
+		"auto setNonBlockFlag = [](int fd) -> int {",
+		"	int oldflags = fcntl (fd, F_GETFL, 0);",
+		"	if (oldflags == -1)",
+		"		return -1;",
+		"	oldflags |= O_NONBLOCK;",
+		"	return fcntl (fd, F_SETFL, oldflags);",
+		"}; setNonBlockFlag (", stdIn, "); });");
+	end
+	$c("({",
+	"auto setRawMode = [](int fd) -> void {",
+	"	struct termios raw;",
+	"	if (tcgetattr(fd, &raw) == -1)",
+	"		return;",
+	"	raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);",
+	"	raw.c_lflag &= ~(ECHO | ICANON | IEXTEN);",
+	//"	raw.c_oflag &= ~(OPOST | ISIG);",
+	"	raw.c_cflag |= (CS8);",
+	"	if (tcsetattr(fd, TCSAFLUSH, &raw) == -1)",
+	"		return;",
+	"}; if (isatty(", stdIn, ")) setRawMode (", stdIn, "); });");
 end
 
 endmodule
