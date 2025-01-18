@@ -21,6 +21,8 @@
 `include "rvxx/cpu.v"
 /* makefile defined *///`define CPU_COUNT 1
 
+`include "dev/irqctrl.v"
+
 `include "dev/serial_sim.v"
 
 `include "dev/sram.v"
@@ -52,16 +54,18 @@ localparam CPU_COUNT = `CPU_COUNT;
 
 localparam M_WBPI_CPU        = 0;
 localparam M_WBPI_LAST       = M_WBPI_CPU;
-localparam S_WBPI_SERIAL     = 0;
+localparam S_WBPI_IRQCTRL    = 0;
+localparam S_WBPI_SERIAL     = (S_WBPI_IRQCTRL + 1);
 localparam S_WBPI_RAM        = (S_WBPI_SERIAL + 1);
 localparam S_WBPI_INVALIDDEV = (S_WBPI_RAM + 1);
 
 localparam WBPI_MASTERCOUNT       = (M_WBPI_LAST + 1);
 localparam WBPI_SLAVECOUNT        = (S_WBPI_INVALIDDEV + 1);
 localparam WBPI_DEFAULTSLAVEINDEX = S_WBPI_INVALIDDEV;
-localparam WBPI_FIRSTSLAVEADDR    = /* set so memory starts at 0x1000*/ ('h1000 - (128/*SERIAL_MAPSZ*/));
+localparam WBPI_FIRSTSLAVEADDR    = /* set in such a way that S_WBPI_RAM starts at 0x1000*/
+                                    ('h1000 - (128/*SERIAL_MAPSZ*/) - (128/*IRQCTRL_MAPSZ*/));
 localparam WBPI_MAXPENDINGACK     = 32;
-localparam WBPI_DNSIZR            = 3'b001;
+localparam WBPI_DNSIZR            = 4'b0011;
 localparam WBPI_WORDBITSZ         = WORDBITSZ;
 localparam WBPI_CLOG2WORDBITSZBY8 = clog2(WBPI_WORDBITSZ/8);
 localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
@@ -94,6 +98,18 @@ wire wbpi_clk_w = clk_i;
 // 	input  [WORDBITSZ -1 : 0]          dev_id_w       [WBPI_SLAVECOUNT -1 : 0];
 // 	input                              dev_useirq_w   [WBPI_SLAVECOUNT -1 : 0];
 `include "lib/wbpi_inst.v"
+
+localparam IRQ_SDCARD = 0;
+localparam IRQ_SERIAL   = (IRQ_SDCARD + 1);
+
+localparam IRQSRCCOUNT = (IRQ_SERIAL +1); // Number of interrupt source.
+localparam IRQDSTCOUNT = CPU_COUNT; // Number of interrupt destination.
+wire [IRQSRCCOUNT -1 : 0] irq_src_stb_w;
+wire [IRQSRCCOUNT -1 : 0] irq_src_rdy_w;
+wire [IRQDSTCOUNT -1 : 0] irq_dst_stb_w0;
+wire [IRQDSTCOUNT -1 : 0] irq_dst_stb_w1;
+wire [IRQDSTCOUNT -1 : 0] irq_dst_rdy_w;
+wire [IRQDSTCOUNT -1 : 0] irq_dst_pri_w;
 
 localparam ICACHESZ = 16;
 localparam DCACHESZ = 16;
@@ -142,7 +158,13 @@ cpu #(
 	,.dcache_addr_o (cpu_dcache_addr_w)
 	,.dcache_miss_i (cpu_dcache_miss_w)
 
+	,.irq_stb_i (irq_dst_stb_w0)
+	,.irq_stb_o (irq_dst_stb_w1)
+	,.irq_rdy_o (irq_dst_rdy_w)
+	,.halted_o  (irq_dst_pri_w)
+
 	,.rstaddr_i  ('h1000)
+	,.rstaddr2_i ('h1000)
 
 	,.spval_i (spval_r)
 
@@ -157,6 +179,39 @@ assign pc_w[gen_pc_w_idx] =
 	cpu.genpu[gen_pc_w_idx].pu.eX_JumpOrBranch ? cpu.genpu[gen_pc_w_idx].pu.iF_pc :
 	                                             cpu.genpu[gen_pc_w_idx].pu.iD_pc;
 end endgenerate
+
+// ### IRQ 0 must be reserved for device at address 0x0.
+assign irq_src_stb_w[IRQ_SDCARD] = 0;
+
+irqctrl #(
+	 .WORDBITSZ   (WORDBITSZ)
+	,.IRQSRCCOUNT (IRQSRCCOUNT)
+	,.IRQDSTCOUNT (IRQDSTCOUNT)
+) irqctrl (
+
+	 .rst_i (wbpi_rst_w)
+
+	,.clk_i (wbpi_clk_w)
+
+	,.wb_cyc_i   (s_wbpi_cyc_w[S_WBPI_IRQCTRL])
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_IRQCTRL])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_IRQCTRL])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_IRQCTRL])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_IRQCTRL])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_IRQCTRL])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_IRQCTRL])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_IRQCTRL])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_IRQCTRL])
+	,.wb_mapsz_o (s_wbpi_mapsz_w[S_WBPI_IRQCTRL])
+
+	,.irq_dst_stb_o (irq_dst_stb_w0)
+	,.irq_dst_stb_i (irq_dst_stb_w1)
+	,.irq_dst_rdy_i (irq_dst_rdy_w)
+	,.irq_dst_pri_i (irq_dst_pri_w)
+
+	,.irq_src_stb_i (irq_src_stb_w)
+	,.irq_src_rdy_o (irq_src_rdy_w)
+);
 
 serial_sim #(
 	.WORDBITSZ (WORDBITSZ)
@@ -176,6 +231,9 @@ serial_sim #(
 	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SERIAL])
 	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SERIAL])
 	,.wb_mapsz_o (s_wbpi_mapsz_w[S_WBPI_SERIAL])
+
+	,.irq_stb_o (irq_src_stb_w[IRQ_SERIAL])
+	,.irq_rdy_i (irq_src_rdy_w[IRQ_SERIAL])
 );
 
 sram #(
