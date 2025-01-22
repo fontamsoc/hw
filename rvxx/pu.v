@@ -1122,7 +1122,7 @@ always @ (posedge clk_i) begin
 		add     a3,a3,a1
 		lw      a3,0(a3)       (Multi-cycle instruction)
 		jr      a3                                                        */
-		if (!iD_flushed && iD_lateWritebackInsn && iD_eX_rdId == iD_rdId) begin
+		if (!iD_flushed && !iD_stalled && iD_lateWritebackInsn && iD_eX_rdId == iD_rdId) begin
 			iD_rW_rdId_isTrue <= 1'b0;
 			iD_rW_rdId <= {CLOG2GPRCNT{1'b0}};
 		end else begin
