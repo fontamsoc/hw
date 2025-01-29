@@ -1145,7 +1145,7 @@ always @ (posedge clk_i) begin
 end
 
 always @ (posedge clk_i) begin
-	if (rst_i || (rW_we_i && !eX_isExc && !eX_isExc0_i))
+	if (rst_i || (rW_we_i && (rW_stalled || (!eX_isExc && !eX_isExc0_i))))
 		gprDat[rst_i ? 2 : rW_idx_i] <= (rst_i ? spval_i : rW_dat_i);
 end
 
