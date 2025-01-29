@@ -578,8 +578,6 @@ wire iD_opIdiv_bsy;
 wire iD_ldUnit_bsy;
 wire iD_stUnit_bsy;
 
-wire iD_eX_flushed;
-wire iD_eX_stalled;
 wire iD_eX_carryon;
 
 wire dCache_m_pending;
@@ -871,22 +869,17 @@ wire _eX_takeBranch_i = (eX_takeBranch_i ^ eX_predictBranch_i[1]);
 wire eX_predictRetMiss_i = (iD_predictRet != {eX_aluPlus_i[WORDBITSZ-1:1], 1'b0});
 `endif
 
-wire eX_rW_flushed;
 wire eX_rW_stalled;
 wire eX_rW_carryon;
 
 wire eX_stalled = !eX_rW_carryon;
-
-assign iD_eX_stalled = eX_stalled;
 
 // Jumps or Branchs are triggered only at the iDecoded stage.
 // Interrupts and exceptions set eX_flushed_i to prevent eXecution.
 wire eX_flushed_i = (iD_flushed || iD_stalled);
 reg eX_flushed;
 
-assign iD_eX_flushed = eX_flushed;
-
-wire eX_carryon = (eX_flushed || !eX_stalled);
+wire eX_carryon = (!eX_stalled);
 
 assign iD_eX_carryon = eX_carryon;
 
@@ -1044,13 +1037,9 @@ wire rW_stalled = (
 
 assign eX_rW_stalled = rW_stalled;
 
-reg rW_flushed;
-always @ (posedge clk_i)
-	rW_flushed <= (eX_flushed || eX_stalled);
+wire rW_carryon = (!rW_stalled);
 
-assign eX_rW_flushed = (rW_flushed && !rW_stalled);
-
-assign eX_rW_carryon = (eX_rW_flushed || !eX_rW_stalled);
+assign eX_rW_carryon = rW_carryon;
 
 always @* begin
 
