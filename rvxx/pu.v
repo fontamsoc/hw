@@ -872,7 +872,7 @@ wire eX_predictRetMiss_i = (iD_predictRet != {eX_aluPlus_i[WORDBITSZ-1:1], 1'b0}
 wire eX_rW_stalled;
 wire eX_rW_carryon;
 
-wire eX_stalled = !eX_rW_carryon;
+wire eX_stalled = (!eX_rW_carryon ? iD_eX_rdId_isTrue : 1'b0);
 
 // Jumps or Branchs are triggered only at the iDecoded stage.
 // Interrupts and exceptions set eX_flushed_i to prevent eXecution.
