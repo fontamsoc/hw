@@ -1168,8 +1168,10 @@ end
 
 `ifdef SIMULATION
 always @ (posedge clk_i) begin
-	rW_pc   <= eX_pc;
-	rW_insn <= eX_insn;
+	if (rW_carryon) begin
+		rW_pc   <= eX_pc;
+		rW_insn <= eX_insn;
+	end
 end
 `endif
 
