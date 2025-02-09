@@ -94,12 +94,12 @@ fifo #(
 	,.empty_o     (ldUnit_rqsts_empty)
 );
 
-wire [CLOG2MAXPENDINGACK -1 : 0] ldUnit_rqstSeqs_seq;
+wire [(CLOG2MAXPENDINGACK +1) -1 : 0] ldUnit_rqstSeqs_seq;
 
 wire ldUnit_rqstSeqs_empty;
 
 fifo_fwft #(
-	 .WIDTH (CLOG2MAXPENDINGACK)
+	 .WIDTH ((CLOG2MAXPENDINGACK +1))
 	,.DEPTH (MAXPENDINGACK)
 ) ldUnit_rqstSeqs (
 	 .rst_i      (rst_i)

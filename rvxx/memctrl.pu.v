@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-reg [(CLOG2MAXPENDINGACK +1) -1 : 0] wb_pending_acks;
+reg [(CLOG2MAXPENDINGACK +1) -1 : 0] wb_rqst_cnt;
+reg [(CLOG2MAXPENDINGACK +1) -1 : 0] wb_rsp_cnt;
 
-wire wb_max_pending = (wb_pending_acks == MAXPENDINGACK);
+wire [(CLOG2MAXPENDINGACK +1) -1 : 0] wb_pending_acks = (wb_rqst_cnt - wb_rsp_cnt);
+
+wire wb_max_pending = wb_pending_acks[CLOG2MAXPENDINGACK];
 
 assign _wb_bsy_i = (wb_bsy_i || wb_max_pending);
-
-reg [CLOG2MAXPENDINGACK -1 : 0] wb_rqst_cnt;
-reg [CLOG2MAXPENDINGACK -1 : 0] wb_rsp_cnt;
 
 always @ (posedge clk_i) begin
 	if (rst_i)
@@ -24,18 +24,8 @@ always @ (posedge clk_i) begin
 		wb_rsp_cnt <= wb_rsp_cnt + 1'b1;
 end
 
-always @ (posedge clk_i) begin
-	if (rst_i)
-		wb_pending_acks <= 0;
-	else if (wb_stb_o && !_wb_bsy_i && wb_ack_i);
-	else if (wb_ack_i)
-		wb_pending_acks <= wb_pending_acks - 1'b1;
-	else if (wb_stb_o && !_wb_bsy_i)
-		wb_pending_acks <= wb_pending_acks + 1'b1;
-end
-
-reg [CLOG2MAXPENDINGACK -1 : 0] iF_mem_seq;
-reg                             iF_mem_seq_valid;
+reg [(CLOG2MAXPENDINGACK +1) -1 : 0] iF_mem_seq;
+reg                                  iF_mem_seq_valid;
 
 assign dCache_s_ack_i = (wb_ack_i && (!iF_mem_seq_valid || wb_rsp_cnt != iF_mem_seq));
 

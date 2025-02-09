@@ -33,6 +33,8 @@ wire                        skidBuf_dCache_s_bsy_i;
 wire                        skidBuf_dCache_s_ack_i;
 wire [WORDBITSZ -1 : 0]     skidBuf_dCache_s_dat_i;
 
+wire _dCache_m_stb_i;
+
 generate if (USE_DCACHE) begin: gen_skidBuf_dCache
 
 wb_skidbuf #(
@@ -46,7 +48,7 @@ wb_skidbuf #(
 	,.clk_i (clk_i)
 
 	,.m_wb_cyc_i  (dCache_m_cyc_i)
-	,.m_wb_stb_i  (dCache_m_stb_i)
+	,.m_wb_stb_i  (_dCache_m_stb_i)
 	,.m_wb_we_i   (dCache_m_we_i)
 	,.m_wb_addr_i (dCache_m_addr_i)
 	,.m_wb_sel_i  (dCache_m_sel_i)
@@ -69,7 +71,7 @@ wb_skidbuf #(
 end else begin
 
 assign skidBuf_dCache_s_cyc_o = dCache_m_cyc_i;
-assign skidBuf_dCache_s_stb_o = dCache_m_stb_i;
+assign skidBuf_dCache_s_stb_o = _dCache_m_stb_i;
 assign skidBuf_dCache_s_we_o = dCache_m_we_i;
 assign skidBuf_dCache_s_addr_o = dCache_m_addr_i;
 assign skidBuf_dCache_s_sel_o = dCache_m_sel_i;
@@ -185,15 +187,19 @@ reg                         dCache_m_we_i_;  // Used for atomic load-store.
 reg  [(WORDBITSZ/8) -1 : 0] dCache_m_sel_i_; // ### comb-block-reg.
 reg  [WORDBITSZ -1 : 0]     dCache_m_dat_i_; // ### comb-block-reg.
 
-reg [(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_pending_acks;
+reg [(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_rqst_cnt;
+reg [(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_rsp_cnt;
+
+wire [(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_pending_acks = (dCache_m_rqst_cnt - dCache_m_rsp_cnt);
+
+wire dCache_m_max_pending = dCache_m_pending_acks[CLOG2MAXPENDINGACK];
+
+wire _dCache_m_bsy_o = (dCache_m_bsy_o || dCache_m_max_pending);
 
 // Signal set to 1 when the logic setting dCache_m_stb_i cannot accept a new operation.
-wire __dCache_m_bsy = ((dCache_m_stb_i && dCache_m_bsy_o) || dCache_m_we_i_);
+wire __dCache_m_bsy = ((dCache_m_stb_i && _dCache_m_bsy_o) || dCache_m_we_i_);
 
-wire _dCache_m_stb_i = (dCache_m_stb_i && !dCache_m_bsy_o);
-
-reg [CLOG2MAXPENDINGACK -1 : 0] dCache_m_rqst_cnt;
-reg [CLOG2MAXPENDINGACK -1 : 0] dCache_m_rsp_cnt;
+assign _dCache_m_stb_i = (dCache_m_stb_i && !_dCache_m_bsy_o);
 
 always @ (posedge clk_i) begin
 	if (rst_i)
@@ -207,16 +213,6 @@ always @ (posedge clk_i) begin
 		dCache_m_rsp_cnt <= 0;
 	else if (dCache_m_ack_o)
 		dCache_m_rsp_cnt <= dCache_m_rsp_cnt + 1'b1;
-end
-
-always @ (posedge clk_i) begin
-	if (rst_i)
-		dCache_m_pending_acks <= 0;
-	else if (_dCache_m_stb_i && dCache_m_ack_o);
-	else if (dCache_m_ack_o)
-		dCache_m_pending_acks <= dCache_m_pending_acks - 1'b1;
-	else if (_dCache_m_stb_i)
-		dCache_m_pending_acks <= dCache_m_pending_acks + 1'b1;
 end
 
 assign dCache_m_pending = (dCache_m_stb_i || dCache_m_pending_acks);
@@ -262,7 +258,7 @@ always @ (posedge clk_i) begin
 				(amoUnit_opType == 5'b11100) ? // amomaxu.w
 					(!dCache_m_dat_i_ltu_dCache_m_dat_o ? dCache_m_dat_i : dCache_m_dat_o) :
 				dCache_m_dat_i);
-		end else if (!dCache_m_bsy_o)
+		end else if (!_dCache_m_bsy_o)
 			dCache_m_stb_i <= 1'b0;
 	end else if (iD_insn_valid) begin
 		if (iD_isLoadOrLr) begin
@@ -284,10 +280,10 @@ always @ (posedge clk_i) begin
 			dCache_m_addr_i <= dCache_m_addr_i_[WORDBITSZ-1:CLOG2WORDBITSZBY8];
 			dCache_m_sel_i <= dCache_m_sel_i_;
 			dCache_m_dat_i <= dCache_m_dat_i_;
-		end else if (!dCache_m_bsy_o) begin
+		end else if (!_dCache_m_bsy_o) begin
 			dCache_m_stb_i <= 1'b0;
 		end
-	end else if (!dCache_m_bsy_o) begin
+	end else if (!_dCache_m_bsy_o) begin
 		dCache_m_stb_i <= 1'b0;
 	end
 end
