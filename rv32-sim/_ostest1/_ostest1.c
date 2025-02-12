@@ -24,7 +24,7 @@ static int thrd_array[THREADS_NUM][LENGTH + 1];
 
 static uintptr_t busy_cntr = THREADS_NUM;
 
-_waitq_t main_wq = _WAITQ_CLR;
+_thread_t *main_thrd = 0;
 
 void thrd_fn (void *arg) {
 
@@ -66,8 +66,13 @@ void thrd_fn (void *arg) {
 		buffer += 4;
 	}
 
-	if (_atomic_dec(&busy_cntr) == 1)
-		_thread_schedone(&main_wq);
+	if (_atomic_dec(&busy_cntr) == 1) {
+		// Spinloop until main_thrd sleeps, otherwise
+		// there will be no worker thread to wake it up.
+		while (_is_thread_running(main_thrd))
+			_thread_yield();
+		_thread_sched(main_thrd);
+	}
 
 	_thread_sleep(_DATE_MAX); // Slightly faster than `return` which calls `_thread_exit()`.
 }
@@ -76,6 +81,8 @@ void main (void) {
 
 	printf("Calculate first %d digits of Pi independently by %d threads.\n",
 		DIGITS_NUM, THREADS_NUM);
+
+	main_thrd = _thread_cur;
 
 	uintptr_t ncpu = _ncpu();
 
@@ -87,11 +94,15 @@ void main (void) {
 
 	for (uintptr_t i = 0; i < THREADS_NUM; ++i) {
 		thrd[i] = _thread_create(0, 2048, thrd_fn, (void *)i);
-		_thread_schedoncpu(thrd[i], (i % ncpu), true);
+		_thread_schedoncpu(thrd[i],
+			// Try to use a cpu other than _cpuid() to immediately start computing.
+			// TODO: With load-balancing, just use _thread_sched() on _thread_create() output.
+			// TODO: No need to store _thread_create() output in thrd[] ...
+			((_cpuid() + i + 1) % ncpu), true);
 	}
 
 	// Wait for all workers to finish their calculations.
-	_thread_sleeponwq(&main_wq);
+	_thread_sleep(-1);
 
 	// Capture end timestamp.
 	_date_t end_time = _clkcycles();
