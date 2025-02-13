@@ -99,12 +99,12 @@ wire [(CLOG2MAXPENDINGACK +1) -1 : 0] ldUnit_rqstSeqs_seq;
 wire ldUnit_rqstSeqs_empty;
 
 fifo_fwft #(
-	 .WIDTH ((CLOG2MAXPENDINGACK +1))
+	 .WIDTH (CLOG2MAXPENDINGACK +1)
 	,.DEPTH (MAXPENDINGACK)
 ) ldUnit_rqstSeqs (
 	 .rst_i      (rst_i)
 	,.clk_push_i (clk_i)
-	,.push_i     (_dCache_m_stb_i && !dCache_m_we_i)
+	,.push_i     (__dCache_m_stb_i && !dCache_m_we_i)
 	,.data_i     (dCache_m_rqst_cnt)
 	,.clk_pop_i  (clk_i)
 	,.pop_i      (ldUnit_memAck)

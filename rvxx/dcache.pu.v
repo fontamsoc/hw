@@ -196,6 +196,10 @@ wire dCache_m_max_pending = dCache_m_pending_acks[CLOG2MAXPENDINGACK];
 
 wire _dCache_m_bsy_o = (dCache_m_bsy_o || dCache_m_max_pending);
 
+assign _dCache_m_stb_i = (dCache_m_stb_i && !dCache_m_max_pending);
+
+wire __dCache_m_stb_i = (_dCache_m_stb_i && !_dCache_m_bsy_o);
+
 reg[(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_breather;
 // Logic used to force wb_cyc low when it has been high for too long;
 // otherwise in a multi-core soc, the arbiter will not switch to other cores.
@@ -205,7 +209,7 @@ always @ (posedge clk_i) begin
 	else if (!dCache_m_cyc_i || dCache_m_breather[CLOG2MAXPENDINGACK]) begin
 		if (!dCache_m_cyc_i)
 			dCache_m_breather <= 0;
-	end else if (_dCache_m_stb_i)
+	end else if (__dCache_m_stb_i)
 		dCache_m_breather <= dCache_m_breather + 1'b1;
 end
 
@@ -213,12 +217,10 @@ end
 wire __dCache_m_bsy = ((dCache_m_stb_i && _dCache_m_bsy_o) || dCache_m_we_i_ ||
 	dCache_m_breather[CLOG2MAXPENDINGACK]);
 
-assign _dCache_m_stb_i = (dCache_m_stb_i && !_dCache_m_bsy_o);
-
 always @ (posedge clk_i) begin
 	if (rst_i)
 		dCache_m_rqst_cnt <= 0;
-	else if (_dCache_m_stb_i)
+	else if (__dCache_m_stb_i)
 		dCache_m_rqst_cnt <= dCache_m_rqst_cnt + 1'b1;
 end
 
