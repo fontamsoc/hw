@@ -24,7 +24,7 @@ static int thrd_array[THREADS_NUM][LENGTH + 1];
 
 static uintptr_t busy_cntr = THREADS_NUM;
 
-_thread_t *main_thrd = 0;
+static _SEM_DEF(main_sem, 1, 0);
 
 void thrd_fn (void *arg) {
 
@@ -66,13 +66,8 @@ void thrd_fn (void *arg) {
 		buffer += 4;
 	}
 
-	if (_atomic_dec(&busy_cntr) == 1) {
-		// Spinloop until main_thrd sleeps, otherwise
-		// there will be no worker thread to wake it up.
-		while (_is_thread_running(main_thrd))
-			_thread_yield();
-		_thread_sched(main_thrd);
-	}
+	if (_atomic_dec(&busy_cntr) == 1)
+		_sem_put(&main_sem, _DATE_MAX);
 
 	_thread_sleep(_DATE_MAX); // Slightly faster than `return` which calls `_thread_exit()`.
 }
@@ -81,8 +76,6 @@ void main (void) {
 
 	printf("Calculate first %d digits of Pi independently by %d threads.\n",
 		DIGITS_NUM, THREADS_NUM);
-
-	main_thrd = _thread_cur;
 
 	uintptr_t ncpu = _ncpu();
 
@@ -102,7 +95,7 @@ void main (void) {
 	}
 
 	// Wait for all workers to finish their calculations.
-	_thread_sleep(-1);
+	_sem_get(&main_sem, _DATE_MAX);
 
 	// Capture end timestamp.
 	_date_t end_time = _clkcycles();
