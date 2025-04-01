@@ -1,20 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-only
-# (c) William Fonkou Tambe
-
-PREFIX := riscv32-unknown-elf
-
-CC := ${PREFIX}-gcc
-OBJCOPY := ${PREFIX}-objcopy
-OBJDUMP := ${PREFIX}-objdump
-READELF := ${PREFIX}-readelf
-
-CFLAGS := -Werror -fdata-sections -ffunction-sections -Wl,--gc-sections -O3 -g
-CFLAGS += -march=rv32ima_zicsr -mabi=ilp32
-CFLAGS += -nostdlib
-# Below used to make stvec_handler and mtvec_handler null when not used by a test;
-# Making stvec_handler and mtvec_handler weak symbols does not work because they become global
-# but they need to be local to each test.
-CFLAGS += -Wl,--unresolved-symbols=ignore-all
+# 20250401 (c) William Fonkou Tambe
 
 TESTS += simple
 TESTS += addi
@@ -83,30 +68,50 @@ TESTS += sw_misaligned
 
 TESTS_OBJS = $(addsuffix .o,${TESTS})
 
+PREFIX := riscv32-unknown-elf
+
+CC := ${PREFIX}-gcc
+OBJCOPY := ${PREFIX}-objcopy
+OBJDUMP := ${PREFIX}-objdump
+READELF := ${PREFIX}-readelf
+
+CFLAGS += -march=rv32ima_zicsr -ftls-model=local-exec
+CFLAGS += -Werror -fdata-sections -ffunction-sections -Wl,--gc-sections -O3 -g
+CFLAGS += -nostdlib
+# Below used to make stvec_handler and mtvec_handler null when not used by a test;
+# Making stvec_handler and mtvec_handler weak symbols does not work because they become global
+# but they need to be local to each test.
+CFLAGS += -Wl,--unresolved-symbols=ignore-all
+
+WORDBITSZ ?= 32
+
 .PHONY: all
-all: isatests216.hex isatests232.hex isatests264.hex  isatests2128.hex  isatests2256.hex
+all: isatests2.hex
 
-isatests216.hex: isatests2.bin
-	truncate --size=%2 isatests2.bin
-	hexdump -v -e '/2 "%04x "' isatests2.bin > isatests216.hex # 16bits.
+isatests2.hex: isatests2.${WORDBITSZ}.he_
+	ln -nf $< $@
 
-isatests232.hex: isatests2.bin
-	truncate --size=%4 isatests2.bin
-	hexdump -v -e '/4 "%08x "' isatests2.bin > isatests232.hex # 32bits.
+isatests2.16.he_: isatests2.bin
+	truncate --size=%2 $<
+	hexdump -v -e '/2 "%04x "' $< > $@ # 16bits.
 
-isatests264.hex: isatests2.bin
-	truncate --size=%8 isatests2.bin
-	hexdump -v -e '/4 "%08x "' isatests2.bin | \
-		{ while IFS=' ' read -n 18 V0 V1; do echo -n "$$V1$$V0 "; done; } > isatests264.hex # 64bits.
+isatests2.32.he_: isatests2.bin
+	truncate --size=%4 $<
+	hexdump -v -e '/4 "%08x "' $< > $@ # 32bits.
 
-isatests2128.hex: isatests2.bin
-	truncate --size=%16 isatests2.bin
-	hexdump -v -e '/4 "%08x "' isatests2.bin | \
-		{ while IFS=' ' read -n 36 V0 V1 V2 V3; do echo -n "$$V3$$V2$$V1$$V0 "; done; } > isatests2128.hex # 128bits.
+isatests2.64.he_: isatests2.bin
+	truncate --size=%8 $<
+	hexdump -v -e '/4 "%08x "' $< | \
+		{ while IFS=' ' read -n 18 V0 V1; do echo -n "$$V1$$V0 "; done; } > $@ # 64bits.
 
-isatests2256.hex: isatests2.bin
-	truncate --size=%32 isatests2.bin
-	hexdump -v -e '/4 "%08x "' isatests2.bin | \
+isatests2.128.he_: isatests2.bin
+	truncate --size=%16 $<
+	hexdump -v -e '/4 "%08x "' $< | \
+		{ while IFS=' ' read -n 36 V0 V1 V2 V3; do echo -n "$$V3$$V2$$V1$$V0 "; done; } > $@ # 128bits.
+
+isatests2.256.he_: isatests2.bin
+	truncate --size=%32 $<
+	hexdump -v -e '/4 "%08x "' $< | \
 		{ while IFS=' ' read -n 72 V0 V1 V2 V3 V4 V5 V6 V7; do echo -n "$$V7$$V6$$V5$$V4$$V3$$V2$$V1$$V0 "; done; } > isatests2256.hex # 256bits.
 
 %.o : tests/%.S
@@ -114,11 +119,11 @@ isatests2256.hex: isatests2.bin
 		-DTEST_FUNC_NAME=$* -DTEST_FUNC_TXT='"$*"' -DTEST_FUNC_RET=$*_ret $<
 
 isatests2.bin: isatests2.S ${TESTS_OBJS}
-	${CC} ${CFLAGS} -I ./ -o isatests2.elf -Wl,-Tisatests2.lds isatests2.S ${TESTS_OBJS}
-	${OBJCOPY} -O binary --set-section-flags .bss=alloc,load,contents isatests2.elf isatests2.bin
+	${CC} ${CFLAGS} -I ./ -o isatests2.elf -Wl,-Tisatests2.lds $^
+	${OBJCOPY} -O binary --set-section-flags .bss=alloc,load,contents isatests2.elf $@
 	$(OBJDUMP) -Sdrl isatests2.elf > isatests2.elf.objdump
 	${READELF} -a isatests2.elf > isatests2.elf.readelf
 
 .PHONY: clean
 clean:
-	rm -rf *.o *.elf *.bin *.hex *.objdump *.readelf
+	rm -rf *.o *.elf *.bin *.he{_,x} *.objdump *.readelf
