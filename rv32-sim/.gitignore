@@ -1,0 +1,7 @@
+obj_dir
+*.vcd
+*.bin
+*.elf
+*.hex
+*.o
+build.log

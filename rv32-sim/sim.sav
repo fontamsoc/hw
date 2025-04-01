@@ -1,0 +1,198 @@
+[*]
+[*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
+[*] Sun Jul 21 19:13:49 2024
+[*]
+[dumpfile] "/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/sim.vcd"
+[dumpfile_mtime] "Sun Jul 21 18:00:09 2024"
+[dumpfile_size] 3100328834
+[savefile] "/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/sim.sav"
+[timestart] 2861377
+[size] 2098 1221
+[pos] -1 -1
+*-2.943416 2861392 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] TOP.
+[treeopen] TOP.sim.
+[treeopen] TOP.sim.cpu.
+[treeopen] TOP.sim.cpu.genpu[0].
+[treeopen] TOP.sim.cpu.genpu[0].pu.
+[treeopen] TOP.sim.cpu.genpu[0].pu.iCache.
+[treeopen] TOP.sim.wb_mux.
+[sst_width] 276
+[signals_width] 280
+[sst_expanded] 1
+[sst_vpaned_height] 375
+@200
+-pu[0]
+@28
+TOP.sim.cpu.genpu[0].pu.clk_i
+@22
+TOP.sim.pc_w[0][31:0]
+@200
+-
+@22
+TOP.sim.cpu.genpu[0].pu.iF0_pc_i[31:0]
+TOP.sim.cpu.genpu[0].pu.iF0_pc[31:0]
+TOP.sim.cpu.genpu[0].pu.iF0_pc_i_[31:0]
+@28
+TOP.sim.cpu.genpu[0].pu.iF0_flushed
+@22
+TOP.sim.cpu.genpu[0].pu.iF0_insn[31:0]
+@28
+TOP.sim.cpu.genpu[0].pu.iF0_en
+TOP.sim.cpu.genpu[0].pu.iF0_isJAL
+@22
+TOP.sim.cpu.genpu[0].pu.iF0_JALaddr[31:0]
+@200
+-
+@22
+TOP.sim.cpu.genpu[0].pu.iF1_pc[31:0]
+@28
+TOP.sim.cpu.genpu[0].pu.iF1_flushed
+@22
+TOP.sim.cpu.genpu[0].pu.iF1_insn[31:0]
+@200
+-
+@22
+TOP.sim.cpu.genpu[0].pu.iD_pc[31:0]
+@28
+TOP.sim.cpu.genpu[0].pu.iD_flushed
+TOP.sim.cpu.genpu[0].pu.iD_stalled
+@22
+TOP.sim.cpu.genpu[0].pu.iD_insn[31:0]
+@28
+TOP.sim.cpu.genpu[0].pu.iD_en
+@22
+TOP.sim.cpu.genpu[0].pu.gprRdy[31:0]
+@28
+TOP.sim.cpu.genpu[0].pu.iD_use_rdId_i
+TOP.sim.cpu.genpu[0].pu.iD_use_rdId
+TOP.sim.cpu.genpu[0].pu._iD_use_rdId_i
+TOP.sim.cpu.genpu[0].pu._iD_flushed_i
+@24
+TOP.sim.cpu.genpu[0].pu.iD_func3[2:0]
+TOP.sim.cpu.genpu[0].pu.iD_rdId_i[4:0]
+TOP.sim.cpu.genpu[0].pu.iD_rs1Id_i[4:0]
+TOP.sim.cpu.genpu[0].pu.iD_rs2Id_i[4:0]
+TOP.sim.cpu.genpu[0].pu.iD_rdId[4:0]
+TOP.sim.cpu.genpu[0].pu.iD_rs1Id[4:0]
+TOP.sim.cpu.genpu[0].pu.iD_rs2Id[4:0]
+TOP.sim.cpu.genpu[0].pu._iD_rdId_i[4:0]
+@22
+TOP.sim.cpu.genpu[0].pu.iD_rs1[31:0]
+TOP.sim.cpu.genpu[0].pu.iD_rs2[31:0]
+TOP.sim.cpu.genpu[0].pu.iD_Iimm[31:0]
+TOP.sim.cpu.genpu[0].pu.iD_Simm[31:0]
+@28
+TOP.sim.cpu.genpu[0].pu.iD_isALUimm
+TOP.sim.cpu.genpu[0].pu.iD_isALUreg
+TOP.sim.cpu.genpu[0].pu.iD_isLoad
+TOP.sim.cpu.genpu[0].pu.iD_isStore
+TOP.sim.cpu.genpu[0].pu.iD_rdRdy
+TOP.sim.cpu.genpu[0].pu.iD_rdRdy_
+TOP.sim.cpu.genpu[0].pu.iD_rs1Rdy
+TOP.sim.cpu.genpu[0].pu.iD_rs1Rdy_
+@24
+TOP.sim.cpu.genpu[0].pu.iD_eX_rdId[4:0]
+@22
+TOP.sim.cpu.genpu[0].pu.iD_eX_rslt[31:0]
+@24
+TOP.sim.cpu.genpu[0].pu.iD_rW_rdId[4:0]
+@22
+TOP.sim.cpu.genpu[0].pu.iD_rW_rslt[31:0]
+@28
+TOP.sim.cpu.genpu[0].pu.iD_rs1Id_eq_iD_eX_rdId
+TOP.sim.cpu.genpu[0].pu.iD_rs1Id_eq_iD_rW_rdId
+@24
+TOP.sim.cpu.genpu[0].pu._iD_rdId_i[4:0]
+TOP.sim.cpu.genpu[0].pu._iD_rs1Id_i[4:0]
+@200
+-
+@22
+TOP.sim.cpu.genpu[0].pu.eX_pc[31:0]
+@28
+TOP.sim.cpu.genpu[0].pu.eX_flushed
+TOP.sim.cpu.genpu[0].pu.eX_JumpOrBranch_i
+@22
+TOP.sim.cpu.genpu[0].pu.eX_insn[31:0]
+@200
+-
+@22
+TOP.sim.cpu.genpu[0].pu.rW_pc[31:0]
+@28
+TOP.sim.cpu.genpu[0].pu.rW_we_i
+@24
+TOP.sim.cpu.genpu[0].pu.rW_idx_i[4:0]
+@22
+TOP.sim.cpu.genpu[0].pu.rW_dat_i[31:0]
+TOP.sim.cpu.genpu[0].pu.rW_insn[31:0]
+@200
+-
+@28
+TOP.sim.cpu.genpu[0].pu.ldUnit_stb
+TOP.sim.cpu.genpu[0].pu.ldUnit_rqsts_empty
+TOP.sim.cpu.genpu[0].pu.ldUnit_rqstSeqs_empty
+TOP.sim.cpu.genpu[0].pu.ldUnit_done
+@200
+-
+@28
+TOP.sim.cpu.genpu[0].pu.iF0_mem_stb
+TOP.sim.cpu.genpu[0].pu.iF0_mem_ack
+TOP.sim.cpu.genpu[0].pu.iCache_we_w
+TOP.sim.cpu.genpu[0].pu.iCache_re_w
+TOP.sim.cpu.genpu[0].pu.iCache_hit_w
+TOP.sim.cpu.genpu[0].pu.iCache_rdy_w
+@200
+-
+@28
+TOP.sim.cpu.genpu[0].pu.dCache_m_cyc_i
+TOP.sim.cpu.genpu[0].pu.dCache_m_stb_i
+TOP.sim.cpu.genpu[0].pu.dCache_m_we_i
+@22
+TOP.sim.cpu.genpu[0].pu.dCache_m_addr_i[29:0]
+@28
+TOP.sim.cpu.genpu[0].pu.dCache_m_sel_i[3:0]
+@22
+TOP.sim.cpu.genpu[0].pu.dCache_m_dat_i[31:0]
+@28
+TOP.sim.cpu.genpu[0].pu.dCache_m_bsy_o
+TOP.sim.cpu.genpu[0].pu.dCache_m_ack_o
+@22
+TOP.sim.cpu.genpu[0].pu.dCache_m_dat_o[31:0]
+@200
+-
+@28
+TOP.sim.cpu.genpu[0].pu.dCache_s_cyc_o
+TOP.sim.cpu.genpu[0].pu.dCache_s_stb_o
+TOP.sim.cpu.genpu[0].pu.dCache_s_we_o
+TOP.sim.cpu.genpu[0].pu.dCache_s_bsy_i
+TOP.sim.cpu.genpu[0].pu.dCache_s_ack_i
+@200
+-
+@28
+TOP.sim.cpu.genpu[0].pu.wb_cyc_o
+TOP.sim.cpu.genpu[0].pu.wb_stb_o
+TOP.sim.cpu.genpu[0].pu.wb_we_o
+TOP.sim.cpu.genpu[0].pu.wb_bsy_i
+TOP.sim.cpu.genpu[0].pu.wb_ack_i
+@22
+TOP.sim.cpu.genpu[0].pu.wb_dat_i[31:0]
+@200
+-
+-wb_mux
+@28
+TOP.sim.wb_mux.slvidx_rdy
+@24
+TOP.sim.wb_mux.slvidx[1:0]
+@200
+-
+-sram
+@28
+TOP.sim.sram.wb_cyc_i
+TOP.sim.sram.wb_stb_i
+TOP.sim.sram.wb_we_i
+TOP.sim.sram.wb_bsy_o
+TOP.sim.sram.wb_ack_o
+@200
+-
+[pattern_trace] 1
+[pattern_trace] 0
