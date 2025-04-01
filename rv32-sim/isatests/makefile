@@ -1,16 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-only
-# (c) William Fonkou Tambe
-
-PREFIX := riscv32-unknown-elf
-
-CC := ${PREFIX}-gcc
-OBJCOPY := ${PREFIX}-objcopy
-OBJDUMP := ${PREFIX}-objdump
-READELF := ${PREFIX}-readelf
-
-CFLAGS := -Werror -fdata-sections -ffunction-sections -Wl,--gc-sections -O3 -g
-CFLAGS += -march=rv32ima_zicsr -mabi=ilp32
-CFLAGS += -nostdlib
+# 20250401 (c) William Fonkou Tambe
 
 TESTS += simple
 TESTS += addi
@@ -70,30 +59,46 @@ TESTS += lrsc
 
 TESTS_OBJS = $(addsuffix .o,${TESTS})
 
+PREFIX := riscv32-unknown-elf
+
+CC := ${PREFIX}-gcc
+OBJCOPY := ${PREFIX}-objcopy
+OBJDUMP := ${PREFIX}-objdump
+READELF := ${PREFIX}-readelf
+
+CFLAGS += -march=rv32ima_zicsr -ftls-model=local-exec
+CFLAGS += -Werror -fdata-sections -ffunction-sections -Wl,--gc-sections -O3 -g
+CFLAGS += -nostdlib
+
+WORDBITSZ ?= 32
+
 .PHONY: all
-all: isatests16.hex isatests32.hex isatests64.hex  isatests128.hex  isatests256.hex
+all: isatests.hex
 
-isatests16.hex: isatests.bin
-	truncate --size=%2 isatests.bin
-	hexdump -v -e '/2 "%04x "' isatests.bin > isatests16.hex # 16bits.
+isatests.hex: isatests.${WORDBITSZ}.he_
+	ln -nf $< $@
 
-isatests32.hex: isatests.bin
-	truncate --size=%4 isatests.bin
-	hexdump -v -e '/4 "%08x "' isatests.bin > isatests32.hex # 32bits.
+isatests.16.he_: isatests.bin
+	truncate --size=%2 $<
+	hexdump -v -e '/2 "%04x "' $< > $@ # 16bits.
 
-isatests64.hex: isatests.bin
-	truncate --size=%8 isatests.bin
-	hexdump -v -e '/4 "%08x "' isatests.bin | \
-		{ while IFS=' ' read -n 18 V0 V1; do echo -n "$$V1$$V0 "; done; } > isatests64.hex # 64bits.
+isatests.32.he_: isatests.bin
+	truncate --size=%4 $<
+	hexdump -v -e '/4 "%08x "' $< > $@ # 32bits.
 
-isatests128.hex: isatests.bin
-	truncate --size=%16 isatests.bin
-	hexdump -v -e '/4 "%08x "' isatests.bin | \
-		{ while IFS=' ' read -n 36 V0 V1 V2 V3; do echo -n "$$V3$$V2$$V1$$V0 "; done; } > isatests128.hex # 128bits.
+isatests.64.he_: isatests.bin
+	truncate --size=%8 $<
+	hexdump -v -e '/4 "%08x "' $< | \
+		{ while IFS=' ' read -n 18 V0 V1; do echo -n "$$V1$$V0 "; done; } > $@ # 64bits.
 
-isatests256.hex: isatests.bin
-	truncate --size=%32 isatests.bin
-	hexdump -v -e '/4 "%08x "' isatests.bin | \
+isatests.128.he_: isatests.bin
+	truncate --size=%16 $<
+	hexdump -v -e '/4 "%08x "' $< | \
+		{ while IFS=' ' read -n 36 V0 V1 V2 V3; do echo -n "$$V3$$V2$$V1$$V0 "; done; } > $@ # 128bits.
+
+isatests.256.he_: isatests.bin
+	truncate --size=%32 $<
+	hexdump -v -e '/4 "%08x "' $< | \
 		{ while IFS=' ' read -n 72 V0 V1 V2 V3 V4 V5 V6 V7; do echo -n "$$V7$$V6$$V5$$V4$$V3$$V2$$V1$$V0 "; done; } > isatests256.hex # 256bits.
 
 %.o : tests/%.S
@@ -101,11 +106,11 @@ isatests256.hex: isatests.bin
 		-DTEST_FUNC_NAME=$* -DTEST_FUNC_TXT='"$*"' -DTEST_FUNC_RET=$*_ret $<
 
 isatests.bin: isatests.S ${TESTS_OBJS}
-	${CC} ${CFLAGS} -I ./ -o isatests.elf -Wl,-Tisatests.lds isatests.S ${TESTS_OBJS}
-	${OBJCOPY} -O binary --set-section-flags .bss=alloc,load,contents isatests.elf isatests.bin
+	${CC} ${CFLAGS} -I ./ -o isatests.elf -Wl,-Tisatests.lds $^
+	${OBJCOPY} -O binary --set-section-flags .bss=alloc,load,contents isatests.elf $@
 	$(OBJDUMP) -Sdrl isatests.elf > isatests.elf.objdump
 	${READELF} -a isatests.elf > isatests.elf.readelf
 
 .PHONY: clean
 clean:
-	rm -rf *.o *.elf *.bin *.hex *.objdump *.readelf
+	rm -rf *.o *.elf *.bin *.he{_,x} *.objdump *.readelf
