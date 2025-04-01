@@ -1,0 +1,6 @@
+*.bin
+*.elf
+*.hex
+*.o
+*.su
+*.objdump
