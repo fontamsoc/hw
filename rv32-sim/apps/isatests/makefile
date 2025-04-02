@@ -66,16 +66,15 @@ OBJCOPY := ${PREFIX}-objcopy
 OBJDUMP := ${PREFIX}-objdump
 READELF := ${PREFIX}-readelf
 
-CFLAGS += -march=rv32ima_zicsr -ftls-model=local-exec
 CFLAGS += -Werror -fdata-sections -ffunction-sections -Wl,--gc-sections -O3 -g
 CFLAGS += -nostdlib
 
-WORDBITSZ ?= 32
+XWORDBITSZ ?= 32
 
 .PHONY: all
 all: isatests.hex
 
-isatests.hex: isatests.${WORDBITSZ}.he_
+isatests.hex: isatests.${XWORDBITSZ}.he_
 	ln -nf $< $@
 
 isatests.16.he_: isatests.bin
@@ -99,7 +98,7 @@ isatests.128.he_: isatests.bin
 isatests.256.he_: isatests.bin
 	truncate --size=%32 $<
 	hexdump -v -e '/4 "%08x "' $< | \
-		{ while IFS=' ' read -n 72 V0 V1 V2 V3 V4 V5 V6 V7; do echo -n "$$V7$$V6$$V5$$V4$$V3$$V2$$V1$$V0 "; done; } > isatests256.hex # 256bits.
+		{ while IFS=' ' read -n 72 V0 V1 V2 V3 V4 V5 V6 V7; do echo -n "$$V7$$V6$$V5$$V4$$V3$$V2$$V1$$V0 "; done; } > $@ # 256bits.
 
 %.o : tests/%.S
 	${CC} ${CFLAGS} -I ./tests/ -c -o $@ \

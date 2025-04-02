@@ -75,7 +75,6 @@ OBJCOPY := ${PREFIX}-objcopy
 OBJDUMP := ${PREFIX}-objdump
 READELF := ${PREFIX}-readelf
 
-CFLAGS += -march=rv32ima_zicsr -ftls-model=local-exec
 CFLAGS += -Werror -fdata-sections -ffunction-sections -Wl,--gc-sections -O3 -g
 CFLAGS += -nostdlib
 # Below used to make stvec_handler and mtvec_handler null when not used by a test;
@@ -83,12 +82,12 @@ CFLAGS += -nostdlib
 # but they need to be local to each test.
 CFLAGS += -Wl,--unresolved-symbols=ignore-all
 
-WORDBITSZ ?= 32
+XWORDBITSZ ?= 32
 
 .PHONY: all
 all: isatests2.hex
 
-isatests2.hex: isatests2.${WORDBITSZ}.he_
+isatests2.hex: isatests2.${XWORDBITSZ}.he_
 	ln -nf $< $@
 
 isatests2.16.he_: isatests2.bin
@@ -112,7 +111,7 @@ isatests2.128.he_: isatests2.bin
 isatests2.256.he_: isatests2.bin
 	truncate --size=%32 $<
 	hexdump -v -e '/4 "%08x "' $< | \
-		{ while IFS=' ' read -n 72 V0 V1 V2 V3 V4 V5 V6 V7; do echo -n "$$V7$$V6$$V5$$V4$$V3$$V2$$V1$$V0 "; done; } > isatests2256.hex # 256bits.
+		{ while IFS=' ' read -n 72 V0 V1 V2 V3 V4 V5 V6 V7; do echo -n "$$V7$$V6$$V5$$V4$$V3$$V2$$V1$$V0 "; done; } > $@ # 256bits.
 
 %.o : tests/%.S
 	${CC} ${CFLAGS} -I ./tests/ -c -o $@ \

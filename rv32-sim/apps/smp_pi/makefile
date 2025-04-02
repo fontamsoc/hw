@@ -8,15 +8,15 @@ OBJCOPY := ${PREFIX}-objcopy
 OBJDUMP := ${PREFIX}-objdump
 READELF := ${PREFIX}-readelf
 
-CFLAGS += -march=rv32ima_zicsr -ftls-model=local-exec
 CFLAGS += -Werror -fdata-sections -ffunction-sections -Wl,--gc-sections -O3 -g
+#CFLAGS += -specs=nano.specs
 
-WORDBITSZ ?= 32
+XWORDBITSZ ?= 32
 
 .PHONY: all
 all: smp_pi.hex
 
-smp_pi.hex: smp_pi.${WORDBITSZ}.he_
+smp_pi.hex: smp_pi.${XWORDBITSZ}.he_
 	ln -nf $< $@
 
 smp_pi.16.he_: smp_pi.bin
@@ -40,7 +40,7 @@ smp_pi.128.he_: smp_pi.bin
 smp_pi.256.he_: smp_pi.bin
 	truncate --size=%32 $<
 	hexdump -v -e '/4 "%08x "' $< | \
-		{ while IFS=' ' read -n 72 V0 V1 V2 V3 V4 V5 V6 V7; do echo -n "$$V7$$V6$$V5$$V4$$V3$$V2$$V1$$V0 "; done; } > smp_pi256.hex # 256bits.
+		{ while IFS=' ' read -n 72 V0 V1 V2 V3 V4 V5 V6 V7; do echo -n "$$V7$$V6$$V5$$V4$$V3$$V2$$V1$$V0 "; done; } > $@ # 256bits.
 
 smp_pi.bin: smp_pi.c
 	${CC} ${CFLAGS} -I ./ -o smp_pi.elf $<

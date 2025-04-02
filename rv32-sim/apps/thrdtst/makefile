@@ -8,15 +8,15 @@ OBJCOPY := ${PREFIX}-objcopy
 OBJDUMP := ${PREFIX}-objdump
 READELF := ${PREFIX}-readelf
 
-CFLAGS += -march=rv32ima_zicsr -ftls-model=local-exec
 CFLAGS += -Werror -fdata-sections -ffunction-sections -Wl,--gc-sections -O3 -g
+#CFLAGS += -specs=nano.specs
 
-WORDBITSZ ?= 32
+XWORDBITSZ ?= 32
 
 .PHONY: all
 all: thrdtst.hex
 
-thrdtst.hex: thrdtst.${WORDBITSZ}.he_
+thrdtst.hex: thrdtst.${XWORDBITSZ}.he_
 	ln -nf $< $@
 
 thrdtst.16.he_: thrdtst.bin
@@ -40,7 +40,7 @@ thrdtst.128.he_: thrdtst.bin
 thrdtst.256.he_: thrdtst.bin
 	truncate --size=%32 $<
 	hexdump -v -e '/4 "%08x "' $< | \
-		{ while IFS=' ' read -n 72 V0 V1 V2 V3 V4 V5 V6 V7; do echo -n "$$V7$$V6$$V5$$V4$$V3$$V2$$V1$$V0 "; done; } > thrdtst256.hex # 256bits.
+		{ while IFS=' ' read -n 72 V0 V1 V2 V3 V4 V5 V6 V7; do echo -n "$$V7$$V6$$V5$$V4$$V3$$V2$$V1$$V0 "; done; } > $@ # 256bits.
 
 thrdtst.bin: thrdtst.c
 	${CC} ${CFLAGS} -I ./ -o thrdtst.elf $<

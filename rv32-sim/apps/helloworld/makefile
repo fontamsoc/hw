@@ -8,15 +8,15 @@ OBJCOPY := ${PREFIX}-objcopy
 OBJDUMP := ${PREFIX}-objdump
 READELF := ${PREFIX}-readelf
 
-CFLAGS += -march=rv32ima_zicsr -ftls-model=local-exec
 CFLAGS += -Werror -fdata-sections -ffunction-sections -Wl,--gc-sections -O3 -g
+#CFLAGS += -specs=nano.specs
 
-WORDBITSZ ?= 32
+XWORDBITSZ ?= 32
 
 .PHONY: all
 all: helloworld.hex
 
-helloworld.hex: helloworld.${WORDBITSZ}.he_
+helloworld.hex: helloworld.${XWORDBITSZ}.he_
 	ln -nf $< $@
 
 helloworld.16.he_: helloworld.bin
@@ -40,7 +40,7 @@ helloworld.128.he_: helloworld.bin
 helloworld.256.he_: helloworld.bin
 	truncate --size=%32 $<
 	hexdump -v -e '/4 "%08x "' $< | \
-		{ while IFS=' ' read -n 72 V0 V1 V2 V3 V4 V5 V6 V7; do echo -n "$$V7$$V6$$V5$$V4$$V3$$V2$$V1$$V0 "; done; } > helloworld256.hex # 256bits.
+		{ while IFS=' ' read -n 72 V0 V1 V2 V3 V4 V5 V6 V7; do echo -n "$$V7$$V6$$V5$$V4$$V3$$V2$$V1$$V0 "; done; } > $@ # 256bits.
 
 helloworld.bin: helloworld.c
 	${CC} ${CFLAGS} -I ./ -o helloworld.elf $<
