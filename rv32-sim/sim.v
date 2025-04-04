@@ -9,10 +9,6 @@
 
 `define SIMULATION
 
-`include "lib/wb_arbiter.v"
-`include "lib/wb_mux.v"
-`include "lib/wb_dnsizr.v"
-
 `define PURV32M
 `define PUIMULDSP
 `define PUPREDICTJAL
@@ -20,6 +16,10 @@
 `define PUPREDICTRET
 `include "rvxx/cpu.v"
 /* makefile defined *///`define CPU_COUNT 1
+
+`include "lib/wb_arbiter.v"
+`include "lib/wb_mux.v"
+`include "lib/wb_dnsizr.v"
 
 `include "dev/irqctrl.v"
 
@@ -56,13 +56,13 @@ localparam M_WBPI_CPU        = 0;
 localparam M_WBPI_LAST       = M_WBPI_CPU;
 localparam S_WBPI_IRQCTRL    = 0;
 localparam S_WBPI_SERIAL     = (S_WBPI_IRQCTRL + 1);
-localparam S_WBPI_RAM        = (S_WBPI_SERIAL + 1);
-localparam S_WBPI_INVALIDDEV = (S_WBPI_RAM + 1);
+localparam S_WBPI_SRAM       = (S_WBPI_SERIAL + 1);
+localparam S_WBPI_INVALIDDEV = (S_WBPI_SRAM + 1);
 
 localparam WBPI_MASTERCOUNT       = (M_WBPI_LAST + 1);
 localparam WBPI_SLAVECOUNT        = (S_WBPI_INVALIDDEV + 1);
 localparam WBPI_DEFAULTSLAVEINDEX = S_WBPI_INVALIDDEV;
-localparam WBPI_FIRSTSLAVEADDR    = /* set in such a way that S_WBPI_RAM starts at 0x1000*/
+localparam WBPI_FIRSTSLAVEADDR    = /* set in such a way that S_WBPI_SRAM starts at 0x1000 */
                                     ('h1000 - (128/*SERIAL_MAPSZ*/) - (128/*IRQCTRL_MAPSZ*/));
 localparam WBPI_MAXPENDINGACK     = 32;
 localparam WBPI_DNSIZR            = 4'b0011;
@@ -99,8 +99,7 @@ wire wbpi_clk_w = clk_i;
 // 	input                              dev_useirq_w   [WBPI_SLAVECOUNT -1 : 0];
 `include "lib/wbpi_inst.v"
 
-localparam IRQ_SDCARD = 0;
-localparam IRQ_SERIAL   = (IRQ_SDCARD + 1);
+localparam IRQ_SERIAL = 0;
 
 localparam IRQSRCCOUNT = (IRQ_SERIAL +1); // Number of interrupt source.
 localparam IRQDSTCOUNT = CPU_COUNT; // Number of interrupt destination.
@@ -124,7 +123,7 @@ wire [CPU_COUNT -1 : 0]                  cpu_dcache_miss_w;
 
 reg [WORDBITSZ -1 : 0] spval_r;
 always @ (posedge wbpi_clk_w)
-	spval_r <= ('h1000 + s_wbpi_mapsz_w[S_WBPI_RAM]);
+	spval_r <= ('h1000 + s_wbpi_mapsz_w[S_WBPI_SRAM]);
 
 cpu #(
 	 .WORDBITSZ     (WORDBITSZ)
@@ -179,9 +178,6 @@ assign pc_w[gen_pc_w_idx] =
 	cpu.genpu[gen_pc_w_idx].pu.eX_JumpOrBranch ? cpu.genpu[gen_pc_w_idx].pu.iF_pc :
 	                                             cpu.genpu[gen_pc_w_idx].pu.iD_pc;
 end endgenerate
-
-// ### IRQ 0 must be reserved for device at address 0x0.
-assign irq_src_stb_w[IRQ_SDCARD] = 0;
 
 irqctrl #(
 	 .WORDBITSZ   (WORDBITSZ)
@@ -246,16 +242,16 @@ sram #(
 
 	,.clk_i (wbpi_clk_w)
 
-	,.wb_cyc_i   (s_wbpi_cyc_w[S_WBPI_RAM])
-	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_RAM])
-	,.wb_we_i    (s_wbpi_we_w[S_WBPI_RAM])
-	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_RAM])
-	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_RAM])
-	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_RAM])
-	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_RAM])
-	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_RAM])
-	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_RAM])
-	,.wb_mapsz_o (s_wbpi_mapsz_w[S_WBPI_RAM])
+	,.wb_cyc_i   (s_wbpi_cyc_w[S_WBPI_SRAM])
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_SRAM])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_SRAM])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_SRAM])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_SRAM])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_SRAM])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_SRAM])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SRAM])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SRAM])
+	,.wb_mapsz_o (s_wbpi_mapsz_w[S_WBPI_SRAM])
 );
 
 // WBPI_DEFAULTSLAVEINDEX to catch invalid physical address space access.
@@ -279,7 +275,7 @@ generate for (
 	wire [WBPI_WORDBITSZ -1 : 0] addr_w = cpu_dcache_addr_w[
 		((gen_cpu_dcache_miss_w_idx+1)*WBPI_WORDBITSZ) -1 : gen_cpu_dcache_miss_w_idx*WBPI_WORDBITSZ];
 assign cpu_dcache_miss_w[gen_cpu_dcache_miss_w_idx] = (
-	(addr_w < 'h1000) || (addr_w >= ('h1000 + s_wbpi_mapsz_w[S_WBPI_RAM])));
+	(addr_w < 'h1000) || (addr_w >= ('h1000 + s_wbpi_mapsz_w[S_WBPI_SRAM])));
 end endgenerate
 
 endmodule
