@@ -1,0 +1,215 @@
+ELF Header:
+  Magic:   7f 45 4c 46 01 01 01 00 00 00 00 00 00 00 00 00 
+  Class:                             ELF32
+  Data:                              2's complement, little endian
+  Version:                           1 (current)
+  OS/ABI:                            UNIX - System V
+  ABI Version:                       0
+  Type:                              EXEC (Executable file)
+  Machine:                           RISC-V
+  Version:                           0x1
+  Entry point address:               0x1000
+  Start of program headers:          52 (bytes into file)
+  Start of section headers:          257252 (bytes into file)
+  Flags:                             0x0
+  Size of this header:               52 (bytes)
+  Size of program headers:           32 (bytes)
+  Number of program headers:         3
+  Size of section headers:           40 (bytes)
+  Number of section headers:         20
+  Section header string table index: 19
+
+Section Headers:
+  [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
+  [ 0]                   NULL            00000000 000000 000000 00      0   0  0
+  [ 1] .text             PROGBITS        00001000 001000 00c990 00  AX  0   0 32
+  [ 2] .rodata           PROGBITS        0000d990 00d990 000804 00   A  0   0  4
+  [ 3] .sdata            PROGBITS        0000f198 00e198 000020 00  WA  0   0  8
+  [ 4] .sbss             NOBITS          0000f1b8 00e1b8 000020 00  WA  0   0  8
+  [ 5] .bss              NOBITS          0000f1d8 00e1b8 0007d0 00  WA  0   0  4
+  [ 6] .comment          PROGBITS        00000000 00e1b8 00001b 01  MS  0   0  1
+  [ 7] .riscv.attributes RISCV_ATTRIBUTE 00000000 00e1d3 00005b 00      0   0  1
+  [ 8] .debug_aranges    PROGBITS        00000000 00e22e 000400 00      0   0  1
+  [ 9] .debug_info       PROGBITS        00000000 00e62e 007620 00      0   0  1
+  [10] .debug_abbrev     PROGBITS        00000000 015c4e 0024f6 00      0   0  1
+  [11] .debug_line       PROGBITS        00000000 018144 019072 00      0   0  1
+  [12] .debug_frame      PROGBITS        00000000 0311b8 000bdc 00      0   0  4
+  [13] .debug_str        PROGBITS        00000000 031d94 001097 01  MS  0   0  1
+  [14] .debug_line_str   PROGBITS        00000000 032e2b 000699 01  MS  0   0  1
+  [15] .debug_loclists   PROGBITS        00000000 0334c4 00995b 00      0   0  1
+  [16] .debug_rnglists   PROGBITS        00000000 03ce1f 001182 00      0   0  1
+  [17] .symtab           SYMTAB          00000000 03dfa4 000880 10     18  82  4
+  [18] .strtab           STRTAB          00000000 03e824 0003ec 00      0   0  1
+  [19] .shstrtab         STRTAB          00000000 03ec10 0000d3 00      0   0  1
+Key to Flags:
+  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),
+  L (link order), O (extra OS processing required), G (group), T (TLS),
+  C (compressed), x (unknown), o (OS specific), E (exclude),
+  D (mbind), p (processor specific)
+
+There are no section groups in this file.
+
+Program Headers:
+  Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+  RISCV_ATTRIBUT 0x00e1d3 0x00000000 0x00000000 0x0005b 0x00000 R   0x1
+  LOAD           0x001000 0x00001000 0x00001000 0x0d194 0x0d194 R E 0x1000
+  LOAD           0x00e198 0x0000f198 0x0000f198 0x00020 0x00810 RW  0x1000
+
+ Section to Segment mapping:
+  Segment Sections...
+   00     .riscv.attributes 
+   01     .text .rodata 
+   02     .sdata .sbss .bss 
+
+There is no dynamic section in this file.
+
+There are no relocations in this file.
+
+The decoding of unwind sections for machine type RISC-V is not currently supported.
+
+Symbol table '.symtab' contains 136 entries:
+   Num:    Value  Size Type    Bind   Vis      Ndx Name
+     0: 00000000     0 NOTYPE  LOCAL  DEFAULT  UND 
+     1: 00001000     0 SECTION LOCAL  DEFAULT    1 .text
+     2: 0000d990     0 SECTION LOCAL  DEFAULT    2 .rodata
+     3: 0000f198     0 SECTION LOCAL  DEFAULT    3 .sdata
+     4: 0000f1b8     0 SECTION LOCAL  DEFAULT    4 .sbss
+     5: 0000f1d8     0 SECTION LOCAL  DEFAULT    5 .bss
+     6: 00000000     0 SECTION LOCAL  DEFAULT    6 .comment
+     7: 00000000     0 SECTION LOCAL  DEFAULT    7 .riscv.attributes
+     8: 00000000     0 SECTION LOCAL  DEFAULT    8 .debug_aranges
+     9: 00000000     0 SECTION LOCAL  DEFAULT    9 .debug_info
+    10: 00000000     0 SECTION LOCAL  DEFAULT   10 .debug_abbrev
+    11: 00000000     0 SECTION LOCAL  DEFAULT   11 .debug_line
+    12: 00000000     0 SECTION LOCAL  DEFAULT   12 .debug_frame
+    13: 00000000     0 SECTION LOCAL  DEFAULT   13 .debug_str
+    14: 00000000     0 SECTION LOCAL  DEFAULT   14 .debug_line_str
+    15: 00000000     0 SECTION LOCAL  DEFAULT   15 .debug_loclists
+    16: 00000000     0 SECTION LOCAL  DEFAULT   16 .debug_rnglists
+    17: 00000000     0 FILE    LOCAL  DEFAULT  ABS core_portme.c
+    18: 00001000     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    19: 00006760     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    20: 0000f1c0     8 OBJECT  LOCAL  DEFAULT    4 start_time_val
+    21: 00006800     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    22: 0000f1b8     8 OBJECT  LOCAL  DEFAULT    4 stop_time_val
+    23: 000068a0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    24: 000068e0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    25: 00006940     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    26: 00006980     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    27: 00000000     0 FILE    LOCAL  DEFAULT  ABS core_main.c
+    28: 00002b40     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    29: 00001040     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    30: 00000000     0 FILE    LOCAL  DEFAULT  ABS core_list_join.c
+    31: 00001c60     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    32: 00002700     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    33: 00000000     0 FILE    LOCAL  DEFAULT  ABS core_matrix.c
+    34: 00002c00     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    35: 000047a0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    36: 00000000     0 FILE    LOCAL  DEFAULT  ABS core_state.c
+    37: 00004ba0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    38: 00005880     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    39: 0000df0c    16 OBJECT  LOCAL  DEFAULT    2 intpat
+    40: 0000defc    16 OBJECT  LOCAL  DEFAULT    2 floatpat
+    41: 0000deec    16 OBJECT  LOCAL  DEFAULT    2 scipat
+    42: 0000dedc    16 OBJECT  LOCAL  DEFAULT    2 errpat
+    43: 00000000     0 FILE    LOCAL  DEFAULT  ABS core_util.c
+    44: 00005c00     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    45: 00005c60     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    46: 00005ee0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    47: 00006440     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    48: 00006720     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    49: 00000000     0 FILE    LOCAL  DEFAULT  ABS ee_printf.c
+    50: 000069a0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    51: 00000000     0 FILE    LOCAL  DEFAULT  ABS cvt.c
+    52: 0000aaa0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    53: 00000000     0 FILE    LOCAL  DEFAULT  ABS adddf3.c
+    54: 0000b75c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    55: 00000000     0 FILE    LOCAL  DEFAULT  ABS divdf3.c
+    56: 0000bef0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    57: 00000000     0 FILE    LOCAL  DEFAULT  ABS eqdf2.c
+    58: 0000c5cc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    59: 00000000     0 FILE    LOCAL  DEFAULT  ABS gedf2.c
+    60: 0000c658     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    61: 00000000     0 FILE    LOCAL  DEFAULT  ABS ledf2.c
+    62: 0000c734     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    63: 00000000     0 FILE    LOCAL  DEFAULT  ABS muldf3.c
+    64: 0000c810     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    65: 00000000     0 FILE    LOCAL  DEFAULT  ABS subdf3.c
+    66: 0000ce00     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    67: 00000000     0 FILE    LOCAL  DEFAULT  ABS fixdfsi.c
+    68: 0000d5a8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    69: 00000000     0 FILE    LOCAL  DEFAULT  ABS fixunsdfsi.c
+    70: 0000d628     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    71: 00000000     0 FILE    LOCAL  DEFAULT  ABS floatunsidf.c
+    72: 0000d6a4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    73: 00000000     0 FILE    LOCAL  DEFAULT  ABS floatundidf.c
+    74: 0000d724     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    75: 00000000     0 FILE    LOCAL  DEFAULT  ABS libgcc2.c
+    76: 0000d8d4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    77: 00000000     0 FILE    LOCAL  DEFAULT  ABS libgcc2.c
+    78: 0000d90c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    79: 00000000     0 FILE    LOCAL  DEFAULT  ABS libgcc2.c
+    80: 0000d944     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    81: 00000000     0 FILE    LOCAL  DEFAULT  ABS libgcc2.c
+    82: 0000d90c    56 FUNC    GLOBAL HIDDEN     1 __ashldi3
+    83: 0000f1d4     4 OBJECT  GLOBAL DEFAULT    4 seed1_volatile
+    84: 0000c5cc   140 FUNC    GLOBAL HIDDEN     1 __eqdf2
+    85: 0000f994     0 NOTYPE  GLOBAL DEFAULT  ABS __global_pointer$
+    86: 00002700  1056 FUNC    GLOBAL DEFAULT    1 core_list_init
+    87: 0000aaa0  3244 FUNC    GLOBAL DEFAULT    1 fcvtbuf
+    88: 00005ee0  1332 FUNC    GLOBAL DEFAULT    1 crcu32
+    89: 00006720     8 FUNC    GLOBAL DEFAULT    1 check_data_types
+    90: 00006800   140 FUNC    GLOBAL DEFAULT    1 stop_time
+    91: 00005c60   604 FUNC    GLOBAL DEFAULT    1 crcu16
+    92: 0000c658   220 FUNC    GLOBAL HIDDEN     1 __gtdf2
+    93: 00006980    16 FUNC    GLOBAL DEFAULT    1 portable_fini
+    94: 0000f198     0 NOTYPE  GLOBAL DEFAULT    3 __SDATA_BEGIN__
+    95: 000068a0    36 FUNC    GLOBAL DEFAULT    1 get_time
+    96: 00004ba0  3280 FUNC    GLOBAL DEFAULT    1 core_bench_state
+    97: 00001c60  2688 FUNC    GLOBAL DEFAULT    1 core_bench_list
+    98: 0000c734   220 FUNC    GLOBAL HIDDEN     1 __ltdf2
+    99: 000069a0 16636 FUNC    GLOBAL DEFAULT    1 ee_printf
+   100: 0000f1b4     4 OBJECT  GLOBAL DEFAULT    3 seed3_volatile
+   101: 0000d628   124 FUNC    GLOBAL HIDDEN     1 __fixunsdfsi
+   102: 0000f1cc     4 OBJECT  GLOBAL DEFAULT    4 seed4_volatile
+   103: 0000b75c  1940 FUNC    GLOBAL HIDDEN     1 __adddf3
+   104: 00002b40   152 FUNC    GLOBAL DEFAULT    1 iterate
+   105: 0000d6a4   128 FUNC    GLOBAL HIDDEN     1 __floatunsidf
+   106: 0000d5a8   128 FUNC    GLOBAL HIDDEN     1 __fixdfsi
+   107: 0000d8d4    56 FUNC    GLOBAL HIDDEN     1 __lshrdi3
+   108: 0000c734   220 FUNC    GLOBAL HIDDEN     1 __ledf2
+   109: 00002c00  7052 FUNC    GLOBAL DEFAULT    1 core_bench_matrix
+   110: 00006760   140 FUNC    GLOBAL DEFAULT    1 start_time
+   111: 0000d944    76 FUNC    GLOBAL HIDDEN     1 __clzsi2
+   112: 0000f1c8     4 OBJECT  GLOBAL DEFAULT    4 seed5_volatile
+   113: 00001000    40 FUNC    GLOBAL DEFAULT    1 _start
+   114: 0000d724   432 FUNC    GLOBAL HIDDEN     1 __floatundidf
+   115: 00006440   700 FUNC    GLOBAL DEFAULT    1 crc16
+   116: 0000bef0  1756 FUNC    GLOBAL HIDDEN     1 __divdf3
+   117: 0000f9a8     0 NOTYPE  GLOBAL DEFAULT    5 __BSS_END__
+   118: 0000c810  1520 FUNC    GLOBAL HIDDEN     1 __muldf3
+   119: 0000f1d8  2000 OBJECT  GLOBAL DEFAULT    5 static_memblk
+   120: 0000f1b8     0 NOTYPE  GLOBAL DEFAULT    4 __bss_start
+   121: 00001040  3080 FUNC    GLOBAL DEFAULT    1 main
+   122: 00005c00    80 FUNC    GLOBAL DEFAULT    1 get_seed_32
+   123: 0000c5cc   140 FUNC    GLOBAL HIDDEN     1 __nedf2
+   124: 0000e094   256 OBJECT  GLOBAL HIDDEN     2 __clz_tab
+   125: 00006940    56 FUNC    GLOBAL DEFAULT    1 portable_init
+   126: 000047a0   996 FUNC    GLOBAL DEFAULT    1 core_init_matrix
+   127: 0000f194     0 NOTYPE  GLOBAL DEFAULT    3 __DATA_BEGIN__
+   128: 0000f1b8     0 NOTYPE  GLOBAL DEFAULT    4 _edata
+   129: 0000f9a8     0 NOTYPE  GLOBAL DEFAULT    5 _end
+   130: 00005880   844 FUNC    GLOBAL DEFAULT    1 core_init_state
+   131: 000068e0    80 FUNC    GLOBAL DEFAULT    1 time_in_secs
+   132: 0000c658   220 FUNC    GLOBAL HIDDEN     1 __gedf2
+   133: 0000f1d0     4 OBJECT  GLOBAL DEFAULT    4 seed2_volatile
+   134: 0000ce00  1960 FUNC    GLOBAL HIDDEN     1 __subdf3
+   135: 0000f1b0     4 OBJECT  GLOBAL DEFAULT    3 default_num_contexts
+
+No version information found in this file.
+Attribute Section: riscv
+File Attributes
+  Tag_RISCV_stack_align: 16-bytes
+  Tag_RISCV_arch: "rv32i2p1_m2p0_a2p1_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0"
+  Tag_RISCV_priv_spec: 1
+  Tag_RISCV_priv_spec_minor: 11
