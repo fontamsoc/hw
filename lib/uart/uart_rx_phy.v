@@ -100,12 +100,14 @@ reg [2 -1 : 0] rxstate = RXIDLE; // Register which hold the state of the receive
 
 reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] cntr = 0;
 
+wire rxen = (cntr >= clockcyclesperbit_i);
+
 // Register which is used to keep track of the number of bits left to receive.
 reg [3 -1 : 0] bitcnt = 0;
 
 always @ (posedge clk_i) begin
 	// Logic updating the register cntr.
-	if (rst_i || rxstate == RXIDLE || cntr >= clockcyclesperbit_i)
+	if (rst_i || rxstate == RXIDLE || rxen)
 		cntr <= 0;
 	else
 		cntr <= cntr + 1'b1;
@@ -114,7 +116,7 @@ end
 always @ (posedge clk_i) begin
 	// Logic updating the register bitcnt and data_o.
 	if (rxstate == RXRCVD) begin
-		if (cntr >= clockcyclesperbit_i) begin
+		if (rxen) begin
 			// At the last bit to receive, "bitcnt" will be 0, and
 			// will be automatically reset to 7 when decremented.
 			bitcnt <= bitcnt - 1'b1;
@@ -139,14 +141,15 @@ always @ (posedge clk_i) begin
 
 		rcvd_o <= 0;
 
-	end else if (cntr >= clockcyclesperbit_i) begin
+	end else if (rxen) begin
 
 		if (rxstate == RXSTOP) begin
 			// If I get here, I expect a stop bit which
 			// corresponds to the incoming serial line being high.
-			if (rx_i) rcvd_o <= 1;
+			if (rx_i)
+				rcvd_o <= 1;
 			// If the expected stop bit is never found,
-			// the rcvd_o bits are discarded since
+			// the received bits get discarded since
 			// the output "rcvd_o" never get set high.
 
 			// I set the receiver state to iddle so

@@ -97,7 +97,7 @@ wire prevcmdisdevrdy = (wb_dat_o_[1:0] == CMDDEVRDY);
 
 wire prevcmddone = (iscmd && prevcmdisdevrdy);
 
-wire cmddevrdy = (iscmd && wb_dat_r[1:0] == CMDDEVRDY);
+wire cmddevrdy = (iscmd       && wb_dat_r[1:0] == CMDDEVRDY);
 wire cmdgetbuf = (prevcmddone && wb_dat_r[1:0] == CMDGETBUFFERUSAGE);
 wire cmdsetint = (prevcmddone && wb_dat_r[1:0] == CMDSETINTERRUPT);
 wire cmdsetspd = (prevcmddone && wb_dat_r[1:0] == CMDSETSPEED);
@@ -112,7 +112,7 @@ wire [(CLOG2BUFSZ +1) -1 : 0] rx_usage_w;
 
 assign wb_bsy_o = (!wb_addr_i[ISCMDBIT] && (wb_we_i ? 1'b0 : (rx_usage_w == 0)));
 
-reg [(WORDBITSZ-2) -1 : 0] intrqstthresh;
+reg [(CLOG2BUFSZ +1) -1 : 0] intrqstthresh;
 
 assign irq_stb_o = (|intrqstthresh && (rx_usage_w >= intrqstthresh) &&
 	// Raise intrqst only when the device is ready for the next command,

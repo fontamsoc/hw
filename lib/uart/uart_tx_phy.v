@@ -110,7 +110,8 @@ reg [3 -1 : 0] bitcnt = 0;
 reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] clockcyclesperbit = 0;
 
 reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] cntr = 0;
-wire                                     txen = (cntr >= clockcyclesperbit);
+
+wire txen = (cntr >= clockcyclesperbit);
 
 wire bsy = (txstate != TXIDLE || bitcnt);
 
@@ -146,10 +147,10 @@ always @ (posedge clk_i) begin
 		end else begin
 
 			tx_o <= data[0];
+			data <= data[7:1];
 
 			if (bitcnt) begin
 				bitcnt <= bitcnt - 1'b1;
-				data <= data >> 1'b1;
 			end else begin
 				txstate <= TXIDLE;
 				bitcnt <= 2; // 2 stop bits to send.

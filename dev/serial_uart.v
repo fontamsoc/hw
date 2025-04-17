@@ -213,7 +213,7 @@ wire prevcmdisdevrdy = (wb_dat_o_[1:0] == CMDDEVRDY);
 
 wire prevcmddone = (iscmd && prevcmdisdevrdy);
 
-wire cmddevrdy = (iscmd && wb_dat_r[1:0] == CMDDEVRDY);
+wire cmddevrdy = (iscmd       && wb_dat_r[1:0] == CMDDEVRDY);
 wire cmdgetbuf = (prevcmddone && wb_dat_r[1:0] == CMDGETBUFFERUSAGE);
 wire cmdsetint = (prevcmddone && wb_dat_r[1:0] == CMDSETINTERRUPT);
 wire cmdsetspd = (prevcmddone && wb_dat_r[1:0] == CMDSETSPEED);
@@ -234,7 +234,7 @@ wire tx_near_full_w;
 
 assign wb_bsy_o = (!wb_addr_i[ISCMDBIT] && (wb_we_i ? tx_near_full_w : (rx_usage_w == 0)));
 
-reg [(WORDBITSZ-2) -1 : 0] intrqstthresh;
+reg [(CLOG2BUFSZ +1) -1 : 0] intrqstthresh;
 
 assign irq_stb_o = (|intrqstthresh && (rx_usage_w >= intrqstthresh) &&
 	// Raise intrqst only when the device is ready for the next command,
@@ -250,9 +250,8 @@ reg rx_read_w_sampled;
 
 assign wb_dat_o = (rx_read_w_sampled ? rx_data_w0 : wb_dat_o_);
 
-// Note that (WORDBITSZ-2) is the number of bits used by a command argument.
-localparam CLOCKCYCLESPERBITLIMIT = (1<<(WORDBITSZ-2));
-localparam CLOG2CLOCKCYCLESPERBITLIMIT = (WORDBITSZ-2);
+localparam CLOCKCYCLESPERBITLIMIT = (PHYCLKFREQ/110); // 110 is the standard minimum baudrate.
+localparam CLOG2CLOCKCYCLESPERBITLIMIT = clog2(CLOCKCYCLESPERBITLIMIT);
 
 reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] rxclockcyclesperbit;
 reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] txclockcyclesperbit;
@@ -295,7 +294,7 @@ always @ (posedge clk_i) begin
 		// Normally the formula to use is:
 		// ((PHYCLKFREQ/bitrate) + ((PHYCLKFREQ/bitrate)/10/2));
 		// so this is an approximation.
-		rxclockcyclesperbit <= (wb_dat_r[WORDBITSZ-1:2] + (wb_dat_r[WORDBITSZ-1:2] >> 5));
+		rxclockcyclesperbit <= (wb_dat_r[WORDBITSZ-1:2] + wb_dat_r[WORDBITSZ-1:(2+5)]);
 		txclockcyclesperbit <=  wb_dat_r[WORDBITSZ-1:2];
 	end
 end
