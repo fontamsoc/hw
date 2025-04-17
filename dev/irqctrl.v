@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// (c) William Fonkou Tambe
+// 20250417 (c) William Fonkou Tambe
 
 // Interrupt controller peripheral.
-// It dispatches an interrupt to a destination
-// for which its irq_rdy_o is high, iterating in
-// a round-robin fashion through each destination.
-// Preference is given to destination driving
-// intbest high.
+// It dispatches an interrupt to a destination for which
+// its irq_rdy_o is high, iterating in a round-robin fashion
+// through each destination.
+// Preference is given to destination with irq_dst_pri_i high.
 
 // Parameters:
 //
@@ -51,19 +50,18 @@
 // 	irq_dst_stb_i is raised when the interrupt request is now being
 // 	considered by the destination.
 // 	When the destination drives irq_dst_rdy_i low while irq_dst_stb_i
-// 	is high, it means that it has taken on the requested interrupt.
+// 	is high, it is assumed that it has taken on the requested interrupt.
 // 	The destination keeps irq_dst_pri_i low when it wouldn't be
 // 	the best choice to service the interrupt; irq_dst_pri_i is used
-// 	in a multi-pu system where it is driven by PUs output "halted_o"
-// 	in order to give a preference to PUs that are halted when looking
-// 	for an interrupt destination.
+// 	in a multi-PU system where it is driven by PUs "halted_o" in order
+// 	to give a preference to PUs that are halted.
 // 	The destination with the lowest index is always preferred.
 //
 // irq_src_stb_i
 // irq_src_rdy_o
 // 	Source interrupt signals.
 // 	irq_src_stb_i is high to request an interrupt, and irq_src_rdy_o
-// 	is driven low when the requested interrupt is being acknowledged.
+// 	gets driven low when the requested interrupt has been acknowledged.
 // 	The source device must drive irq_src_stb_i low as soon as a falling edge
 // 	of irq_src_rdy_o occurs, otherwise another interrupt request will occur
 // 	when irq_src_rdy_o has become high and irq_src_stb_i is still high.
@@ -81,33 +79,35 @@
 // is CMDDEVRDY, otherwise sending the command CMDDEVRDY is needed.
 //
 // The description of commands is as follow:
-// 	CMDDEVRDY: Make the controller accept a new command.
-// 	"resp" in the result get set to 0.
+// 	CMDDEVRDY: Ready the controller to accept a new command.
+// 	"resp" in the result gets set to 0.
 // 	CMDACKIRQ: Acknowledges an interrupt source; field "arg" is expected
 // 	to have following format | idx: (WORDBITSZ-3) bits | en: 1 bit |
 // 	where "idx" is the interrupt destination index, "en" enable/disable
 // 	further interrupt delivery to the interrupt destination "idx".
-// 	"resp" in the result get set to the interrupt source index, or -2
+// 	"resp" in the result gets set to the interrupt source index, or -2
 // 	if there are no pending interrupt for the destination "idx", or -1
 // 	for an interrupt triggered by CMDINTDST.
 // 	CMDINTDST: Triggers an interrupt targeting a specific destination;
 // 	the field "arg" is the index of the interrupt destination to target,
-// 	while "resp" in the result get set to the interrupt destination index
+// 	while "resp" in the result gets set to the interrupt destination index
 // 	if valid, -2 if not ready due to an interrupt pending ack, or -1 if invalid.
 // 	CMDENAIRQ: Enable/Disable an interrupt source; field "arg" is expected
 // 	to have following format | idx: (WORDBITSZ-3) bits | en: 1 bit|
 // 	where "idx" is the interrupt source index, "en" enable/disable
 // 	interrupts from the interrupt source "idx".
-// 	"resp" in the result get set to the interrupt source index, or -1
+// 	"resp" in the result gets set to the interrupt source index, or -1
 // 	if invalid.
 //
-// To be multi core proof, an atomic read-write must be used to send
-// a command to the controller until CMDDEVRDY is returned, then another
-// atomic read-write sending CMDDEVRDY must be used to retrieve the
-// result while making the controller ready for the next command.
+// To be threadsafe, an atomic read-write can be used to send a command
+// to the controller until CMDDEVRDY is returned, then another atomic
+// read-write sending CMDDEVRDY must be used to retrieve the result while
+// making the controller ready for the next command.
 //
-// An interrupt must be acknowledged as soon as possible so
-// that the irqctrl can dispatch another interrupt request.
+// An interrupt must be acknowledged as soon as possible using CMDACKIRQ
+// (which drives irq_src_rdy_o low and retuns its index) so that
+// the controller can dispatch another interrupt, because the controller
+// does not buffer requests.
 
 module irqctrl (
 
