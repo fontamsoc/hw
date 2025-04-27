@@ -172,7 +172,7 @@ static inline void GL_init() {
  */
 static inline void GL_terminate() {
     GL_restore_default_colors();
-    GL_gotoxy(0,GL_height);
+    GL_gotoxy(0,GL_height/2+1);
     printf("\033[?25h"); // show cursor
 }
 
@@ -212,10 +212,7 @@ static inline void GL_scan_RGB(
 	    do_pixel(i,j  , &r1, &g1, &b1);
 	    do_pixel(i,j+1, &r2, &g2, &b2);
 	    GL_set2pixelsRGBhere(r1,g1,b1,r2,g2,b2);
-	    if(i == width-1) {
-		GL_newline();
-	    }
-	}
+	} GL_newline();
     }
 }
 
@@ -258,10 +255,7 @@ static inline void GL_scan_RGBf(
 	    g2 = GL_ftoi(fg2);
 	    b2 = GL_ftoi(fb2);	    
 	    GL_set2pixelsRGBhere(r1,g1,b1,r2,g2,b2);
-	    if(i == width-1) {
-		GL_newline();
-	    }
-	}
+	} GL_newline();
     }
 }
 
