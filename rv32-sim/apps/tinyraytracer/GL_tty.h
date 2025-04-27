@@ -73,14 +73,17 @@ static inline void GL_set2pixelsRGBhere(
     uint8_t r2, uint8_t g2, uint8_t b2
 ) {
     if((r2 == r1) && (g2 == g1) && (b2 == b1)) {
-	GL_setpixelRGBhere(r1,g1,b1);
+        GL_setpixelRGBhere(r1,g1,b1);
     } else {
-	printf("\033[48;2;%d;%d;%dm",(int)r1,(int)g1,(int)b1);	   	   
-	printf("\033[38;2;%d;%d;%dm",(int)r2,(int)g2,(int)b2);
-	// https://www.w3.org/TR/xml-entity-names/025.html
-	// https://onlineunicodetools.com/convert-unicode-to-utf8
-	// https://copypastecharacter.com/
-	printf("\xE2\x96\x83");
+        printf(
+            "\033[48;2;%d;%d;%dm"
+            "\033[38;2;%d;%d;%dm"
+            // https://www.w3.org/TR/xml-entity-names/025.html
+            // https://onlineunicodetools.com/convert-unicode-to-utf8
+            // https://copypastecharacter.com/
+            "\xE2\x96\x83",
+            (int)r1,(int)g1,(int)b1,
+            (int)r2,(int)g2,(int)b2);
     }
 }
 
@@ -97,14 +100,16 @@ static inline void GL_set2pixelsIhere(
     const char** cmap, int c1, int c2
 ) {
     if(c1 == c2) {
-	GL_setpixelIhere(cmap, c1);
+        GL_setpixelIhere(cmap, c1);
     } else {
-	printf("\033[48;2;%sm",cmap[c1]);	   	   
-	printf("\033[38;2;%sm",cmap[c2]);
-	// https://www.w3.org/TR/xml-entity-names/025.html
-	// https://onlineunicodetools.com/convert-unicode-to-utf8
-	// https://copypastecharacter.com/
-	printf("\xE2\x96\x83");
+        printf(
+            "\033[48;2;%sm"
+            "\033[38;2;%sm"
+            // https://www.w3.org/TR/xml-entity-names/025.html
+            // https://onlineunicodetools.com/convert-unicode-to-utf8
+            // https://copypastecharacter.com/
+            "\xE2\x96\x83",
+            cmap[c1],cmap[c2]);
     }
 }
 
@@ -113,8 +118,10 @@ static inline void GL_set2pixelsIhere(
  * \details Background and foreground colors are set to black.
  */
 static inline void GL_newline() {
-    printf("\033[38;2;0;0;0m");	   
-    printf("\033[48;2;0;0;0m\n");
+    printf(
+        "\033[38;2;0;0;0m"
+        "\033[48;2;0;0;0m\n"
+    );
 }
 
 /**
@@ -126,8 +133,10 @@ static inline void GL_newline() {
 static inline void GL_setpixelRGB(
     int x, int y, uint8_t R, uint8_t G, uint8_t B
 ) {
-    GL_gotoxy(x,y);
-    GL_setpixelRGBhere(R,G,B);
+    printf(
+        "\033[%d;%dH"             //GL_gotoxy(x,y);
+        "\033[48;2;%d;%d;%dm ",   //GL_setpixelRGBhere(R,G,B);
+    y,x,(int)R,(int)G,(int)B);
 }
 
 /**
