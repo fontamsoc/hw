@@ -321,6 +321,72 @@ void render(int x, int y, float* r, float* g, float* b) {
 }
 
 
+#ifdef __underLineOS__
+
+#include <_os.h>
+
+#define NTHRD_MIN 1
+
+static uintptr_t busy_cntr;
+
+static _SEM_DEF(main_sem, 1, 0);
+
+static uintptr_t y_nxt = 0;
+
+static void scan_RGBf_thrd_fn (void *) {
+	for (uintptr_t j; (j = _atomic_add(&y_nxt, 2)) < GL_height;) {
+		for (uintptr_t i = 0; i < GL_width; ++i) {
+			float fr1, fg1, fb1;
+			render(i,j,&fr1,&fg1,&fb1);
+			uint8_t r1 = GL_ftoi(fr1);
+			uint8_t g1 = GL_ftoi(fg1);
+			uint8_t b1 = GL_ftoi(fb1);
+			float fr2, fg2, fb2;
+			render(i,j+1,&fr2,&fg2,&fb2);
+			uint8_t r2 = GL_ftoi(fr2);
+			uint8_t g2 = GL_ftoi(fg2);
+			uint8_t b2 = GL_ftoi(fb2);
+			GL_set2pixelsRGB(i+1,j/2+1,r1,g1,b1,r2,g2,b2);
+		}
+	}
+	if (_atomic_dec(&busy_cntr) == 1)
+		_sem_put(&main_sem, _DATE_MAX);
+	_thread_sleep(_DATE_MAX); // Slightly faster than `return` which calls `_thread_exit()`.
+}
+
+int main() {
+	init_scene();
+	GL_init();
+	uintptr_t ncpu = _ncpu();
+	uintptr_t nthrd =
+		(ncpu < NTHRD_MIN) ? NTHRD_MIN :
+		((ncpu < (GL_height/2)) ? ncpu : (GL_height/2));
+	busy_cntr = nthrd;
+	// Prevent context switch until all threads have been scheduled.
+	_preempt_disable();
+	// Capture start timestamp.
+	_date_t start_time = _clkcycles();
+	for (uintptr_t i = 0; i < nthrd; ++i) {
+		_thread_t *thrd = _thread_create(0, 2048, scan_RGBf_thrd_fn, 0);
+		_thread_schedoncpu(thrd,
+			// Try to use a cpu other than _cpuid() to immediately start computing.
+			// TODO: With load-balancing, just use _thread_sched(_thread_create(...)).
+			((_cpuid() + i + 1) % ncpu), true);
+	}
+	// Wait for all workers to finish their rendering.
+	_sem_get(&main_sem, _DATE_MAX);
+	// Capture end timestamp.
+	_date_t end_time = _clkcycles();
+	_preempt_enable();
+	GL_terminate();
+	_date_t cycles_spent = (end_time - start_time);
+	uintptr_t milliseconds_spent = ((cycles_spent * 1000) / _clkfreq());
+	printf("Completed in %u ms by %u thread(s)\n", milliseconds_spent, nthrd);
+	return 0;
+}
+
+#else
+
 int main() {
     init_scene();
     GL_init();
@@ -328,3 +394,5 @@ int main() {
     GL_terminate();
     return 0;
 }
+
+#endif

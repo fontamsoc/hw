@@ -10,6 +10,7 @@ READELF := ${PREFIX}-readelf
 
 CFLAGS += -Werror -fdata-sections -ffunction-sections -Wl,--gc-sections -O3 -g
 #CFLAGS += -specs=nano.specs
+CFLAGS += -D__underLineOS__=1
 
 XWORDBITSZ ?= 32
 
