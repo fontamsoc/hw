@@ -139,6 +139,28 @@ static inline void GL_setpixelRGB(
     y,x,(int)R,(int)G,(int)B);
 }
 
+static inline void GL_set2pixelsRGB(
+    int x, int y,
+    uint8_t r1, uint8_t g1, uint8_t b1,
+    uint8_t r2, uint8_t g2, uint8_t b2
+) {
+    if((r2 == r1) && (g2 == g1) && (b2 == b1)) {
+        GL_setpixelRGB(x,y,r1,g1,b1);
+    } else {
+        printf(
+            "\033[%d;%dH"           //GL_gotoxy(x,y);
+            "\033[48;2;%d;%d;%dm"
+            "\033[38;2;%d;%d;%dm"
+            // https://www.w3.org/TR/xml-entity-names/025.html
+            // https://onlineunicodetools.com/convert-unicode-to-utf8
+            // https://copypastecharacter.com/
+            "\xE2\x96\x83",
+            y,x,
+            (int)r1,(int)g1,(int)b1,
+            (int)r2,(int)g2,(int)b2);
+    }
+}
+
 /**
  * \brief restore default foreground and background colors
  */
