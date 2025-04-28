@@ -206,7 +206,6 @@ static inline void GL_scan_RGB(
 ) {
     uint8_t r1, g1, b1;
     uint8_t r2, g2, b2;
-    GL_home(); 
     for (int j = 0; j<height; j+=2) { 
 	for (int i = 0; i<width; i++) {
 	    do_pixel(i,j  , &r1, &g1, &b1);
@@ -243,7 +242,6 @@ static inline void GL_scan_RGBf(
     float fr2, fg2, fb2;
     uint8_t r1, g1, b1;
     uint8_t r2, g2, b2;
-    GL_home();
     for (int j = 0; j<height; j+=2) { 
 	for (int i = 0; i<width; i++) {
 	    do_pixel(i,j  , &fr1, &fg1, &fb1);
