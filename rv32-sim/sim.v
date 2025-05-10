@@ -26,7 +26,7 @@
 `include "dev/serial_sim.v"
 
 `include "dev/sram.v"
-/* makefile defined *///`define SRAM_INITFILE "coremark.hex"
+/* makefile defined *///`define SRAM_INITFILE "apps/helloworld/helloworld.hex"
 /* makefile defined *///`define SRAM_KBSIZE (256/*KB*/)
 
 /* makefile defined *///`define CLKFREQ (100000000/* 100 Mhz */)

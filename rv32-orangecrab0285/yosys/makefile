@@ -4,7 +4,7 @@
 TOP ?= orangecrab0285
 
 CPU_COUNT ?= 1
-SRAM_INITFILE ?= helloworld.hex
+SRAM_INITFILE ?= ../../rv32-sim/apps/helloworld/helloworld.hex
 SRAM_KBSIZE ?= 256
 
 RETRY_COUNT ?= 5

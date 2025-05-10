@@ -5,7 +5,7 @@ BUILD_LOG_FILE ?= build.log
 
 CLKFREQ ?= 100000000
 CPU_COUNT ?= 1
-SRAM_INITFILE ?= helloworld.hex
+SRAM_INITFILE ?= apps/helloworld/helloworld.hex
 SRAM_KBSIZE ?= "(256/*KB*/)"
 
 # Used only by target sim_vcd:
