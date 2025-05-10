@@ -165,7 +165,7 @@ always @ (posedge clk_i) begin
 	csrClkFreq <= CLKFREQ;
 end
 
-`ifdef _SIMULATION
+`ifdef _SIMULATION_PERF
 `ifdef PUPREDICTBRANCH
 always @ (posedge clk_i) begin
 	if (rst_i) begin
@@ -213,7 +213,7 @@ always @ (posedge clk_i) begin
 end
 always @ (posedge clk_i) begin
 	if (endSimRq && !wb_pending_acks) begin
-		`ifdef _SIMULATION
+		`ifdef _SIMULATION_PERF
 		`ifdef PUPREDICTBRANCH
 		$write ("BranchPredictHit: %1.2f%%\n",
 			($bitstoreal(csrBranchPredictHit * 100) / $bitstoreal(csrBranchPredictHit + csrBranchPredictMiss)));

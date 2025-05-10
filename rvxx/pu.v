@@ -469,7 +469,7 @@ wire csrMhartidIsNonNull = (csrMhartid != 0);
 reg [64 -1 : 0] csrCycle;
 reg [64 -1 : 0] csrInstret;
 reg [WORDBITSZ -1 : 0] csrClkFreq;
-`ifdef SIMULATION
+`ifdef _SIMULATION_PERF
 `ifdef PUPREDICTBRANCH
 reg [WORDBITSZ -1 : 0] csrBranchPredictHit;
 reg [WORDBITSZ -1 : 0] csrBranchPredictMiss;
