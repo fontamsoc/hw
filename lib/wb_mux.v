@@ -143,6 +143,11 @@ always @ (posedge clk_i) begin
 		addrspace_rdy <= 0;
 
 	end else if (!addrspace_rdy) begin
+		`ifdef _SIMULATION_WBMUX
+		$write ("wb_mux: %d: 0x%08x: 0x%08x\n",
+			slvidx, addrspace_slvidx_lo, _s_wb_mapsz_i[slvidx]);
+		$fflush();
+		`endif
 
 		if (slvidx_not_max) begin
 			addrspace_slvidx_lo <= addrspace_slvidx_nxt;
