@@ -36,35 +36,39 @@ module wb_skidbuf (
 `include "lib/clog2.v"
 
 parameter WORDBITSZ     = 32;
+parameter ADDRLIMIT     = 'h2000;
 parameter MAXPENDINGACK = 16;
 parameter USEFWFTFIFO   = 0;
 
 localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
 localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
+// -1 account for the msb oring ignored bits.
+localparam MSBSZIGN = (WORDBITSZ-clog2(ADDRLIMIT)-1);
+
 input wire rst_i;
 
 input wire clk_i;
 
-input  wire                        m_wb_cyc_i;
-input  wire                        m_wb_stb_i;
-input  wire                        m_wb_we_i;
-input  wire [ADDRBITSZ -1 : 0]     m_wb_addr_i;
-input  wire [(WORDBITSZ/8) -1 : 0] m_wb_sel_i;
-input  wire [WORDBITSZ -1 : 0]     m_wb_dat_i;
-output wire                        m_wb_bsy_o;
-output wire                        m_wb_ack_o;
-output wire [WORDBITSZ -1 : 0]     m_wb_dat_o;
+input  wire                               m_wb_cyc_i;
+input  wire                               m_wb_stb_i;
+input  wire                               m_wb_we_i;
+input  wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] m_wb_addr_i;
+input  wire [(WORDBITSZ/8) -1 : 0]        m_wb_sel_i;
+input  wire [WORDBITSZ -1 : 0]            m_wb_dat_i;
+output wire                               m_wb_bsy_o;
+output wire                               m_wb_ack_o;
+output wire [WORDBITSZ -1 : 0]            m_wb_dat_o;
 
-output wire                        s_wb_cyc_o;
-output wire                        s_wb_stb_o;
-output wire                        s_wb_we_o;
-output wire [ADDRBITSZ -1 : 0]     s_wb_addr_o;
-output wire [(WORDBITSZ/8) -1 : 0] s_wb_sel_o;
-output wire [WORDBITSZ -1 : 0]     s_wb_dat_o;
-input  wire                        s_wb_bsy_i;
-input  wire                        s_wb_ack_i;
-input  wire [WORDBITSZ -1 : 0]     s_wb_dat_i;
+output wire                               s_wb_cyc_o;
+output wire                               s_wb_stb_o;
+output wire                               s_wb_we_o;
+output wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] s_wb_addr_o;
+output wire [(WORDBITSZ/8) -1 : 0]        s_wb_sel_o;
+output wire [WORDBITSZ -1 : 0]            s_wb_dat_o;
+input  wire                               s_wb_bsy_i;
+input  wire                               s_wb_ack_i;
+input  wire [WORDBITSZ -1 : 0]            s_wb_dat_i;
 
 assign m_wb_ack_o = s_wb_ack_i;
 assign m_wb_dat_o = s_wb_dat_i;
@@ -77,7 +81,7 @@ assign s_wb_stb_o = (s_wb_stb_o_ && !s_wb_max_pending);
 wire _s_wb_bsy_i;
 
 skidbuf #(
-	 .WIDTH       (1 + ADDRBITSZ + (WORDBITSZ/8) + WORDBITSZ)
+	 .WIDTH       (1 + (ADDRBITSZ-MSBSZIGN) + (WORDBITSZ/8) + WORDBITSZ)
 	,.DEPTH       (MAXPENDINGACK)
 	,.USEFWFTFIFO (USEFWFTFIFO)
 ) skidbuf (

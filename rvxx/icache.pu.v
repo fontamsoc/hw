@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-localparam ICACHETAGBITSZ = (ADDRBITSZ - (CLOG2ICACHESETCNT + CLOG2XWORDBITSZBY8DIFF));
+localparam ICACHETAGBITSZ = ((ADDRBITSZ-MSBSZIGN) - (CLOG2ICACHESETCNT + CLOG2XWORDBITSZBY8DIFF));
 
 wire                            iCache_invd_w;
 wire                            iCache_nxtway_w;

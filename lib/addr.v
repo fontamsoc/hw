@@ -16,12 +16,17 @@ module addr (
 
 parameter WORDBITSZ = 32;
 
+parameter ADDRLIMIT = 'h2000;
+
 localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
 localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
-input  wire [ADDRBITSZ -1 : 0]     addr_i;
-input  wire [(WORDBITSZ/8) -1 : 0] sel_i;
-output wire [WORDBITSZ -1 : 0]     addr_o;
+// -1 account for the msb oring ignored bits.
+localparam MSBSZIGN = (WORDBITSZ-clog2(ADDRLIMIT)-1);
+
+input  wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] addr_i;
+input  wire [(WORDBITSZ/8) -1 : 0]        sel_i;
+output wire [(WORDBITSZ-MSBSZIGN) -1 : 0] addr_o;
 
 generate if (WORDBITSZ == 16) begin
 	assign addr_o = {addr_i, {

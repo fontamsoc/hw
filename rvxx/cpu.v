@@ -61,6 +61,7 @@ module cpu (
 
 parameter WORDBITSZ     = 32;
 parameter XWORDBITSZ    = 32; // TODO: Support all the way up to 1024 ...
+parameter ADDRLIMIT     = 'h2000;
 parameter CLKFREQ       = 1;
 parameter ICACHESETCNT  = 2;
 parameter DCACHESETCNT  = 0;
@@ -74,6 +75,9 @@ parameter PUCNT         = 1;
 localparam CLOG2XWORDBITSZBY8 = clog2(XWORDBITSZ/8);
 localparam XADDRBITSZ = (XWORDBITSZ-CLOG2XWORDBITSZBY8);
 
+// -1 account for the msb oring ignored bits.
+localparam XMSBSZIGN = (XWORDBITSZ-clog2(ADDRLIMIT)-1);
+
 input wire rst_i;
 
 output wire rst_o;
@@ -83,18 +87,18 @@ input wire clk_mem_i;
 input wire clk_imul_i;
 input wire clk_idiv_i;
 
-output wire                         wb_cyc_o;
-output wire                         wb_stb_o;
-output wire                         wb_we_o;
-output wire [XADDRBITSZ -1 : 0]     wb_addr_o;
-output wire [(XWORDBITSZ/8) -1 : 0] wb_sel_o;
-output wire [XWORDBITSZ -1 : 0]     wb_dat_o;
-input  wire                         wb_bsy_i;
-input  wire                         wb_ack_i;
-input  wire [XWORDBITSZ -1 : 0]     wb_dat_i;
+output wire                                 wb_cyc_o;
+output wire                                 wb_stb_o;
+output wire                                 wb_we_o;
+output wire [(XADDRBITSZ-XMSBSZIGN) -1 : 0] wb_addr_o;
+output wire [(XWORDBITSZ/8) -1 : 0]         wb_sel_o;
+output wire [XWORDBITSZ -1 : 0]             wb_dat_o;
+input  wire                                 wb_bsy_i;
+input  wire                                 wb_ack_i;
+input  wire [XWORDBITSZ -1 : 0]             wb_dat_i;
 
-output wire [(XWORDBITSZ*PUCNT) -1 : 0] dcache_addr_o;
-input  wire [PUCNT -1 : 0]              dcache_miss_i;
+output wire [((XWORDBITSZ-XMSBSZIGN)*PUCNT) -1 : 0] dcache_addr_o;
+input  wire [PUCNT -1 : 0]                          dcache_miss_i;
 
 input  wire [PUCNT -1 : 0] irq_stb_i;
 output wire [PUCNT -1 : 0] irq_stb_o;
@@ -108,40 +112,41 @@ input wire [WORDBITSZ -1 : 0] spval_i;
 
 input wire [WORDBITSZ -1 : 0] id_i;
 
-wire                         arbiter_wb_cyc_i  [0 : PUCNT -1];
-wire                         arbiter_wb_stb_i  [0 : PUCNT -1];
-wire                         arbiter_wb_we_i   [0 : PUCNT -1];
-wire [XADDRBITSZ -1 : 0]     arbiter_wb_addr_i [0 : PUCNT -1];
-wire [(XWORDBITSZ/8) -1 : 0] arbiter_wb_sel_i  [0 : PUCNT -1];
-wire [XWORDBITSZ -1 : 0]     arbiter_wb_dat_i  [0 : PUCNT -1];
-wire                         arbiter_wb_bsy_o  [0 : PUCNT -1];
-wire                         arbiter_wb_ack_o  [0 : PUCNT -1];
-wire [XWORDBITSZ -1 : 0]     arbiter_wb_dat_o  [0 : PUCNT -1];
+wire                                 arbiter_wb_cyc_i  [0 : PUCNT -1];
+wire                                 arbiter_wb_stb_i  [0 : PUCNT -1];
+wire                                 arbiter_wb_we_i   [0 : PUCNT -1];
+wire [(XADDRBITSZ-XMSBSZIGN) -1 : 0] arbiter_wb_addr_i [0 : PUCNT -1];
+wire [(XWORDBITSZ/8) -1 : 0]         arbiter_wb_sel_i  [0 : PUCNT -1];
+wire [XWORDBITSZ -1 : 0]             arbiter_wb_dat_i  [0 : PUCNT -1];
+wire                                 arbiter_wb_bsy_o  [0 : PUCNT -1];
+wire                                 arbiter_wb_ack_o  [0 : PUCNT -1];
+wire [XWORDBITSZ -1 : 0]             arbiter_wb_dat_o  [0 : PUCNT -1];
 
-wire [(1 * PUCNT) -1 : 0]              _arbiter_wb_cyc_i;
-wire [(1 * PUCNT) -1 : 0]              _arbiter_wb_stb_i;
-wire [(1 * PUCNT) -1 : 0]              _arbiter_wb_we_i;
-wire [(XADDRBITSZ * PUCNT) -1 : 0]     _arbiter_wb_addr_i;
-wire [((XWORDBITSZ/8) * PUCNT) -1 : 0] _arbiter_wb_sel_i;
-wire [(XWORDBITSZ * PUCNT) -1 : 0]     _arbiter_wb_dat_i;
-wire [(1 * PUCNT) -1 : 0]              arbiter_wb_bsy_o_;
-wire [(1 * PUCNT) -1 : 0]              arbiter_wb_ack_o_;
-wire [(XWORDBITSZ * PUCNT) -1 : 0]     arbiter_wb_dat_o_;
+wire [(1 * PUCNT) -1 : 0]                      _arbiter_wb_cyc_i;
+wire [(1 * PUCNT) -1 : 0]                      _arbiter_wb_stb_i;
+wire [(1 * PUCNT) -1 : 0]                      _arbiter_wb_we_i;
+wire [((XADDRBITSZ-XMSBSZIGN) * PUCNT) -1 : 0] _arbiter_wb_addr_i;
+wire [((XWORDBITSZ/8) * PUCNT) -1 : 0]         _arbiter_wb_sel_i;
+wire [(XWORDBITSZ * PUCNT) -1 : 0]             _arbiter_wb_dat_i;
+wire [(1 * PUCNT) -1 : 0]                      arbiter_wb_bsy_o_;
+wire [(1 * PUCNT) -1 : 0]                      arbiter_wb_ack_o_;
+wire [(XWORDBITSZ * PUCNT) -1 : 0]             arbiter_wb_dat_o_;
 
-wire                         wb_cyc_o_;
-wire                         wb_stb_o_;
-wire                         wb_we_o_;
-wire [XADDRBITSZ -1 : 0]     wb_addr_o_;
-wire [(XWORDBITSZ/8) -1 : 0] wb_sel_o_;
-wire [XWORDBITSZ -1 : 0]     wb_dat_o_;
-wire                         _wb_bsy_i;
-wire                         _wb_ack_i;
-wire [XWORDBITSZ -1 : 0]     _wb_dat_i;
+wire                                 wb_cyc_o_;
+wire                                 wb_stb_o_;
+wire                                 wb_we_o_;
+wire [(XADDRBITSZ-XMSBSZIGN) -1 : 0] wb_addr_o_;
+wire [(XWORDBITSZ/8) -1 : 0]         wb_sel_o_;
+wire [XWORDBITSZ -1 : 0]             wb_dat_o_;
+wire                                 _wb_bsy_i;
+wire                                 _wb_ack_i;
+wire [XWORDBITSZ -1 : 0]             _wb_dat_i;
 
 generate if (PUCNT > 1) begin: gen_wb_arbiter
 
 wb_arbiter #(
 	 .WORDBITSZ   (XWORDBITSZ)
+	,.ADDRLIMIT   (ADDRLIMIT)
 	,.MASTERCOUNT (PUCNT)
 ) wb_arbiter (
 
@@ -186,6 +191,7 @@ end endgenerate
 
 wb_cdc #(
 	 .WORDBITSZ     (XWORDBITSZ)
+	,.ADDRLIMIT     (ADDRLIMIT)
 	,.MAXPENDINGACK (MAXPENDINGACK)
 ) wb_cdc (
 
@@ -227,6 +233,7 @@ generate for (
 pu #(
 	 .WORDBITSZ     (WORDBITSZ)
 	,.XWORDBITSZ    (XWORDBITSZ)
+	,.ADDRLIMIT     (ADDRLIMIT)
 	,.CLKFREQ       (CLKFREQ)
 	,.ICACHESETCNT  (ICACHESETCNT)
 	,.DCACHESETCNT  ((PUCNT > 1) ? 0 : DCACHESETCNT) /* TODO: cache-coherence */
@@ -255,7 +262,7 @@ pu #(
 	,.wb_ack_i  (arbiter_wb_ack_o[genpu_idx])
 	,.wb_dat_i  (arbiter_wb_dat_o[genpu_idx])
 
-	,.dcache_addr_o (dcache_addr_o[((genpu_idx+1) * XWORDBITSZ) -1 : genpu_idx * XWORDBITSZ])
+	,.dcache_addr_o (dcache_addr_o[((genpu_idx+1) * (XWORDBITSZ-XMSBSZIGN)) -1 : genpu_idx * (XWORDBITSZ-XMSBSZIGN)])
 	,.dcache_miss_i (dcache_miss_i[genpu_idx])
 
 	,.irq_stb_i (irq_stb_i[genpu_idx])
@@ -273,7 +280,7 @@ pu #(
 assign _arbiter_wb_cyc_i[genpu_idx] = arbiter_wb_cyc_i[genpu_idx];
 assign _arbiter_wb_stb_i[genpu_idx] = arbiter_wb_stb_i[genpu_idx];
 assign _arbiter_wb_we_i[genpu_idx] = arbiter_wb_we_i[genpu_idx];
-assign _arbiter_wb_addr_i[((genpu_idx+1) * XADDRBITSZ) -1 : (genpu_idx * XADDRBITSZ)] =
+assign _arbiter_wb_addr_i[((genpu_idx+1) * (XADDRBITSZ-XMSBSZIGN)) -1 : (genpu_idx * (XADDRBITSZ-XMSBSZIGN))] =
 	arbiter_wb_addr_i[genpu_idx];
 assign _arbiter_wb_sel_i[((genpu_idx+1) * (XWORDBITSZ/8)) -1 : (genpu_idx * (XWORDBITSZ/8))] =
 	arbiter_wb_sel_i[genpu_idx];

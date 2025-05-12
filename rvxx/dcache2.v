@@ -42,6 +42,8 @@ module dcache (
 
 parameter WORDBITSZ = 32;
 
+parameter ADDRLIMIT = 'h2000;
+
 parameter CACHESETCNT = 2;
 parameter CACHEWAYCNT = 1;
 
@@ -56,8 +58,10 @@ localparam CLOG2CACHESETCNT = clog2(CACHESETCNT);
 localparam CLOG2CACHEWAYCNT = clog2(CACHEWAYCNT);
 
 localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
-
 localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
+
+// -1 account for the msb oring ignored bits.
+localparam MSBSZIGN = (WORDBITSZ-clog2(ADDRLIMIT)-1);
 
 input wire rst_i;
 
@@ -66,32 +70,32 @@ input wire clk_i;
 input wire conly_i;
 input wire cmiss_i;
 
-input  wire                        m_wb_cyc_i;
-input  wire                        m_wb_stb_i;
-input  wire                        m_wb_we_i;
-input  wire [ADDRBITSZ -1 : 0]     m_wb_addr_i;
-input  wire [(WORDBITSZ/8) -1 : 0] m_wb_sel_i;
-input  wire [WORDBITSZ -1 : 0]     m_wb_dat_i;
-output wire                        m_wb_bsy_o;
-output reg                         m_wb_ack_o;
-output reg  [WORDBITSZ -1 : 0]     m_wb_dat_o;
+input  wire                               m_wb_cyc_i;
+input  wire                               m_wb_stb_i;
+input  wire                               m_wb_we_i;
+input  wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] m_wb_addr_i;
+input  wire [(WORDBITSZ/8) -1 : 0]        m_wb_sel_i;
+input  wire [WORDBITSZ -1 : 0]            m_wb_dat_i;
+output wire                               m_wb_bsy_o;
+output reg                                m_wb_ack_o;
+output reg  [WORDBITSZ -1 : 0]            m_wb_dat_o;
 
-output wire                        s_wb_cyc_o;
-output reg                         s_wb_stb_o;
-output reg                         s_wb_we_o;
-output reg  [ADDRBITSZ -1 : 0]     s_wb_addr_o;
-output reg  [(WORDBITSZ/8) -1 : 0] s_wb_sel_o;
-output reg  [WORDBITSZ -1 : 0]     s_wb_dat_o;
-input  wire                        s_wb_bsy_i;
-input  wire                        s_wb_ack_i;
-input  wire [WORDBITSZ -1 : 0]     s_wb_dat_i;
+output wire                               s_wb_cyc_o;
+output reg                                s_wb_stb_o;
+output reg                                s_wb_we_o;
+output reg  [(ADDRBITSZ-MSBSZIGN) -1 : 0] s_wb_addr_o;
+output reg  [(WORDBITSZ/8) -1 : 0]        s_wb_sel_o;
+output reg  [WORDBITSZ -1 : 0]            s_wb_dat_o;
+input  wire                               s_wb_bsy_i;
+input  wire                               s_wb_ack_i;
+input  wire [WORDBITSZ -1 : 0]            s_wb_dat_i;
 
 wire _m_wb_stb_i = (m_wb_cyc_i && m_wb_stb_i && !m_wb_bsy_o);
 
-reg                        m_wb_we_r;
-reg [ADDRBITSZ -1 : 0]     m_wb_addr_r;
-reg [(WORDBITSZ/8) -1 : 0] m_wb_sel_r;
-reg [WORDBITSZ -1 : 0]     m_wb_dat_r;
+reg                               m_wb_we_r;
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] m_wb_addr_r;
+reg [(WORDBITSZ/8) -1 : 0]        m_wb_sel_r;
+reg [WORDBITSZ -1 : 0]            m_wb_dat_r;
 
 reg rst_r;
 reg conly_r;
@@ -147,7 +151,7 @@ reg m_wb_ack;
 wire cache_we = (!cmiss_r &&
 	((m_wb_ack && m_wb_we_r) || (!s_wb_we_o && refill_ack)));
 
-localparam CACHETAGBITSIZE = (ADDRBITSZ - CLOG2CACHESETCNT);
+localparam CACHETAGBITSIZE = ((ADDRBITSZ-MSBSZIGN) - CLOG2CACHESETCNT);
 
 wire [CLOG2CACHESETCNT -1 : 0] cache_rdidx = m_wb_addr_i[CLOG2CACHESETCNT -1 : 0];
 wire [CLOG2CACHESETCNT -1 : 0] cache_wridx = m_wb_addr_r[CLOG2CACHESETCNT -1 : 0];
@@ -177,7 +181,7 @@ end
 
 reg [CLOG2CACHEWAYCNT -1 : 0] cache_we_wayidx;
 
-wire [CACHETAGBITSIZE -1 : 0] cache_tag_i = m_wb_addr_r[ADDRBITSZ -1 : CLOG2CACHESETCNT];
+wire [CACHETAGBITSIZE -1 : 0] cache_tag_i = m_wb_addr_r[(ADDRBITSZ-MSBSZIGN) -1 : CLOG2CACHESETCNT];
 
 wire [(WORDBITSZ/8) -1 : 0] cache_sel_o_tag_hit = cache_sel_o[cache_tag_hit_wayidx];
 wire [(WORDBITSZ/8) -1 : 0] _cache_sel_o;
@@ -259,7 +263,7 @@ always @ (posedge clk_i) begin
 end
 
 assign cache_tag_hit_[gen_cache_idx] = ((|cache_sel_o[gen_cache_idx]) &&
-	m_wb_addr_r[ADDRBITSZ -1 : CLOG2CACHESETCNT] == cache_tag_o[gen_cache_idx]);
+	m_wb_addr_r[(ADDRBITSZ-MSBSZIGN) -1 : CLOG2CACHESETCNT] == cache_tag_o[gen_cache_idx]);
 
 end endgenerate
 

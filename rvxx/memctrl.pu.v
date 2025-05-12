@@ -29,15 +29,15 @@ reg                                  iF_mem_seq_valid;
 
 assign dCache_s_ack_i = (wb_ack_i && (!iF_mem_seq_valid || wb_rsp_cnt != iF_mem_seq));
 
-reg                      iF_mem_stb;
-reg  [XADDRBITSZ -1 : 0] iF_mem_addr;
-wire                     iF_mem_bsy = (dCache_s_stb_o || _wb_bsy_i);
-wire                     iF_mem_ack = (wb_ack_i && iF_mem_seq_valid && wb_rsp_cnt == iF_mem_seq);
+reg iF_mem_stb;
+reg [(XADDRBITSZ-XMSBSZIGN) -1 : 0] iF_mem_addr;
+wire iF_mem_bsy = (dCache_s_stb_o || _wb_bsy_i);
+wire iF_mem_ack = (wb_ack_i && iF_mem_seq_valid && wb_rsp_cnt == iF_mem_seq);
 
 assign iCache_we_w   = iF_mem_ack;
 assign iCache_dati_w = wb_dat_i;
 assign iCache_widx_w = iF_mem_addr[CLOG2ICACHESETCNT-1:0];
-assign iCache_wtag_w = iF_mem_addr[(WORDBITSZ-CLOG2XWORDBITSZBY8)-1:CLOG2ICACHESETCNT];
+assign iCache_wtag_w = iF_mem_addr[((WORDBITSZ-MSBSZIGN)-CLOG2XWORDBITSZBY8)-1:CLOG2ICACHESETCNT];
 
 reg iF_mem_wait;
 
@@ -64,7 +64,9 @@ always @ (posedge clk_i) begin
 		iF_mem_wait <= 1; // Set in order to begin with an icache access on branching.
 	end else if (!iCache_hit_w) begin
 		iF_mem_stb <= iCache_rdy_w;
-		iF_mem_addr <= iF_pc[WORDBITSZ-1:CLOG2XWORDBITSZBY8];
+		iF_mem_addr <= { // MSB oring of ignored bits.
+			|iF_pc[WORDBITSZ-1:(WORDBITSZ-MSBSZIGN-1)],
+			iF_pc[(WORDBITSZ-MSBSZIGN-1)-1:CLOG2XWORDBITSZBY8]};
 	end
 end
 

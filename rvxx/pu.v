@@ -168,6 +168,7 @@ module pu (
 
 parameter WORDBITSZ     = 32;
 parameter XWORDBITSZ    = 32; // TODO: Support all the way up to 1024 ...
+parameter ADDRLIMIT     = 'h2000;
 parameter CLKFREQ       = 1;
 parameter ICACHESETCNT  = 2;
 parameter DCACHESETCNT  = 0;
@@ -203,6 +204,10 @@ localparam CLOG2GPRCNT = clog2(GPRCNT);
 localparam INSNBITSZ = 32;
 localparam CLOG2INSNBITSZBY8 = clog2(INSNBITSZ/8);
 
+// -1 account for the msb oring ignored bits.
+localparam MSBSZIGN  = (WORDBITSZ-clog2(ADDRLIMIT)-1);
+localparam XMSBSZIGN = (XWORDBITSZ-clog2(ADDRLIMIT)-1);
+
 input wire rst_i;
 
 output reg rst_o = 0;
@@ -211,18 +216,18 @@ input wire clk_i;
 input wire clk_imul_i;
 input wire clk_idiv_i;
 
-output reg                          wb_cyc_o;  // ### comb-block-reg.
-output reg                          wb_stb_o;  // ### comb-block-reg.
-output reg                          wb_we_o;   // ### comb-block-reg.
-output reg  [XADDRBITSZ -1 : 0]     wb_addr_o; // ### comb-block-reg.
-output reg  [(XWORDBITSZ/8) -1 : 0] wb_sel_o;  // ### comb-block-reg.
-output reg  [XWORDBITSZ -1 : 0]     wb_dat_o;  // ### comb-block-reg.
-input  wire                         wb_bsy_i;
-input  wire                         wb_ack_i;
-input  wire [XWORDBITSZ -1 : 0]     wb_dat_i;
+output reg                                  wb_cyc_o;  // ### comb-block-reg.
+output reg                                  wb_stb_o;  // ### comb-block-reg.
+output reg                                  wb_we_o;   // ### comb-block-reg.
+output reg  [(XADDRBITSZ-XMSBSZIGN) -1 : 0] wb_addr_o; // ### comb-block-reg.
+output reg  [(XWORDBITSZ/8) -1 : 0]         wb_sel_o;  // ### comb-block-reg.
+output reg  [XWORDBITSZ -1 : 0]             wb_dat_o;  // ### comb-block-reg.
+input  wire                                 wb_bsy_i;
+input  wire                                 wb_ack_i;
+input  wire [XWORDBITSZ -1 : 0]             wb_dat_i;
 
-output wire [XWORDBITSZ -1 : 0] dcache_addr_o;
-input  wire                     dcache_miss_i;
+output wire [(XWORDBITSZ-XMSBSZIGN) -1 : 0] dcache_addr_o;
+input  wire                                 dcache_miss_i;
 
 input  wire irq_stb_i;
 output reg  irq_stb_o;

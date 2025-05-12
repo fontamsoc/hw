@@ -44,6 +44,7 @@ parameter WORDBITSZ         = 32;
 parameter SLAVECOUNT        = 1;
 parameter DEFAULTSLAVEINDEX = 0;
 parameter FIRSTSLAVEADDR    = 0;
+parameter ADDRLIMIT         = 'h2000;
 parameter MAXPENDINGACK     = 16; // Must be non-null.
 
 localparam CLOG2SLAVECOUNT  = clog2(SLAVECOUNT);
@@ -51,30 +52,33 @@ localparam CLOG2SLAVECOUNT  = clog2(SLAVECOUNT);
 localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
 localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
+// -1 account for the msb oring ignored bits.
+localparam MSBSZIGN = (WORDBITSZ-clog2(ADDRLIMIT)-1);
+
 input wire rst_i;
 
 input wire clk_i;
 
-input  wire                        m_wb_cyc_i;
-input  wire                        m_wb_stb_i;
-input  wire                        m_wb_we_i;
-input  wire [ADDRBITSZ -1 : 0]     m_wb_addr_i;
-input  wire [(WORDBITSZ/8) -1 : 0] m_wb_sel_i;
-input  wire [WORDBITSZ -1 : 0]     m_wb_dat_i;
-output wire                        m_wb_bsy_o;
-output wire                        m_wb_ack_o;
-output wire [WORDBITSZ -1 : 0]     m_wb_dat_o;
+input  wire                               m_wb_cyc_i;
+input  wire                               m_wb_stb_i;
+input  wire                               m_wb_we_i;
+input  wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] m_wb_addr_i;
+input  wire [(WORDBITSZ/8) -1 : 0]        m_wb_sel_i;
+input  wire [WORDBITSZ -1 : 0]            m_wb_dat_i;
+output wire                               m_wb_bsy_o;
+output wire                               m_wb_ack_o;
+output wire [WORDBITSZ -1 : 0]            m_wb_dat_o;
 
-output wire [(1 * SLAVECOUNT) -1 : 0]             s_wb_cyc_o;
-output wire [(1 * SLAVECOUNT) -1 : 0]             s_wb_stb_o;
-output wire [(1 * SLAVECOUNT) -1 : 0]             s_wb_we_o;
-output wire [(ADDRBITSZ * SLAVECOUNT) -1 : 0]     s_wb_addr_o;
-output wire [((WORDBITSZ/8) * SLAVECOUNT) -1 : 0] s_wb_sel_o;
-output wire [(WORDBITSZ * SLAVECOUNT) -1 : 0]     s_wb_dat_o;
-input  wire [(1 * SLAVECOUNT) -1 : 0]             s_wb_bsy_i;
-input  wire [(1 * SLAVECOUNT) -1 : 0]             s_wb_ack_i;
-input  wire [(WORDBITSZ * SLAVECOUNT) -1 : 0]     s_wb_dat_i;
-input  wire [(WORDBITSZ * SLAVECOUNT) -1 : 0]     s_wb_mapsz_i;
+output wire [(1 * SLAVECOUNT) -1 : 0]                    s_wb_cyc_o;
+output wire [(1 * SLAVECOUNT) -1 : 0]                    s_wb_stb_o;
+output wire [(1 * SLAVECOUNT) -1 : 0]                    s_wb_we_o;
+output wire [((ADDRBITSZ-MSBSZIGN) * SLAVECOUNT) -1 : 0] s_wb_addr_o;
+output wire [((WORDBITSZ/8) * SLAVECOUNT) -1 : 0]        s_wb_sel_o;
+output wire [(WORDBITSZ * SLAVECOUNT) -1 : 0]            s_wb_dat_o;
+input  wire [(1 * SLAVECOUNT) -1 : 0]                    s_wb_bsy_i;
+input  wire [(1 * SLAVECOUNT) -1 : 0]                    s_wb_ack_i;
+input  wire [(WORDBITSZ * SLAVECOUNT) -1 : 0]            s_wb_dat_i;
+input  wire [((WORDBITSZ-MSBSZIGN) * SLAVECOUNT) -1 : 0] s_wb_mapsz_i;
 
 wire _m_wb_stb_i = (m_wb_cyc_i && m_wb_stb_i);
 
@@ -92,27 +96,28 @@ always @ (posedge clk_i) begin
 		ack_pending <= ack_pending + 1'b1;
 end
 
-wire [WORDBITSZ -1 : 0] _m_wb_addr_i;
+wire [(WORDBITSZ-MSBSZIGN) -1 : 0] _m_wb_addr_i;
 addr #(
-	.WORDBITSZ (WORDBITSZ)
+	 .WORDBITSZ (WORDBITSZ)
+	,.ADDRLIMIT (ADDRLIMIT)
 ) addr (
 	 .addr_i (m_wb_addr_i)
 	,.sel_i  (m_wb_sel_i)
 	,.addr_o (_m_wb_addr_i)
 );
 
-wire [WORDBITSZ -1 : 0] _s_wb_mapsz_i [SLAVECOUNT -1 : 0];
-wire [WORDBITSZ -1 : 0] _s_wb_dat_i [SLAVECOUNT -1 : 0];
+wire [(WORDBITSZ-MSBSZIGN) -1 : 0] _s_wb_mapsz_i [SLAVECOUNT -1 : 0];
+wire [WORDBITSZ -1 : 0]            _s_wb_dat_i   [SLAVECOUNT -1 : 0];
 
-reg [WORDBITSZ -1 : 0] addrspace [SLAVECOUNT -1 : 0];
+reg [(WORDBITSZ-MSBSZIGN) -1 : 0] addrspace [SLAVECOUNT -1 : 0];
 reg addrspace_rdy;
 
 reg [CLOG2SLAVECOUNT -1 : 0] slvidx;
 reg slvidx_rdy;
 reg slvidx_dflt;
 
-reg [WORDBITSZ -1 : 0] addrspace_slvidx_lo; // Also used to initialize addrspace.
-reg [WORDBITSZ -1 : 0] addrspace_slvidx_hi;
+reg [(WORDBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_lo; // Also used to initialize addrspace.
+reg [(WORDBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_hi;
 
 wire slvidx_not_max = (slvidx < (SLAVECOUNT-1));
 
@@ -123,11 +128,11 @@ wire slvidx_invalid = (!addrspace_rdy || (!slvidx_dflt &&
 
 wire _slvidx_invalid = (slvidx_invalid && !ack_pending);
 
-wire [WORDBITSZ -1 : 0] addrspace_slvidx_nxt = (addrspace_slvidx_lo + _s_wb_mapsz_i[slvidx]);
-wire [WORDBITSZ -1 : 0] _addrspace_slvidx_nxt = (addrspace_slvidx_nxt - 1'b1);
+wire [(WORDBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_nxt = (addrspace_slvidx_lo + _s_wb_mapsz_i[slvidx]);
+wire [(WORDBITSZ-MSBSZIGN) -1 : 0] _addrspace_slvidx_nxt = (addrspace_slvidx_nxt - 1'b1);
 
-reg [WORDBITSZ -1 : 0] slvidx_dflt_lo;
-reg [WORDBITSZ -1 : 0] slvidx_dflt_hi;
+reg [(WORDBITSZ-MSBSZIGN) -1 : 0] slvidx_dflt_lo;
+reg [(WORDBITSZ-MSBSZIGN) -1 : 0] slvidx_dflt_hi;
 
 always @ (posedge clk_i) begin
 
@@ -203,7 +208,7 @@ assign m_wb_ack_o = s_wb_ack_i[slvidx];
 
 assign m_wb_dat_o = _s_wb_dat_i[slvidx];
 
-wire [WORDBITSZ -1 : 0] s_wb_addr_o_ = (_m_wb_addr_i - addrspace_slvidx_lo);
+wire [(WORDBITSZ-MSBSZIGN) -1 : 0] s_wb_addr_o_ = (_m_wb_addr_i - addrspace_slvidx_lo);
 
 genvar gen_s_wb_idx;
 generate for (
@@ -217,18 +222,15 @@ assign s_wb_stb_o[gen_s_wb_idx] = ((slvidx != gen_s_wb_idx || slvidx_invalid || 
 
 assign s_wb_we_o[gen_s_wb_idx] = m_wb_we_i;
 
-assign s_wb_addr_o[((gen_s_wb_idx+1) * ADDRBITSZ) -1 : (gen_s_wb_idx * ADDRBITSZ)] =
-	s_wb_addr_o_[WORDBITSZ -1 : CLOG2WORDBITSZBY8];
+assign s_wb_addr_o[((gen_s_wb_idx+1) * (ADDRBITSZ-MSBSZIGN)) -1 : (gen_s_wb_idx * (ADDRBITSZ-MSBSZIGN))] = s_wb_addr_o_[(WORDBITSZ-MSBSZIGN) -1 : CLOG2WORDBITSZBY8];
 
 assign s_wb_sel_o[((gen_s_wb_idx+1) * (WORDBITSZ/8)) -1 : (gen_s_wb_idx * (WORDBITSZ/8))] = m_wb_sel_i;
 
 assign s_wb_dat_o[((gen_s_wb_idx+1) * WORDBITSZ) -1 : (gen_s_wb_idx * WORDBITSZ)] = m_wb_dat_i;
 
-assign _s_wb_dat_i[gen_s_wb_idx] =
-	s_wb_dat_i[((gen_s_wb_idx+1) * WORDBITSZ) -1 : (gen_s_wb_idx * WORDBITSZ)];
+assign _s_wb_dat_i[gen_s_wb_idx] = s_wb_dat_i[((gen_s_wb_idx+1) * WORDBITSZ) -1 : (gen_s_wb_idx * WORDBITSZ)];
 
-assign _s_wb_mapsz_i[gen_s_wb_idx] =
-	s_wb_mapsz_i[((gen_s_wb_idx+1) * WORDBITSZ) -1 : (gen_s_wb_idx * WORDBITSZ)];
+assign _s_wb_mapsz_i[gen_s_wb_idx] = s_wb_mapsz_i[((gen_s_wb_idx+1) * (WORDBITSZ-MSBSZIGN)) -1 : (gen_s_wb_idx * (WORDBITSZ-MSBSZIGN))];
 
 end endgenerate
 

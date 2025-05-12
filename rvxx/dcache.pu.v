@@ -3,35 +3,35 @@
 
 wire dCache_invd_w;
 
-wire                        dCache_m_cyc_i;
-reg                         dCache_m_stb_i;
-reg                         dCache_m_we_i;
-reg  [ADDRBITSZ -1 : 0]     dCache_m_addr_i;
-reg  [(WORDBITSZ/8) -1 : 0] dCache_m_sel_i;
-reg  [WORDBITSZ -1 : 0]     dCache_m_dat_i;
-wire                        dCache_m_bsy_o;
-wire                        dCache_m_ack_o;
-wire [WORDBITSZ -1 : 0]     dCache_m_dat_o;
+wire                               dCache_m_cyc_i;
+reg                                dCache_m_stb_i;
+reg                                dCache_m_we_i;
+reg  [(ADDRBITSZ-MSBSZIGN) -1 : 0] dCache_m_addr_i;
+reg  [(WORDBITSZ/8) -1 : 0]        dCache_m_sel_i;
+reg  [WORDBITSZ -1 : 0]            dCache_m_dat_i;
+wire                               dCache_m_bsy_o;
+wire                               dCache_m_ack_o;
+wire [WORDBITSZ -1 : 0]            dCache_m_dat_o;
 
-wire                         dCache_s_cyc_o;
-wire                         dCache_s_stb_o;
-wire                         dCache_s_we_o;
-wire [XADDRBITSZ -1 : 0]     dCache_s_addr_o;
-wire [(XWORDBITSZ/8) -1 : 0] dCache_s_sel_o;
-wire [XWORDBITSZ -1 : 0]     dCache_s_dat_o;
-wire                         dCache_s_bsy_i;
-wire                         dCache_s_ack_i;
-wire [XWORDBITSZ -1 : 0]     dCache_s_dat_i;
+wire                                 dCache_s_cyc_o;
+wire                                 dCache_s_stb_o;
+wire                                 dCache_s_we_o;
+wire [(XADDRBITSZ-XMSBSZIGN) -1 : 0] dCache_s_addr_o;
+wire [(XWORDBITSZ/8) -1 : 0]         dCache_s_sel_o;
+wire [XWORDBITSZ -1 : 0]             dCache_s_dat_o;
+wire                                 dCache_s_bsy_i;
+wire                                 dCache_s_ack_i;
+wire [XWORDBITSZ -1 : 0]             dCache_s_dat_i;
 
-wire                        skidBuf_dCache_s_cyc_o;
-wire                        skidBuf_dCache_s_stb_o;
-wire                        skidBuf_dCache_s_we_o;
-wire [ADDRBITSZ -1 : 0]     skidBuf_dCache_s_addr_o;
-wire [(WORDBITSZ/8) -1 : 0] skidBuf_dCache_s_sel_o;
-wire [WORDBITSZ -1 : 0]     skidBuf_dCache_s_dat_o;
-wire                        skidBuf_dCache_s_bsy_i;
-wire                        skidBuf_dCache_s_ack_i;
-wire [WORDBITSZ -1 : 0]     skidBuf_dCache_s_dat_i;
+wire                               skidBuf_dCache_s_cyc_o;
+wire                               skidBuf_dCache_s_stb_o;
+wire                               skidBuf_dCache_s_we_o;
+wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] skidBuf_dCache_s_addr_o;
+wire [(WORDBITSZ/8) -1 : 0]        skidBuf_dCache_s_sel_o;
+wire [WORDBITSZ -1 : 0]            skidBuf_dCache_s_dat_o;
+wire                               skidBuf_dCache_s_bsy_i;
+wire                               skidBuf_dCache_s_ack_i;
+wire [WORDBITSZ -1 : 0]            skidBuf_dCache_s_dat_i;
 
 wire _dCache_m_stb_i;
 
@@ -39,6 +39,7 @@ generate if (USE_DCACHE) begin: gen_skidBuf_dCache
 
 wb_skidbuf #(
 	 .WORDBITSZ     (WORDBITSZ)
+	,.ADDRLIMIT     (ADDRLIMIT)
 	,.MAXPENDINGACK (MAXPENDINGACK)
 	,.USEFWFTFIFO   (1)
 ) skidBuf_dCache (
@@ -82,21 +83,22 @@ assign dCache_m_dat_o = skidBuf_dCache_s_dat_i;
 
 end endgenerate
 
-wire                         upSizr_dCache_s_cyc_o;
-wire                         upSizr_dCache_s_stb_o;
-wire                         upSizr_dCache_s_we_o;
-wire [XADDRBITSZ -1 : 0]     upSizr_dCache_s_addr_o;
-wire [(XWORDBITSZ/8) -1 : 0] upSizr_dCache_s_sel_o;
-wire [XWORDBITSZ -1 : 0]     upSizr_dCache_s_dat_o;
-wire                         upSizr_dCache_s_bsy_i;
-wire                         upSizr_dCache_s_ack_i;
-wire [XWORDBITSZ -1 : 0]     upSizr_dCache_s_dat_i;
+wire                                 upSizr_dCache_s_cyc_o;
+wire                                 upSizr_dCache_s_stb_o;
+wire                                 upSizr_dCache_s_we_o;
+wire [(XADDRBITSZ-XMSBSZIGN) -1 : 0] upSizr_dCache_s_addr_o;
+wire [(XWORDBITSZ/8) -1 : 0]         upSizr_dCache_s_sel_o;
+wire [XWORDBITSZ -1 : 0]             upSizr_dCache_s_dat_o;
+wire                                 upSizr_dCache_s_bsy_i;
+wire                                 upSizr_dCache_s_ack_i;
+wire [XWORDBITSZ -1 : 0]             upSizr_dCache_s_dat_i;
 
 generate if (WORDBITSZ < XWORDBITSZ) begin :gen_upSizr_dCache
 
 wb_upsizr #(
 	 .MWORDBITSZ    (WORDBITSZ)
 	,.SWORDBITSZ    (XWORDBITSZ)
+	,.ADDRLIMIT     (ADDRLIMIT)
 	,.MAXPENDINGACK (MAXPENDINGACK)
 	,.USEFWFTFIFO   (1)
 ) upSizr_dCache (
@@ -144,6 +146,7 @@ generate if (USE_DCACHE) begin: gen_dCache
 
 dcache #(
 	 .WORDBITSZ     (XWORDBITSZ)
+	,.ADDRLIMIT     (ADDRLIMIT)
 	,.CACHESETCNT   (DCACHESETCNT)
 	,.CACHEWAYCNT   (DCACHEWAYCNT)
 	,.MAXPENDINGACK (MAXPENDINGACK)
@@ -296,12 +299,16 @@ always @ (posedge clk_i) begin
 		if (iD_isLoadOrLr) begin
 			dCache_m_stb_i <= 1'b1;
 			dCache_m_we_i <= 0;
-			dCache_m_addr_i <= dCache_m_addr_i_[WORDBITSZ-1:CLOG2WORDBITSZBY8];
+			dCache_m_addr_i <= { // MSB oring of ignored bits.
+				|dCache_m_addr_i_[WORDBITSZ-1:(WORDBITSZ-MSBSZIGN-1)],
+				dCache_m_addr_i_[(WORDBITSZ-MSBSZIGN-1)-1:CLOG2XWORDBITSZBY8]};
 			dCache_m_sel_i <= dCache_m_sel_i_;
 		end else if (iD_isStore || (iD_isSc && _amoUnit_lrValid)) begin
 			dCache_m_stb_i <= 1'b1;
 			dCache_m_we_i <= 1;
-			dCache_m_addr_i <= dCache_m_addr_i_[WORDBITSZ-1:CLOG2WORDBITSZBY8];
+			dCache_m_addr_i <= { // MSB oring of ignored bits.
+				|dCache_m_addr_i_[WORDBITSZ-1:(WORDBITSZ-MSBSZIGN-1)],
+				dCache_m_addr_i_[(WORDBITSZ-MSBSZIGN-1)-1:CLOG2XWORDBITSZBY8]};
 			dCache_m_sel_i <= dCache_m_sel_i_;
 			dCache_m_dat_i <= dCache_m_dat_i_;
 		end else if (iD_isAMO && !(iD_isLr || iD_isSc)) begin
@@ -309,7 +316,9 @@ always @ (posedge clk_i) begin
 			dCache_m_stb_i <= 1'b1;
 			dCache_m_we_i <= 1'b0;
 			dCache_m_we_i_ <= 1'b1;
-			dCache_m_addr_i <= dCache_m_addr_i_[WORDBITSZ-1:CLOG2WORDBITSZBY8];
+			dCache_m_addr_i <= { // MSB oring of ignored bits.
+				|dCache_m_addr_i_[WORDBITSZ-1:(WORDBITSZ-MSBSZIGN-1)],
+				dCache_m_addr_i_[(WORDBITSZ-MSBSZIGN-1)-1:CLOG2XWORDBITSZBY8]};
 			dCache_m_sel_i <= dCache_m_sel_i_;
 			dCache_m_dat_i <= dCache_m_dat_i_;
 		end else if (!_dCache_m_bsy_o) begin

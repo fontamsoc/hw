@@ -34,6 +34,7 @@ module wb_arbiter (
 `include "lib/clog2.v"
 
 parameter WORDBITSZ   = 32;
+parameter ADDRLIMIT   = 'h2000;
 parameter MASTERCOUNT = 1;
 
 localparam CLOG2MASTERCOUNT = clog2(MASTERCOUNT);
@@ -41,35 +42,38 @@ localparam CLOG2MASTERCOUNT = clog2(MASTERCOUNT);
 localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
 localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
+// -1 account for the msb oring ignored bits.
+localparam MSBSZIGN = (WORDBITSZ-clog2(ADDRLIMIT)-1);
+
 input wire rst_i;
 
 input wire clk_i;
 
-input  wire [(1 * MASTERCOUNT) -1 : 0]             m_wb_cyc_i;
-input  wire [(1 * MASTERCOUNT) -1 : 0]             m_wb_stb_i;
-input  wire [(1 * MASTERCOUNT) -1 : 0]             m_wb_we_i;
-input  wire [(ADDRBITSZ * MASTERCOUNT) -1 : 0]     m_wb_addr_i;
-input  wire [((WORDBITSZ/8) * MASTERCOUNT) -1 : 0] m_wb_sel_i;
-input  wire [(WORDBITSZ * MASTERCOUNT) -1 : 0]     m_wb_dat_i;
-output wire [(1 * MASTERCOUNT) -1 : 0]             m_wb_bsy_o;
-output wire [(1 * MASTERCOUNT) -1 : 0]             m_wb_ack_o;
-output wire [(WORDBITSZ * MASTERCOUNT) -1 : 0]     m_wb_dat_o;
+input  wire [(1 * MASTERCOUNT) -1 : 0]                    m_wb_cyc_i;
+input  wire [(1 * MASTERCOUNT) -1 : 0]                    m_wb_stb_i;
+input  wire [(1 * MASTERCOUNT) -1 : 0]                    m_wb_we_i;
+input  wire [((ADDRBITSZ-MSBSZIGN) * MASTERCOUNT) -1 : 0] m_wb_addr_i;
+input  wire [((WORDBITSZ/8) * MASTERCOUNT) -1 : 0]        m_wb_sel_i;
+input  wire [(WORDBITSZ * MASTERCOUNT) -1 : 0]            m_wb_dat_i;
+output wire [(1 * MASTERCOUNT) -1 : 0]                    m_wb_bsy_o;
+output wire [(1 * MASTERCOUNT) -1 : 0]                    m_wb_ack_o;
+output wire [(WORDBITSZ * MASTERCOUNT) -1 : 0]            m_wb_dat_o;
 
-output wire                        s_wb_cyc_o;
-output wire                        s_wb_stb_o;
-output wire                        s_wb_we_o;
-output wire [ADDRBITSZ -1 : 0]     s_wb_addr_o;
-output wire [(WORDBITSZ/8) -1 : 0] s_wb_sel_o;
-output wire [WORDBITSZ -1 : 0]     s_wb_dat_o;
-input  wire                        s_wb_bsy_i;
-input  wire                        s_wb_ack_i;
-input  wire [WORDBITSZ -1 : 0]     s_wb_dat_i;
+output wire                               s_wb_cyc_o;
+output wire                               s_wb_stb_o;
+output wire                               s_wb_we_o;
+output wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] s_wb_addr_o;
+output wire [(WORDBITSZ/8) -1 : 0]        s_wb_sel_o;
+output wire [WORDBITSZ -1 : 0]            s_wb_dat_o;
+input  wire                               s_wb_bsy_i;
+input  wire                               s_wb_ack_i;
+input  wire [WORDBITSZ -1 : 0]            s_wb_dat_i;
 
 reg [CLOG2MASTERCOUNT -1 : 0] mstridx;
 
-wire [ADDRBITSZ -1 : 0]     _m_wb_addr_i [MASTERCOUNT -1 : 0];
-wire [(WORDBITSZ/8) -1 : 0] _m_wb_sel_i  [MASTERCOUNT -1 : 0];
-wire [WORDBITSZ -1 : 0]     _m_wb_dat_i  [MASTERCOUNT -1 : 0];
+wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] _m_wb_addr_i [MASTERCOUNT -1 : 0];
+wire [(WORDBITSZ/8) -1 : 0]        _m_wb_sel_i  [MASTERCOUNT -1 : 0];
+wire [WORDBITSZ -1 : 0]            _m_wb_dat_i  [MASTERCOUNT -1 : 0];
 
 genvar gen_m_wb_idx;
 generate for (
@@ -78,7 +82,7 @@ generate for (
 	gen_m_wb_idx = gen_m_wb_idx + 1) begin :gen_m_wb
 
 assign _m_wb_addr_i[gen_m_wb_idx] =
-	m_wb_addr_i[((gen_m_wb_idx+1) * ADDRBITSZ) -1 : (gen_m_wb_idx * ADDRBITSZ)];
+	m_wb_addr_i[((gen_m_wb_idx+1) * (ADDRBITSZ-MSBSZIGN)) -1 : (gen_m_wb_idx * (ADDRBITSZ-MSBSZIGN))];
 
 assign _m_wb_sel_i[gen_m_wb_idx] =
 	m_wb_sel_i[((gen_m_wb_idx+1) * (WORDBITSZ/8)) -1 : (gen_m_wb_idx * (WORDBITSZ/8))];

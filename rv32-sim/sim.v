@@ -69,34 +69,35 @@ localparam WBPI_DNSIZR            = 4'b0011;
 localparam WBPI_WORDBITSZ         = WORDBITSZ;
 localparam WBPI_CLOG2WORDBITSZBY8 = clog2(WBPI_WORDBITSZ/8);
 localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
+localparam WBPI_ADDRLIMIT         = ('h2000 + (`SRAM_KBSIZE * 1024));
 localparam WBPI_CLKFREQ           = `CLKFREQ;
 wire wbpi_rst_w = rst_w;
 wire wbpi_clk_w = clk_i;
 // The peripheral interconnect is instantiated in a separate file to keep this file clean.
 // Master devices must use the following signals to plug onto the peripheral interconnect:
-// 	input                              m_wbpi_cyc_w  [WBPI_MASTERCOUNT -1 : 0];
-// 	input                              m_wbpi_stb_w  [WBPI_MASTERCOUNT -1 : 0];
-// 	input                              m_wbpi_we_w   [WBPI_MASTERCOUNT -1 : 0];
-// 	input  [WBPI_ADDRBITSZ -1 : 0]     m_wbpi_addr_w [WBPI_MASTERCOUNT -1 : 0];
-// 	input  [(WBPI_WORDBITSZ/8) -1 : 0] m_wbpi_sel_w  [WBPI_MASTERCOUNT -1 : 0];
-// 	input  [WBPI_WORDBITSZ -1 : 0]     m_wbpi_dati_w [WBPI_MASTERCOUNT -1 : 0];
-// 	output                             m_wbpi_bsy_w  [WBPI_MASTERCOUNT -1 : 0];
-// 	output                             m_wbpi_ack_w  [WBPI_MASTERCOUNT -1 : 0];
-// 	output [WBPI_WORDBITSZ -1 : 0]     m_wbpi_dato_w [WBPI_MASTERCOUNT -1 : 0];
+// 	input                                          m_wbpi_cyc_w  [WBPI_MASTERCOUNT -1 : 0];
+// 	input                                          m_wbpi_stb_w  [WBPI_MASTERCOUNT -1 : 0];
+// 	input                                          m_wbpi_we_w   [WBPI_MASTERCOUNT -1 : 0];
+// 	input  [(WBPI_ADDRBITSZ-WBPI_MSBSZIGN) -1 : 0] m_wbpi_addr_w [WBPI_MASTERCOUNT -1 : 0];
+// 	input  [(WBPI_WORDBITSZ/8) -1 : 0]             m_wbpi_sel_w  [WBPI_MASTERCOUNT -1 : 0];
+// 	input  [WBPI_WORDBITSZ -1 : 0]                 m_wbpi_dati_w [WBPI_MASTERCOUNT -1 : 0];
+// 	output                                         m_wbpi_bsy_w  [WBPI_MASTERCOUNT -1 : 0];
+// 	output                                         m_wbpi_ack_w  [WBPI_MASTERCOUNT -1 : 0];
+// 	output [WBPI_WORDBITSZ -1 : 0]                 m_wbpi_dato_w [WBPI_MASTERCOUNT -1 : 0];
 // Slave devices must use the following signals to plug onto the peripheral interconnect:
-// 	output                             s_wbpi_cyc_w   [WBPI_SLAVECOUNT -1 : 0];
-// 	output                             s_wbpi_stb_w   [WBPI_SLAVECOUNT -1 : 0];
-// 	output                             s_wbpi_we_w    [WBPI_SLAVECOUNT -1 : 0];
-// 	output [WBPI_ADDRBITSZ -1 : 0]     s_wbpi_addr_w  [WBPI_SLAVECOUNT -1 : 0];
-// 	output [(WBPI_WORDBITSZ/8) -1 : 0] s_wbpi_sel_w   [WBPI_SLAVECOUNT -1 : 0];
-// 	output [WBPI_WORDBITSZ -1 : 0]     s_wbpi_dato_w  [WBPI_SLAVECOUNT -1 : 0];
-// 	input                              s_wbpi_bsy_w   [WBPI_SLAVECOUNT -1 : 0];
-// 	input                              s_wbpi_ack_w   [WBPI_SLAVECOUNT -1 : 0];
-// 	input  [WBPI_WORDBITSZ -1 : 0]     s_wbpi_dati_w  [WBPI_SLAVECOUNT -1 : 0];
-// 	input  [WORDBITSZ -1 : 0]          s_wbpi_mapsz_w [WBPI_SLAVECOUNT -1 : 0];
+// 	output                                         s_wbpi_cyc_w   [WBPI_SLAVECOUNT -1 : 0];
+// 	output                                         s_wbpi_stb_w   [WBPI_SLAVECOUNT -1 : 0];
+// 	output                                         s_wbpi_we_w    [WBPI_SLAVECOUNT -1 : 0];
+// 	output [(WBPI_ADDRBITSZ-WBPI_MSBSZIGN) -1 : 0] s_wbpi_addr_w  [WBPI_SLAVECOUNT -1 : 0];
+// 	output [(WBPI_WORDBITSZ/8) -1 : 0]             s_wbpi_sel_w   [WBPI_SLAVECOUNT -1 : 0];
+// 	output [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dato_w  [WBPI_SLAVECOUNT -1 : 0];
+// 	input                                          s_wbpi_bsy_w   [WBPI_SLAVECOUNT -1 : 0];
+// 	input                                          s_wbpi_ack_w   [WBPI_SLAVECOUNT -1 : 0];
+// 	input  [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dati_w  [WBPI_SLAVECOUNT -1 : 0];
+// 	input  [WORDBITSZ -1 : 0]                      s_wbpi_mapsz_w [WBPI_SLAVECOUNT -1 : 0];
 // If "dev/devtbl.v" was included, slave devices must also use following signals:
-// 	input  [WORDBITSZ -1 : 0]          dev_id_w       [WBPI_SLAVECOUNT -1 : 0];
-// 	input                              dev_useirq_w   [WBPI_SLAVECOUNT -1 : 0];
+// 	input  [WORDBITSZ -1 : 0]                      dev_id_w       [WBPI_SLAVECOUNT -1 : 0];
+// 	input                                          dev_useirq_w   [WBPI_SLAVECOUNT -1 : 0];
 `include "lib/wbpi_inst.v"
 
 localparam IRQ_SERIAL = 0;
@@ -118,8 +119,8 @@ localparam DCACHEWAYCNT = 2;
 
 // cpu_dcache_miss_w must be combinationally set high if
 // cpu_dcache_addr_w is an address that must not be cached.
-wire [(WBPI_WORDBITSZ*CPU_COUNT) -1 : 0] cpu_dcache_addr_w;
-wire [CPU_COUNT -1 : 0]                  cpu_dcache_miss_w;
+wire [((WBPI_WORDBITSZ-WBPI_MSBSZIGN)*CPU_COUNT) -1 : 0] cpu_dcache_addr_w;
+wire [CPU_COUNT -1 : 0]                                  cpu_dcache_miss_w;
 
 reg [WORDBITSZ -1 : 0] spval_r;
 always @ (posedge wbpi_clk_w)
@@ -128,6 +129,7 @@ always @ (posedge wbpi_clk_w)
 cpu #(
 	 .WORDBITSZ     (WORDBITSZ)
 	,.XWORDBITSZ    (WBPI_WORDBITSZ)
+	,.ADDRLIMIT     (WBPI_ADDRLIMIT)
 	,.CLKFREQ       (WBPI_CLKFREQ)
 	,.ICACHESETCNT  ((1024/(WBPI_WORDBITSZ/8))*(ICACHESZ/ICACHEWAYCNT))
 	,.DCACHESETCNT  ((1024/(WBPI_WORDBITSZ/8))*(DCACHESZ/DCACHEWAYCNT))
@@ -272,8 +274,7 @@ generate for (
 	gen_cpu_dcache_miss_w_idx = 0;
 	gen_cpu_dcache_miss_w_idx < CPU_COUNT;
 	gen_cpu_dcache_miss_w_idx = gen_cpu_dcache_miss_w_idx + 1) begin :gen_cpu_dcache_miss_w
-	wire [WBPI_WORDBITSZ -1 : 0] addr_w = cpu_dcache_addr_w[
-		((gen_cpu_dcache_miss_w_idx+1)*WBPI_WORDBITSZ) -1 : gen_cpu_dcache_miss_w_idx*WBPI_WORDBITSZ];
+	wire [(WBPI_WORDBITSZ-WBPI_MSBSZIGN) -1 : 0] addr_w = cpu_dcache_addr_w[((gen_cpu_dcache_miss_w_idx+1)*(WBPI_WORDBITSZ-WBPI_MSBSZIGN)) -1 : gen_cpu_dcache_miss_w_idx*(WBPI_WORDBITSZ-WBPI_MSBSZIGN)];
 assign cpu_dcache_miss_w[gen_cpu_dcache_miss_w_idx] = (
 	(addr_w < 'h1000) || (addr_w >= ('h1000 + s_wbpi_mapsz_w[S_WBPI_SRAM])));
 end endgenerate
