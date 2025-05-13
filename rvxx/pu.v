@@ -119,11 +119,11 @@
 
 `include "lib/fifo.v"
 `include "lib/fifo_fwft.v"
-`include "lib/icache.v"
 `include "lib/wb_skidbuf.v"
-`include "lib/dcache.v"
 `include "lib/wb_upsizr.v"
 
+`include "./icache.v"
+`include "./dcache.v"
 `ifdef PURV32M
 `include "./imul.v"
 `include "./idiv.v"
