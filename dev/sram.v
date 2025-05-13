@@ -68,23 +68,26 @@ parameter DELAY = 0;
 parameter INITFILE = "";
 
 localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
-
 localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
+
+localparam MAPSZ = (SIZE*(WORDBITSZ/8));
+
+localparam MSBSZIGN = (WORDBITSZ-clog2(MAPSZ));
 
 input wire rst_i;
 
 input wire clk_i;
 
-input  wire                        wb_cyc_i;
-input  wire                        wb_stb_i;
-input  wire                        wb_we_i;
-input  wire [ADDRBITSZ -1 : 0]     wb_addr_i;
-input  wire [(WORDBITSZ/8) -1 : 0] wb_sel_i;
-input  wire [WORDBITSZ -1 : 0]     wb_dat_i;
-output wire                        wb_bsy_o;
-output reg                         wb_ack_o;
-output wire [WORDBITSZ -1 : 0]     wb_dat_o;
-output wire [WORDBITSZ -1 : 0]     wb_mapsz_o;
+input  wire                               wb_cyc_i;
+input  wire                               wb_stb_i;
+input  wire                               wb_we_i;
+input  wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] wb_addr_i;
+input  wire [(WORDBITSZ/8) -1 : 0]        wb_sel_i;
+input  wire [WORDBITSZ -1 : 0]            wb_dat_i;
+output wire                               wb_bsy_o;
+output reg                                wb_ack_o;
+output wire [WORDBITSZ -1 : 0]            wb_dat_o;
+output wire [(WORDBITSZ-MSBSZIGN) : 0]    wb_mapsz_o;
 
 localparam CLOG2DELAY = clog2(DELAY);
 
@@ -95,7 +98,6 @@ reg [(CLOG2DELAY +1) -1 : 0] cntr = 0;
 
 assign wb_bsy_o = |cntr;
 
-localparam MAPSZ = (SIZE*(WORDBITSZ/8));
 // By convention, devices mapsz must be aligned to 128 bytes (1024 bits).
 assign wb_mapsz_o = ((MAPSZ < 128) ? 128 : MAPSZ);
 
@@ -110,11 +112,11 @@ initial begin
 	end
 end
 
-reg                        wb_stb_r;
-reg                        wb_we_r;
-reg [ADDRBITSZ -1 : 0]     wb_addr_r;
-reg [(WORDBITSZ/8) -1 : 0] wb_sel_r;
-reg [WORDBITSZ -1 : 0]     wb_dat_r;
+reg                               wb_stb_r;
+reg                               wb_we_r;
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] wb_addr_r;
+reg [(WORDBITSZ/8) -1 : 0]        wb_sel_r;
+reg [WORDBITSZ -1 : 0]            wb_dat_r;
 
 wire wb_stb_r_ = (wb_cyc_i && wb_stb_i && !wb_bsy_o);
 always @ (posedge clk_i) begin
