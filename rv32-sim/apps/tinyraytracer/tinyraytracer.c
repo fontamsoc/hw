@@ -381,7 +381,8 @@ int main() {
 	GL_terminate();
 	_date_t cycles_spent = (end_time - start_time);
 	uintptr_t milliseconds_spent = ((cycles_spent * 1000) / _clkfreq());
-	printf("Completed in %u ms by %u thread(s)\n", milliseconds_spent, nthrd);
+	printf("Completed %ux%u in %u ms by %u thread(s)\n",
+		   GL_width, GL_height, milliseconds_spent, nthrd);
 	return 0;
 }
 
