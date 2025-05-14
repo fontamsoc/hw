@@ -487,10 +487,10 @@ reg [CLOG2GPRCNT -1 : 0] iD_rs1Id;
 reg [CLOG2GPRCNT -1 : 0] iD_rs2Id;
 
 reg [WORDBITSZ -1 : 0] iD_Iimm;
-reg [WORDBITSZ -1 : 0] iD_Simm;
-reg [WORDBITSZ -1 : 0] iD_Bimm;
+//reg [WORDBITSZ -1 : 0] iD_Simm;
+//reg [WORDBITSZ -1 : 0] iD_Bimm;
 reg [WORDBITSZ -1 : 0] iD_Uimm;
-reg [WORDBITSZ -1 : 0] iD_Jimm;
+//reg [WORDBITSZ -1 : 0] iD_Jimm;
 
 reg [3 -1 : 0] iD_func3;
 reg [5 -1 : 0] iD_func5;
@@ -499,13 +499,17 @@ reg [7 -1 : 0] iD_func7;
 reg [WORDBITSZ -1 : 0] iD_pc_plus_INSNBITSzBy8;
 reg [WORDBITSZ -1 : 0] iD_pc_plus_iD_Bimm;
 reg [WORDBITSZ -1 : 0] iD_pc_plus_iD_Uimm;
+`ifndef PUPREDICTJAL
 reg [WORDBITSZ -1 : 0] iD_pc_plus_iD_Jimm;
+`endif
 
 reg iD_isALUreg;
-reg iD_isALUimm;
+//reg iD_isALUimm;
 reg iD_isBranch;
 reg iD_isJALR;
+`ifndef PUPREDICTJAL
 reg iD_isJAL;
+`endif
 `ifdef PUPREDICTRET
 reg iD_isRet;
 reg iD_isJALRnotRet;
@@ -513,7 +517,7 @@ reg iD_isCall;
 `endif
 reg iD_isAUIPC;
 reg iD_isLUI;
-reg iD_isLoad;
+//reg iD_isLoad;
 reg iD_isStore;
 reg iD_isSystem;
 reg iD_isAMO;
@@ -723,10 +727,10 @@ always @ (posedge clk_i) begin
 		iD_rs2Id <= iF_rs2Id;
 
 		iD_Iimm <= iF_Iimm;
-		iD_Simm <= iF_Simm;
-		iD_Bimm <= iF_Bimm;
+		//iD_Simm <= iF_Simm;
+		//iD_Bimm <= iF_Bimm;
 		iD_Uimm <= iF_Uimm;
-		iD_Jimm <= iF_Jimm;
+		//iD_Jimm <= iF_Jimm;
 
 		iD_func3 <= iF_func3;
 		iD_func5 <= iF_func5;
@@ -735,13 +739,17 @@ always @ (posedge clk_i) begin
 		iD_pc_plus_INSNBITSzBy8 <= iF_pc_plus_INSNBITSzBy8;
 		iD_pc_plus_iD_Bimm      <= iF_pc_plus_iF_Bimm;
 		iD_pc_plus_iD_Uimm      <= iF_pc_plus_iF_Uimm;
+		`ifndef PUPREDICTJAL
 		iD_pc_plus_iD_Jimm      <= iF_pc_plus_iF_Jimm;
+		`endif
 
 		iD_isALUreg <= iF_isALUreg;
-		iD_isALUimm <= iF_isALUimm;
+		//iD_isALUimm <= iF_isALUimm;
 		iD_isBranch <= iF_isBranch;
 		iD_isJALR   <= iF_isJALR;
+		`ifndef PUPREDICTJAL
 		iD_isJAL    <= iF_isJAL;
+		`endif
 		`ifdef PUPREDICTRET
 		iD_isRet        <= iF_isRet;
 		iD_isJALRnotRet <= iF_isJALRnotRet;
@@ -749,7 +757,7 @@ always @ (posedge clk_i) begin
 		`endif
 		iD_isAUIPC  <= iF_isAUIPC;
 		iD_isLUI    <= iF_isLUI;
-		iD_isLoad   <= iF_isLoad;
+		//iD_isLoad   <= iF_isLoad;
 		iD_isStore  <= iF_isStore;
 		iD_isSystem <= iF_isSystem;
 		iD_isAMO    <= iF_isAMO;

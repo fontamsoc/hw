@@ -92,6 +92,8 @@ wire                         upSizr_dCache_s_bsy_i;
 wire                         upSizr_dCache_s_ack_i;
 wire [XWORDBITSZ -1 : 0]     upSizr_dCache_s_dat_i;
 
+generate if (WORDBITSZ < XWORDBITSZ) begin :gen_upSizr_dCache
+
 wb_upsizr #(
 	 .MWORDBITSZ    (WORDBITSZ)
 	,.SWORDBITSZ    (XWORDBITSZ)
@@ -123,6 +125,20 @@ wb_upsizr #(
 	,.s_wb_ack_i  (upSizr_dCache_s_ack_i)
 	,.s_wb_dat_i  (upSizr_dCache_s_dat_i)
 );
+
+end else begin
+
+assign upSizr_dCache_s_cyc_o = skidBuf_dCache_s_cyc_o;
+assign upSizr_dCache_s_stb_o = skidBuf_dCache_s_stb_o;
+assign upSizr_dCache_s_we_o = skidBuf_dCache_s_we_o;
+assign upSizr_dCache_s_addr_o = skidBuf_dCache_s_addr_o;
+assign upSizr_dCache_s_sel_o = skidBuf_dCache_s_sel_o;
+assign upSizr_dCache_s_dat_o = skidBuf_dCache_s_dat_o;
+assign skidBuf_dCache_s_bsy_i = upSizr_dCache_s_bsy_i;
+assign skidBuf_dCache_s_ack_i = upSizr_dCache_s_ack_i;
+assign skidBuf_dCache_s_dat_i = upSizr_dCache_s_dat_i;
+
+end endgenerate
 
 generate if (USE_DCACHE) begin: gen_dCache
 
