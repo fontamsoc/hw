@@ -329,33 +329,31 @@ _start():
     11c0:	86a1aa23          	sw	a0,-1932(gp) # 156d4 <NCPU>
     11c4:	cc0027f3          	csrr	a5,0xcc0
 main():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:380
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:350
+  }
 }
 
 int main () {
-#ifndef __linux__
   NCPU = _ncpu();
   MHZ  = (_clkfreq()/1000000);
     11c8:	000f4737          	lui	a4,0xf4
     11cc:	24070713          	addi	a4,a4,576 # f4240 <__tbss_end+0xd79a0>
     11d0:	02e7d7b3          	divu	a5,a5,a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:382
-#endif
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:351
   print("\033[48;5;16m" // set background color black
     11d4:	00014537          	lui	a0,0x14
     11d8:	99050513          	addi	a0,a0,-1648 # 13990 <__clzsi2+0x114>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:380
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:350
   MHZ  = (_clkfreq()/1000000);
     11dc:	86f1a823          	sw	a5,-1936(gp) # 156d0 <MHZ>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:382
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:351
   print("\033[48;5;16m" // set background color black
     11e0:	320000ef          	jal	1500 <print>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:388
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:356
         "\033[38;5;15m" // set foreground color white
         "\033[H"        // home
         "\033[?25l"     // hide cursor
         "\033[2J");     // clear screen
-
   thrd_fn();
     11e4:	3cc000ef          	jal	15b0 <thrd_fn>
 
@@ -976,43 +974,43 @@ frame_dummy():
 
 00001500 <print>:
 print():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:119
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:100
 void print (const char *s) {
     1500:	ff010113          	addi	sp,sp,-16
     1504:	00812423          	sw	s0,8(sp)
     1508:	00112623          	sw	ra,12(sp)
     150c:	00050413          	mv	s0,a0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:120
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:101
   _preempt_disable();
     1510:	6690b0ef          	jal	d378 <_preempt_disable>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:121 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:102 (discriminator 1)
   for (char c; (c = *s); ++s)
     1514:	00044783          	lbu	a5,0(s0)
     1518:	00078e63          	beqz	a5,1534 <print+0x34>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:122
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:103
     *(volatile char *)SERIAL0_ADDR = c;
     151c:	00001737          	lui	a4,0x1
     1520:	f8070713          	addi	a4,a4,-128 # f80 <fb+0xf64>
     1524:	00f70023          	sb	a5,0(a4)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:121 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:102 (discriminator 1)
   for (char c; (c = *s); ++s)
     1528:	00144783          	lbu	a5,1(s0)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:121 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:102 (discriminator 2)
     152c:	00140413          	addi	s0,s0,1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:121 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:102 (discriminator 1)
     1530:	fe079ae3          	bnez	a5,1524 <print+0x24>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:124
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:105
 }
     1534:	00812403          	lw	s0,8(sp)
     1538:	00c12083          	lw	ra,12(sp)
     153c:	01010113          	addi	sp,sp,16
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:123
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:104
   _preempt_enable();
     1540:	6650b06f          	j	d3a4 <_preempt_enable>
 
 00001544 <fbprintf>:
 fbprintf():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:130
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:110
 int fbprintf (const char *fmt, ...) {
     1544:	fc010113          	addi	sp,sp,-64
     1548:	00812c23          	sw	s0,24(sp)
@@ -1024,41 +1022,41 @@ int fbprintf (const char *fmt, ...) {
     1560:	03012c23          	sw	a6,56(sp)
     1564:	03112e23          	sw	a7,60(sp)
     1568:	01822703          	lw	a4,24(tp) # 18 <fbidx>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:133
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:113
   int n = vsnprintf(&fb[fbidx], (sizeof(fb) - fbidx), fmt, args);
     156c:	000085b7          	lui	a1,0x8
     1570:	01c20793          	addi	a5,tp,28 # 1c <fb>
     1574:	80058593          	addi	a1,a1,-2048 # 7800 <_svfprintf_r+0x2348>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:132
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:112
   va_start(args, fmt);
     1578:	02410693          	addi	a3,sp,36
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:130
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:110
 int fbprintf (const char *fmt, ...) {
     157c:	00050613          	mv	a2,a0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:133
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:113
   int n = vsnprintf(&fb[fbidx], (sizeof(fb) - fbidx), fmt, args);
     1580:	40e585b3          	sub	a1,a1,a4
     1584:	00e78533          	add	a0,a5,a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:130
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:110
 int fbprintf (const char *fmt, ...) {
     1588:	00112e23          	sw	ra,28(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:132
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:112
   va_start(args, fmt);
     158c:	00d12623          	sw	a3,12(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:133
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:113
   int n = vsnprintf(&fb[fbidx], (sizeof(fb) - fbidx), fmt, args);
     1590:	205010ef          	jal	2f94 <vsnprintf>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:135
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:115
   fbidx += n;
     1594:	01822783          	lw	a5,24(tp) # 18 <fbidx>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:137
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:117
 }
     1598:	01c12083          	lw	ra,28(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:135
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:115
   fbidx += n;
     159c:	00a787b3          	add	a5,a5,a0
     15a0:	00f22c23          	sw	a5,24(tp) # 18 <fbidx>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:137
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:117
 }
     15a4:	01812403          	lw	s0,24(sp)
     15a8:	04010113          	addi	sp,sp,64
@@ -1066,55 +1064,55 @@ int fbprintf (const char *fmt, ...) {
 
 000015b0 <thrd_fn>:
 my_rdcycle():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:69
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:57
         __asm__ __volatile__ ("rdcycleh %0" : "=r" (a1));
     15b0:	c8002773          	rdcycleh	a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:70
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:58
         __asm__ __volatile__ ("rdcycle %0" : "=r" (a0));
     15b4:	c00026f3          	rdcycle	a3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:71
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:59
         __asm__ __volatile__ ("rdcycleh %0" : "=r" (t0));
     15b8:	c80027f3          	rdcycleh	a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:72
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:60
     } while(t0 != a1);
     15bc:	00f70463          	beq	a4,a5,15c4 <thrd_fn+0x14>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:72 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:60 (discriminator 1)
     15c0:	0000006f          	j	15c0 <thrd_fn+0x10>
 stats_reset():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:101 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:87 (discriminator 1)
     stats_cycles_init       = my_rdcycle();
     15c4:	000087b7          	lui	a5,0x8
     15c8:	004787b3          	add	a5,a5,tp
 my_rdcycle():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:74
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:62
     return ((uint64_t)a1 << 32) | a0;
     15cc:	84d7a423          	sw	a3,-1976(a5) # 7848 <stats_cycles_init>
     15d0:	84e7a623          	sw	a4,-1972(a5)
 my_rdinstret():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:81
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:69
         __asm__ __volatile__ ("rdinstreth %0" : "=r" (a1));
     15d4:	c8202773          	rdinstreth	a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:82
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:70
         __asm__ __volatile__ ("rdinstret %0" : "=r" (a0));
     15d8:	c0202573          	rdinstret	a0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:83
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:71
         __asm__ __volatile__ ("rdinstreth %0" : "=r" (t0));
     15dc:	c82027f3          	rdinstreth	a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:84
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:72
     } while(t0 != a1);
     15e0:	00f70463          	beq	a4,a5,15e8 <thrd_fn+0x38>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:84 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:72 (discriminator 1)
     15e4:	0000006f          	j	15e4 <thrd_fn+0x34>
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:234
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:212
 void thrd_fn (void) {
     15e8:	f2010113          	addi	sp,sp,-224
 stats_reset():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:102 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:88 (discriminator 1)
     stats_instructions_init = my_rdinstret();
     15ec:	000087b7          	lui	a5,0x8
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:234
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:212
 void thrd_fn (void) {
     15f0:	0c112e23          	sw	ra,220(sp)
     15f4:	0c812c23          	sw	s0,216(sp)
@@ -1130,16 +1128,16 @@ void thrd_fn (void) {
     161c:	0b912a23          	sw	s9,180(sp)
     1620:	0bb12623          	sw	s11,172(sp)
 stats_reset():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:102 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:88 (discriminator 1)
     stats_instructions_init = my_rdinstret();
     1624:	004787b3          	add	a5,a5,tp
 my_rdinstret():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:86
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:74
     return ((uint64_t)a1 << 32) | a0;
     1628:	84a7a023          	sw	a0,-1984(a5) # 7840 <stats_instructions_init>
     162c:	84e7a223          	sw	a4,-1980(a5)
 stats_reset():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:103
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:89
     stats_frame_init        = frame;
     1630:	8cc18793          	addi	a5,gp,-1844 # 1572c <scanline>
     1634:	02f12423          	sw	a5,40(sp)
@@ -1149,356 +1147,356 @@ stats_reset():
     1644:	8781a603          	lw	a2,-1928(gp) # 156d8 <frame>
     1648:	87c1a683          	lw	a3,-1924(gp) # 156dc <frame+0x4>
 setpixel():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:151
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:131
             if(prev_color1 == color1) {
     164c:	02f12623          	sw	a5,44(sp)
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:249
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:227
   int16_t sAcB = 11583, cAcB = 11583;
     1650:	000030b7          	lui	ra,0x3
 stats_reset():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:103
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:89
     stats_frame_init        = frame;
     1654:	000085b7          	lui	a1,0x8
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:249
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:227
   int16_t sAcB = 11583, cAcB = 11583;
     1658:	d3f08093          	addi	ra,ra,-705 # 2d3f <__sinit+0x37>
 stats_reset():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:103
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:89
     stats_frame_init        = frame;
     165c:	004585b3          	add	a1,a1,tp
 setpixel():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:158 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:138 (discriminator 1)
             if(prev_color1 != color1 && prev_color2 != color2) {
     1660:	02f12a23          	sw	a5,52(sp)
 stats_update():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:107 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:93 (discriminator 1)
     stats_instructions = (my_rdinstret() - stats_instructions_init);
     1664:	000087b7          	lui	a5,0x8
     1668:	004787b3          	add	a5,a5,tp
 stats_reset():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:103
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:89
     stats_frame_init        = frame;
     166c:	82c5ac23          	sw	a2,-1992(a1) # 7838 <stats_frame_init>
     1670:	82d5ae23          	sw	a3,-1988(a1)
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:248
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:226
   int16_t sAsB = 0, cAsB = 0;
     1674:	04012a23          	sw	zero,84(sp)
     1678:	04012423          	sw	zero,72(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:247
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:225
   int16_t sA = 11583, cA = 11583;
     167c:	04112823          	sw	ra,80(sp)
     1680:	04112623          	sw	ra,76(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:246
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:224
   int16_t sB = 0, cB = 16384;
     1684:	04012223          	sw	zero,68(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:238
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
   uintptr_t MIPS = 0;
     1688:	06012623          	sw	zero,108(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:237
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:215
   uintptr_t CPI  = 0;
     168c:	06012423          	sw	zero,104(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:236
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
   uintptr_t FPS  = 0;
     1690:	06012223          	sw	zero,100(sp)
 stats_update():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:107 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:93 (discriminator 1)
     stats_instructions = (my_rdinstret() - stats_instructions_init);
     1694:	06f12823          	sw	a5,112(sp)
     1698:	04812c03          	lw	s8,72(sp)
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:246
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:224
   int16_t sB = 0, cB = 16384;
     169c:	00004437          	lui	s0,0x4
     16a0:	16900913          	li	s2,361
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:249
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:227
   int16_t sAcB = 11583, cAcB = 11583;
     16a4:	00008d13          	mv	s10,ra
     16a8:	10000b13          	li	s6,256
 stats_update():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:107 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:93 (discriminator 1)
     stats_instructions = (my_rdinstret() - stats_instructions_init);
     16ac:	00040793          	mv	a5,s0
     16b0:	00090513          	mv	a0,s2
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:266
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:244
     int16_t yincS = (sA >> 6) + (sA >> 5);      // 12*sA >> 8;
     16b4:	04c12903          	lw	s2,76(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:270
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:248
     int16_t ycA = -((cA >> 1) + (cA >> 4));     // -12 * yinc1 = -9*cA >> 4;
     16b8:	05012983          	lw	s3,80(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:275
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:253
     int xcAsB = (cAsB >> 4) - cAsB;  // -40*xincZ;
     16bc:	05412a03          	lw	s4,84(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:266
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:244
     int16_t yincS = (sA >> 6) + (sA >> 5);      // 12*sA >> 8;
     16c0:	40595613          	srai	a2,s2,0x5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:270
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:248
     int16_t ycA = -((cA >> 1) + (cA >> 4));     // -12 * yinc1 = -9*cA >> 4;
     16c4:	4049d693          	srai	a3,s3,0x4
     16c8:	4019d713          	srai	a4,s3,0x1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:279
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:257
       int16_t vxi14 = (cB >> 4) - cB - sB; // -40*xincX - sB;
     16cc:	01079a93          	slli	s5,a5,0x10
     16d0:	4047d293          	srai	t0,a5,0x4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:267
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:245
     int16_t xincX = (cB >> 7) + (cB >> 6);      // 6*cB >> 8;
     16d4:	4077d793          	srai	a5,a5,0x7
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:271
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:249
     int16_t ysA = -((sA >> 1) + (sA >> 4));     // -12 * yinc2 = -9*sA >> 4;
     16d8:	40495813          	srai	a6,s2,0x4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:258
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:236
     int p0x = dz * sB >> 6;
     16dc:	04412c83          	lw	s9,68(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:266
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:244
     int16_t yincS = (sA >> 6) + (sA >> 5);      // 12*sA >> 8;
     16e0:	01061413          	slli	s0,a2,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:270
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:248
     int16_t ycA = -((cA >> 1) + (cA >> 4));     // -12 * yinc1 = -9*cA >> 4;
     16e4:	00d70733          	add	a4,a4,a3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:275
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:253
     int xcAsB = (cAsB >> 4) - cAsB;  // -40*xincZ;
     16e8:	404a5613          	srai	a2,s4,0x4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:271
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:249
     int16_t ysA = -((sA >> 1) + (sA >> 4));     // -12 * yinc2 = -9*sA >> 4;
     16ec:	40195693          	srai	a3,s2,0x1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:267
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:245
     int16_t xincX = (cB >> 7) + (cB >> 6);      // 6*cB >> 8;
     16f0:	016787b3          	add	a5,a5,s6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:275
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:253
     int xcAsB = (cAsB >> 4) - cAsB;  // -40*xincZ;
     16f4:	41460633          	sub	a2,a2,s4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:271
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:249
     int16_t ysA = -((sA >> 1) + (sA >> 4));     // -12 * yinc2 = -9*sA >> 4;
     16f8:	010686b3          	add	a3,a3,a6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:268
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:246
     int16_t xincY = (sAsB >> 7) + (sAsB >> 6);  // 6*sAsB >> 8;
     16fc:	406c5393          	srai	t2,s8,0x6
     1700:	407c5813          	srai	a6,s8,0x7
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:267
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:245
     int16_t xincX = (cB >> 7) + (cB >> 6);      // 6*cB >> 8;
     1704:	01079793          	slli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:265
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:243
     int16_t yincC = (cA >> 6) + (cA >> 5);      // 12*cA >> 8;
     1708:	4069df13          	srai	t5,s3,0x6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:274
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:252
     int xsAsB = (sAsB >> 4) - sAsB;  // -40*xincY
     170c:	404c5893          	srai	a7,s8,0x4
     1710:	40d606b3          	sub	a3,a2,a3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:269
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:247
     int16_t xincZ = (cAsB >> 7) + (cAsB >> 6);  // 6*cAsB >> 8;
     1714:	000a0c13          	mv	s8,s4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:268
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:246
     int16_t xincY = (sAsB >> 7) + (sAsB >> 6);  // 6*sAsB >> 8;
     1718:	00780633          	add	a2,a6,t2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:267
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:245
     int16_t xincX = (cB >> 7) + (cB >> 6);      // 6*cB >> 8;
     171c:	0107d793          	srli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:258
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:236
     int p0x = dz * sB >> 6;
     1720:	002c9e93          	slli	t4,s9,0x2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:269
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:247
     int16_t xincZ = (cAsB >> 7) + (cAsB >> 6);  // 6*cAsB >> 8;
     1724:	407a5a13          	srai	s4,s4,0x7
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:279
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:257
       int16_t vxi14 = (cB >> 4) - cB - sB; // -40*xincX - sB;
     1728:	04415c83          	lhu	s9,68(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:269
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:247
     int16_t xincZ = (cAsB >> 7) + (cAsB >> 6);  // 6*cAsB >> 8;
     172c:	406c5c13          	srai	s8,s8,0x6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:277 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:255 (discriminator 2)
     for (int j = 0; j < 46; j++, ycA += yincC>>1, ysA += yincS>>1) {
     1730:	00af0533          	add	a0,t5,a0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:267
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:245
     int16_t xincX = (cB >> 7) + (cB >> 6);      // 6*cB >> 8;
     1734:	00f12823          	sw	a5,16(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:274
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:252
     int xsAsB = (sAsB >> 4) - sAsB;  // -40*xincY
     1738:	04812f03          	lw	t5,72(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:268
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:246
     int16_t xincY = (sAsB >> 7) + (sAsB >> 6);  // 6*sAsB >> 8;
     173c:	01061793          	slli	a5,a2,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:269
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:247
     int16_t xincZ = (cAsB >> 7) + (cAsB >> 6);  // 6*cAsB >> 8;
     1740:	018a0833          	add	a6,s4,s8
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:279
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:257
       int16_t vxi14 = (cB >> 4) - cB - sB; // -40*xincX - sB;
     1744:	010ada93          	srli	s5,s5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:268
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:246
     int16_t xincY = (sAsB >> 7) + (sAsB >> 6);  // 6*sAsB >> 8;
     1748:	0107d793          	srli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:279
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:257
       int16_t vxi14 = (cB >> 4) - cB - sB; // -40*xincX - sB;
     174c:	415282b3          	sub	t0,t0,s5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:268
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:246
     int16_t xincY = (sAsB >> 7) + (sAsB >> 6);  // 6*sAsB >> 8;
     1750:	00f12a23          	sw	a5,20(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:269
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:247
     int16_t xincZ = (cAsB >> 7) + (cAsB >> 6);  // 6*cAsB >> 8;
     1754:	01081793          	slli	a5,a6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:274
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:252
     int xsAsB = (sAsB >> 4) - sAsB;  // -40*xincY
     1758:	41e888b3          	sub	a7,a7,t5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:266
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:244
     int16_t yincS = (sA >> 6) + (sA >> 5);      // 12*sA >> 8;
     175c:	01045413          	srli	s0,s0,0x10
     1760:	40695593          	srai	a1,s2,0x6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:269
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:247
     int16_t xincZ = (cAsB >> 7) + (cAsB >> 6);  // 6*cAsB >> 8;
     1764:	0107d793          	srli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:279
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:257
       int16_t vxi14 = (cB >> 4) - cB - sB; // -40*xincX - sB;
     1768:	41928f33          	sub	t5,t0,s9
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:260
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:238
     int p0z = -dz * cAcB >> 6;
     176c:	00209313          	slli	t1,ra,0x2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:290
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:268
         int16_t lz0 = (-cAcB - sA) >> 2;
     1770:	40100fb3          	neg	t6,ra
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:266
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:244
     int16_t yincS = (sA >> 6) + (sA >> 5);      // 12*sA >> 8;
     1774:	00b405b3          	add	a1,s0,a1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:269
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:247
     int16_t xincZ = (cAsB >> 7) + (cAsB >> 6);  // 6*cAsB >> 8;
     1778:	00f12c23          	sw	a5,24(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:279
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:257
       int16_t vxi14 = (cB >> 4) - cB - sB; // -40*xincX - sB;
     177c:	010f1793          	slli	a5,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:290
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:268
         int16_t lz0 = (-cAcB - sA) >> 2;
     1780:	412f8fb3          	sub	t6,t6,s2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:260
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:238
     int p0z = -dz * cAcB >> 6;
     1784:	00130333          	add	t1,t1,ra
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:281
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:259
       int16_t vzi14 = ysA + xcAsB + cAcB;
     1788:	01009913          	slli	s2,ra,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:279
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:257
       int16_t vxi14 = (cB >> 4) - cB - sB; // -40*xincX - sB;
     178c:	4107d793          	srai	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:258
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:236
     int p0x = dz * sB >> 6;
     1790:	04412083          	lw	ra,68(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:277 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:255 (discriminator 2)
     for (int j = 0; j < 46; j++, ycA += yincC>>1, ysA += yincS>>1) {
     1794:	01059593          	slli	a1,a1,0x10
     1798:	40155513          	srai	a0,a0,0x1
     179c:	4105d593          	srai	a1,a1,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:279
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:257
       int16_t vxi14 = (cB >> 4) - cB - sB; // -40*xincX - sB;
     17a0:	06f12e23          	sw	a5,124(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:277 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:255 (discriminator 2)
     for (int j = 0; j < 46; j++, ycA += yincC>>1, ysA += yincS>>1) {
     17a4:	01051793          	slli	a5,a0,0x10
     17a8:	0107d793          	srli	a5,a5,0x10
     17ac:	4015d593          	srai	a1,a1,0x1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:258
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:236
     int p0x = dz * sB >> 6;
     17b0:	001e8eb3          	add	t4,t4,ra
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:277 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:255 (discriminator 2)
     for (int j = 0; j < 46; j++, ycA += yincC>>1, ysA += yincS>>1) {
     17b4:	06f12a23          	sw	a5,116(sp)
     17b8:	01059793          	slli	a5,a1,0x10
     17bc:	0107d793          	srli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:259
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:237
     int p0y = dz * sAcB >> 6;
     17c0:	002d1e13          	slli	t3,s10,0x2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:258
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:236
     int p0x = dz * sB >> 6;
     17c4:	406ede93          	srai	t4,t4,0x6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:259
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:237
     int p0y = dz * sAcB >> 6;
     17c8:	01ae0e33          	add	t3,t3,s10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:277 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:255 (discriminator 2)
     for (int j = 0; j < 46; j++, ycA += yincC>>1, ysA += yincS>>1) {
     17cc:	06f12c23          	sw	a5,120(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:285
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:263
         int16_t px = p0x + (vxi14 >> 5); // assuming t = 512, t*vxi>>8 == vxi<<1
     17d0:	010e9793          	slli	a5,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:290
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:268
         int16_t lz0 = (-cAcB - sA) >> 2;
     17d4:	402fdb13          	srai	s6,t6,0x2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:285
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:263
         int16_t px = p0x + (vxi14 >> 5); // assuming t = 512, t*vxi>>8 == vxi<<1
     17d8:	0107d793          	srli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:259
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:237
     int p0y = dz * sAcB >> 6;
     17dc:	406e5f93          	srai	t6,t3,0x6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:280
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:258
       int16_t vyi14 = ycA - xsAsB - sAcB;
     17e0:	010d1493          	slli	s1,s10,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:260
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:238
     int p0z = -dz * cAcB >> 6;
     17e4:	40600333          	neg	t1,t1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:285
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:263
         int16_t px = p0x + (vxi14 >> 5); // assuming t = 512, t*vxi>>8 == vxi<<1
     17e8:	00f12e23          	sw	a5,28(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:286
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:264
         int16_t py = p0y + (vyi14 >> 5);
     17ec:	010f9793          	slli	a5,t6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:280
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:258
       int16_t vyi14 = ycA - xsAsB - sAcB;
     17f0:	0104d493          	srli	s1,s1,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:286
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:264
         int16_t py = p0y + (vyi14 >> 5);
     17f4:	0107d793          	srli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:270
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:248
     int16_t ycA = -((cA >> 1) + (cA >> 4));     // -12 * yinc1 = -9*cA >> 4;
     17f8:	40e00733          	neg	a4,a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:260
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:238
     int p0z = -dz * cAcB >> 6;
     17fc:	40635313          	srai	t1,t1,0x6
     1800:	40970733          	sub	a4,a4,s1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:286
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:264
         int16_t py = p0y + (vyi14 >> 5);
     1804:	02f12023          	sw	a5,32(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:287
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:265
         int16_t pz = p0z + (vzi14 >> 5);
     1808:	01031793          	slli	a5,t1,0x10
     180c:	41170733          	sub	a4,a4,a7
     1810:	0107d793          	srli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:281
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:259
       int16_t vzi14 = ysA + xcAsB + cAcB;
     1814:	01095913          	srli	s2,s2,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:287
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:265
         int16_t pz = p0z + (vzi14 >> 5);
     1818:	02f12223          	sw	a5,36(sp)
     181c:	01071793          	slli	a5,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:289
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:267
         int16_t ly0 = (sAcB - cA) >> 2;
     1820:	413d0db3          	sub	s11,s10,s3
     1824:	00d906b3          	add	a3,s2,a3
     1828:	0107d793          	srli	a5,a5,0x10
     182c:	402dda13          	srai	s4,s11,0x2
 length_cordic():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:199
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:179
   int x2 = *x2_;
     1830:	4020d993          	srai	s3,ra,0x2
     1834:	04f12c23          	sw	a5,88(sp)
     1838:	01069793          	slli	a5,a3,0x10
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:281
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:259
       int16_t vzi14 = ysA + xcAsB + cAcB;
     183c:	09212023          	sw	s2,128(sp)
 length_cordic():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1840:	010a1c13          	slli	s8,s4,0x10
     1844:	0107d793          	srli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:202
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:182
     x2 = -x2;
     1848:	41300933          	neg	s2,s3
     184c:	41600db3          	neg	s11,s6
     1850:	08912a23          	sw	s1,148(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1854:	010c5c13          	srli	s8,s8,0x10
     1858:	04f12e23          	sw	a5,92(sp)
     185c:	02012823          	sw	zero,48(sp)
     1860:	06012023          	sw	zero,96(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:202
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:182
     x2 = -x2;
     1864:	08812223          	sw	s0,132(sp)
     1868:	09512423          	sw	s5,136(sp)
@@ -1507,808 +1505,808 @@ length_cordic():
     1874:	00090493          	mv	s1,s2
     1878:	000d8893          	mv	a7,s11
 setpixel():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:147
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:127
     if(y&1){
     187c:	03012783          	lw	a5,48(sp)
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:280
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:258
       int16_t vyi14 = ycA - xsAsB - sAcB;
     1880:	05811c83          	lh	s9,88(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:281
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:259
       int16_t vzi14 = ysA + xcAsB + cAcB;
     1884:	05c11a83          	lh	s5,92(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:279
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:257
       int16_t vxi14 = (cB >> 4) - cB - sB; // -40*xincX - sB;
     1888:	07c12403          	lw	s0,124(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:300
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:278
           if (t > 8*256) {
     188c:	00001d37          	lui	s10,0x1
 setpixel():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:147
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:127
     if(y&1){
     1890:	0017f793          	andi	a5,a5,1
     1894:	00f12623          	sw	a5,12(sp)
     1898:	00000d93          	li	s11,0
     189c:	00000313          	li	t1,0
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:300
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:278
           if (t > 8*256) {
     18a0:	800d0d13          	addi	s10,s10,-2048 # 800 <fb+0x7e4>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:306
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:284
           } else if (d < 2) {
     18a4:	00100913          	li	s2,1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:285
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:263
         int16_t px = p0x + (vxi14 >> 5); // assuming t = 512, t*vxi>>8 == vxi<<1
     18a8:	01c12783          	lw	a5,28(sp)
     18ac:	40545593          	srai	a1,s0,0x5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:286
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:264
         int16_t py = p0y + (vyi14 >> 5);
     18b0:	405cd613          	srai	a2,s9,0x5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:285
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:263
         int16_t px = p0x + (vxi14 >> 5); // assuming t = 512, t*vxi>>8 == vxi<<1
     18b4:	00b785b3          	add	a1,a5,a1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:286
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:264
         int16_t py = p0y + (vyi14 >> 5);
     18b8:	02012783          	lw	a5,32(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:287
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:265
         int16_t pz = p0z + (vzi14 >> 5);
     18bc:	405ad813          	srai	a6,s5,0x5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:285
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:263
         int16_t px = p0x + (vxi14 >> 5); // assuming t = 512, t*vxi>>8 == vxi<<1
     18c0:	01059713          	slli	a4,a1,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:286
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:264
         int16_t py = p0y + (vyi14 >> 5);
     18c4:	00c78633          	add	a2,a5,a2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:287
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:265
         int16_t pz = p0z + (vzi14 >> 5);
     18c8:	02412783          	lw	a5,36(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:286
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:264
         int16_t py = p0y + (vyi14 >> 5);
     18cc:	01061e13          	slli	t3,a2,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:285
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:263
         int16_t px = p0x + (vxi14 >> 5); // assuming t = 512, t*vxi>>8 == vxi<<1
     18d0:	41075713          	srai	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:287
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:265
         int16_t pz = p0z + (vzi14 >> 5);
     18d4:	01078833          	add	a6,a5,a6
     18d8:	01081813          	slli	a6,a6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:286
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:264
         int16_t py = p0y + (vyi14 >> 5);
     18dc:	410e5e13          	srai	t3,t3,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:287
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:265
         int16_t pz = p0z + (vzi14 >> 5);
     18e0:	41085813          	srai	a6,a6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:284
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:262
         int t = 512; // (256 * dz) - r2i - r1i;
     18e4:	20000693          	li	a3,512
     18e8:	3740006f          	j	1c5c <thrd_fn+0x6ac>
 length_cordic():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     18ec:	00150533          	add	a0,a0,ra
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     18f0:	40ff0f33          	sub	t5,t5,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     18f4:	41d380b3          	sub	ra,t2,t4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     18f8:	010f1e13          	slli	t3,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     18fc:	01009393          	slli	t2,ra,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1900:	01051293          	slli	t0,a0,0x10
     1904:	01051793          	slli	a5,a0,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1908:	010f1f13          	slli	t5,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     190c:	01009093          	slli	ra,ra,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1910:	0102d293          	srli	t0,t0,0x10
     1914:	4107d793          	srai	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1918:	010e5e13          	srli	t3,t3,0x10
     191c:	410f5f13          	srai	t5,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:215
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:195
       x2 += y2 >> i;
     1920:	00ef8733          	add	a4,t6,a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1924:	0103d393          	srli	t2,t2,0x10
     1928:	4100d093          	srai	ra,ra,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     192c:	402f5f93          	srai	t6,t5,0x2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1930:	4027d793          	srai	a5,a5,0x2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1934:	40275e93          	srai	t4,a4,0x2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1938:	010f9f93          	slli	t6,t6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     193c:	01079793          	slli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1940:	010e9e93          	slli	t4,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1944:	010fdf93          	srli	t6,t6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1948:	0107d793          	srli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:215
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:195
       x2 += y2 >> i;
     194c:	4020d513          	srai	a0,ra,0x2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1950:	010ede93          	srli	t4,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:207
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:187
     if (y < 0) {
     1954:	6e0f4863          	bltz	t5,2044 <thrd_fn+0xa94>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1958:	01f28fb3          	add	t6,t0,t6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     195c:	40fe07b3          	sub	a5,t3,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1960:	41d38eb3          	sub	t4,t2,t4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1964:	010f9093          	slli	ra,t6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1968:	01079393          	slli	t2,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     196c:	010f9f93          	slli	t6,t6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1970:	01079793          	slli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:215
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:195
       x2 += y2 >> i;
     1974:	00a70e33          	add	t3,a4,a0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1978:	010e9293          	slli	t0,t4,0x10
     197c:	010e9713          	slli	a4,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1980:	0100d093          	srli	ra,ra,0x10
     1984:	410fdf93          	srai	t6,t6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1988:	0103d393          	srli	t2,t2,0x10
     198c:	4107d793          	srai	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1990:	0102d293          	srli	t0,t0,0x10
     1994:	41075713          	srai	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1998:	4037de93          	srai	t4,a5,0x3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     199c:	403fdf93          	srai	t6,t6,0x3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     19a0:	403e5513          	srai	a0,t3,0x3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     19a4:	010e9e93          	slli	t4,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     19a8:	010f9f93          	slli	t6,t6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     19ac:	01051513          	slli	a0,a0,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     19b0:	010ede93          	srli	t4,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     19b4:	010fdf93          	srli	t6,t6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:215
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:195
       x2 += y2 >> i;
     19b8:	40375f13          	srai	t5,a4,0x3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     19bc:	01055513          	srli	a0,a0,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:207
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:187
     if (y < 0) {
     19c0:	6207ca63          	bltz	a5,1ff4 <thrd_fn+0xa44>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     19c4:	41f38fb3          	sub	t6,t2,t6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     19c8:	40a28733          	sub	a4,t0,a0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     19cc:	010f9513          	slli	a0,t6,0x10
     19d0:	41055513          	srai	a0,a0,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     19d4:	01d08eb3          	add	t4,ra,t4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     19d8:	01071713          	slli	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     19dc:	40455793          	srai	a5,a0,0x4
     19e0:	010e9e93          	slli	t4,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     19e4:	41075713          	srai	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     19e8:	01079793          	slli	a5,a5,0x10
     19ec:	010ede93          	srli	t4,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:215
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:195
       x2 += y2 >> i;
     19f0:	01ee0e33          	add	t3,t3,t5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     19f4:	0107d793          	srli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:215
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:195
       x2 += y2 >> i;
     19f8:	40475713          	srai	a4,a4,0x4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:207
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:187
     if (y < 0) {
     19fc:	62054a63          	bltz	a0,2030 <thrd_fn+0xa80>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1a00:	00fe87b3          	add	a5,t4,a5
     1a04:	01079793          	slli	a5,a5,0x10
     1a08:	4107d793          	srai	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:215
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:195
       x2 += y2 >> i;
     1a0c:	00ee0733          	add	a4,t3,a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:221
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:201
   *x2_ = (x2 >> 1) + (x2 >> 3);
     1a10:	40175513          	srai	a0,a4,0x1
     1a14:	40375713          	srai	a4,a4,0x3
     1a18:	00e50733          	add	a4,a0,a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:222
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:202
   return (x >> 1) + (x >> 3)
     1a1c:	4017de13          	srai	t3,a5,0x1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:201
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:181
     x = -x;
     1a20:	01081513          	slli	a0,a6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:222
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:202
   return (x >> 1) + (x >> 3)
     1a24:	4037d793          	srai	a5,a5,0x3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:221
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:201
   *x2_ = (x2 >> 1) + (x2 >> 3);
     1a28:	01071f13          	slli	t5,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:222
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:202
   return (x >> 1) + (x >> 3)
     1a2c:	00fe07b3          	add	a5,t3,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:201
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:181
     x = -x;
     1a30:	01055513          	srli	a0,a0,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:221
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:201
   *x2_ = (x2 >> 1) + (x2 >> 3);
     1a34:	01071713          	slli	a4,a4,0x10
     1a38:	010f5f13          	srli	t5,t5,0x10
     1a3c:	41075713          	srai	a4,a4,0x10
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:295
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:273
           t1 = t0 - r2i;
     1a40:	e0078793          	addi	a5,a5,-512 # 7e00 <_fflush_r+0x8>
 length_cordic():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:200
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:180
   if (x < 0) { // start in right half-plane
     1a44:	00050293          	mv	t0,a0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:199
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:179
   int x2 = *x2_;
     1a48:	000b0f93          	mv	t6,s6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:200
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:180
   if (x < 0) { // start in right half-plane
     1a4c:	00085a63          	bgez	a6,1a60 <thrd_fn+0x4b0>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:201
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:181
     x = -x;
     1a50:	40a002b3          	neg	t0,a0
     1a54:	01029293          	slli	t0,t0,0x10
     1a58:	0102d293          	srli	t0,t0,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:202
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:182
     x2 = -x2;
     1a5c:	00088f93          	mv	t6,a7
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1a60:	01079813          	slli	a6,a5,0x10
     1a64:	01085813          	srli	a6,a6,0x10
     1a68:	01028eb3          	add	t4,t0,a6
     1a6c:	010e9e13          	slli	t3,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1a70:	010f9393          	slli	t2,t6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1a74:	010e9e93          	slli	t4,t4,0x10
     1a78:	010e5e13          	srli	t3,t3,0x10
     1a7c:	410ede93          	srai	t4,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1a80:	0103d393          	srli	t2,t2,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:207
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:187
     if (y < 0) {
     1a84:	5207cc63          	bltz	a5,1fbc <thrd_fn+0xa0c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1a88:	40580833          	sub	a6,a6,t0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1a8c:	407f03b3          	sub	t2,t5,t2
     1a90:	01039293          	slli	t0,t2,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1a94:	01081f13          	slli	t5,a6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1a98:	01039393          	slli	t2,t2,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1a9c:	01081813          	slli	a6,a6,0x10
     1aa0:	010f5f13          	srli	t5,t5,0x10
     1aa4:	41085813          	srai	a6,a6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:215
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:195
       x2 += y2 >> i;
     1aa8:	00ef8fb3          	add	t6,t6,a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1aac:	0102d293          	srli	t0,t0,0x10
     1ab0:	4103d393          	srai	t2,t2,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1ab4:	40185093          	srai	ra,a6,0x1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1ab8:	401ed793          	srai	a5,t4,0x1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1abc:	401fd713          	srai	a4,t6,0x1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1ac0:	01009e93          	slli	t4,ra,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1ac4:	01079793          	slli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1ac8:	01071093          	slli	ra,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1acc:	010ede93          	srli	t4,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1ad0:	0107d793          	srli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:215
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:195
       x2 += y2 >> i;
     1ad4:	4013d393          	srai	t2,t2,0x1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1ad8:	0100d093          	srli	ra,ra,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:207
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:187
     if (y < 0) {
     1adc:	48084e63          	bltz	a6,1f78 <thrd_fn+0x9c8>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1ae0:	01de0733          	add	a4,t3,t4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1ae4:	40ff0f33          	sub	t5,t5,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1ae8:	40128833          	sub	a6,t0,ra
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1aec:	01071e93          	slli	t4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1af0:	010f1293          	slli	t0,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1af4:	01071793          	slli	a5,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1af8:	010f1f13          	slli	t5,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:215
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:195
       x2 += y2 >> i;
     1afc:	007f8e33          	add	t3,t6,t2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1b00:	01081393          	slli	t2,a6,0x10
     1b04:	01081813          	slli	a6,a6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1b08:	010ede93          	srli	t4,t4,0x10
     1b0c:	4107d793          	srai	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1b10:	0102d293          	srli	t0,t0,0x10
     1b14:	410f5f13          	srai	t5,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1b18:	0103d393          	srli	t2,t2,0x10
     1b1c:	41085813          	srai	a6,a6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1b20:	402f5f93          	srai	t6,t5,0x2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1b24:	4027d793          	srai	a5,a5,0x2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1b28:	402e5713          	srai	a4,t3,0x2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1b2c:	010f9f93          	slli	t6,t6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1b30:	01079793          	slli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1b34:	01071713          	slli	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1b38:	010fdf93          	srli	t6,t6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1b3c:	0107d793          	srli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:215
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:195
       x2 += y2 >> i;
     1b40:	40285813          	srai	a6,a6,0x2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1b44:	01075713          	srli	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:207
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:187
     if (y < 0) {
     1b48:	3e0f4663          	bltz	t5,1f34 <thrd_fn+0x984>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1b4c:	01fe8f33          	add	t5,t4,t6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1b50:	40e38733          	sub	a4,t2,a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1b54:	40f287b3          	sub	a5,t0,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1b58:	010f1393          	slli	t2,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1b5c:	01079293          	slli	t0,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1b60:	01071f93          	slli	t6,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1b64:	010f1f13          	slli	t5,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1b68:	01079793          	slli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1b6c:	01071713          	slli	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1b70:	0103d393          	srli	t2,t2,0x10
     1b74:	410f5f13          	srai	t5,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1b78:	0102d293          	srli	t0,t0,0x10
     1b7c:	4107d793          	srai	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:215
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:195
       x2 += y2 >> i;
     1b80:	010e0e33          	add	t3,t3,a6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1b84:	010fdf93          	srli	t6,t6,0x10
     1b88:	41075713          	srai	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1b8c:	4037de93          	srai	t4,a5,0x3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1b90:	403f5f13          	srai	t5,t5,0x3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1b94:	403e5813          	srai	a6,t3,0x3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1b98:	010e9e93          	slli	t4,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1b9c:	010f1f13          	slli	t5,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1ba0:	01081813          	slli	a6,a6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1ba4:	010ede93          	srli	t4,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1ba8:	010f5f13          	srli	t5,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:215
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:195
       x2 += y2 >> i;
     1bac:	40375713          	srai	a4,a4,0x3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1bb0:	01085813          	srli	a6,a6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:207
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:187
     if (y < 0) {
     1bb4:	3407ca63          	bltz	a5,1f08 <thrd_fn+0x958>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1bb8:	410f87b3          	sub	a5,t6,a6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1bbc:	01d38eb3          	add	t4,t2,t4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1bc0:	41e28f33          	sub	t5,t0,t5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1bc4:	010e9e93          	slli	t4,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1bc8:	010f1813          	slli	a6,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1bcc:	01079793          	slli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1bd0:	010ede93          	srli	t4,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1bd4:	41085813          	srai	a6,a6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:215
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:195
       x2 += y2 >> i;
     1bd8:	00ee0e33          	add	t3,t3,a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1bdc:	4107d793          	srai	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1be0:	40485713          	srai	a4,a6,0x4
     1be4:	01071713          	slli	a4,a4,0x10
     1be8:	01075713          	srli	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:215
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:195
       x2 += y2 >> i;
     1bec:	4047d793          	srai	a5,a5,0x4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:207
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:187
     if (y < 0) {
     1bf0:	14084a63          	bltz	a6,1d44 <thrd_fn+0x794>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1bf4:	00ee8733          	add	a4,t4,a4
     1bf8:	01071713          	slli	a4,a4,0x10
     1bfc:	41075713          	srai	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:215
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:195
       x2 += y2 >> i;
     1c00:	00fe0e33          	add	t3,t3,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:222
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:202
   return (x >> 1) + (x >> 3)
     1c04:	40175793          	srai	a5,a4,0x1
     1c08:	40375713          	srai	a4,a4,0x3
     1c0c:	00e787b3          	add	a5,a5,a4
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:297
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:275
           d = t2 - r1i;
     1c10:	f0078793          	addi	a5,a5,-256
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:298
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:276
           t += d;
     1c14:	00f686b3          	add	a3,a3,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:300
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:278
           if (t > 8*256) {
     1c18:	14dd4a63          	blt	s10,a3,1d6c <thrd_fn+0x7bc>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:306
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:284
           } else if (d < 2) {
     1c1c:	4af95263          	bge	s2,a5,20c0 <thrd_fn+0xb10>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:314
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:292
           px += d*vxi14 >> 14;
     1c20:	02f40733          	mul	a4,s0,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:315
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:293
 	      py += d*vyi14 >> 14;
     1c24:	02fc8833          	mul	a6,s9,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:314
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:292
           px += d*vxi14 >> 14;
     1c28:	40e75713          	srai	a4,a4,0xe
     1c2c:	00e585b3          	add	a1,a1,a4
     1c30:	01059713          	slli	a4,a1,0x10
     1c34:	41075713          	srai	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:316
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:294
 	      pz += d*vzi14 >> 14;
     1c38:	02fa87b3          	mul	a5,s5,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:315
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:293
 	      py += d*vyi14 >> 14;
     1c3c:	40e85593          	srai	a1,a6,0xe
     1c40:	00b60633          	add	a2,a2,a1
     1c44:	01061e13          	slli	t3,a2,0x10
     1c48:	410e5e13          	srai	t3,t3,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:316
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:294
 	      pz += d*vzi14 >> 14;
     1c4c:	40e7d793          	srai	a5,a5,0xe
     1c50:	00f50533          	add	a0,a0,a5
     1c54:	01051813          	slli	a6,a0,0x10
     1c58:	41085813          	srai	a6,a6,0x10
 length_cordic():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:201
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:181
     x = -x;
     1c5c:	01071593          	slli	a1,a4,0x10
     1c60:	0105d593          	srli	a1,a1,0x10
     1c64:	00058793          	mv	a5,a1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:199
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:179
   int x2 = *x2_;
     1c68:	00098f93          	mv	t6,s3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:200
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:180
   if (x < 0) { // start in right half-plane
     1c6c:	00075a63          	bgez	a4,1c80 <thrd_fn+0x6d0>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:201
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:181
     x = -x;
     1c70:	40b007b3          	neg	a5,a1
     1c74:	01079793          	slli	a5,a5,0x10
     1c78:	0107d793          	srli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:202
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:182
     x2 = -x2;
     1c7c:	00048f93          	mv	t6,s1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1c80:	010e1613          	slli	a2,t3,0x10
     1c84:	01065613          	srli	a2,a2,0x10
     1c88:	00c78eb3          	add	t4,a5,a2
     1c8c:	010e9513          	slli	a0,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1c90:	010f9713          	slli	a4,t6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1c94:	010e9e93          	slli	t4,t4,0x10
     1c98:	01055513          	srli	a0,a0,0x10
     1c9c:	410ede93          	srai	t4,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1ca0:	01075713          	srli	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:207
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:187
     if (y < 0) {
     1ca4:	3e0e4263          	bltz	t3,2088 <thrd_fn+0xad8>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1ca8:	40f607b3          	sub	a5,a2,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1cac:	40ec0733          	sub	a4,s8,a4
     1cb0:	01071393          	slli	t2,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1cb4:	01079f13          	slli	t5,a5,0x10
     1cb8:	01079293          	slli	t0,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1cbc:	01071713          	slli	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1cc0:	010f5f13          	srli	t5,t5,0x10
     1cc4:	4102d293          	srai	t0,t0,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:215
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:195
       x2 += y2 >> i;
     1cc8:	01fa0fb3          	add	t6,s4,t6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1ccc:	0103d393          	srli	t2,t2,0x10
     1cd0:	41075713          	srai	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1cd4:	401ed793          	srai	a5,t4,0x1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1cd8:	4012d093          	srai	ra,t0,0x1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1cdc:	401fde93          	srai	t4,t6,0x1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1ce0:	01009093          	slli	ra,ra,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1ce4:	01079793          	slli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1ce8:	010e9e93          	slli	t4,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     1cec:	0100d093          	srli	ra,ra,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:194
       y -= t >> i;
     1cf0:	0107d793          	srli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:215
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:195
       x2 += y2 >> i;
     1cf4:	40175713          	srai	a4,a4,0x1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:216
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:196
       y2 -= t2 >> i;
     1cf8:	010ede93          	srli	t4,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:207
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:187
     if (y < 0) {
     1cfc:	be02d8e3          	bgez	t0,18ec <thrd_fn+0x33c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     1d00:	40150533          	sub	a0,a0,ra
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     1d04:	00ff0f33          	add	t5,t5,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     1d08:	01d380b3          	add	ra,t2,t4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     1d0c:	010f1e13          	slli	t3,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     1d10:	01009393          	slli	t2,ra,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     1d14:	01051293          	slli	t0,a0,0x10
     1d18:	01051793          	slli	a5,a0,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     1d1c:	010f1f13          	slli	t5,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     1d20:	01009093          	slli	ra,ra,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     1d24:	0102d293          	srli	t0,t0,0x10
     1d28:	4107d793          	srai	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     1d2c:	010e5e13          	srli	t3,t3,0x10
     1d30:	410f5f13          	srai	t5,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:210
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:190
       x2 -= y2 >> i;
     1d34:	40ef8733          	sub	a4,t6,a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     1d38:	0103d393          	srli	t2,t2,0x10
     1d3c:	4100d093          	srai	ra,ra,0x10
     1d40:	bedff06f          	j	192c <thrd_fn+0x37c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     1d44:	40ee8eb3          	sub	t4,t4,a4
     1d48:	010e9713          	slli	a4,t4,0x10
     1d4c:	41075713          	srai	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:210
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:190
       x2 -= y2 >> i;
     1d50:	40fe0e33          	sub	t3,t3,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:222
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:202
   return (x >> 1) + (x >> 3)
     1d54:	40175793          	srai	a5,a4,0x1
     1d58:	40375713          	srai	a4,a4,0x3
     1d5c:	00e787b3          	add	a5,a5,a4
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:297
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:275
           d = t2 - r1i;
     1d60:	f0078793          	addi	a5,a5,-256
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:298
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:276
           t += d;
     1d64:	00f686b3          	add	a3,a3,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:300
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:278
           if (t > 8*256) {
     1d68:	eadd5ae3          	bge	s10,a3,1c1c <thrd_fn+0x66c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:302
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:280
               int N = (((j-frame)>>3)^(((i+frame)>>3)))&1;
     1d6c:	8781a703          	lw	a4,-1928(gp) # 156d8 <frame>
     1d70:	03012783          	lw	a5,48(sp)
@@ -2316,51 +2314,51 @@ thrd_fn():
     1d78:	01b70733          	add	a4,a4,s11
     1d7c:	00e7c7b3          	xor	a5,a5,a4
 setpixel():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:147
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:127
     if(y&1){
     1d80:	00c12703          	lw	a4,12(sp)
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:303
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:281
               setpixel(i,j,(N<<2)+26);
     1d84:	0017d793          	srli	a5,a5,0x1
     1d88:	0047f793          	andi	a5,a5,4
     1d8c:	01a78793          	addi	a5,a5,26
 setpixel():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:147
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:127
     if(y&1){
     1d90:	3e070663          	beqz	a4,217c <thrd_fn+0xbcc>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:148
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:128
         int color1 = scanline[x];
     1d94:	02812703          	lw	a4,40(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:151
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:131
             if(prev_color1 == color1) {
     1d98:	02c12683          	lw	a3,44(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:148
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:128
         int color1 = scanline[x];
     1d9c:	01b70733          	add	a4,a4,s11
     1da0:	00074703          	lbu	a4,0(a4)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:151
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:131
             if(prev_color1 == color1) {
     1da4:	01422683          	lw	a3,20(tp) # 14 <prev_color1>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:150
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:130
         if(color1 == color2) {
     1da8:	3ee78a63          	beq	a5,a4,219c <thrd_fn+0xbec>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:158 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:138 (discriminator 1)
             if(prev_color1 != color1 && prev_color2 != color2) {
     1dac:	03412603          	lw	a2,52(sp)
     1db0:	01022603          	lw	a2,16(tp) # 10 <prev_color2>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:158
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:138
     1db4:	4ed70263          	beq	a4,a3,2298 <thrd_fn+0xce8>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:154
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:134
                 fbprintf("\033[4%sm ",colormap[color1]);
     1db8:	04012503          	lw	a0,64(sp)
     1dbc:	00271693          	slli	a3,a4,0x2
     1dc0:	00d506b3          	add	a3,a0,a3
     1dc4:	0006a583          	lw	a1,0(a3)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:158 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:138 (discriminator 1)
             if(prev_color1 != color1 && prev_color2 != color2) {
     1dc8:	4ac78063          	beq	a5,a2,2268 <thrd_fn+0xcb8>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:159
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:139
                 fbprintf("\033[4%s;3%sm",colormap[color1],colormap[color2]);
     1dcc:	00279693          	slli	a3,a5,0x2
     1dd0:	00d506b3          	add	a3,a0,a3
@@ -2372,23 +2370,23 @@ setpixel():
     1de8:	08612c23          	sw	t1,152(sp)
     1dec:	02e12e23          	sw	a4,60(sp)
     1df0:	f54ff0ef          	jal	1544 <fbprintf>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:160
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:140
                 prev_color1 = color1;
     1df4:	02c12783          	lw	a5,44(sp)
     1df8:	03c12703          	lw	a4,60(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:161
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:141
                 prev_color2 = color2;
     1dfc:	09812303          	lw	t1,152(sp)
     1e00:	09c12883          	lw	a7,156(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:160
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:140
                 prev_color1 = color1;
     1e04:	00e22a23          	sw	a4,20(tp) # 14 <prev_color1>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:161
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:141
                 prev_color2 = color2;
     1e08:	03412703          	lw	a4,52(sp)
     1e0c:	03812783          	lw	a5,56(sp)
     1e10:	00f22823          	sw	a5,16(tp) # 10 <prev_color2>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:169
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:149
             fbprintf("\u2583");
     1e14:	000147b7          	lui	a5,0x14
     1e18:	92c78513          	addi	a0,a5,-1748 # 1392c <__clzsi2+0xb0>
@@ -2398,37 +2396,37 @@ setpixel():
     1e28:	03812303          	lw	t1,56(sp)
     1e2c:	03c12883          	lw	a7,60(sp)
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:283 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:261 (discriminator 2)
       for (int i = 0; i < 79; i++, vxi14 += xincX, vyi14 -= xincY, vzi14 += xincZ) {
     1e30:	01012683          	lw	a3,16(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:283 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:261 (discriminator 1)
     1e34:	001d8793          	addi	a5,s11,1
     1e38:	01b7b733          	sltu	a4,a5,s11
     1e3c:	00868433          	add	s0,a3,s0
     1e40:	01412683          	lw	a3,20(sp)
     1e44:	00078d93          	mv	s11,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:283 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:261 (discriminator 2)
     1e48:	01041413          	slli	s0,s0,0x10
     1e4c:	40dc8cb3          	sub	s9,s9,a3
     1e50:	01812683          	lw	a3,24(sp)
     1e54:	010c9c93          	slli	s9,s9,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:283 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:261 (discriminator 1)
     1e58:	04f00793          	li	a5,79
     1e5c:	01568ab3          	add	s5,a3,s5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:283 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:261 (discriminator 2)
     1e60:	010a9a93          	slli	s5,s5,0x10
     1e64:	41045413          	srai	s0,s0,0x10
     1e68:	410cdc93          	srai	s9,s9,0x10
     1e6c:	410ada93          	srai	s5,s5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:283 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:261 (discriminator 1)
     1e70:	00670333          	add	t1,a4,t1
     1e74:	a2fd9ae3          	bne	s11,a5,18a8 <thrd_fn+0x2f8>
     1e78:	a20318e3          	bnez	t1,18a8 <thrd_fn+0x2f8>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:321
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:299
         if (j&1) fbprintf("\n");
     1e7c:	00c12783          	lw	a5,12(sp)
     1e80:	4a079663          	bnez	a5,232c <thrd_fn+0xd7c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:277 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:255 (discriminator 1)
     for (int j = 0; j < 46; j++, ycA += yincC>>1, ysA += yincS>>1) {
     1e84:	07412683          	lw	a3,116(sp)
     1e88:	05812603          	lw	a2,88(sp)
@@ -2454,7 +2452,7 @@ thrd_fn():
     1ed8:	9af592e3          	bne	a1,a5,187c <thrd_fn+0x2cc>
     1edc:	9a0690e3          	bnez	a3,187c <thrd_fn+0x2cc>
 my_rdinstret():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:81
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:69
         __asm__ __volatile__ ("rdinstreth %0" : "=r" (a1));
     1ee0:	08412403          	lw	s0,132(sp)
     1ee4:	08812a83          	lw	s5,136(sp)
@@ -2462,347 +2460,347 @@ my_rdinstret():
     1eec:	09012d03          	lw	s10,144(sp)
     1ef0:	09412483          	lw	s1,148(sp)
     1ef4:	c82027f3          	rdinstreth	a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:82
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:70
         __asm__ __volatile__ ("rdinstret %0" : "=r" (a0));
     1ef8:	c02026f3          	rdinstret	a3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:83
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:71
         __asm__ __volatile__ ("rdinstreth %0" : "=r" (t0));
     1efc:	c8202773          	rdinstreth	a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:84
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:72
     } while(t0 != a1);
     1f00:	44e78263          	beq	a5,a4,2344 <thrd_fn+0xd94>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:84 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:72 (discriminator 1)
     1f04:	0000006f          	j	1f04 <thrd_fn+0x954>
 length_cordic():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     1f08:	010f87b3          	add	a5,t6,a6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     1f0c:	41d383b3          	sub	t2,t2,t4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     1f10:	01e282b3          	add	t0,t0,t5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     1f14:	01039e93          	slli	t4,t2,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     1f18:	01029813          	slli	a6,t0,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     1f1c:	01079793          	slli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     1f20:	010ede93          	srli	t4,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     1f24:	41085813          	srai	a6,a6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:210
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:190
       x2 -= y2 >> i;
     1f28:	40ee0e33          	sub	t3,t3,a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     1f2c:	4107d793          	srai	a5,a5,0x10
     1f30:	cb1ff06f          	j	1be0 <thrd_fn+0x630>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     1f34:	41fe8f33          	sub	t5,t4,t6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     1f38:	00e38733          	add	a4,t2,a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     1f3c:	00f287b3          	add	a5,t0,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     1f40:	010f1393          	slli	t2,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     1f44:	01079293          	slli	t0,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     1f48:	01071f93          	slli	t6,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     1f4c:	010f1f13          	slli	t5,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     1f50:	01079793          	slli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     1f54:	01071713          	slli	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     1f58:	0103d393          	srli	t2,t2,0x10
     1f5c:	410f5f13          	srai	t5,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     1f60:	0102d293          	srli	t0,t0,0x10
     1f64:	4107d793          	srai	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:210
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:190
       x2 -= y2 >> i;
     1f68:	410e0e33          	sub	t3,t3,a6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     1f6c:	010fdf93          	srli	t6,t6,0x10
     1f70:	41075713          	srai	a4,a4,0x10
     1f74:	c19ff06f          	j	1b8c <thrd_fn+0x5dc>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     1f78:	41de0733          	sub	a4,t3,t4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     1f7c:	00ff0f33          	add	t5,t5,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     1f80:	00128833          	add	a6,t0,ra
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     1f84:	01071e93          	slli	t4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     1f88:	010f1293          	slli	t0,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     1f8c:	01071793          	slli	a5,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     1f90:	010f1f13          	slli	t5,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:210
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:190
       x2 -= y2 >> i;
     1f94:	407f8e33          	sub	t3,t6,t2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     1f98:	01081393          	slli	t2,a6,0x10
     1f9c:	01081813          	slli	a6,a6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     1fa0:	010ede93          	srli	t4,t4,0x10
     1fa4:	4107d793          	srai	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     1fa8:	0102d293          	srli	t0,t0,0x10
     1fac:	410f5f13          	srai	t5,t5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     1fb0:	0103d393          	srli	t2,t2,0x10
     1fb4:	41085813          	srai	a6,a6,0x10
     1fb8:	b69ff06f          	j	1b20 <thrd_fn+0x570>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     1fbc:	410287b3          	sub	a5,t0,a6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     1fc0:	007f03b3          	add	t2,t5,t2
     1fc4:	01039293          	slli	t0,t2,0x10
     1fc8:	000e0f13          	mv	t5,t3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     1fcc:	000e8813          	mv	a6,t4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     1fd0:	01039393          	slli	t2,t2,0x10
     1fd4:	01079e13          	slli	t3,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     1fd8:	01079e93          	slli	t4,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:210
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:190
       x2 -= y2 >> i;
     1fdc:	40ef8fb3          	sub	t6,t6,a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     1fe0:	0102d293          	srli	t0,t0,0x10
     1fe4:	4103d393          	srai	t2,t2,0x10
     1fe8:	010e5e13          	srli	t3,t3,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     1fec:	410ede93          	srai	t4,t4,0x10
     1ff0:	ac5ff06f          	j	1ab4 <thrd_fn+0x504>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     1ff4:	01f383b3          	add	t2,t2,t6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     1ff8:	00a28733          	add	a4,t0,a0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     1ffc:	01039513          	slli	a0,t2,0x10
     2000:	41055513          	srai	a0,a0,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     2004:	41d080b3          	sub	ra,ra,t4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     2008:	01071713          	slli	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     200c:	40455793          	srai	a5,a0,0x4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     2010:	01009e93          	slli	t4,ra,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     2014:	41075713          	srai	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     2018:	01079793          	slli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     201c:	010ede93          	srli	t4,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:210
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:190
       x2 -= y2 >> i;
     2020:	41ee0e33          	sub	t3,t3,t5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:213
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:193
       x += y >> i;
     2024:	0107d793          	srli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:215
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:195
       x2 += y2 >> i;
     2028:	40475713          	srai	a4,a4,0x4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:207
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:187
     if (y < 0) {
     202c:	9c055ae3          	bgez	a0,1a00 <thrd_fn+0x450>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     2030:	40fe8eb3          	sub	t4,t4,a5
     2034:	010e9793          	slli	a5,t4,0x10
     2038:	4107d793          	srai	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:210
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:190
       x2 -= y2 >> i;
     203c:	40ee0733          	sub	a4,t3,a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     2040:	9d1ff06f          	j	1a10 <thrd_fn+0x460>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     2044:	41f28fb3          	sub	t6,t0,t6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     2048:	00fe0e33          	add	t3,t3,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     204c:	01d38eb3          	add	t4,t2,t4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     2050:	010f9093          	slli	ra,t6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     2054:	010e1393          	slli	t2,t3,0x10
     2058:	010e1793          	slli	a5,t3,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     205c:	010f9f93          	slli	t6,t6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:210
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:190
       x2 -= y2 >> i;
     2060:	40a70e33          	sub	t3,a4,a0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     2064:	010e9293          	slli	t0,t4,0x10
     2068:	010e9713          	slli	a4,t4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     206c:	0100d093          	srli	ra,ra,0x10
     2070:	410fdf93          	srai	t6,t6,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     2074:	0103d393          	srli	t2,t2,0x10
     2078:	4107d793          	srai	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     207c:	0102d293          	srli	t0,t0,0x10
     2080:	41075713          	srai	a4,a4,0x10
     2084:	915ff06f          	j	1998 <thrd_fn+0x3e8>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     2088:	40c787b3          	sub	a5,a5,a2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     208c:	00ec0733          	add	a4,s8,a4
     2090:	01071393          	slli	t2,a4,0x10
     2094:	00050f13          	mv	t5,a0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:189
       y += t >> i;
     2098:	000e8293          	mv	t0,t4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     209c:	01071713          	slli	a4,a4,0x10
     20a0:	01079513          	slli	a0,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     20a4:	01079e93          	slli	t4,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:210
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:190
       x2 -= y2 >> i;
     20a8:	414f8fb3          	sub	t6,t6,s4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:211
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:191
       y2 += t2 >> i;
     20ac:	0103d393          	srli	t2,t2,0x10
     20b0:	41075713          	srai	a4,a4,0x10
     20b4:	01055513          	srli	a0,a0,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:208
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:188
       x -= y >> i;
     20b8:	410ede93          	srai	t4,t4,0x10
     20bc:	c19ff06f          	j	1cd4 <thrd_fn+0x724>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:221
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:201
   *x2_ = (x2 >> 1) + (x2 >> 3);
     20c0:	401e5793          	srai	a5,t3,0x1
     20c4:	403e5e13          	srai	t3,t3,0x3
     20c8:	01c787b3          	add	a5,a5,t3
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:308
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:286
               int N = lz >> 8;
     20cc:	01079793          	slli	a5,a5,0x10
     20d0:	4107d793          	srai	a5,a5,0x10
     20d4:	4087d793          	srai	a5,a5,0x8
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:309 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:287 (discriminator 2)
               N = N > 0 ? N < 26 ? N : 25 : 0;
     20d8:	00000713          	li	a4,0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:309
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:287
     20dc:	00f05a63          	blez	a5,20f0 <thrd_fn+0xb40>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:308
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:286
               int N = lz >> 8;
     20e0:	00078713          	mv	a4,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:309 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:287 (discriminator 1)
               N = N > 0 ? N < 26 ? N : 25 : 0;
     20e4:	01900793          	li	a5,25
     20e8:	00e7d463          	bge	a5,a4,20f0 <thrd_fn+0xb40>
     20ec:	01900713          	li	a4,25
 setpixel():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:147
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:127
     if(y&1){
     20f0:	00c12783          	lw	a5,12(sp)
     20f4:	08078c63          	beqz	a5,218c <thrd_fn+0xbdc>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:148
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:128
         int color1 = scanline[x];
     20f8:	02812783          	lw	a5,40(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:151
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:131
             if(prev_color1 == color1) {
     20fc:	02c12683          	lw	a3,44(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:148
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:128
         int color1 = scanline[x];
     2100:	01b787b3          	add	a5,a5,s11
     2104:	0007c783          	lbu	a5,0(a5)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:151
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:131
             if(prev_color1 == color1) {
     2108:	01422683          	lw	a3,20(tp) # 14 <prev_color1>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:150
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:130
         if(color1 == color2) {
     210c:	0cf70a63          	beq	a4,a5,21e0 <thrd_fn+0xc30>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:158 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:138 (discriminator 1)
             if(prev_color1 != color1 && prev_color2 != color2) {
     2110:	03412603          	lw	a2,52(sp)
     2114:	01022603          	lw	a2,16(tp) # 10 <prev_color2>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:158
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:138
     2118:	10d78663          	beq	a5,a3,2224 <thrd_fn+0xc74>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:154
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:134
                 fbprintf("\033[4%sm ",colormap[color1]);
     211c:	04012503          	lw	a0,64(sp)
     2120:	00279693          	slli	a3,a5,0x2
     2124:	00d506b3          	add	a3,a0,a3
     2128:	0006a583          	lw	a1,0(a3)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:158 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:138 (discriminator 1)
             if(prev_color1 != color1 && prev_color2 != color2) {
     212c:	1cc70863          	beq	a4,a2,22fc <thrd_fn+0xd4c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:159
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:139
                 fbprintf("\033[4%s;3%sm",colormap[color1],colormap[color2]);
     2130:	00271693          	slli	a3,a4,0x2
     2134:	00d506b3          	add	a3,a0,a3
@@ -2814,24 +2812,24 @@ setpixel():
     214c:	08612c23          	sw	t1,152(sp)
     2150:	02f12e23          	sw	a5,60(sp)
     2154:	bf0ff0ef          	jal	1544 <fbprintf>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:160
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:140
                 prev_color1 = color1;
     2158:	02c12703          	lw	a4,44(sp)
     215c:	03c12783          	lw	a5,60(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:161
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:141
                 prev_color2 = color2;
     2160:	09812303          	lw	t1,152(sp)
     2164:	09c12883          	lw	a7,156(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:160
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:140
                 prev_color1 = color1;
     2168:	00f22a23          	sw	a5,20(tp) # 14 <prev_color1>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:161
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:141
                 prev_color2 = color2;
     216c:	03412783          	lw	a5,52(sp)
     2170:	03812703          	lw	a4,56(sp)
     2174:	00e22823          	sw	a4,16(tp) # 10 <prev_color2>
     2178:	c9dff06f          	j	1e14 <thrd_fn+0x864>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:172
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:152
         scanline[x] = color;
     217c:	02812703          	lw	a4,40(sp)
     2180:	01b70733          	add	a4,a4,s11
@@ -2841,10 +2839,10 @@ setpixel():
     2190:	01b787b3          	add	a5,a5,s11
     2194:	00e78023          	sb	a4,0(a5)
     2198:	c99ff06f          	j	1e30 <thrd_fn+0x880>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:151
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:131
             if(prev_color1 == color1) {
     219c:	14d78063          	beq	a5,a3,22dc <thrd_fn+0xd2c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:154
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:134
                 fbprintf("\033[4%sm ",colormap[color1]);
     21a0:	00279713          	slli	a4,a5,0x2
     21a4:	02f12c23          	sw	a5,56(sp)
@@ -2856,7 +2854,7 @@ setpixel():
     21bc:	000147b7          	lui	a5,0x14
     21c0:	90878513          	addi	a0,a5,-1784 # 13908 <__clzsi2+0x8c>
     21c4:	b80ff0ef          	jal	1544 <fbprintf>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:155
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:135
                 prev_color1 = color1;
     21c8:	02c12703          	lw	a4,44(sp)
     21cc:	03812783          	lw	a5,56(sp)
@@ -2864,10 +2862,10 @@ setpixel():
     21d4:	09812883          	lw	a7,152(sp)
     21d8:	00f22a23          	sw	a5,20(tp) # 14 <prev_color1>
     21dc:	c55ff06f          	j	1e30 <thrd_fn+0x880>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:151
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:131
             if(prev_color1 == color1) {
     21e0:	0ed70e63          	beq	a4,a3,22dc <thrd_fn+0xd2c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:154
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:134
                 fbprintf("\033[4%sm ",colormap[color1]);
     21e4:	00271793          	slli	a5,a4,0x2
     21e8:	02e12c23          	sw	a4,56(sp)
@@ -2879,7 +2877,7 @@ setpixel():
     2200:	000147b7          	lui	a5,0x14
     2204:	90878513          	addi	a0,a5,-1784 # 13908 <__clzsi2+0x8c>
     2208:	b3cff0ef          	jal	1544 <fbprintf>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:155
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:135
                 prev_color1 = color1;
     220c:	02c12783          	lw	a5,44(sp)
     2210:	03812703          	lw	a4,56(sp)
@@ -2887,10 +2885,10 @@ setpixel():
     2218:	09812883          	lw	a7,152(sp)
     221c:	00e22a23          	sw	a4,20(tp) # 14 <prev_color1>
     2220:	c11ff06f          	j	1e30 <thrd_fn+0x880>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:165
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:145
             } else if(prev_color2 != color2) {
     2224:	bec708e3          	beq	a4,a2,1e14 <thrd_fn+0x864>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:166
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:146
                 fbprintf("\033[3%sm",colormap[color2]);
     2228:	00271793          	slli	a5,a4,0x2
     222c:	02e12c23          	sw	a4,56(sp)
@@ -2902,7 +2900,7 @@ setpixel():
     2244:	000147b7          	lui	a5,0x14
     2248:	92478513          	addi	a0,a5,-1756 # 13924 <__clzsi2+0xa8>
     224c:	af8ff0ef          	jal	1544 <fbprintf>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:167
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:147
                 prev_color2 = color2;
     2250:	03412783          	lw	a5,52(sp)
     2254:	03812703          	lw	a4,56(sp)
@@ -2910,7 +2908,7 @@ setpixel():
     225c:	09812883          	lw	a7,152(sp)
     2260:	00e22823          	sw	a4,16(tp) # 10 <prev_color2>
     2264:	bb1ff06f          	j	1e14 <thrd_fn+0x864>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:163
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:143
                 fbprintf("\033[4%sm",colormap[color1]);
     2268:	000147b7          	lui	a5,0x14
     226c:	91c78513          	addi	a0,a5,-1764 # 1391c <__clzsi2+0xa0>
@@ -2918,7 +2916,7 @@ setpixel():
     2274:	02612e23          	sw	t1,60(sp)
     2278:	02e12c23          	sw	a4,56(sp)
     227c:	ac8ff0ef          	jal	1544 <fbprintf>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:164
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:144
                 prev_color1 = color1;
     2280:	02c12783          	lw	a5,44(sp)
     2284:	03812703          	lw	a4,56(sp)
@@ -2926,10 +2924,10 @@ setpixel():
     228c:	09812883          	lw	a7,152(sp)
     2290:	00e22a23          	sw	a4,20(tp) # 14 <prev_color1>
     2294:	b81ff06f          	j	1e14 <thrd_fn+0x864>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:165
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:145
             } else if(prev_color2 != color2) {
     2298:	b6c78ee3          	beq	a5,a2,1e14 <thrd_fn+0x864>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:166
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:146
                 fbprintf("\033[3%sm",colormap[color2]);
     229c:	00279713          	slli	a4,a5,0x2
     22a0:	02f12c23          	sw	a5,56(sp)
@@ -2941,7 +2939,7 @@ setpixel():
     22b8:	000147b7          	lui	a5,0x14
     22bc:	92478513          	addi	a0,a5,-1756 # 13924 <__clzsi2+0xa8>
     22c0:	a84ff0ef          	jal	1544 <fbprintf>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:167
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:147
                 prev_color2 = color2;
     22c4:	03412703          	lw	a4,52(sp)
     22c8:	03812783          	lw	a5,56(sp)
@@ -2949,27 +2947,27 @@ setpixel():
     22d0:	03c12303          	lw	t1,60(sp)
     22d4:	00f22823          	sw	a5,16(tp) # 10 <prev_color2>
     22d8:	b3dff06f          	j	1e14 <thrd_fn+0x864>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:152
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:132
                 fbprintf(" ");
     22dc:	000147b7          	lui	a5,0x14
     22e0:	97478513          	addi	a0,a5,-1676 # 13974 <__clzsi2+0xf8>
     22e4:	03112e23          	sw	a7,60(sp)
     22e8:	02612c23          	sw	t1,56(sp)
     22ec:	a58ff0ef          	jal	1544 <fbprintf>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:174
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:154
 }
     22f0:	03812303          	lw	t1,56(sp)
     22f4:	03c12883          	lw	a7,60(sp)
     22f8:	b39ff06f          	j	1e30 <thrd_fn+0x880>
     22fc:	02f12c23          	sw	a5,56(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:163
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:143
                 fbprintf("\033[4%sm",colormap[color1]);
     2300:	000147b7          	lui	a5,0x14
     2304:	91c78513          	addi	a0,a5,-1764 # 1391c <__clzsi2+0xa0>
     2308:	09112c23          	sw	a7,152(sp)
     230c:	02612e23          	sw	t1,60(sp)
     2310:	a34ff0ef          	jal	1544 <fbprintf>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:164
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:144
                 prev_color1 = color1;
     2314:	02c12703          	lw	a4,44(sp)
     2318:	03812783          	lw	a5,56(sp)
@@ -2978,7 +2976,7 @@ setpixel():
     2324:	00f22a23          	sw	a5,20(tp) # 14 <prev_color1>
     2328:	aedff06f          	j	1e14 <thrd_fn+0x864>
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:321 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:299 (discriminator 1)
         if (j&1) fbprintf("\n");
     232c:	000147b7          	lui	a5,0x14
     2330:	93078513          	addi	a0,a5,-1744 # 13930 <__clzsi2+0xb4>
@@ -2987,7 +2985,7 @@ thrd_fn():
     233c:	00c12883          	lw	a7,12(sp)
     2340:	b45ff06f          	j	1e84 <thrd_fn+0x8d4>
 stats_update():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:107 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:93 (discriminator 1)
     stats_instructions = (my_rdinstret() - stats_instructions_init);
     2344:	00008737          	lui	a4,0x8
     2348:	00470633          	add	a2,a4,tp
@@ -3001,104 +2999,104 @@ stats_update():
     2368:	82e6a423          	sw	a4,-2008(a3)
     236c:	82f6a623          	sw	a5,-2004(a3)
 my_rdcycle():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:69
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:57
         __asm__ __volatile__ ("rdcycleh %0" : "=r" (a1));
     2370:	c80027f3          	rdcycleh	a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:70
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:58
         __asm__ __volatile__ ("rdcycle %0" : "=r" (a0));
     2374:	c0002573          	rdcycle	a0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:71
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:59
         __asm__ __volatile__ ("rdcycleh %0" : "=r" (t0));
     2378:	c8002773          	rdcycleh	a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:72
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:60
     } while(t0 != a1);
     237c:	00e78463          	beq	a5,a4,2384 <thrd_fn+0xdd4>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:72 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:60 (discriminator 1)
     2380:	0000006f          	j	2380 <thrd_fn+0xdd0>
 stats_update():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:109
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:95
     stats_frame        = (frame - stats_frame_init);
     2384:	000086b7          	lui	a3,0x8
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:108 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:94 (discriminator 1)
     stats_cycles       = (my_rdcycle() - stats_cycles_init);
     2388:	00008737          	lui	a4,0x8
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:109
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:95
     stats_frame        = (frame - stats_frame_init);
     238c:	00468833          	add	a6,a3,tp
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:108 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:94 (discriminator 1)
     stats_cycles       = (my_rdcycle() - stats_cycles_init);
     2390:	00470733          	add	a4,a4,tp
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:109
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:95
     stats_frame        = (frame - stats_frame_init);
     2394:	8781a683          	lw	a3,-1928(gp) # 156d8 <frame>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:108 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:94 (discriminator 1)
     stats_cycles       = (my_rdcycle() - stats_cycles_init);
     2398:	84872583          	lw	a1,-1976(a4) # 7848 <stats_cycles_init>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:109
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:95
     stats_frame        = (frame - stats_frame_init);
     239c:	83882603          	lw	a2,-1992(a6)
     23a0:	83c82883          	lw	a7,-1988(a6)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:108 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:94 (discriminator 1)
     stats_cycles       = (my_rdcycle() - stats_cycles_init);
     23a4:	84c72303          	lw	t1,-1972(a4)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:109
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:95
     stats_frame        = (frame - stats_frame_init);
     23a8:	87c1a703          	lw	a4,-1924(gp) # 156dc <frame+0x4>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:108 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:94 (discriminator 1)
     stats_cycles       = (my_rdcycle() - stats_cycles_init);
     23ac:	40b505b3          	sub	a1,a0,a1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:109
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:95
     stats_frame        = (frame - stats_frame_init);
     23b0:	40c68633          	sub	a2,a3,a2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:108 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:94 (discriminator 1)
     stats_cycles       = (my_rdcycle() - stats_cycles_init);
     23b4:	00b53833          	sltu	a6,a0,a1
     23b8:	406787b3          	sub	a5,a5,t1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:109
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:95
     stats_frame        = (frame - stats_frame_init);
     23bc:	00c6b533          	sltu	a0,a3,a2
     23c0:	41170733          	sub	a4,a4,a7
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:108 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:94 (discriminator 1)
     stats_cycles       = (my_rdcycle() - stats_cycles_init);
     23c4:	000086b7          	lui	a3,0x8
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:109
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:95
     stats_frame        = (frame - stats_frame_init);
     23c8:	000088b7          	lui	a7,0x8
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:108 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:94 (discriminator 1)
     stats_cycles       = (my_rdcycle() - stats_cycles_init);
     23cc:	004686b3          	add	a3,a3,tp
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:109
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:95
     stats_frame        = (frame - stats_frame_init);
     23d0:	004888b3          	add	a7,a7,tp
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:108 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:94 (discriminator 1)
     stats_cycles       = (my_rdcycle() - stats_cycles_init);
     23d4:	410787b3          	sub	a5,a5,a6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:109
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:95
     stats_frame        = (frame - stats_frame_init);
     23d8:	40a70733          	sub	a4,a4,a0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:108 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:94 (discriminator 1)
     stats_cycles       = (my_rdcycle() - stats_cycles_init);
     23dc:	82b6a823          	sw	a1,-2000(a3) # 7830 <stats_cycles>
     23e0:	82f6aa23          	sw	a5,-1996(a3)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:109
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:95
     stats_frame        = (frame - stats_frame_init);
     23e4:	82c8a023          	sw	a2,-2016(a7) # 7820 <stats_frame>
     23e8:	82e8a223          	sw	a4,-2012(a7)
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:327
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:305
     if (stats_cycles >= _clkfreq()) {
     23ec:	cc002773          	csrr	a4,0xcc0
     23f0:	8346a783          	lw	a5,-1996(a3)
     23f4:	8306a503          	lw	a0,-2000(a3)
     23f8:	1e079e63          	bnez	a5,25f4 <thrd_fn+0x1044>
     23fc:	1ee57c63          	bgeu	a0,a4,25f4 <thrd_fn+0x1044>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:336
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:313
       fbprintf("\033[0m"); // reset colors
     2400:	000147b7          	lui	a5,0x14
     2404:	93478513          	addi	a0,a5,-1740 # 13934 <__clzsi2+0xb8>
     2408:	93cff0ef          	jal	1544 <fbprintf>
 setcolors():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:140
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:120
     fbprintf("\033[4%s;3%sm",colormap[bg],colormap[fg]);
     240c:	04012903          	lw	s2,64(sp)
     2410:	000149b7          	lui	s3,0x14
@@ -3107,7 +3105,7 @@ setcolors():
     241c:	08492583          	lw	a1,132(s2)
     2420:	924ff0ef          	jal	1544 <fbprintf>
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:339
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:316
       fbprintf(" %s %dMHz FRAME#%d ", CPU_NAME, MHZ, (int)frame);
     2424:	8701a603          	lw	a2,-1936(gp) # 156d0 <MHZ>
     2428:	8781a683          	lw	a3,-1928(gp) # 156d8 <frame>
@@ -3116,290 +3114,290 @@ thrd_fn():
     2434:	000147b7          	lui	a5,0x14
     2438:	94878513          	addi	a0,a5,-1720 # 13948 <__clzsi2+0xcc>
     243c:	908ff0ef          	jal	1544 <fbprintf>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:340
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:317
       if (FPS) {
     2440:	06412a03          	lw	s4,100(sp)
     2444:	060a0263          	beqz	s4,24a8 <thrd_fn+0xef8>
 setcolors():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:140
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:120
     fbprintf("\033[4%s;3%sm",colormap[bg],colormap[fg]);
     2448:	06492603          	lw	a2,100(s2)
     244c:	00092583          	lw	a1,0(s2)
     2450:	91098513          	addi	a0,s3,-1776
     2454:	8f0ff0ef          	jal	1544 <fbprintf>
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:342
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:319
         fbprintf(" %u FPS ", FPS);
     2458:	000147b7          	lui	a5,0x14
     245c:	95c78513          	addi	a0,a5,-1700 # 1395c <__clzsi2+0xe0>
     2460:	000a0593          	mv	a1,s4
     2464:	8e0ff0ef          	jal	1544 <fbprintf>
 setcolors():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:140
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:120
     fbprintf("\033[4%s;3%sm",colormap[bg],colormap[fg]);
     2468:	00092603          	lw	a2,0(s2)
     246c:	06492583          	lw	a1,100(s2)
     2470:	91098513          	addi	a0,s3,-1776
     2474:	8d0ff0ef          	jal	1544 <fbprintf>
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:344
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:321
         fbprintf(" %u CPIx1000 ", CPI);
     2478:	06812583          	lw	a1,104(sp)
     247c:	000147b7          	lui	a5,0x14
     2480:	96878513          	addi	a0,a5,-1688 # 13968 <__clzsi2+0xec>
     2484:	8c0ff0ef          	jal	1544 <fbprintf>
 setcolors():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:140
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:120
     fbprintf("\033[4%s;3%sm",colormap[bg],colormap[fg]);
     2488:	00092583          	lw	a1,0(s2)
     248c:	06492603          	lw	a2,100(s2)
     2490:	91098513          	addi	a0,s3,-1776
     2494:	8b0ff0ef          	jal	1544 <fbprintf>
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:346
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:323
         fbprintf(" %u MIPSx1000 ", MIPS);
     2498:	06c12583          	lw	a1,108(sp)
     249c:	000147b7          	lui	a5,0x14
     24a0:	97878513          	addi	a0,a5,-1672 # 13978 <__clzsi2+0xfc>
     24a4:	8a0ff0ef          	jal	1544 <fbprintf>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:349
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:325
       fbprintf("\r\x1b[23A");
     24a8:	000147b7          	lui	a5,0x14
     24ac:	98878513          	addi	a0,a5,-1656 # 13988 <__clzsi2+0x10c>
     24b0:	894ff0ef          	jal	1544 <fbprintf>
 print():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:120
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:101
   _preempt_disable();
     24b4:	6c50a0ef          	jal	d378 <_preempt_disable>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:121 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:102 (discriminator 1)
   for (char c; (c = *s); ++s)
     24b8:	01c24703          	lbu	a4,28(tp) # 1c <fb>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:122
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:103
     *(volatile char *)SERIAL0_ADDR = c;
     24bc:	000016b7          	lui	a3,0x1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:121 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:102 (discriminator 1)
   for (char c; (c = *s); ++s)
     24c0:	01c20793          	addi	a5,tp,28 # 1c <fb>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:122
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:103
     *(volatile char *)SERIAL0_ADDR = c;
     24c4:	f8068693          	addi	a3,a3,-128 # f80 <fb+0xf64>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:121 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:102 (discriminator 1)
   for (char c; (c = *s); ++s)
     24c8:	00070a63          	beqz	a4,24dc <thrd_fn+0xf2c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:122
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:103
     *(volatile char *)SERIAL0_ADDR = c;
     24cc:	00e68023          	sb	a4,0(a3)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:121 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:102 (discriminator 1)
   for (char c; (c = *s); ++s)
     24d0:	0017c703          	lbu	a4,1(a5)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:121 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:102 (discriminator 2)
     24d4:	00178793          	addi	a5,a5,1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:121 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:102 (discriminator 1)
     24d8:	fe071ae3          	bnez	a4,24cc <thrd_fn+0xf1c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:123
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:104
   _preempt_enable();
     24dc:	6c90a0ef          	jal	d3a4 <_preempt_enable>
 thrd_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:358 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:330 (discriminator 2)
     _atomic_inc(&frame);
     24e0:	00100713          	li	a4,1
     24e4:	87818793          	addi	a5,gp,-1928 # 156d8 <frame>
     24e8:	06e7a72f          	amoadd.w.aqrl	a4,a4,(a5)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:369
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:340
     R(5, cAsB, sAsB);
     24ec:	04812683          	lw	a3,72(sp)
     24f0:	05412783          	lw	a5,84(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:370
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:341
     R(5, cAcB, sAcB);
     24f4:	08012603          	lw	a2,128(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:369
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:340
     R(5, cAsB, sAsB);
     24f8:	4056d593          	srai	a1,a3,0x5
     24fc:	40b785b3          	sub	a1,a5,a1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:370
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:341
     R(5, cAcB, sAcB);
     2500:	405d5713          	srai	a4,s10,0x5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:369
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:340
     R(5, cAsB, sAsB);
     2504:	01059793          	slli	a5,a1,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:370
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:341
     R(5, cAcB, sAcB);
     2508:	40e60733          	sub	a4,a2,a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:369
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:340
     R(5, cAsB, sAsB);
     250c:	4107d793          	srai	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:370
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:341
     R(5, cAcB, sAcB);
     2510:	01071713          	slli	a4,a4,0x10
     2514:	01075713          	srli	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:369
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:340
     R(5, cAsB, sAsB);
     2518:	4057d613          	srai	a2,a5,0x5
     251c:	00d60633          	add	a2,a2,a3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:370
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:341
     R(5, cAcB, sAcB);
     2520:	01071693          	slli	a3,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:373
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:344
     R(6, sAcB, sAsB);
     2524:	01061893          	slli	a7,a2,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:370
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:341
     R(5, cAcB, sAcB);
     2528:	4106d693          	srai	a3,a3,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:371
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:342
     R(6, cB, sB);
     252c:	04412503          	lw	a0,68(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:370
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:341
     R(5, cAcB, sAcB);
     2530:	4056d693          	srai	a3,a3,0x5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:373
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:344
     R(6, sAcB, sAsB);
     2534:	4108d893          	srai	a7,a7,0x10
     2538:	4068d893          	srai	a7,a7,0x6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:370
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:341
     R(5, cAcB, sAcB);
     253c:	00d486b3          	add	a3,s1,a3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:373
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:344
     R(6, sAcB, sAsB);
     2540:	411686b3          	sub	a3,a3,a7
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:371
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:342
     R(6, cB, sB);
     2544:	40655813          	srai	a6,a0,0x6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:373
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:344
     R(6, sAcB, sAsB);
     2548:	01069d13          	slli	s10,a3,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:372
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:343
     R(6, cAcB, cAsB);
     254c:	4067d513          	srai	a0,a5,0x6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:368
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:339
     R(5, cA, sA);
     2550:	05012783          	lw	a5,80(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:361
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:332
     fbidx = 0;
     2554:	00022c23          	sw	zero,24(tp) # 18 <fbidx>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:363
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:334
     prev_color1=-1;
     2558:	02c12883          	lw	a7,44(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:368
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:339
     R(5, cA, sA);
     255c:	40878333          	sub	t1,a5,s0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:372
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:343
     R(6, cAcB, cAsB);
     2560:	40a70733          	sub	a4,a4,a0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:368
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:339
     R(5, cA, sA);
     2564:	04c12683          	lw	a3,76(sp)
     2568:	01031513          	slli	a0,t1,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:372
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:343
     R(6, cAcB, cAsB);
     256c:	01071093          	slli	ra,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:363
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:334
     prev_color1=-1;
     2570:	fff00713          	li	a4,-1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:371
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:342
     R(6, cB, sB);
     2574:	410a87b3          	sub	a5,s5,a6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:368
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:339
     R(5, cA, sA);
     2578:	41055513          	srai	a0,a0,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:363
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:334
     prev_color1=-1;
     257c:	00e22a23          	sw	a4,20(tp) # 14 <prev_color1>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:364
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:335
     prev_color2=-1;
     2580:	03412883          	lw	a7,52(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:368
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:339
     R(5, cA, sA);
     2584:	04a12823          	sw	a0,80(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:371
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:342
     R(6, cB, sB);
     2588:	01079793          	slli	a5,a5,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:368
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:339
     R(5, cA, sA);
     258c:	40555513          	srai	a0,a0,0x5
     2590:	00d50833          	add	a6,a0,a3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:371
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:342
     R(6, cB, sB);
     2594:	4107d793          	srai	a5,a5,0x10
     2598:	4067db13          	srai	s6,a5,0x6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:364
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:335
     prev_color2=-1;
     259c:	00e22823          	sw	a4,16(tp) # 10 <prev_color2>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:368
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:339
     R(5, cA, sA);
     25a0:	01081713          	slli	a4,a6,0x10
     25a4:	41075713          	srai	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:372
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:343
     R(6, cAcB, cAsB);
     25a8:	4100d093          	srai	ra,ra,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:371
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:342
     R(6, cB, sB);
     25ac:	016c86b3          	add	a3,s9,s6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:372
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:343
     R(6, cAcB, cAsB);
     25b0:	4060de13          	srai	t3,ra,0x6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:368
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:339
     R(5, cA, sA);
     25b4:	04e12623          	sw	a4,76(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:371
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:342
     R(6, cB, sB);
     25b8:	01069713          	slli	a4,a3,0x10
     25bc:	41075713          	srai	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:373
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:344
     R(6, sAcB, sAsB);
     25c0:	410d5d13          	srai	s10,s10,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:372
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:343
     R(6, cAcB, cAsB);
     25c4:	01c585b3          	add	a1,a1,t3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:373
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:344
     R(6, sAcB, sAsB);
     25c8:	406d5313          	srai	t1,s10,0x6
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:371
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:342
     R(6, cB, sB);
     25cc:	04e12223          	sw	a4,68(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:372
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:343
     R(6, cAcB, cAsB);
     25d0:	01059713          	slli	a4,a1,0x10
     25d4:	41075713          	srai	a4,a4,0x10
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:373
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:344
     R(6, sAcB, sAsB);
     25d8:	00660633          	add	a2,a2,t1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:372
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:343
     R(6, cAcB, cAsB);
     25dc:	04e12a23          	sw	a4,84(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:373
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:344
     R(6, sAcB, sAsB);
     25e0:	01061713          	slli	a4,a2,0x10
     25e4:	41075713          	srai	a4,a4,0x10
     25e8:	04e12423          	sw	a4,72(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:253
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:231
   for (;;) {
     25ec:	00070c13          	mv	s8,a4
     25f0:	8c4ff06f          	j	16b4 <thrd_fn+0x104>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:329
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:307
       CPI  = ((stats_cycles * 1000) / stats_instructions);
     25f4:	3e800a13          	li	s4,1000
     25f8:	02fa07b3          	mul	a5,s4,a5
     25fc:	07012903          	lw	s2,112(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:328
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:306
       FPS  = stats_frame;
     2600:	00008737          	lui	a4,0x8
     2604:	00470733          	add	a4,a4,tp
     2608:	82072703          	lw	a4,-2016(a4) # 7820 <stats_frame>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:329
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:307
       CPI  = ((stats_cycles * 1000) / stats_instructions);
     260c:	82892603          	lw	a2,-2008(s2)
     2610:	82c92683          	lw	a3,-2004(s2)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:328
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:306
       FPS  = stats_frame;
     2614:	06e12223          	sw	a4,100(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:329
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:307
       CPI  = ((stats_cycles * 1000) / stats_instructions);
     2618:	02aa35b3          	mulhu	a1,s4,a0
     261c:	02aa0533          	mul	a0,s4,a0
     2620:	00b785b3          	add	a1,a5,a1
     2624:	0c8000ef          	jal	26ec <__udivdi3>
     2628:	06a12423          	sw	a0,104(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:330
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:308
       MIPS = ((stats_instructions * _clkfreq() * 1000) / (stats_cycles * 1000000));
     262c:	cc0025f3          	csrr	a1,0xcc0
     2630:	82892503          	lw	a0,-2008(s2)
@@ -3425,73 +3423,73 @@ thrd_fn():
     2680:	06c000ef          	jal	26ec <__udivdi3>
     2684:	06a12623          	sw	a0,108(sp)
 my_rdcycle():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:69
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:57
         __asm__ __volatile__ ("rdcycleh %0" : "=r" (a1));
     2688:	c8002773          	rdcycleh	a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:70
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:58
         __asm__ __volatile__ ("rdcycle %0" : "=r" (a0));
     268c:	c00026f3          	rdcycle	a3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:71
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:59
         __asm__ __volatile__ ("rdcycleh %0" : "=r" (t0));
     2690:	c80027f3          	rdcycleh	a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:72
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:60
     } while(t0 != a1);
     2694:	00f70463          	beq	a4,a5,269c <thrd_fn+0x10ec>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:72 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:60 (discriminator 1)
     2698:	0000006f          	j	2698 <thrd_fn+0x10e8>
 stats_reset():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:101 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:87 (discriminator 1)
     stats_cycles_init       = my_rdcycle();
     269c:	000087b7          	lui	a5,0x8
     26a0:	004787b3          	add	a5,a5,tp
 my_rdcycle():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:74
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:62
     return ((uint64_t)a1 << 32) | a0;
     26a4:	84d7a423          	sw	a3,-1976(a5) # 7848 <stats_cycles_init>
     26a8:	84e7a623          	sw	a4,-1972(a5)
 my_rdinstret():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:81
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:69
         __asm__ __volatile__ ("rdinstreth %0" : "=r" (a1));
     26ac:	c8202773          	rdinstreth	a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:82
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:70
         __asm__ __volatile__ ("rdinstret %0" : "=r" (a0));
     26b0:	c0202573          	rdinstret	a0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:83
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:71
         __asm__ __volatile__ ("rdinstreth %0" : "=r" (t0));
     26b4:	c82027f3          	rdinstreth	a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:84
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:72
     } while(t0 != a1);
     26b8:	00f70463          	beq	a4,a5,26c0 <thrd_fn+0x1110>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:84 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:72 (discriminator 1)
     26bc:	0000006f          	j	26bc <thrd_fn+0x110c>
 stats_reset():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:103
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:89
     stats_frame_init        = frame;
     26c0:	8781a603          	lw	a2,-1928(gp) # 156d8 <frame>
     26c4:	87c1a683          	lw	a3,-1924(gp) # 156dc <frame+0x4>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:102 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:88 (discriminator 1)
     stats_instructions_init = my_rdinstret();
     26c8:	000087b7          	lui	a5,0x8
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:103
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:89
     stats_frame_init        = frame;
     26cc:	000085b7          	lui	a1,0x8
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:102 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:88 (discriminator 1)
     stats_instructions_init = my_rdinstret();
     26d0:	004787b3          	add	a5,a5,tp
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:103
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:89
     stats_frame_init        = frame;
     26d4:	004585b3          	add	a1,a1,tp
 my_rdinstret():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:86
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:74
     return ((uint64_t)a1 << 32) | a0;
     26d8:	84a7a023          	sw	a0,-1984(a5) # 7840 <stats_instructions_init>
     26dc:	84e7a223          	sw	a4,-1980(a5)
 stats_reset():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:103
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:89
     stats_frame_init        = frame;
     26e0:	82c5ac23          	sw	a2,-1992(a1) # 7838 <stats_frame_init>
     26e4:	82d5ae23          	sw	a3,-1988(a1)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:104
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/donut/donut.c:90
 }
     26e8:	d19ff06f          	j	2400 <thrd_fn+0xe50>
 
