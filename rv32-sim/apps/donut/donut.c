@@ -50,18 +50,6 @@ const char* colormap[34] = {
 
 char scanline[80];
 
-#ifdef __linux__
-
-static uint64_t my_rdcycle() {
-    return 0;
-}
-
-static uint64_t my_rdinstret() {
-    return 0;
-}
-
-#else
-
 static uint64_t my_rdcycle() {
     uint64_t result;
     uint32_t a0,a1,t0;
@@ -86,8 +74,6 @@ static uint64_t my_rdinstret() {
     return ((uint64_t)a1 << 32) | a0;
 }
 
-#endif
-
 uint64_t frame = 0;
 
 __thread uint64_t stats_cycles_init = 0;
@@ -109,11 +95,6 @@ static void stats_update() {
     stats_frame        = (frame - stats_frame_init);
 }
 
-#ifdef __linux__
-void print (const char *s) {
-  fprintf(stdout, "%s", s); fflush(stdout);
-}
-#else
 #include <_os.h>
 #define SERIAL0_ADDR (0xf80 /* By convention, the first UART is located at 0xf80 */)
 void print (const char *s) {
@@ -122,7 +103,6 @@ void print (const char *s) {
     *(volatile char *)SERIAL0_ADDR = c;
   _preempt_enable();
 }
-#endif
 
 __thread char fb[80*24*16];
 __thread int fbidx = 0;
@@ -226,17 +206,15 @@ static int length_cordic(int16_t x, int16_t y, int16_t *x2_, int16_t y2) {
        ;
 }
 
-#ifndef __linux__
 uintptr_t NCPU = 0;
 uintptr_t MHZ = 0;
-#endif
 
 void thrd_fn (void) {
-#ifndef __linux__
+
   uintptr_t FPS  = 0;
   uintptr_t CPI  = 0;
   uintptr_t MIPS = 0;
-#endif
+
   // torus radii and distance from camera
   // these are pretty baked-in to other constants now, so it probably won't work
   // if you change them too much.
@@ -321,7 +299,7 @@ void thrd_fn (void) {
         if (j&1) fbprintf("\n");
       }
     }
-#ifndef __linux__
+
     stats_update();
 
     if (stats_cycles >= _clkfreq()) {
@@ -330,9 +308,8 @@ void thrd_fn (void) {
       MIPS = ((stats_instructions * _clkfreq() * 1000) / (stats_cycles * 1000000));
       stats_reset();
     }
-#endif
+
     /* display */ {
-#ifndef __linux__
       fbprintf("\033[0m"); // reset colors
       setcolors(25,33);
       //fbprintf(" %s %dMHz %dCPU%s FRAME#%d ", CPU_NAME, MHZ, NCPU, ((NCPU > 1) ? "s" : ""), (int)frame);
@@ -345,18 +322,12 @@ void thrd_fn (void) {
         setcolors(25,0);
         fbprintf(" %u MIPSx1000 ", MIPS);
       }
-#endif
       fbprintf("\r\x1b[23A");
     }
 
     print(fb);
 
-#ifdef __linux__
-    usleep(15000);
-    ++frame;
-#else
     _atomic_inc(&frame);
-#endif
 
     fbidx = 0;
 
@@ -375,15 +346,12 @@ void thrd_fn (void) {
 }
 
 int main () {
-#ifndef __linux__
   NCPU = _ncpu();
   MHZ  = (_clkfreq()/1000000);
-#endif
   print("\033[48;5;16m" // set background color black
         "\033[38;5;15m" // set foreground color white
         "\033[H"        // home
         "\033[?25l"     // hide cursor
         "\033[2J");     // clear screen
-
   thrd_fn();
 }
