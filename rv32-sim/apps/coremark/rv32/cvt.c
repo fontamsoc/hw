@@ -3,7 +3,7 @@
 static char CVTBUF[CVTBUFSIZE];
 
 // Copied from musl/src/math/modf.c
-double modf(double x, double *iptr)
+static double modf(double x, double *iptr)
 {
 	union {double f; uint64_t i;} u = {x};
 	uint64_t mask;
@@ -115,22 +115,22 @@ static char *cvt(double arg, int ndigits, int *decpt, int *sign, char *buf, int 
   return buf;
 }
 
-char *ecvt(double arg, int ndigits, int *decpt, int *sign)
+char *ee_ecvt(double arg, int ndigits, int *decpt, int *sign)
 {
   return cvt(arg, ndigits, decpt, sign, CVTBUF, 1);
 }
 
-char *ecvtbuf(double arg, int ndigits, int *decpt, int *sign, char *buf)
+char *ee_ecvtbuf(double arg, int ndigits, int *decpt, int *sign, char *buf)
 {
   return cvt(arg, ndigits, decpt, sign, buf, 1);
 }
 
-char *fcvt(double arg, int ndigits, int *decpt, int *sign)
+char *ee_fcvt(double arg, int ndigits, int *decpt, int *sign)
 {
   return cvt(arg, ndigits, decpt, sign, CVTBUF, 0);
 }
 
-char *fcvtbuf(double arg, int ndigits, int *decpt, int *sign, char *buf)
+char *ee_fcvtbuf(double arg, int ndigits, int *decpt, int *sign, char *buf)
 {
   return cvt(arg, ndigits, decpt, sign, buf, 0);
 }

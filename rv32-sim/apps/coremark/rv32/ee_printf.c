@@ -202,8 +202,8 @@ static char *iaddr(char *str, unsigned char *addr, int size, int precision, int 
 
 #if HAS_FLOAT
 
-char *ecvtbuf(double arg, int ndigits, int *decpt, int *sign, char *buf);
-char *fcvtbuf(double arg, int ndigits, int *decpt, int *sign, char *buf);
+char *ee_ecvtbuf(double arg, int ndigits, int *decpt, int *sign, char *buf);
+char *ee_fcvtbuf(double arg, int ndigits, int *decpt, int *sign, char *buf);
 static void ee_bufcpy(char *d, char *s, int count); 
  
 void ee_bufcpy(char *pd, char *ps, int count) {
@@ -228,7 +228,7 @@ static void parse_float(double value, char *buffer, char fmt, int precision)
 
   if (fmt == 'g')
   {
-    digits = ecvtbuf(value, precision, &decpt, &sign, cvtbuf);
+    digits = ee_ecvtbuf(value, precision, &decpt, &sign, cvtbuf);
     magnitude = decpt - 1;
     if (magnitude < -4  ||  magnitude > precision - 1)
     {
@@ -244,7 +244,7 @@ static void parse_float(double value, char *buffer, char fmt, int precision)
 
   if (fmt == 'e')
   {
-    digits = ecvtbuf(value, precision + 1, &decpt, &sign, cvtbuf);
+    digits = ee_ecvtbuf(value, precision + 1, &decpt, &sign, cvtbuf);
 
     if (sign) *buffer++ = '-';
     *buffer++ = *digits;
@@ -280,7 +280,7 @@ static void parse_float(double value, char *buffer, char fmt, int precision)
   }
   else if (fmt == 'f')
   {
-    digits = fcvtbuf(value, precision, &decpt, &sign, cvtbuf);
+    digits = ee_fcvtbuf(value, precision, &decpt, &sign, cvtbuf);
     if (sign) *buffer++ = '-';
     if (*digits)
     {
