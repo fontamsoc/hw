@@ -36,13 +36,13 @@
 	Define to 1 if the platform has stdio.h.
 */
 #ifndef HAS_STDIO
-#define HAS_STDIO 0
+#define HAS_STDIO 1
 #endif
 /* Configuration : HAS_PRINTF
 	Define to 1 if the platform has stdio.h and implements the printf function.
 */
 #ifndef HAS_PRINTF
-#define HAS_PRINTF 0
+#define HAS_PRINTF 1
 #endif
 
 
@@ -59,8 +59,8 @@
 #ifndef COMPILER_FLAGS 
  #define COMPILER_FLAGS FLAGS_STR /* "Please put compiler flags here (e.g. -o3)" */
 #endif
-#ifndef MEM_LOCATION 
- #define MEM_LOCATION "STATIC"
+#ifndef MEM_LOCATION
+ #define MEM_LOCATION "HEAP"
 #endif
 
 /* Data Types :
@@ -113,7 +113,7 @@ typedef ee_u64 CORE_TICKS;
 	MEM_STACK - to allocate the data block on the stack (NYI).
 */
 #ifndef MEM_METHOD
-#define MEM_METHOD MEM_STATIC
+#define MEM_METHOD MEM_MALLOC
 #endif
 
 /* Configuration : MULTITHREAD
@@ -126,16 +126,29 @@ typedef ee_u64 CORE_TICKS;
 	Note : 
 	If this flag is defined to more then 1, an implementation for launching parallel contexts must be defined.
 	
-	Two sample implementations are provided. Use <USE_PTHREAD> or <USE_FORK> to enable them.
+	A sample implementations is provided. Use <USE__OS> to enable it.
 	
 	It is valid to have a different implementation of <core_start_parallel> and <core_end_parallel> in <core_portme.c>,
 	to fit a particular architecture. 
 */
 #ifndef MULTITHREAD
 #define MULTITHREAD 1
-#define USE_PTHREAD 0
-#define USE_FORK 0
-#define USE_SOCKET 0
+#define USE__OS 0
+#endif
+
+/* Configuration: USE__OS
+	Sample implementation for launching parallel contexts
+	This implementation uses _thread_create() and semaphore.
+
+	Valid values:
+	0 - Do not use _OS (underLineOS) API.
+	1 - Use _OS (underLineOS) API
+
+	Note:
+	This flag only matters if MULTITHREAD has been defined to a value greater then 1.
+*/
+#ifndef USE__OS
+#define USE__OS 0
 #endif
 
 /* Configuration : MAIN_HAS_NOARGC
@@ -168,7 +181,21 @@ typedef ee_u64 CORE_TICKS;
 */
 extern ee_u32 default_num_contexts;
 
+#if (MULTITHREAD>1)
+#if USE__OS
+	#include <_os.h>
+	#define PARALLEL_METHOD "threads"
+#else
+	#define PARALLEL_METHOD "Proprietary"
+	#error "Please implement multicore functionality in core_portme.c to use multiple contexts."
+#endif /* Method for multithreading */
+#endif /* MULTITHREAD > 1 */
+
 typedef struct CORE_PORTABLE_S {
+#if (MULTITHREAD>1)
+	#if USE__OS
+	#endif /* Method for multithreading */
+#endif /* MULTITHREAD>1 */
 	ee_u8	portable_id;
 } core_portable;
 

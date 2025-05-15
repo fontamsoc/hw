@@ -8,6 +8,15 @@
 #include "coremark.h"
 #include "core_portme.h"
 
+#include <stdlib.h>
+
+void *portable_malloc(size_t size) {
+	return malloc(size);
+}
+void portable_free(void *p) {
+	free(p);
+}
+
 #if VALIDATION_RUN
 	volatile ee_s32 seed1_volatile=0x3415;
 	volatile ee_s32 seed2_volatile=0x3415;
@@ -104,6 +113,39 @@ secs_ret time_in_secs(CORE_TICKS ticks) {
 	return retval;
 }
 
+#if (MULTITHREAD>1)
+#if USE__OS
+#define _OS_THRD_STACKSZ 2048
+void *_os_thrd_stack;
+static unsigned long _os_busy_ctnr;
+static _SEM_DEF(_os_thrd_sem, 1, 0);
+void _os_thrd_fn (void *arg) {
+	iterate((core_results *)arg);
+	if (_atomic_dec(&_os_busy_ctnr) == 1)
+		_sem_put(&_os_thrd_sem, _DATE_MAX);
+}
+unsigned long ncpu;
+ee_u8 core_start_parallel(core_results *res) {
+	static unsigned long i = 0;
+	_thread_schedoncpu(
+		_thread_create(_os_thrd_stack + (i*_OS_THRD_STACKSZ), _OS_THRD_STACKSZ,
+			_os_thrd_fn, (void *)res),
+		// Try to use a cpu other than _cpuid() to immediately start computing.
+		// TODO: With load-balancing, just use _thread_sched() on _thread_create() output.
+		((_cpuid() + i + 1) % ncpu), true);
+	++i;
+	return 0;
+}
+ee_u8 core_stop_parallel(core_results *res) {
+	if (_os_busy_ctnr)
+		_sem_get(&_os_thrd_sem, _DATE_MAX);
+	return 0;
+}
+#else /* no standard multicore implementation */
+#error "Please implement multicore functionality in core_portme.c to use multiple contexts."
+#endif /* multithread implementations */
+#endif
+
 ee_u32 default_num_contexts=1;
 
 /* Function : portable_init
@@ -119,6 +161,19 @@ void portable_init(core_portable *p, int *argc, char *argv[]) {
 		ee_printf("ERROR! Please define ee_u32 to a 32b unsigned type!\n");
 	}
 	p->portable_id=1;
+#if (MULTITHREAD>1)
+#if USE__OS
+	_os_busy_ctnr=ncpu=_ncpu();
+	if (_os_busy_ctnr>MULTITHREAD) {
+		ee_printf("WARNING! _ncpu()>MULTITHREAD!\n");
+		_os_busy_ctnr=MULTITHREAD;
+	}
+	default_num_contexts=_os_busy_ctnr;
+	_os_thrd_stack = malloc(default_num_contexts*_OS_THRD_STACKSZ);
+	if (!_os_thrd_stack)
+		ee_printf("ERROR! Failed to allocate stack!\n");
+#endif
+#endif
 }
 /* Function : portable_fini
 	Target specific final code
@@ -128,39 +183,3 @@ void portable_fini(core_portable *p)
 	p->portable_id=0;
 	ee_printf("CoreMark done\n");
 }
-
-// Substitute for crt0.S since this is built using -nostdlib.
-__asm__ (
-	".section .text._start\n"
-	".global  _start\n"
-	".type    _start, @function\n"
-	"_start:\n"
-
-	// Register sp should already be set.
-
-	// Initialize global pointer.
-	".option push\n"
-	".option norelax\n"
-	"0:auipc gp, %pcrel_hi(__global_pointer$)\n"
-	"  addi  gp, gp, %pcrel_lo(0b)\n"
-	".option pop\n"
-
-	// Clear the bss segment.
-	"la a0, __bss_start\n"
-	"la a1, _end\n"
-	"ble a1, a0, 1f; 0:\n"
-#if __riscv_xlen == 64
-	"sd zero, (a0)\n"
-	"add a0, a0, 8\n"
-#elif __riscv_xlen == 32
-	"sw zero, (a0)\n"
-	"add a0, a0, 4\n"
-#else
-#error "Unexpected __riscv_xlen"
-#endif
-	"blt a0, a1, 0b; 1:\n"
-
-	"call main\n"
-	"ebreak\n"
-
-	".size _start, (. - _start)\n");
