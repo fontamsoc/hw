@@ -74,7 +74,7 @@ Symbol table '.symtab' contains 1694 entries:
      8: 00000000     0 SECTION LOCAL  DEFAULT    8 .debug_line
      9: 00000000     0 SECTION LOCAL  DEFAULT    9 .debug_str
     10: 00000000     0 SECTION LOCAL  DEFAULT   10 .debug_line_str
-    11: 00000000     0 FILE    LOCAL  DEFAULT  ABS ccoLPKET.o
+    11: 00000000     0 FILE    LOCAL  DEFAULT  ABS ccipssei.o
     12: 00001000     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     13: 00000000     0 FILE    LOCAL  DEFAULT  ABS simple.o
     14: 000010e4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
