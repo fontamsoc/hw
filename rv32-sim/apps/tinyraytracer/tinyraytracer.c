@@ -351,7 +351,6 @@ static void scan_RGBf_thrd_fn (void *) {
 	}
 	if (_atomic_dec(&busy_cntr) == 1)
 		_sem_put(&main_sem, _DATE_MAX);
-	_thread_sleep(_DATE_MAX); // Slightly faster than `return` which calls `_thread_exit()`.
 }
 
 int main() {
