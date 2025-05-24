@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// (c) William Fonkou Tambe
+// 20250519 (c) William Fonkou Tambe
 
 `ifndef SPI_MASTER_PHY_V
 `define SPI_MASTER_PHY_V
 
-// Module implementing SPI master PHY.
+// Module implementing SPI master PHY, with CPHA == 0.
 
 // Parameters.
 //
@@ -14,6 +14,9 @@
 //
 // SCLKDIVLIMIT:
 // 	Limit below which the input "sclkdiv_i" must be set.
+//
+// CPOL:
+// 	SPI clock polarity.
 
 // Ports.
 //
@@ -21,8 +24,8 @@
 // 	Clock signal.
 // 	Its frequency determine the transmission bitrate
 // 	which is computed as follow: (CLKFREQ / (1 << sclkdiv_i)).
-// 	For a CLKFREQ of 100 Mhz and a value of 0 on the input
-// 	"sclkdiv_i", it results in a bitrate of 100 Mbps.
+// 	For a CLKFREQ of 100 Mhz and a value of 1 on the input "sclkdiv_i",
+// 	it results in a bitrate of 50 Mbps.
 //
 // sclk_o
 // mosi_o
@@ -31,150 +34,105 @@
 // 	SPI master signals.
 //
 // sclkdiv_i
-// 	This input is used to adjust the bitrate.
-// 	The resulting bitrate is computed as follow: (CLKFREQ / (1 << sclkdiv_i)).
-// 	For a CLKFREQ of 100 Mhz and a value of 0 on the input
-// 	"sclkdiv_i", it results in a bitrate of 100 Mbps.
+// 	This input is used to adjust the bitrate, and must be non-null.
+// 	The resulting bitrate is computed as follow: (CLKFREQ/(sclkdiv_i+1)).
+// 	For a CLKFREQ of 100 Mhz and a value of 1 on the input "sclkdiv_i",
+// 	it results in a bitrate of 50 Mbps.
 //
 // stb_i
 // 	This signal is set high to begin transmitting the data value on
 // 	the input "data_i" and receiving a data value on the output "data_o".
-// 	When the output "rdy_o" is high, transmission begins
-// 	on the next active edge of the clock input "clk_i".
-// 	To prevent the output "cs_o" from becoming high between each
-// 	data transmission, this signal must be set high as soon as
-// 	the output "rdy_o" becomes high.
+// 	It must be held high until transmission begins (ie: signal "rdy_o" negedge).
+// 	To prevent the output "cs_o" from becoming high between each data transmission,
+// 	this signal must be set high as soon as the signal "rdy_o" posedge.
 //
 // rdy_o
 // 	This signal is high when ready to transmit "data_i".
 //
 // rcvd_o
 // 	This signal is high for a single clock cycle
-//  when data is ready to be sampled on "data_o".
+// 	when data is ready to be sampled on "data_o".
 //
 // data_o
 // 	Data received which is valid only while "rcvd_o" is high.
 //
 // data_i
-// 	Data value to transmit through "mosi_o" when (stb_i && rdy_o) is true.
-//
-// To flush unknown states on the outputs "mosi_o" and "cs_o"
-// after poweron, this module must be run for a clock cycle count
-// of at least (DATABITSZ * (1 << (SCLKDIVLIMIT-1))) with "stb_i" low.
+// 	Data value to transmit through "mosi_o".
 
 module spi_master_phy (
-
-	clk_i
-
-	,sclk_o ,mosi_o ,miso_i ,cs_o
-
-	,stb_i ,rdy_o ,rcvd_o ,sclkdiv_i
-
-	,data_o ,data_i
+	rst_i, clk_i,
+	sclk_o, mosi_o, miso_i, cs_o,
+	stb_i, rdy_o, rcvd_o, sclkdiv_i,
+	data_o, data_i
 );
 
 `include "lib/clog2.v"
 
 parameter DATABITSZ    = 2;
-parameter SCLKDIVLIMIT = 1;
+parameter SCLKDIVLIMIT = 2;
+parameter CPOL         = 0;
 
 localparam CLOG2DATABITSZ    = clog2(DATABITSZ);
 localparam CLOG2SCLKDIVLIMIT = clog2(SCLKDIVLIMIT);
 
+input wire rst_i;
+
 input wire clk_i;
 
-output wire sclk_o;
+output reg  sclk_o = (|CPOL);
 output wire mosi_o;
 input  wire miso_i;
 output reg  cs_o = 1'b1;
 
-input  wire                            stb_i;
-output wire                            rdy_o;
-output wire                            rcvd_o;
-input  wire [CLOG2SCLKDIVLIMIT -1 : 0] sclkdiv_i;
+input  wire stb_i;
+output reg  rdy_o = 1'b1;
+output reg  rcvd_o = 1'b0;
+
+input wire [CLOG2SCLKDIVLIMIT -1 : 0] sclkdiv_i;
 
 output reg  [DATABITSZ -1 : 0] data_o;
 input  wire [DATABITSZ -1 : 0] data_i;
 
-// Register holding bits used to set the output "mosi_o".
-reg [DATABITSZ -1 : 0] mosibits = {DATABITSZ{1'b1}};
+reg  [DATABITSZ -1 : 0] mosibits = {DATABITSZ{1'b1}};
+assign mosi_o = mosibits[DATABITSZ-1];
 
-// Register used to keep track of the number of clock cycles.
-reg [SCLKDIVLIMIT : 0] cntr = 0;
-
-// Register which is used to keep track
-// of the number of bits left to transmit.
+// Keep track of the number of bits left to transmit.
 reg [CLOG2DATABITSZ -1 : 0] bitcnt = 0;
+wire bitcntNull = !bitcnt;
+wire bitcntNull_and_stbNull = (bitcntNull && !stb_i);
 
-assign rdy_o = !bitcnt;
-
-wire [CLOG2SCLKDIVLIMIT -1 : 0] sclkdiv_w;
-wire [CLOG2SCLKDIVLIMIT -1 : 0] sclkdiv_w_minus_one = (sclkdiv_w-1);
-
-assign sclkdiv_w = ((sclkdiv_i < 1) ? 1 : sclkdiv_i);
-assign sclk_o = cntr[sclkdiv_w_minus_one];
-assign mosi_o = mosibits[DATABITSZ -1];
-
-// Register used to detect a falling edge on "rdy_o".
-reg rdy_o_sampled = 1;
-
-// This logic set the net rdy_o_negedge to 1
-// when the falling edge of "rdy_o" occurs.
-wire rdy_o_negedge = (rdy_o < rdy_o_sampled);
-
-// Register used to detect a falling/rising edge on "cs_o".
-reg cs_o_sampled = 1;
-
-wire cs_o_negedge = (cs_o < cs_o_sampled);
-
-wire cs_o_posedge = (cs_o > cs_o_sampled);
-
-// Data has been received when either of the following condition occurs:
-// - A falling edge on "rdy_o";
-// 	in this condition, data has been received only if there was no
-// 	falling edge on "cs_o", otherwise it means that the transmission
-//  just started and data still has yet to be received.
-// - A rising edge on "cs_o".
-//
-// "rcvd_o" is high only for a single clock cycle since
-// rdy_o_sampled and cs_o_sampled are updated every clock cycles.
-assign rcvd_o = ((rdy_o_negedge && !cs_o_negedge) || cs_o_posedge);
+// Keep track of the number of clock cycles.
+reg [CLOG2SCLKDIVLIMIT -1 : 0] cntr;
 
 always @ (posedge clk_i) begin
-	if (!cs_o && (cntr == (({{SCLKDIVLIMIT{1'b0}}, 1'b1} << sclkdiv_w_minus_one) -1)))
-		data_o <= {data_o[DATABITSZ -2 : 0], miso_i};
-end
-
-always @ (posedge clk_i) begin
-	// When the output "cs_o" is low, this block executes only
-	// after every clock cycle count of ((1 << sclkdiv_w) -1);
-	// when the output "cs_o" is high, this block executes every clock cycle.
-	// ">=" is used so that the register "cntr" gets correctly wrapped
-	// around when "sclkdiv_w" is suddently set to a value that makes
-	// the register "cntr" greater than or equal to ((1 << sclkdiv_w) -1).
-	if (cs_o || (cntr >= (({{SCLKDIVLIMIT{1'b0}}, 1'b1} << sclkdiv_w) -1))) begin
-
-		if (bitcnt)
-			mosibits <= (mosibits << 1);
-		else
+	if (rst_i) begin
+		sclk_o <= (|CPOL);
+		cs_o <= 1'b1;
+		rdy_o <= 1'b1;
+		rcvd_o <= 1'b0;
+		mosibits <= {DATABITSZ{1'b1}};
+		bitcnt <= 0;
+	end else if (cs_o || (cntr == sclkdiv_i)) begin
+		sclk_o <= (|CPOL);
+		if (bitcnt) begin
+			bitcnt <= (bitcnt - 1'b1);
+			mosibits <= {mosibits[(DATABITSZ-1)-1:0], 1'b1};
+		end else if (stb_i) begin
+			bitcnt <= (DATABITSZ-1);
 			mosibits <= data_i;
-
-		if (bitcnt)
-			bitcnt <= bitcnt - 1'b1;
-		else if (stb_i)
-			bitcnt <= (DATABITSZ -1);
-
-		cs_o <= !(bitcnt || stb_i);
-
+		end
+		cs_o <= bitcntNull_and_stbNull;
+		rdy_o <= (bitcntNull_and_stbNull || (bitcnt == 1));
+		rcvd_o <= (bitcntNull && !cs_o);
 		cntr <= 0;
-
-	end else
-		cntr <= cntr + 1'b1;
-end
-
-always @ (posedge clk_i) begin
-	rdy_o_sampled <= rdy_o;
-	cs_o_sampled <= cs_o;
+	end else begin
+		if (cntr == {1'b0, sclkdiv_i[CLOG2SCLKDIVLIMIT-1:1]}) begin
+			sclk_o <= ~(|CPOL);
+			data_o <= {data_o[(DATABITSZ-1)-1:0], miso_i};
+		end
+		rcvd_o <= 1'b0;
+		cntr <= (cntr + 1'b1);
+	end
 end
 
 endmodule

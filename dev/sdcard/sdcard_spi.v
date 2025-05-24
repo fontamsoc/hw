@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// (c) William Fonkou Tambe
+// 20250519 (c) William Fonkou Tambe
 
 // SDCard peripheral.
 //
@@ -55,8 +55,7 @@
 //
 // PHYCLKFREQ
 // 	Frequency of the clock input "clk_phy_i" in Hz.
-// 	It should be at least 500KHz in order to provide
-// 	at least 250KHz required by the device.
+// 	It must be greather than or equal to CLKFREQ.
 //
 // INITFILE
 // 	File from which memory will be initialized using $readmemh().
@@ -184,6 +183,11 @@ localparam XADDRBITSZ = (XWORDBITSZ-CLOG2XWORDBITSZBY8);
 
 localparam CLOG2XWORDBITSZBY8DIFF = (CLOG2XWORDBITSZBY8 - CLOG2WORDBITSZBY8);
 
+localparam MAPSZ = (PHYBLKSZ*2);
+
+localparam MSBSZIGN = (WORDBITSZ-clog2(MAPSZ));
+localparam XMSBSZIGN = (XWORDBITSZ-clog2(MAPSZ));
+
 input wire rst_i;
 
 input wire clk_i;
@@ -196,23 +200,23 @@ input  wire do_i;
 output wire cs_o;
 `endif
 
-input  wire                         wb_cyc_i;
-input  wire                         wb_stb_i;
-input  wire                         wb_we_i;
-input  wire [XADDRBITSZ -1 : 0]     wb_addr_i;
-input  wire [(XWORDBITSZ/8) -1 : 0] wb_sel_i;
-input  wire [XWORDBITSZ -1 : 0]     wb_dat_i;
-output wire                         wb_bsy_o;
-output reg                          wb_ack_o;
-output reg  [XWORDBITSZ -1 : 0]     wb_dat_o;
-output wire [WORDBITSZ -1 : 0]      wb_mapsz_o;
+input  wire                                 wb_cyc_i;
+input  wire                                 wb_stb_i;
+input  wire                                 wb_we_i;
+input  wire [(XADDRBITSZ-XMSBSZIGN) -1 : 0] wb_addr_i;
+input  wire [(XWORDBITSZ/8) -1 : 0]         wb_sel_i;
+input  wire [XWORDBITSZ -1 : 0]             wb_dat_i;
+output wire                                 wb_bsy_o;
+output reg                                  wb_ack_o;
+output reg  [XWORDBITSZ -1 : 0]             wb_dat_o;
+output wire [(WORDBITSZ-MSBSZIGN) : 0]      wb_mapsz_o;
 
 output reg  irq_stb_o;
 input  wire irq_rdy_i;
 
 assign wb_bsy_o = 1'b0;
 
-assign wb_mapsz_o = PHYBLKSZ*2;
+assign wb_mapsz_o = MAPSZ;
 
 localparam CLOG2PHYBLKSZ = clog2(PHYBLKSZ);
 
@@ -228,13 +232,13 @@ localparam STATUSREADY    = 1;
 localparam STATUSBUSY     = 2;
 localparam STATUSERROR    = 3;
 
-reg                         wb_stb_r;
-reg                         wb_we_r;
-reg [XADDRBITSZ -1 : 0]     wb_addr_r;
-reg [(XWORDBITSZ/8) -1 : 0] wb_sel_r;
-reg [XWORDBITSZ -1 : 0]     wb_dat_r;
+reg                                 wb_stb_r;
+reg                                 wb_we_r;
+reg [(XADDRBITSZ-XMSBSZIGN) -1 : 0] wb_addr_r;
+reg [(XWORDBITSZ/8) -1 : 0]         wb_sel_r;
+reg [XWORDBITSZ -1 : 0]             wb_dat_r;
 
-wire [XWORDBITSZ -1 : 0] _wb_addr_r;
+wire [(XWORDBITSZ-XMSBSZIGN) -1 : 0] _wb_addr_r;
 addr #(
 	.WORDBITSZ (XWORDBITSZ)
 ) addr (
@@ -242,7 +246,7 @@ addr #(
 	,.sel_i  (wb_sel_r)
 	,.addr_o (_wb_addr_r)
 );
-wire [ADDRBITSZ -1 : 0] addr_w = _wb_addr_r[WORDBITSZ -1 : CLOG2WORDBITSZBY8];
+wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] addr_w = _wb_addr_r[(WORDBITSZ-MSBSZIGN) -1 : CLOG2WORDBITSZBY8];
 
 wire cmd_reset = (wb_stb_r && (addr_w == ((CMDRESET * (WORDBITSZ/8) + PHYBLKSZ) >> CLOG2WORDBITSZBY8)));
 wire cmd_swap  = (wb_stb_r && (addr_w == ((CMDSWAP  * (WORDBITSZ/8) + PHYBLKSZ) >> CLOG2WORDBITSZBY8)));
@@ -260,18 +264,17 @@ reg [XADDRBITSZ -1 : 0] phy_cmd_addr_i;
 
 wire [XADDRBITSZ -1 : 0] phy_blkcnt_o;
 
+wire phy_bsy_o;
 wire phy_err_o;
 
 // A phy reset is done when "rst_i" is high or when CMDRESET is issued.
 // Since "rst_i" is also used to signal whether the device is under power,
 // a controller reset will be done as soon as the device is powered-on.
-wire phy_rst_w = (rst_i || (wb_stb_r && wb_we_r && cmd_reset && !phy_err_o));
+wire phy_rst_w = (rst_i || (wb_stb_r && wb_we_r && cmd_reset));
 
 reg phy_cmd_empty_i;
 
 wire phy_cmd_pop_o;
-
-wire phy_bsy_w = !(phy_cmd_empty_i && phy_cmd_pop_o);
 
 `ifdef SIMULATION
 sdcard_sim_phy
@@ -286,7 +289,7 @@ sdcard_spi_phy
 	 .INITFILE      (INITFILE)
 	,.SIMSTORAGESZ (SIMSTORAGESZ)
 	`endif
-) phy (
+) sdcard_phy (
 
 	 .rst_i (phy_rst_w)
 
@@ -308,14 +311,13 @@ sdcard_spi_phy
 
 	,.rx_push_o (phy_rx_push_o)
 	,.rx_data_o (phy_rx_data_o)
-	,.rx_full_i (/* not needed */)
 
 	,.tx_pop_o   (phy_tx_pop_o)
 	,.tx_data_i  (phy_tx_data_i)
-	,.tx_empty_i (/* not needed */)
 
 	,.blkcnt_o (phy_blkcnt_o)
 
+	,.bsy_o (phy_bsy_o)
 	,.err_o (phy_err_o)
 );
 
@@ -631,9 +633,9 @@ wire irq_rdy_i_negedge = (!irq_rdy_i && irq_rdy_i_r);
 reg  phy_err_o_r;
 wire phy_err_o_posedge = (phy_err_o && !phy_err_o_r);
 
-// Register used to detect a falling edge of "phy_bsy_w".
-reg  phy_bsy_w_r;
-wire phy_bsy_w_negedge = (!phy_bsy_w && phy_bsy_w_r);
+// Register used to detect a falling edge of "phy_bsy_o".
+reg  phy_bsy_o_r;
+wire phy_bsy_o_negedge = (!phy_bsy_o && phy_bsy_o_r);
 
 wire cache_rdop = (wb_stb_r && !wb_we_r && wb_addr_r < (PHYBLKSZ >> CLOG2XWORDBITSZBY8));
 wire cache_wrop = (wb_stb_r && wb_we_r  && wb_addr_r < (PHYBLKSZ >> CLOG2XWORDBITSZBY8));
@@ -653,6 +655,9 @@ assign cache1dato = cache1[cache1addr];
 always @ (posedge clk_i) begin
 	if (cache0wr)
 		cache0[cache0addr] <= cache0dati;
+end
+
+always @ (posedge clk_i) begin
 	if (cache1wr)
 		cache1[cache1addr] <= cache1dati;
 end
@@ -663,7 +668,7 @@ always @* begin
 		status = STATUSPOWEROFF;
 	else if (phy_err_o)
 		status = STATUSERROR;
-	else if (phy_rst_w || phy_bsy_w)
+	else if (phy_rst_w || phy_bsy_o)
 		status = STATUSBUSY;
 	else
 		status = STATUSREADY;
@@ -730,8 +735,8 @@ end
 always @ (posedge clk_i) begin
 	// Logic that sets cachephyaddr.
 	// Increment cachephyaddr whenever the PHY is not busy and requesting
-	// a read/write; reset cachephyaddr to 0 whenever "phy_bsy_w" is low.
-	if (!phy_bsy_w)
+	// a read/write; reset cachephyaddr to 0 whenever "phy_bsy_o" is low.
+	if (!phy_bsy_o)
 		cachephyaddr <= 0;
 	else if (cachesel ? (cache1rd | cache1wr) : (cache0rd | cache0wr))
 		cachephyaddr <= cachephyaddr + 1'b1;
@@ -742,7 +747,7 @@ always @ (posedge clk_i) begin
 	// A rising edge of "phy_err_o" means that an error occured
 	// while the controller was processing the previous
 	// operation, which is either initialization, read or write;
-	// a falling edge of "phy_bsy_w" means that the controller
+	// a falling edge of "phy_bsy_o" means that the controller
 	// has completed the previous operation, which is either
 	// initialization, read or write.
 	// Note that on poweron, it is expected that the device
@@ -753,14 +758,14 @@ always @ (posedge clk_i) begin
 	else if (irq_stb_o)
 		irq_stb_o <= !irq_rdy_i_negedge;
 	else
-		irq_stb_o <= (phy_err_o_posedge || phy_bsy_w_negedge);
+		irq_stb_o <= (phy_err_o_posedge || phy_bsy_o_negedge);
 end
 
 always @ (posedge clk_i) begin
 	// Sampling used for edge detection.
 	irq_rdy_i_r <= irq_rdy_i;
 	phy_err_o_r <= phy_err_o;
-	phy_bsy_w_r <= phy_bsy_w;
+	phy_bsy_o_r <= phy_bsy_o;
 end
 
 endmodule

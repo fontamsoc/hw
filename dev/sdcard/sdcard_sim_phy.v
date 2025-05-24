@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// (c) William Fonkou Tambe
+// 20250519 (c) William Fonkou Tambe
 
 `ifndef SDCARD_SIM_PHY_V
 `define SDCARD_SIM_PHY_V
@@ -34,16 +34,17 @@
 //
 // rx_push_o
 // rx_data_o
-// rx_full_i
 // 	FWFT FIFO interface to retrieve data from read commands.
 //
 // tx_pop_o
 // tx_data_i
-// tx_empty_i
 // 	FWFT FIFO interface to buffer data for write commands.
 //
 // blkcnt_o
 // 	This signal is set to the total number of blocks.
+//
+// bsy_o
+// 	This signal is high when the card is busy.
 //
 // err_o
 // 	This signal is high when an error occured; a reset is needed to clear the error.
@@ -61,14 +62,13 @@ module sdcard_sim_phy (
 
 	,rx_push_o
 	,rx_data_o
-	,rx_full_i
 
 	,tx_pop_o
 	,tx_data_i
-	,tx_empty_i
 
 	,blkcnt_o
 
+	,bsy_o
 	,err_o
 );
 
@@ -83,23 +83,25 @@ input wire clk_i;
 
 localparam CMDADDRBITSZ = 32; // Per the spec, read/write address is 32bits.
 
-output wire                    cmd_pop_o;
-input  wire                    cmd_data_i;
+output wire                       cmd_pop_o;
+input  wire                       cmd_data_i;
 input  wire [CMDADDRBITSZ -1 : 0] cmd_addr_i;
-input  wire                    cmd_empty_i;
+input  wire                       cmd_empty_i;
 
 output wire            rx_push_o;
 output wire [8 -1 : 0] rx_data_o;
-input  wire            rx_full_i;
 
 output wire            tx_pop_o;
 input  wire [8 -1 : 0] tx_data_i;
-input  wire            tx_empty_i;
 
 output wire [CMDADDRBITSZ -1 : 0] blkcnt_o;
 assign blkcnt_o = SIMSTORAGESZ;
 
+output wire bsy_o;
 output wire err_o;
+
+assign bsy_o = (!cmd_empty_i || !cmd_pop_o);
+
 assign err_o = 1'b0;
 
 reg [8 -1 : 0] u [(SIMSTORAGESZ*512) -1 : 0];
