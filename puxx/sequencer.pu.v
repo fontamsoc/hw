@@ -230,154 +230,147 @@ end
 
 always @ (posedge clk_i) begin
 
-	case (sequencerstate)
+	if (sequencerstate == SEQIBUFRST) begin
 
-		SEQIBUFRST: begin
+		rst_o <= rst_i ? 0 : rst_o;
 
-			rst_o <= rst_i ? 0 : rst_o;
+		kip <= rst_i ? rstaddr_i[WORDBITSZ -1 : 1] : kip;
+		ip  <= rst_i ? rstaddr_i[WORDBITSZ -1 : 1] : ip;
 
-			kip <= rst_i ? rstaddr_i[WORDBITSZ -1 : 1] : kip;
-			ip  <= rst_i ? rstaddr_i[WORDBITSZ -1 : 1] : ip;
+		inusermode <= rst_i ? |id_i : inusermode;
+		dohalt     <= rst_i ? |id_i : dohalt;
 
-			inusermode <= rst_i ? |id_i : inusermode;
-			dohalt     <= rst_i ? |id_i : dohalt;
+		instrbufrst_a <= rst_i ? ~instrbufrst_b : instrbufrst_a;
 
-			instrbufrst_a <= rst_i ? ~instrbufrst_b : instrbufrst_a;
+		// If instrfetchfaulted == 1, the instruction pagefault
+		// should be ignored because it is for an instruction
+		// fetched that is not going to be executed.
+		instrfetchfaulted_b <= instrfetchfaulted_a;
 
-			// If instrfetchfaulted == 1, the instruction pagefault
-			// should be ignored because it is for an instruction
-			// fetched that is not going to be executed.
-			instrfetchfaulted_b <= instrfetchfaulted_a;
-		end
+	end else if (sequencerstate == SEQINTR) begin
 
-		SEQINTR: begin
+		faultreason <= (
+			sequencerintrtimer ? TIMERINTR :
+			sequencerintrext   ? EXTINTR :
+			sequencerintrexec  ? EXECFAULTINTR : // Must be checked before instruction faults.
+			isopnop            ? PREEMPTINTR :
+			isopld             ? (alignfault                     ? ALIGNFAULTINTR : READFAULTINTR) :
+			isopst             ? (alignfault                     ? ALIGNFAULTINTR : WRITEFAULTINTR) :
+			isopldst           ? (alignfault                     ? ALIGNFAULTINTR :
+								dtlbmiss                       ? READFAULTINTR  :
+								dtlbnotreadable[dtlbwayhitidx] ? READFAULTINTR  :
+							/* dtlbnotwritable[dtlbwayhitidx] ? */WRITEFAULTINTR ) :
+								SYSOPINTR);
 
-			faultreason <= (
-				sequencerintrtimer ? TIMERINTR :
-				sequencerintrext   ? EXTINTR :
-				sequencerintrexec  ? EXECFAULTINTR : // Must be checked before instruction faults.
-				isopnop            ? PREEMPTINTR :
-				isopld             ? (alignfault                     ? ALIGNFAULTINTR : READFAULTINTR) :
-				isopst             ? (alignfault                     ? ALIGNFAULTINTR : WRITEFAULTINTR) :
-				isopldst           ? (alignfault                     ? ALIGNFAULTINTR :
-					              dtlbmiss                       ? READFAULTINTR  :
-					              dtlbnotreadable[dtlbwayhitidx] ? READFAULTINTR  :
-					           /* dtlbnotwritable[dtlbwayhitidx] ? */WRITEFAULTINTR ) :
-					             SYSOPINTR);
+		faultaddr <= (
+			sequencerintrexec              ? instrfetchfaultaddr : // Must be checked before instruction faults.
+			(isopld || isopst || isopldst) ? gprdata2 :
+												{ip, 1'b0});
 
-			faultaddr <= (
-				sequencerintrexec              ? instrfetchfaultaddr : // Must be checked before instruction faults.
-				(isopld || isopst || isopldst) ? gprdata2 :
-				                                 {ip, 1'b0});
+		sysopcode <= (
+			instrbufnotempty ?
+			{instrbufdato1, instrbufdato0} :
+			{8'h00, OPNOTAVAIL[4:0], 3'b000});
 
-			sysopcode <= (instrbufnotempty ? {instrbufdato1, instrbufdato0} : {8'h00, OPNOTAVAIL[4:0], 3'b000});
+		dohalt <= 0;
 
-			dohalt <= 0;
+		uip <= (sequencerintrexec ? (ip - oplioffset) : ip);
+		ip  <= kip;
 
-			uip <= (sequencerintrexec ? (ip - oplioffset) : ip);
-			ip  <= kip;
+		inusermode <= 0;
 
-			inusermode <= 0;
+		instrfetchfaulted_b <= (sequencerintrexec ? instrfetchfaulted_a : instrfetchfaulted_b);
 
-			instrfetchfaulted_b <= (sequencerintrexec ? instrfetchfaulted_a : instrfetchfaulted_b);
+		instrbufrst_a <= ~instrbufrst_b;
 
-			instrbufrst_a <= ~instrbufrst_b;
-		end
+	end else if (sequencerstate == SEQEXEC) begin
 
-		SEQEXEC: begin
-
-			`ifdef PUMMU
-			rst_o <= (inkernelmode_kmodepaging && (
-				itlbfault ||
-				(!oplicounter && isopld && opldfault) ||
-				(!oplicounter && isopst && opstfault) ||
-				(!oplicounter && isopldst && opldstfault))) ? 1 : rst_o;
-			`endif
-
-			dohalt <= ((!oplicounter && isophalt) ? 1 : dohalt);
-
-			uip <= ((!oplicounter && isopsetuip) ? gprdata1[WORDBITSZ-1:1] : uip);
-
-			ip <= (
-				`ifdef PUSC2
-				sc2exec ? (sc2isopjtrue ? sc2gprdata2[WORDBITSZ-1:1] : sc2ipnxt) :
-				`endif
-				((!oplicounter && isopjtrue) ? gprdata2[WORDBITSZ-1:1] : ipnxt));
-
-			instrbufdato <= (
-				`ifdef PUSC2
-				sc2exec ? sc2insn2 :
-				`endif
-				sc1insn2);
-			`ifdef PUSC2
-			sc2instrbufdato <= (sc2exec ? sc2insn3 : sc2insn2);
-			`endif
-
-			instrbufrst_a <= ((
-				`ifdef PUSC2
-				sc2exec ? sc2isopjtrue :
-				`endif
-					// setksl also set instrbufrst to make sure that outofrange values propagate.
-					(!oplicounter && (isopjtrue || isopsetksl))) ?
-						~instrbufrst_b : instrbufrst_a);
-		end
-
-		SEQSTALL0: begin
-
-			`ifdef PUSC2
-			sc2instrbufdato <= sc1insn2;
-			`endif
-		end
-
-		SEQSTALL1: begin
-
-			instrbufdato <= _instrbufi;
-			`ifdef PUSC2
-			sc2instrbufdato <= _sc2instrbufi;
-			`endif
-		end
-
-		SEQHCALL: begin
-
-			saved_sysopcode <= sysopcode;
-			saved_faultaddr <= faultaddr;
-
-			faultaddr <= (isopldst ? {dppn, gprdata2[12 -1 : 0]} : faultaddr);
-
-			sysopcode <= {instrbufdato1, instrbufdato0};
-
-			ksysopfaultmode <= inusermode;
-
-			rst_o <= (!ksysopfaulthdlr);
-
-			ip <= (inusermode ? ksysopfaulthdlr : ksysopfaulthdlrplustwo);
-
-			ksysopfaultaddr <= ipnxt;
-
-			inusermode <= 0;
-
-			instrbufrst_a <= ~instrbufrst_b;
-		end
-
-		`ifdef SIMULATION
-		SEQHALT: begin
-			$display("0x%x: halt %d\n", pc_w, clkcyclecnt);
-			$finish;
-		end
+		`ifdef PUMMU
+		rst_o <= (inkernelmode_kmodepaging && (
+			itlbfault ||
+			(!oplicounter && isopld && opldfault) ||
+			(!oplicounter && isopst && opstfault) ||
+			(!oplicounter && isopldst && opldstfault))) ? 1 : rst_o;
 		`endif
 
-		SEQSRET: begin
+		dohalt <= ((!oplicounter && isophalt) ? 1 : dohalt);
 
-			kip <= (isopsysret ? ipnxt : kip);
+		uip <= ((!oplicounter && isopsetuip) ? gprdata1[WORDBITSZ-1:1] : uip);
 
-			ip <= (isopsysret ? uip : ksysopfaultaddr);
+		ip <= (
+			`ifdef PUSC2
+			sc2exec ? (sc2isopjtrue ? sc2gprdata2[WORDBITSZ-1:1] : sc2ipnxt) :
+			`endif
+			((!oplicounter && isopjtrue) ? gprdata2[WORDBITSZ-1:1] : ipnxt));
 
-			inusermode <= (isopsysret ? 1'b1 : ksysopfaultmode);
+		instrbufdato <= (
+			`ifdef PUSC2
+			sc2exec ? sc2insn2 :
+			`endif
+			sc1insn2);
+		`ifdef PUSC2
+		sc2instrbufdato <= (sc2exec ? sc2insn3 : sc2insn2);
+		`endif
 
-			sysopcode <= (isopsysret ? sysopcode : saved_sysopcode);
-			faultaddr <= (isopsysret ? faultaddr : saved_faultaddr);
+		instrbufrst_a <= ((
+			`ifdef PUSC2
+			sc2exec ? sc2isopjtrue :
+			`endif
+				// setksl also set instrbufrst to make sure that outofrange values propagate.
+				(!oplicounter && (isopjtrue || isopsetksl))) ?
+					~instrbufrst_b : instrbufrst_a);
 
-			instrbufrst_a <= ~instrbufrst_b;
-		end
-	endcase
+	end else if (sequencerstate == SEQSTALL0) begin
+
+		`ifdef PUSC2
+		sc2instrbufdato <= sc1insn2;
+		`endif
+
+	end else if (sequencerstate == SEQSTALL1) begin
+
+		instrbufdato <= _instrbufi;
+		`ifdef PUSC2
+		sc2instrbufdato <= _sc2instrbufi;
+		`endif
+
+	end else if (sequencerstate == SEQHCALL) begin
+
+		saved_sysopcode <= sysopcode;
+		saved_faultaddr <= faultaddr;
+
+		faultaddr <= (isopldst ? {dppn, gprdata2[12 -1 : 0]} : faultaddr);
+
+		sysopcode <= {instrbufdato1, instrbufdato0};
+
+		ksysopfaultmode <= inusermode;
+
+		rst_o <= (!ksysopfaulthdlr);
+
+		ip <= (inusermode ? ksysopfaulthdlr : ksysopfaulthdlrplustwo);
+
+		ksysopfaultaddr <= ipnxt;
+
+		inusermode <= 0;
+
+		instrbufrst_a <= ~instrbufrst_b;
+
+	`ifdef SIMULATION
+	end else if (sequencerstate == SEQHALT) begin
+		$display("0x%x: halt %d\n", pc_w, clkcyclecnt);
+		$finish;
+	`endif
+
+	end else if (sequencerstate == SEQSRET) begin
+
+		kip <= (isopsysret ? ipnxt : kip);
+
+		ip <= (isopsysret ? uip : ksysopfaultaddr);
+
+		inusermode <= (isopsysret ? 1'b1 : ksysopfaultmode);
+
+		sysopcode <= (isopsysret ? sysopcode : saved_sysopcode);
+		faultaddr <= (isopsysret ? faultaddr : saved_faultaddr);
+
+		instrbufrst_a <= ~instrbufrst_b;
+	end
 end
