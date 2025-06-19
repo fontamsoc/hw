@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// (c) William Fonkou Tambe
+// 20250417 (c) William Fonkou Tambe
 
 // Simulation version of serial_uart peripheral.
 // Only writing is supported through the use of $write().

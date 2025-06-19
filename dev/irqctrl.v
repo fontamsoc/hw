@@ -6,6 +6,49 @@
 // its irq_rdy_o is high, iterating in a round-robin fashion
 // through each destination.
 // Preference is given to destination with irq_dst_pri_i high.
+//
+// Commands are sent to the controller writing to it with the
+// following expected format | arg: (WORDBITSZ-2) bits | cmd: 2 bit |
+// where the field "cmd" values are CMDDEVRDY(2'b00), CMDACKIRQ(2'b01),
+// CMDINTDST(2'b10) and CMDENAIRQ(2'b11). The result of a previously
+// sent command is retrieved from the controller reading from it and
+// has the following format | resp: (WORDBITSZ-2) bits | cmd: 2 bit |,
+// where the fields "cmd" and "resp" are the command and its result.
+// Two memory operations, a write followed by a read are needed to send
+// a command to the controller and retrieve its result.
+// The controller has accepted a command only if "cmd" in its result
+// is CMDDEVRDY, otherwise sending the command CMDDEVRDY is needed.
+//
+// The description of commands is as follow:
+// 	CMDDEVRDY: Ready the controller to accept a new command.
+// 	"resp" in the result gets set to 0.
+// 	CMDACKIRQ: Acknowledges an interrupt source; field "arg" is expected
+// 	to have following format | idx: (WORDBITSZ-3) bits | en: 1 bit |
+// 	where "idx" is the interrupt destination index, "en" enable/disable
+// 	further interrupt delivery to the interrupt destination "idx".
+// 	"resp" in the result gets set to the interrupt source index, or -2
+// 	if there are no pending interrupt for the destination "idx", or -1
+// 	for an interrupt triggered by CMDINTDST.
+// 	CMDINTDST: Triggers an interrupt targeting a specific destination;
+// 	the field "arg" is the index of the interrupt destination to target,
+// 	while "resp" in the result gets set to the interrupt destination index
+// 	if valid, -2 if not ready due to an interrupt pending ack, or -1 if invalid.
+// 	CMDENAIRQ: Enable/Disable an interrupt source; field "arg" is expected
+// 	to have following format | idx: (WORDBITSZ-3) bits | en: 1 bit|
+// 	where "idx" is the interrupt source index, "en" enable/disable
+// 	interrupts from the interrupt source "idx".
+// 	"resp" in the result gets set to the interrupt source index, or -1
+// 	if invalid.
+//
+// To be threadsafe, an atomic read-write can be used to send a command
+// to the controller until CMDDEVRDY is returned, then another atomic
+// read-write sending CMDDEVRDY must be used to retrieve the result while
+// making the controller ready for the next command.
+//
+// An interrupt must be acknowledged as soon as possible using CMDACKIRQ
+// (which drives irq_src_rdy_o low and retuns its index) so that
+// the controller can dispatch another interrupt, because the controller
+// does not buffer requests.
 
 // Parameters:
 //
@@ -65,49 +108,6 @@
 // 	The source device must drive irq_src_stb_i low as soon as a falling edge
 // 	of irq_src_rdy_o occurs, otherwise another interrupt request will occur
 // 	when irq_src_rdy_o has become high and irq_src_stb_i is still high.
-//
-// Commands are sent to the controller writing to it with the
-// following expected format | arg: (WORDBITSZ-2) bits | cmd: 2 bit |
-// where the field "cmd" values are CMDDEVRDY(2'b00), CMDACKIRQ(2'b01),
-// CMDINTDST(2'b10) and CMDENAIRQ(2'b11). The result of a previously
-// sent command is retrieved from the controller reading from it and
-// has the following format | resp: (WORDBITSZ-2) bits | cmd: 2 bit |,
-// where the fields "cmd" and "resp" are the command and its result.
-// Two memory operations, a write followed by a read are needed to send
-// a command to the controller and retrieve its result.
-// The controller has accepted a command only if "cmd" in its result
-// is CMDDEVRDY, otherwise sending the command CMDDEVRDY is needed.
-//
-// The description of commands is as follow:
-// 	CMDDEVRDY: Ready the controller to accept a new command.
-// 	"resp" in the result gets set to 0.
-// 	CMDACKIRQ: Acknowledges an interrupt source; field "arg" is expected
-// 	to have following format | idx: (WORDBITSZ-3) bits | en: 1 bit |
-// 	where "idx" is the interrupt destination index, "en" enable/disable
-// 	further interrupt delivery to the interrupt destination "idx".
-// 	"resp" in the result gets set to the interrupt source index, or -2
-// 	if there are no pending interrupt for the destination "idx", or -1
-// 	for an interrupt triggered by CMDINTDST.
-// 	CMDINTDST: Triggers an interrupt targeting a specific destination;
-// 	the field "arg" is the index of the interrupt destination to target,
-// 	while "resp" in the result gets set to the interrupt destination index
-// 	if valid, -2 if not ready due to an interrupt pending ack, or -1 if invalid.
-// 	CMDENAIRQ: Enable/Disable an interrupt source; field "arg" is expected
-// 	to have following format | idx: (WORDBITSZ-3) bits | en: 1 bit|
-// 	where "idx" is the interrupt source index, "en" enable/disable
-// 	interrupts from the interrupt source "idx".
-// 	"resp" in the result gets set to the interrupt source index, or -1
-// 	if invalid.
-//
-// To be threadsafe, an atomic read-write can be used to send a command
-// to the controller until CMDDEVRDY is returned, then another atomic
-// read-write sending CMDDEVRDY must be used to retrieve the result while
-// making the controller ready for the next command.
-//
-// An interrupt must be acknowledged as soon as possible using CMDACKIRQ
-// (which drives irq_src_rdy_o low and retuns its index) so that
-// the controller can dispatch another interrupt, because the controller
-// does not buffer requests.
 
 module irqctrl (
 

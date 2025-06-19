@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// (c) William Fonkou Tambe
+// 20250417 (c) William Fonkou Tambe
 
 // Serial peripheral through USB.
 //
@@ -59,12 +59,6 @@
 // usb_dp_io
 // usb_dn_io
 // 	USB signals.
-
-// On reset, interrupt is disabled, and must be explicitely enabled.
-// It prevent an unwanted interrupt after reset.
-// When enabled, an interrupt request is raised if the receive buffer
-// usage interrupt threshold is reached; interrupt get disabled when
-// the raised interrupt get acknowledged.
 
 `include "lib/serial_usb_fifo_phy.v"
 

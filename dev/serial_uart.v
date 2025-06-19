@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// (c) William Fonkou Tambe
+// 20250417 (c) William Fonkou Tambe
 
 // UART peripheral.
 //
@@ -43,6 +43,12 @@
 // a command to the device until CMDDEVRDY is returned, then another
 // atomic read-write sending CMDDEVRDY must be used to retrieve the
 // result while making the device ready for the next command.
+//
+// On reset, interrupt is disabled, and must be explicitely enabled.
+// It prevent an unwanted interrupt after reset.
+// When enabled, an interrupt request is raised if the receive buffer
+// usage interrupt threshold is reached; interrupt get disabled when
+// the raised interrupt get acknowledged.
 
 // Parameters:
 //
@@ -102,12 +108,6 @@
 //
 // tx_o
 // 	Outgoing serial line.
-
-// On reset, interrupt is disabled, and must be explicitely enabled.
-// It prevent an unwanted interrupt after reset.
-// When enabled, an interrupt request is raised if the receive buffer
-// usage interrupt threshold is reached; interrupt get disabled when
-// the raised interrupt get acknowledged.
 
 `include "lib/uart/uart_rx.v"
 `include "lib/uart/uart_tx.v"
