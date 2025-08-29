@@ -206,8 +206,6 @@ output wire err_o;
 // - Send CMD24; write a 512bytes block of data.
 // 	Expect response R1.
 // 	If no error reported, send data packet, and expect data response byte.
-// 	If no error reported, send CMD13 to check whether the write was successful.
-// 	Expect response R2.
 
 // Register used to implement timeout.
 // The largest value that it will be set to, is > than the clock cycle count equivalent of 250ms.
@@ -238,28 +236,26 @@ localparam SENDCMD58 = 9;
 localparam SENDCMD16 = 10;
 localparam SENDCMD17 = 11;
 localparam SENDCMD24 = 12;
-localparam SENDCMD13 = 13;
 // States that wait for a command's response.
-localparam CMD0RESP  = 14;
-localparam CMD59RESP = 15;
-localparam CMD8RESP  = 16;
-localparam INITRESP  = 17;
-localparam CMD6RESP  = 18;
-localparam CMD9RESP  = 19;
-localparam CMD58RESP = 20;
-localparam CMD16RESP = 21;
-localparam CMD17RESP = 22;
-localparam CMD24RESP = 23;
-localparam CMD13RESP = 24;
+localparam CMD0RESP  = 13;
+localparam CMD59RESP = 14;
+localparam CMD8RESP  = 15;
+localparam INITRESP  = 16;
+localparam CMD6RESP  = 17;
+localparam CMD9RESP  = 18;
+localparam CMD58RESP = 19;
+localparam CMD16RESP = 20;
+localparam CMD17RESP = 21;
+localparam CMD24RESP = 22;
 // Other states.
-localparam PREPNXTCMD = 25;
-localparam PREPINIT   = 26;
-localparam ERROR      = 27; // When in this state, an error occured, and a reset is required.
+localparam PREPNXTCMD = 23;
+localparam PREPINIT   = 24;
+localparam ERROR      = 25; // When in this state, an error occured, and a reset is required.
 
 localparam STATEBITSZ = clog2(32);
 
 // Register used to hold the state of the controller.
-reg [STATEBITSZ -1 : 0] state = ERROR;
+(* mark_debug = "true" *) reg [STATEBITSZ -1 : 0] state = ERROR;
 reg [STATEBITSZ -1 : 0] nxtstate;
 
 assign err_o = (state == ERROR);
@@ -267,13 +263,13 @@ assign err_o = (state == ERROR);
 wire cs_w;
 
 // Register that hold the value of the input "spi.sclkdiv_i".
-reg [CLOG2SCLKDIVLIMIT -1 : 0] sclkdiv_r = 0;
+(* mark_debug = "true" *) reg [CLOG2SCLKDIVLIMIT -1 : 0] sclkdiv_r;
 
 // Register that hold the value of the input "spi.push_i".
-reg spitxbufferwriteenable = 0;
+reg spitxbufferwriteenable;
 
 // Register that hold the value of the input "spi.data_i".
-reg [8 -1 : 0] spitxbufferdatain = 0;
+reg [8 -1 : 0] spitxbufferdatain;
 
 wire spitxbufferfull;
 
@@ -316,6 +312,9 @@ spi_master #(
 	,.read_i  (1'b1)
 	,.data_o  (rx_data_o)
 	,.empty_o (spirxbufferempty_)
+
+	,.misoSync_i        (1'b0)
+	,.misoSkipSyncBit_i (1'b0)
 );
 
 // Register which when 1, keeps the sdcard input "cs_o" high.
@@ -324,20 +323,20 @@ reg keepsdcardcshigh = 1;
 assign cs_o = (cs_w | keepsdcardcshigh);
 
 // Register used for multiple purposes.
-reg miscflag = 0;
+reg miscflag;
 
 // Register set to 1 when the card is found to be SDv2,
 // otherwise it is set to 0.
-reg issdcardver2 = 0;
+(* mark_debug = "true" *) reg issdcardver2;
 
 // Register set to 1 when the card is found to be MMC,
 // otherwise it is set to 0.
-reg issdcardmmc = 0;
+(* mark_debug = "true" *) reg issdcardmmc;
 
 
 // Register set to 1 if the card addressing
 // is block aligned, otherwise it is set to 0.
-reg issdcardaddrblockaligned = 0;
+(* mark_debug = "true" *) reg issdcardaddrblockaligned;
 
 // Register which will be used to store the value of the card CSD register.
 reg [128 -1 : 0] sdcardcsd;
@@ -374,13 +373,16 @@ always @* begin
 	else                                sclkdiv_w = (SCLKDIV10LIMIT-1);  // 10 Mbps.
 end
 
+(* mark_debug = "true" *) wire [2 -1 : 0] CSD_format = sdcardcsd[126+:2];
+(* mark_debug = "true" *) wire [8 -1 : 0] CSD_speed = sdcardcsd[96+:8];
+
 // Register used as the controller counter.
 // The largest value that it will be set to, is greater
 // than the clock cycle count equivalent of 250ms.
 // Since 250ms is 4 Hz, the number of clock cycles using
 // a clock frequency of CLKFREQ would be CLKFREQ/4.
 // In fact CLKFREQ must be at least 250 KHz.
-reg [CLOG2CLKFREQ -1 : 0] cntr = 0;
+reg [CLOG2CLKFREQ -1 : 0] cntr;
 
 assign tx_pop_o  = ((state == CMD24RESP) && !spitxbufferfull  && cntr && cntr <= 512);
 assign rx_push_o = ((state == CMD17RESP) && !spirxbufferempty && cntr && cntr <= 512);
@@ -398,7 +400,6 @@ reg  [CMDADDRBITSZ -1 : 0] cmdaddr = 0;
 wire [CMDADDRBITSZ -1 : 0] cmdaddrshiftedleft = {cmdaddr[(CMDADDRBITSZ-9)-1:0], 9'd0};
 wire [40 -1 : 0] cmd17 = {8'h51, issdcardaddrblockaligned ? cmdaddr : cmdaddrshiftedleft};
 wire [40 -1 : 0] cmd24 = {8'h58, issdcardaddrblockaligned ? cmdaddr : cmdaddrshiftedleft};
-localparam cmd13 = 40'h4d00000000;
 localparam cmd6 = 40'h4680fffff1;
 localparam cmd59 = 40'h7b00000001;
 
@@ -1055,45 +1056,6 @@ always @ (posedge clk_i) begin
 			end
 		end
 
-	end else if (state == SENDCMD13) begin
-		// When I come to this state I expect:
-		// spitxbufferwriteenable == 0;
-		// cntr == (6 + SPIBUFFERSIZE + 1);
-
-		// I write the command in the transmit buffer.
-		spitxbufferwriteenable <= 1;
-
-		// I wait that the transmit buffer
-		// is not full, before doing anything,
-		// otherwise bytes will get lost.
-		if (!spitxbufferfull) begin
-
-			if (cntr <= 6) begin
-				// Transmit the byte containing the CRC7 when
-				// cntr == 1, otherwise transmit the command bytes.
-				if (cntr == 1)
-					spitxbufferdatain <= {crc7, 1'b1};
-				else
-					spitxbufferdatain <= cmdXcntr;
-
-				// Note that when I get here, crccounter == 0.
-
-				if (cntr > 1) begin
-					crcarg <= cmdXcntr;
-					crccounter <= 8;
-				end
-
-			end else
-				cmdX <= cmd13;
-
-			if (cntr)
-				cntr <= cntr - 1'b1;
-			else begin
-				// I move onto the state which will wait for the response.
-				state <= CMD13RESP;
-			end
-		end
-
 	end else if (state == CMD0RESP) begin
 		// When I come to this state I expect:
 		// spitxbufferwriteenable == 1;
@@ -1489,7 +1451,7 @@ always @ (posedge clk_i) begin
 					// are bit3 thru bit1.
 					if ((rx_data_o[3:1]) == 'b010) begin
 						state <= PREPNXTCMD;
-						nxtstate <= SENDCMD13;
+						nxtstate <= READY;
 						miscflag <= 0;
 					end else
 						state <= ERROR;
@@ -1539,40 +1501,6 @@ always @ (posedge clk_i) begin
 			// If I get here, I received response R1 from the card;
 			// throw an error if it is not [0[5:0], x], otherwise start
 			// sending the data packet.
-			if (rx_data_o[6:1])
-				state <= ERROR;
-			else
-				miscflag <= 1;
-		end
-
-	end else if (state == CMD13RESP) begin
-		// When I come to this state I expect:
-		// spitxbufferwriteenable == 1;
-		// miscflag == 0;
-
-		// When I get here, miscflag can be re-used for something
-		// else; so here I use it to determine whether I can start
-		// looking at the byte that follow the first byte of response R2.
-		if (miscflag) begin
-			// I evaluate the byte that follow the first byte of response R2.
-
-			if (!spirxbufferempty) begin
-				// I get here for each byte received.
-
-				// I get here when I have received the byte
-				// that follow the first byte of response R2.
-				if (rx_data_o)
-					state <= ERROR;
-				else begin
-					state <= PREPNXTCMD;
-					nxtstate <= READY;
-				end
-			end
-
-		end else if (rx_data_o != 'hff) begin
-			// If I get here, I received the first byte of response R2
-			// from the card; throw an error if it is not [0[5:0], x],
-			// otherwise look at the following byte.
 			if (rx_data_o[6:1])
 				state <= ERROR;
 			else

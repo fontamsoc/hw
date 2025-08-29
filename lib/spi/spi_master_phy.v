@@ -63,7 +63,8 @@ module spi_master_phy (
 	rst_i, clk_i,
 	sclk_o, mosi_o, miso_i, cs_o,
 	stb_i, rdy_o, rcvd_o, sclkdiv_i,
-	data_o, data_i
+	data_o, data_i,
+	misoSync_i, misoSkipSyncBit_i
 );
 
 `include "lib/clog2.v"
@@ -93,6 +94,13 @@ input wire [CLOG2SCLKDIVLIMIT -1 : 0] sclkdiv_i;
 output reg  [DATABITSZ -1 : 0] data_o;
 input  wire [DATABITSZ -1 : 0] data_i;
 
+input wire misoSync_i;
+input wire misoSkipSyncBit_i;
+
+wire misoIsLow = !data_o[0];
+
+reg inSync = 0; // Relevant only if misoSync_i is true.
+
 reg  [DATABITSZ -1 : 0] mosibits = {DATABITSZ{1'b1}};
 assign mosi_o = mosibits[DATABITSZ-1];
 
@@ -110,17 +118,23 @@ always @ (posedge clk_i) begin
 		cs_o <= 1'b1;
 		rdy_o <= 1'b1;
 		rcvd_o <= 1'b0;
+		inSync <= 1'b0;
 		mosibits <= {DATABITSZ{1'b1}};
 		bitcnt <= 0;
 	end else if (cs_o || (cntr == sclkdiv_i)) begin
 		sclk_o <= (|CPOL);
 		if (bitcnt) begin
-			bitcnt <= (bitcnt - 1'b1);
-			mosibits <= {mosibits[(DATABITSZ-1)-1:0], 1'b1};
+			if (!misoSync_i || inSync || misoIsLow) begin
+				if (!misoSkipSyncBit_i || inSync)
+					bitcnt <= (bitcnt - 1'b1);
+				mosibits <= {mosibits[(DATABITSZ-1)-1:0], 1'b1};
+				inSync <= 1'b1;
+			end
 		end else if (stb_i) begin
 			bitcnt <= (DATABITSZ-1);
 			mosibits <= data_i;
-		end
+		end else
+			inSync <= 1'b0;
 		cs_o <= bitcntNull_and_stbNull;
 		rdy_o <= (bitcntNull_and_stbNull || (bitcnt == 1));
 		rcvd_o <= (bitcntNull && !cs_o);

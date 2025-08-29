@@ -71,7 +71,8 @@ module spi_master (
 	sclk_o, mosi_o, miso_i, cs_o,
 	sclkdiv_i,
 	push_i, data_i, full_o,
-	read_i, data_o, empty_o
+	read_i, data_o, empty_o,
+	misoSync_i, misoSkipSyncBit_i
 );
 
 `include "lib/clog2.v"
@@ -103,10 +104,13 @@ input  wire                    read_i;
 output wire [DATABITSZ -1 : 0] data_o;
 output wire                    empty_o;
 
+input wire misoSync_i;
+input wire misoSkipSyncBit_i;
+
 wire fifo_tx_empty_w;
 
-wire phy_rdy_w;
-wire phy_rcvd_w;
+(* mark_debug = "true" *) wire phy_rdy_w;
+(* mark_debug = "true" *) wire phy_rcvd_w;
 
 wire [DATABITSZ -1 : 0] phy_data_w0;
 wire [DATABITSZ -1 : 0] phy_data_w1;
@@ -132,6 +136,9 @@ spi_master_phy #(
 
 	,.data_o (phy_data_w0)
 	,.data_i (phy_data_w1)
+
+	,.misoSync_i        (misoSync_i)
+	,.misoSkipSyncBit_i (misoSkipSyncBit_i)
 );
 
 fifo #( // fifo for storing data received.
