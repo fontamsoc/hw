@@ -13,14 +13,14 @@
 
 // Used by _timer_t callback because printf() cannot
 // be used due to relying on the thread pointer register.
-static void __printstr (char *s) {
+static void printstr (char *s) {
 	for (char c; c = *s; ++s)
 		*(volatile char *)SERIAL0_ADDR = c;
 }
 
 _timer_t timer0;
 void timer0_cb (_timer_t *t) {
-	__printstr("timer0()\n");
+	printstr("timer0()\n");
 	// Using _trap_savedctx()->cycle instead of _clkcycles() for minimal skew.
 	// It must be greater than _clkcycles(), otherwise we will never return from
 	// the trap and _trap_savedctx()->cycle will never get updated, resulting
@@ -30,7 +30,7 @@ void timer0_cb (_timer_t *t) {
 
 _timer_t timer1;
 void timer1_cb (_timer_t *t) {
-	__printstr("timer1()\n");
+	printstr("timer1()\n");
 	// Using _trap_savedctx()->cycle instead of _clkcycles() for minimal skew.
 	// It must be greater than _clkcycles(), otherwise we will never return from
 	// the trap and _trap_savedctx()->cycle will never get updated, resulting
