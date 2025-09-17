@@ -21,21 +21,13 @@ static void printstr (char *s) {
 _timer_t timer0;
 void timer0_cb (_timer_t *t) {
 	printstr("timer0()\n");
-	// Using _trap_savedctx()->cycle instead of _clkcycles() for minimal skew.
-	// It must be greater than _clkcycles(), otherwise we will never return from
-	// the trap and _trap_savedctx()->cycle will never get updated, resulting
-	// in an infinite loop.
-	_timer_arm(t, _trap_savedctx()->cycle + _MSECS(10));
+	_timer_arm(t, _clkcycles() + _MSECS(10));
 }
 
 _timer_t timer1;
 void timer1_cb (_timer_t *t) {
 	printstr("timer1()\n");
-	// Using _trap_savedctx()->cycle instead of _clkcycles() for minimal skew.
-	// It must be greater than _clkcycles(), otherwise we will never return from
-	// the trap and _trap_savedctx()->cycle will never get updated, resulting
-	// in an infinite loop.
-	_timer_arm(t, _trap_savedctx()->cycle + _MSECS(20));
+	_timer_arm(t, _clkcycles() + _MSECS(20));
 }
 
 typedef struct {
