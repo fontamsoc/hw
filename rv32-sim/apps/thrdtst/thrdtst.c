@@ -38,6 +38,13 @@ typedef struct {
 
 void thrd_fn (void *arg) {
 	uintptr_t id = ((thrd_arg *)arg)->id;
+	if (id == 0) {
+		_timer_init(&timer0, timer0_cb);
+		_timer_arm(&timer0, _clkcycles() + _MSECS(10));
+	} else {
+		_timer_init(&timer1, timer1_cb);
+		_timer_arm(&timer1, _clkcycles() + _MSECS(10));
+	}
 	uintptr_t cntr = ((thrd_arg *)arg)->cntr_start;
 	uintptr_t cntr_thresh = ((thrd_arg *)arg)->cntr_thresh;
 	while(1) {
@@ -57,21 +64,13 @@ void main (void) {
 
 	printf("Starting ...\n");
 
-	_timer_init(&timer0, timer0_cb);
-	_timer_init(&timer1, timer1_cb);
-
-	_timer_arm(&timer0, _clkcycles() + _MSECS(10));
-	_timer_arm(&timer1, _clkcycles() + _MSECS(10));
-
 	_thread_t *thrd0 = _thread_create (0, 2048, thrd_fn, &(thrd_arg){0, 16, 8});
 	_thread_sched(thrd0);
-	_thread_yield();
 
 	_thread_sleep(_MSECS(20));
 
 	_thread_t *thrd1 = _thread_create (0, 2048, thrd_fn, &(thrd_arg){1, 20, 10});
 	_thread_sched(thrd1);
-	_thread_yield();
 
 	_thread_sleep(_MSECS(20));
 
