@@ -366,10 +366,9 @@ int main() {
 	// Capture start timestamp.
 	_date_t start_time = _clkcycles();
 	for (uintptr_t i = 0; i < nthrd; ++i) {
-		_thread_t *thrd = _thread_create(0, 2048, scan_RGBf_thrd_fn, 0);
-		_thread_schedoncpu(thrd,
+		_thread_schedoncpu(
+			_thread_create(0, 2048, scan_RGBf_thrd_fn, 0),
 			// Try to use a cpu other than _cpuid() to immediately start computing.
-			// TODO: With load-balancing, just use _thread_sched(_thread_create(...)).
 			((_cpuid() + i + 1) % ncpu), true);
 	}
 	// Wait for all workers to finish their rendering.
