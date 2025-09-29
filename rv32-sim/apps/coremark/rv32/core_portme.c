@@ -131,7 +131,6 @@ ee_u8 core_start_parallel(core_results *res) {
 		_thread_create(_os_thrd_stack + (i*_OS_THRD_STACKSZ), _OS_THRD_STACKSZ,
 			_os_thrd_fn, (void *)res),
 		// Try to use a cpu other than _cpuid() to immediately start computing.
-		// TODO: With load-balancing, just use _thread_sched() on _thread_create() output.
 		((_cpuid() + i + 1) % ncpu), true);
 	++i;
 	return 0;

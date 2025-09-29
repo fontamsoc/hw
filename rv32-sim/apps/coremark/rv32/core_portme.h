@@ -133,7 +133,6 @@ typedef ee_u64 CORE_TICKS;
 */
 #ifndef MULTITHREAD
 #define MULTITHREAD 1
-#define USE__OS 0
 #endif
 
 /* Configuration: USE__OS
