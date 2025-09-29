@@ -18,7 +18,6 @@
 
 #define LENGTH ((DIGITS_NUM / 4) * 14)
 
-static _thread_t *thrd[THREADS_NUM];
 static char thrd_buffer[THREADS_NUM][DIGITS_NUM + 1];
 static int thrd_array[THREADS_NUM][LENGTH + 1];
 
@@ -84,11 +83,9 @@ void main (void) {
 	_date_t start_time = _clkcycles();
 
 	for (uintptr_t i = 0; i < THREADS_NUM; ++i) {
-		thrd[i] = _thread_create(0, 2048, thrd_fn, (void *)i);
-		_thread_schedoncpu(thrd[i],
+		_thread_schedoncpu(
+			_thread_create(0, 2048, thrd_fn, (void *)i),
 			// Try to use a cpu other than _cpuid() to immediately start computing.
-			// TODO: With load-balancing, just use _thread_sched() on _thread_create() output.
-			// TODO: No need to store _thread_create() output in thrd[] ...
 			((_cpuid() + i + 1) % ncpu), true);
 	}
 
