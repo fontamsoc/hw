@@ -21,11 +21,10 @@ updsram: ${TOP}.sram.hex ${TOP}.bak.config
 	dfu-suffix -v 1209 -p 5af0 -a ${TOP}.dfu &>/dev/null
 	rm ${TOP}.out.config
 
-%.json: ../%.v
+%.json: ../%.sv
 	ecpbram --generate ${TOP}.sram.hex --width ${XWORDBITSZ} --depth $$((${SRAM_KBSIZE}*1024/4))
-	yosys -p "read_verilog ../../lib/ecp5pll.sv; \
-		verilog_defines -DCPU_COUNT=${CPU_COUNT} -DSRAM_KBSIZE=${SRAM_KBSIZE}; \
-		read_verilog -I../../ $<; synth_ecp5 -top ${TOP} -json $@" &>$@.synth.log
+	yosys -p "verilog_defines -DCPU_COUNT=${CPU_COUNT} -DSRAM_KBSIZE=${SRAM_KBSIZE}; \
+		read_verilog -sv -I../../ $<; synth_ecp5 -top ${TOP} -json $@" &>$@.synth.log
 %.out.config: %.json ../%.lpf
 	cntr=0; until \
 		nextpnr-ecp5 -r --ignore-rel-clk --json $< --textcfg $@ --85k --package CSFBGA285 --lpf ../${TOP}.lpf &>$@.pnr.log; \

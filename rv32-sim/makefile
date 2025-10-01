@@ -21,7 +21,7 @@ sim_vcd:
 		TBFLAGS="--trace --trace-underscore $${VCDTRACE_BEGIN:+-CFLAGS -DVCDTRACE_BEGIN=$${VCDTRACE_BEGIN}}" \
 		obj_dir/Vsim
 
-obj_dir/Vsim: sim.v ${TB}.cpp
+obj_dir/Vsim: sim.sv ${TB}.cpp
 	@verilator --version &>${BUILD_LOG_FILE}
 	verilator -cc --exe ${TBFLAGS} \
 		--x-assign 1 --x-initial-edge \
@@ -30,7 +30,7 @@ obj_dir/Vsim: sim.v ${TB}.cpp
 		-DCPU_COUNT=${CPU_COUNT} \
 		-DSRAM_INITFILE='"${SRAM_INITFILE}"' \
 		-DSRAM_KBSIZE=${SRAM_KBSIZE} \
-		sim.v ${TB}.cpp &>>${BUILD_LOG_FILE}
+		sim.sv ${TB}.cpp &>>${BUILD_LOG_FILE}
 	@make -C obj_dir -f Vsim.mk Vsim &>>${BUILD_LOG_FILE}
 
 .PHONY: run
