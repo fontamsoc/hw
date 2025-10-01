@@ -186,7 +186,7 @@ reg [WORDBITSZ -1 : 0] wb_dat_r;
 
 wire wb_stb_r_ = (wb_cyc_i && wb_stb_i);
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	wb_stb_r <= wb_stb_r_ ;
 	if (wb_stb_r_) begin
 		wb_we_r <= wb_we_i;
@@ -194,7 +194,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	wb_ack_o <= wb_stb_r;
 end
 
@@ -224,7 +224,7 @@ wire irqdstseek = (
 reg irqpending; /* set to 1 when an interrupt request is waiting to be acknowledged */
 
 reg [IRQDSTCOUNT -1 : 0] irq_dst_rdy_i_and_not_irq_dst_stb_i_r;
-always @ (posedge clk_i)
+always_ff @(posedge clk_i)
 	irq_dst_rdy_i_and_not_irq_dst_stb_i_r <= (irq_dst_rdy_i & ~irq_dst_stb_i);
 wire [IRQDSTCOUNT -1 : 0] irqpending_abort = (~irq_dst_rdy_i & irq_dst_rdy_i_and_not_irq_dst_stb_i_r);
 
@@ -261,7 +261,7 @@ wire [CLOG2IRQDSTCOUNT -1 : 0] nextdstidx =
 reg [IRQSRCCOUNT -1 : 0] irqsrcen;
 reg [IRQDSTCOUNT -1 : 0] irqdsten;
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		wb_dat_o <= {WORDBITSZ{1'b0}};
 		srcidx <= {CLOG2IRQSRCCOUNT{1'b0}};

@@ -64,7 +64,7 @@ fifo_fwft #(
 	,.empty_o   (buf_empty_w)
 );
 
-always @* begin
+always_comb begin
 	if (buf_empty_w) begin
 		stb_o = stb_i;
 		dat_o = dat_i;
@@ -77,7 +77,7 @@ end
 end else begin
 
 reg buf_empty_r;
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		buf_empty_r <= 1'b1;
 	else if (buf_empty_r || !bsy_i)
@@ -102,7 +102,7 @@ fifo #(
 	,.empty_o    (buf_empty_w)
 );
 
-always @* begin
+always_comb begin
 	if (buf_empty_w && buf_empty_r) begin
 		stb_o = stb_i;
 		dat_o = dat_i;

@@ -222,7 +222,7 @@ wire __dCache_m_stb_i = (_dCache_m_stb_i && !_dCache_m_bsy_o);
 reg[(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_breather;
 // Logic used to force wb_cyc low when it has been high for too long;
 // otherwise in a multi-core soc, the arbiter will not switch to other cores.
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		dCache_m_breather <= 0;
 	else if (!dCache_m_cyc_i || dCache_m_breather[CLOG2MAXPENDINGACK]) begin
@@ -236,14 +236,14 @@ end
 wire __dCache_m_bsy = ((dCache_m_stb_i && _dCache_m_bsy_o) || dCache_m_we_i_ ||
 	dCache_m_breather[CLOG2MAXPENDINGACK]);
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		dCache_m_rqst_cnt <= 0;
 	else if (__dCache_m_stb_i)
 		dCache_m_rqst_cnt <= dCache_m_rqst_cnt + 1'b1;
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		dCache_m_rsp_cnt <= 0;
 	else if (dCache_m_ack_o)
@@ -270,7 +270,7 @@ wire dCache_m_dat_i_ltu_dCache_m_dat_o = dCache_m_dat_i_minus_dCache_m_dat_o[WOR
 
 wire _amoUnit_lrValid;
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		dCache_m_stb_i <= 1'b0;
 		dCache_m_we_i_ <= 1'b0;
@@ -332,7 +332,7 @@ end
 reg dcache_m_addr_misaligned; // ### comb-block-reg.
 
 generate if (WORDBITSZ == 32) begin
-always @* begin
+always_comb begin
 	dCache_m_sel_i_ = {(WORDBITSZ/8){1'b0}};
 	dCache_m_dat_i_ = {WORDBITSZ{1'b0}};
 	dcache_m_addr_misaligned = 0;
@@ -367,7 +367,7 @@ always @* begin
 end
 end endgenerate
 generate if (WORDBITSZ == 64) begin
-always @* begin
+always_comb begin
 	dCache_m_sel_i_ = {(WORDBITSZ/8){1'b0}};
 	dCache_m_dat_i_ = {WORDBITSZ{1'b0}};
 	dcache_m_addr_misaligned = 0;
@@ -430,12 +430,12 @@ end
 end endgenerate
 
 reg amoUnit_lrValid_r;
-always @ (posedge clk_i)
+always_ff @(posedge clk_i)
 	amoUnit_lrValid_r <= amoUnit_lrValid;
 wire amoUnit_lrValid_negedge = (!amoUnit_lrValid && amoUnit_lrValid_r);
 
 reg keep_wb_cyc_o_high; // Used by AMO and Lr instructions to keep wb_cyc_o high.
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	// Note that keep_wb_cyc_o_high is not cleared by dCache_s_ack_i because it
 	// needs to be cleared when the write portion of the AMO instruction is captured.
 	if (dCache_s_stb_o)

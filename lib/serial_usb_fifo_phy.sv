@@ -193,7 +193,7 @@ reg tx_phy_rdy_w_sampled;
 // when a falling edge of tx_phy_rdy_w occurs.
 wire tx_phy_rdy_w_negedge = (tx_phy_rdy_w < tx_phy_rdy_w_sampled);
 
-always @(posedge clk_phy_i) begin
+always_ff @(posedge clk_phy_i) begin
 	// Logic that update tx_read_done.
 	if (rst_i || (tx_read_done && tx_phy_rdy_w_negedge))
 		tx_read_done <= 0;
@@ -201,7 +201,7 @@ always @(posedge clk_phy_i) begin
 		tx_read_done <= 1;
 end
 
-always @ (posedge clk_phy_i) begin
+always_ff @(posedge clk_phy_i) begin
 	// Save the current state of tx_phy_rdy_w;
 	tx_phy_rdy_w_sampled <= tx_phy_rdy_w;
 end

@@ -75,16 +75,16 @@ reg [(((WORDBITSZ*2)+CLOG2GPRCNT)+IDIVTYPEBITSZ) -1 : 0] operands;
 assign gprid_o = operands[((WORDBITSZ*2)+CLOG2GPRCNT)-1:WORDBITSZ*2];
 
 reg remainder_sign;
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	remainder_sign <= (operands[IDIVSIGNED] && operands[(WORDBITSZ*2)-1]);
 end
 
 reg quotient_sign;
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	quotient_sign <= (operands[IDIVSIGNED] && (operands[(WORDBITSZ*2)-1] != operands[(WORDBITSZ-1)]));
 end
 
-always @* begin
+always_comb begin
 	// Logic setting rslt_o using the result computed in cumulator.
 
 	// When operands[IDIVMSBRSLT] == 0, the quotient is used as result.
@@ -113,7 +113,7 @@ always @* begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 
 	if (rst_i) begin
 
@@ -262,14 +262,14 @@ wire [(((WORDBITSZ*2)+CLOG2GPRCNT)+IDIVTYPEBITSZ) -1 : 0] _args_i = args_i;
 wire [(CLOG2INSTCNT +1) -1 : 0]                           __wridx = _wridx;
 `endif
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		wridx <= 0;
 	else if (rdy_o && stb_i)
 		wridx <= (wridx + 1'b1);
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		rdidx <= 0;
 	else if (ordy_o && ostb_i)
@@ -277,7 +277,7 @@ always @ (posedge clk_i) begin
 end
 
 `ifdef PUIDIVCLK
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	// With clk_idiv_i faster than clk_i, idiv signals stb_i args_i _wridx must
 	// be registered using clk_i so to be stable input values; it also means that
 	// sigmal rdy_o posegde must happen at least (freq(clk_idiv_i)/freq(clk_i))

@@ -71,7 +71,7 @@ wire arg0_sign = (arg0[WORDBITSZ-1] & (args_r[IMULSIGNED] || args_r[IMULLVALSIGN
 wire arg1_sign = (arg1[WORDBITSZ-1] & args_r[IMULSIGNED]);
 wire [(WORDBITSZ*2) -1 : 0] rslt_o_ = ($signed({arg0_sign, arg0}) * $signed({arg1_sign, arg1}));
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		rdy_o <= 1;
 	end else if (rdy_o) begin
@@ -168,7 +168,7 @@ reg [(((WORDBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] operands;
 
 assign gprid_o = operands[((WORDBITSZ*2)+CLOG2GPRCNT)-1:WORDBITSZ*2];
 
-always @* begin
+always_comb begin
 	// Logic used by the multiplication; compute the multiplier
 	// times 0, 1, 2 or 3 based on cumulator[1:0].
 	if (cumulator[1:0] == 1)
@@ -182,7 +182,7 @@ always @* begin
 end
 
 reg rslt_sign;
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	// When operands[IMULSIGNED] == 0, an unsigned multiplication was done.
 	// When operands[IMULSIGNED] == 1, a signed multiplication was done.
 	if (operands[IMULSIGNED])
@@ -195,7 +195,7 @@ end
 
 wire [(WORDBITSZ*2) -1 : 0] rslt_o_ = (rslt_sign ? cumulatornegated : cumulator);
 
-always @* begin
+always_comb begin
 	// When operands[IMULMSBRSLT] == 0, the WORDBITSZ lsb are used as result.
 	// When operands[IMULMSBRSLT] == 1, the WORDBITSZ msb are used as result.
 	if (operands[IMULMSBRSLT])
@@ -207,7 +207,7 @@ end
 // Register used to count the number of two-bits-set already used from the multiplier.
 reg [(CLOG2WORDBITSZ-1) -1 : 0] cntr;
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 
 	if (rst_i) begin
 
@@ -364,14 +364,14 @@ wire [(((WORDBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] _args_i = args_i;
 wire [(CLOG2INSTCNT +1) -1 : 0]                           __wridx = _wridx;
 `endif
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		wridx <= 0;
 	else if (rdy_o && stb_i)
 		wridx <= (wridx + 1'b1);
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		rdidx <= 0;
 	else if (ordy_o && ostb_i)
@@ -379,7 +379,7 @@ always @ (posedge clk_i) begin
 end
 
 `ifdef PUIMULCLK
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	// With clk_imul_i faster than clk_i, imul signals stb_i args_i _wridx must
 	// be registered using clk_i so to be stable input values; it also means that
 	// sigmal rdy_o posegde must happen at least (freq(clk_imul_i)/freq(clk_i))

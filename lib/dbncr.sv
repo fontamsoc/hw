@@ -81,7 +81,7 @@ reg [THRESBITSZ -1 : 0] cntr = 0;
 
 wire d = (i != o);
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		o <= i;
 		cntr <= 0;

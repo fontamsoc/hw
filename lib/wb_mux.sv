@@ -84,7 +84,7 @@ reg [clog2(MAXPENDINGACK +1) -1 : 0] ack_pending;
 
 wire _m_wb_stb_i_and_not_m_wb_bsy_o = (_m_wb_stb_i && !m_wb_bsy_o);
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		ack_pending <= 0;
 	else if (_m_wb_stb_i_and_not_m_wb_bsy_o && m_wb_ack_o);
@@ -126,7 +126,7 @@ wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] _addrspace_slvidx_nxt = (addrspace_slvidx_nxt
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] slvidx_dflt_lo;
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] slvidx_dflt_hi;
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	// Logic which on reset computes addrspace
 	// using the size of each slave device mapping;
 	// and after reset computes slvidx using addrspace.

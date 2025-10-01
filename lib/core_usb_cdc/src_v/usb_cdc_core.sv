@@ -305,7 +305,7 @@ reg          utmi_termselect_r;
 reg          utmi_dppulldown_r;
 reg          utmi_dmpulldown_r;
 
-always @ *
+always_comb
 begin
     next_state_r = state_q;
 
@@ -397,14 +397,14 @@ begin
 end
 
 // Update state
-always @ (posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i or posedge rst_i)
 if (rst_i)
     state_q   <= STATE_IDLE;
 else
     state_q   <= next_state_r;
 
 // Time since T0 (start of HS reset)
-always @ (posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i or posedge rst_i)
 if (rst_i)
     usb_rst_time_q <= `USB_RST_W'b0;
 // Entering wait for reset state
@@ -416,14 +416,14 @@ else if (state_q == STATE_WAIT_RST && (utmi_linestate_i != 2'b00))
 else if (usb_rst_time_q != {(`USB_RST_W){1'b1}})
     usb_rst_time_q <= usb_rst_time_q + `USB_RST_W'd1;
 
-always @ (posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i or posedge rst_i)
 if (rst_i)
     last_linestate_q   <= 2'b0;
 else
     last_linestate_q   <= utmi_linestate_i;
 
 // Chirp counter
-always @ (posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i or posedge rst_i)
 if (rst_i)
     chirp_count_q   <= 8'b0;
 else if (state_q == STATE_SEND_CHIRP_K)
@@ -452,7 +452,7 @@ reg          utmi_termselect_r;
 reg          utmi_dppulldown_r;
 reg          utmi_dmpulldown_r;
 
-always @ *
+always_comb
 begin
     if (enable_i)
     begin
@@ -610,7 +610,7 @@ reg       setup_valid_q;
 reg       setup_data_q;
 reg       status_ready_q; // STATUS response received
 
-always @ (posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i or posedge rst_i)
 if (rst_i)
 begin
     setup_packet_q[0]  <= 8'b0;
@@ -701,7 +701,7 @@ reg        set_with_data_q;
 reg        set_with_data_r;
 wire       data_status_zlp_w;
 
-always @ *
+always_comb
 begin
     ctrl_stall_r    = 1'b0;
     ctrl_get_len_r  = 16'b0;
@@ -859,7 +859,7 @@ begin
         set_with_data_r = 1'b0;
 end
 
-always @ (posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i or posedge rst_i)
 if (rst_i)
 begin
     device_addr_q   <= 7'b0;
@@ -911,7 +911,7 @@ wire       ctrl_send_accept_w = ep0_tx_data_accept_w || !ep0_tx_data_valid_w;
 reg [7:0]  desc_addr_q;
 wire[7:0]  desc_data_w;
 
-always @ *
+always_comb
 begin
     ctrl_sending_r  = ctrl_sending_q;
     ctrl_send_idx_r = ctrl_send_idx_q;
@@ -991,7 +991,7 @@ end
 
 assign data_status_zlp_w = set_with_data_q && setup_data_q && ctrl_send_accept_w;
 
-always @ (posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i or posedge rst_i)
 if (rst_i)
 begin
     ctrl_sending_q  <= 1'b0;
@@ -1077,7 +1077,7 @@ reg        inport_valid_q;
 reg [7:0]  inport_data_q;
 reg [10:0] inport_cnt_q;
 
-always @ (posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i or posedge rst_i)
 if (rst_i)
 begin
     inport_valid_q <= 1'b0;
@@ -1092,7 +1092,7 @@ end
 wire [10:0] max_packet_w   = usb_hs_w ? 11'd511 : 11'd63;
 wire        inport_last_w  = !inport_valid_i || (inport_cnt_q == max_packet_w);
 
-always @ (posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i or posedge rst_i)
 if (rst_i)
     inport_cnt_q  <= 11'b0;
 else if (inport_last_w && ep2_tx_data_accept_w)

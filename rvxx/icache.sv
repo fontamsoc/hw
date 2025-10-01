@@ -69,7 +69,7 @@ wire _we_i = (we_i && rdy_o);
 // Register used as counter during the cache reset.
 reg [CLOG2SETCNT -1 : 0] rstidx;
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		rdy_o <= 0;
 		rstidx <= {CLOG2SETCNT{1'b1}};
@@ -94,7 +94,7 @@ reg [CLOG2SETCNT -1 : 0] wecnt = 0;
 // posedge of nxtway_i and we_i, we can register nxtway_i
 // for better timing if it is combinational.
 reg nxtway_r, _nxtway_r;
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	nxtway_r <= nxtway_i;
 	_nxtway_r <= nxtway_r;
 end
@@ -102,7 +102,7 @@ wire nxtway_posedge = (!_nxtway_r && nxtway_r);
 // Eventhough there can be more than one way containing same tags,
 // it wouldn't be a problem because instruction data are read-only;
 // the data associated with two same tags would always be the same.
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (_we_i || nxtway_posedge) begin
 		if ((wecnt >= (SETCNT-1)) || (nxtway_posedge && wecnt)) begin
 			wecnt <= 0;
@@ -118,7 +118,7 @@ end endgenerate
 
 reg [TAGBITSZ -1 : 0] rtag_r;
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (re_i)
 		rtag_r <= rtag_i;
 end
@@ -190,7 +190,7 @@ end endgenerate
 generate if (WAYCNT > 1) begin
 reg [CLOG2WAYCNT -1 : 0] hitidx; // ### comb-block-reg.
 integer gen_hitidx_idx;
-always @* begin
+always_comb begin
 	hitidx = 0;
 	for (
 		gen_hitidx_idx = WAYCNT;

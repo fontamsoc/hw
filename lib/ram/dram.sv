@@ -53,7 +53,7 @@ end
 assign o0 = u[addr0_i];
 assign o1 = u[addr1_i];
 
-always @ (posedge clk1_i) begin
+always_ff @(posedge clk1_i) begin
 	if (we1_i)
 		u[addr1_i] <= i1;
 end
@@ -81,7 +81,7 @@ end
 assign o0 = u[addr0_i];
 assign o1 = u[addr1_i];
 
-always @ (posedge clk1_i) begin
+always_ff @(posedge clk1_i) begin
 	if (we1_i)
 		u[addr1_i] <= i1;
 end

@@ -44,7 +44,7 @@ module usb_desc_rom
 
 reg [7:0] desc_rom_r;
 
-always @ *
+always_comb
 begin
     case (addr_i)
     8'd0: desc_rom_r = 8'h12;

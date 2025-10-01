@@ -108,7 +108,7 @@ assign s_wb_dat_o = _m_wb_dat_i[mstridx];
 reg [CLOG2MASTERCOUNT -1 : 0] mstrlonxt;
 reg [CLOG2MASTERCOUNT -1 : 0] mstrloidx;
 // Compute in mstrlonxt the active master with the lowest index.
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (MASTERCOUNT > 1) begin
 		if (rst_i || (mstrloidx == (MASTERCOUNT - 1)) || m_wb_cyc_i[mstrloidx]) begin
 			if (m_wb_cyc_i[mstrloidx])
@@ -122,7 +122,7 @@ end
 reg [CLOG2MASTERCOUNT -1 : 0] mstrhinxt;
 reg [CLOG2MASTERCOUNT -1 : 0] mstrhiidx;
 // Compute in mstrhinxt the active master with the highest index.
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (MASTERCOUNT > 1) begin
 		if (rst_i || (mstrhiidx == 0) || m_wb_cyc_i[mstrhiidx]) begin
 			if (m_wb_cyc_i[mstrhiidx])
@@ -135,7 +135,7 @@ end
 
 reg [CLOG2MASTERCOUNT -1 : 0] mstrhi;
 // Logic that increments mstridx.
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (MASTERCOUNT > 1) begin
 		if (rst_i)
 			mstrhi <= (MASTERCOUNT - 1);

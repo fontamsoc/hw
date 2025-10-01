@@ -10,14 +10,14 @@ wire wb_max_pending = wb_pending_acks[CLOG2MAXPENDINGACK];
 
 assign _wb_bsy_i = (wb_bsy_i || wb_max_pending);
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		wb_rqst_cnt <= 0;
 	else if (wb_stb_o && !_wb_bsy_i)
 		wb_rqst_cnt <= wb_rqst_cnt + 1'b1;
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		wb_rsp_cnt <= 0;
 	else if (wb_ack_i)
@@ -41,7 +41,7 @@ assign iCache_wtag_w = iF_mem_addr[((WORDBITSZ-MSBSZIGN)-CLOG2XWORDBITSZBY8)-1:C
 
 reg iF_mem_wait;
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		iF_mem_stb <= 0;
 		iF_mem_seq_valid <= 0;
@@ -75,7 +75,7 @@ end
 // and so that the next instruction in the buffer can be sequenced
 // as soon as possible.
 
-always @* begin
+always_comb begin
 
 	wb_cyc_o = 0;
 	wb_stb_o = 0;

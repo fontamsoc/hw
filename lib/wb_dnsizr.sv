@@ -148,12 +148,12 @@ generate if (MWORDBITSZ > SWORDBITSZ) begin :gen_dnsizr
 		{s_wb_addr_o[(CLOG2MWORDBITSZBY8-CLOG2SWORDBITSZBY8) -1 : 0], {CLOG2SWORDBITSZBY8{1'b0}}}};
 
 	if (USEFWFTFIFO) begin
-	always @* begin
+	always_comb begin
 		_s_wb_dat_i = s_wb_dat_i;
 		m_wb_ack_o = s_wb_ack_i;
 	end
 	end else begin
-	always @ (posedge clk_i) begin
+	always_ff @(posedge clk_i) begin
 		_s_wb_dat_i <= s_wb_dat_i;
 		m_wb_ack_o <= s_wb_ack_i;
 	end
@@ -168,7 +168,7 @@ end else begin
 	assign s_wb_dat_o = m_wb_dat_i;
 	assign s_wb_sel_o = m_wb_sel_i;
 
-	always @*
+	always_comb
 		m_wb_ack_o = s_wb_ack_i;
 
 end endgenerate

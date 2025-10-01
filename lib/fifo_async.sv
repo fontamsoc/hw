@@ -165,7 +165,7 @@ bram #(
 assign usage_o = (writeidx - readidx);
 
 reg [(CLOG2DEPTH +1) -1 : 0] _gray_readidx;
-always @ (posedge clk_write_i) // Synchronize gray_readidx to clk_write_i.
+always_ff @(posedge clk_write_i) // Synchronize gray_readidx to clk_write_i.
 	_gray_readidx <= gray_readidx;
 
 wire near_full_o_;
@@ -190,14 +190,14 @@ endgenerate
 assign near_full_o = (near_full_o_ || full_o);
 
 reg [(CLOG2DEPTH +1) -1 : 0] _gray_writeidx;
-always @ (posedge clk_read_i) // Synchronize gray_writeidx to clk_read_i.
+always_ff @(posedge clk_read_i) // Synchronize gray_writeidx to clk_read_i.
 	_gray_writeidx <= gray_writeidx;
 
 assign empty_o = (_gray_writeidx == gray_readidx);
 
 assign near_empty_o = (_gray_writeidx == gray_next_readidx);
 
-always @ (posedge clk_read_i) begin
+always_ff @(posedge clk_read_i) begin
 	if (rst_i) begin
 		readidx <= 0;
 		gray_readidx <= 0;
@@ -207,7 +207,7 @@ always @ (posedge clk_read_i) begin
 	end
 end
 
-always @ (posedge clk_write_i) begin
+always_ff @(posedge clk_write_i) begin
 	if (rst_i) begin
 		writeidx <= 0;
 		gray_writeidx <= 0;

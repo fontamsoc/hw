@@ -110,12 +110,12 @@ reg [2 -1 : 0] state;
 reg                    _s_wb_ack_i;
 reg [WORDBITSZ -1 : 0] _s_wb_dat_i;
 generate if (REGSLVINPUT) begin
-	always @ (posedge clk_i) begin
+	always_ff @(posedge clk_i) begin
 		_s_wb_ack_i <= s_wb_ack_i;
 		_s_wb_dat_i <= s_wb_dat_i;
 	end
 end else begin
-	always @* begin
+	always_comb begin
 		_s_wb_ack_i = s_wb_ack_i;
 		_s_wb_dat_i = s_wb_dat_i;
 	end
@@ -127,10 +127,10 @@ wire cache_stb = (state == IDLE && _m_wb_stb_i);
 wire [CACHEWAYCNT -1 : 0] cache_tag_hit_;
 reg cache_tag_hit;
 generate if (REGCACHEHIT) begin
-always @ (posedge clk_i)
+always_ff @(posedge clk_i)
 	cache_tag_hit <= (|cache_tag_hit_);
 end else begin
-always @*
+always_comb
 	cache_tag_hit = (|cache_tag_hit_);
 end endgenerate
 
@@ -139,7 +139,7 @@ end endgenerate
 // account for the sequencing of EVICT followed by REFILL.
 reg [clog2((MAXPENDINGACK+2)+1) -1 : 0] ack_pending;
 generate if (MAXPENDINGACK) begin
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		ack_pending <= 0;
 	else if (s_wb_stb_o && !s_wb_bsy_i && _s_wb_ack_i);
@@ -152,10 +152,10 @@ end
 end
 endgenerate
 reg s_wb_cyc_o_;
-always @*
+always_comb
 	s_wb_cyc_o = (s_wb_cyc_o_ || (MAXPENDINGACK && ack_pending));
 reg m_wb_bsy_o_;
-always @*
+always_comb
 	m_wb_bsy_o = (m_wb_bsy_o_ || (MAXPENDINGACK && (ack_pending > ((MAXPENDINGACK+2)-2))));
 
 // When MAXPENDINGACK is non-null, and the sequencing of EVICT followed by REFILL
@@ -181,15 +181,15 @@ reg                          cache_drt_o [CACHEWAYCNT];
 reg [CLOG2CACHEWAYCNT -1 : 0] cache_tag_hit_wayidx_; // ### comb-block-reg.
 reg [CLOG2CACHEWAYCNT -1 : 0] cache_tag_hit_wayidx;
 generate if (REGCACHEHIT) begin
-always @ (posedge clk_i)
+always_ff @(posedge clk_i)
 	cache_tag_hit_wayidx <= cache_tag_hit_wayidx_;
 end else begin
-always @*
+always_comb
 	cache_tag_hit_wayidx = cache_tag_hit_wayidx_;
 end endgenerate
 
 integer gen_hitidx_idx;
-always @* begin
+always_comb begin
 	cache_tag_hit_wayidx_ = 0;
 	for (
 		gen_hitidx_idx = CACHEWAYCNT;
@@ -254,7 +254,7 @@ end
 wire _cache_we = (cache_we &&
 	gen_cache_idx == (cache_tag_hit ? cache_tag_hit_wayidx : cache_we_wayidx));
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (cache_stb) begin
 		cache_tag_o[gen_cache_idx] <= cache_tags[cache_rdidx];
 		cache_sel_o[gen_cache_idx] <= cache_sels[cache_rdidx];
@@ -263,14 +263,14 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (_cache_we) begin
 		cache_tags[cache_wridx] <= cache_tag_i;
 		cache_dats[cache_wridx] <= cache_dat_i;
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_r || _cache_we) begin
 		cache_sels[cache_wridx] <= cache_sel_i;
 		cache_drts[cache_wridx] <= cache_drt_i;
@@ -285,7 +285,7 @@ end endgenerate
 // There is a cachehit when there is a cache tag hit and the selected bits are in the cache.
 wire cache_hit = (cache_tag_hit && ((m_wb_sel_r & cache_sel_o_tag_hit) == m_wb_sel_r));
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (CACHEWAYCNT == 1 || (cache_stb && conly_i) || conly_r) begin
 		cache_we_wayidx <= 0;
 	end else if (cache_we && !cache_tag_hit) begin
@@ -293,7 +293,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 
 	if (rst_i) begin
 

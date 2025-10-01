@@ -109,12 +109,12 @@ reg [2 -1 : 0] state;
 reg                    _s_wb_ack_i;
 reg [WORDBITSZ -1 : 0] _s_wb_dat_i;
 generate if (REGSLVINPUT) begin
-	always @ (posedge clk_i) begin
+	always_ff @(posedge clk_i) begin
 		_s_wb_ack_i <= s_wb_ack_i;
 		_s_wb_dat_i <= s_wb_dat_i;
 	end
 end else begin
-	always @* begin
+	always_comb begin
 		_s_wb_ack_i = s_wb_ack_i;
 		_s_wb_dat_i = s_wb_dat_i;
 	end
@@ -126,7 +126,7 @@ endgenerate
 // account for the sequencing of EVICT followed by REFILL.
 reg [clog2((MAXPENDINGACK+2)+1) -1 : 0] ack_pending;
 generate if (MAXPENDINGACK) begin
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		ack_pending <= 0;
 	else if (s_wb_stb_o && !s_wb_bsy_i && _s_wb_ack_i);
@@ -168,7 +168,7 @@ wire cache_tag_hit = (|cache_tag_hit_);
 
 reg [CLOG2CACHEWAYCNT -1 : 0] cache_tag_hit_wayidx; // ### comb-block-reg.
 integer gen_hitidx_idx;
-always @* begin
+always_comb begin
 	cache_tag_hit_wayidx = 0;
 	for (
 		gen_hitidx_idx = CACHEWAYCNT;
@@ -237,7 +237,7 @@ end
 
 wire _cache_we = (cache_we && gen_cache_idx == (cache_tag_hit ? cache_tag_hit_wayidx : cache_we_wayidx));
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	// use_cache_dat_r is used below to update the cache output
 	// needed for a cache refill write, when there is a cache miss.
 	if (_m_wb_stb_i || use_cache_dat_r) begin
@@ -248,14 +248,14 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (_cache_we) begin
 		cache_tags[cache_wridx] <= cache_tag_i;
 		cache_dats[cache_wridx] <= cache_dat_i;
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_r || _cache_we) begin
 		cache_sels[cache_wridx] <= cache_sel_i;
 		cache_drts[cache_wridx] <= cache_drt_i;
@@ -270,7 +270,7 @@ end endgenerate
 // There is a cachehit when there is a cache tag hit and the selected bits are in the cache.
 wire cache_hit = (cache_tag_hit && ((m_wb_sel_r & _cache_sel_o) == m_wb_sel_r));
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (CACHEWAYCNT == 1 || (_m_wb_stb_i && conly_i) || conly_r) begin
 		cache_we_wayidx <= 0;
 	end else if (cache_we && !cache_tag_hit) begin
@@ -280,7 +280,7 @@ end
 
 reg [WORDBITSZ -1 : 0] cache_dat_r;
 reg [(WORDBITSZ/8) -1 : 0] cache_sel_r;
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (state == REFILL && !s_wb_we_o && refill_ack) begin
 		// Note that when set here, cache_dat_r is not used
 		// to update the cache, but only to set m_wb_dat_o_.
@@ -296,10 +296,10 @@ end
 
 assign m_wb_dat_o_ = (use_cache_dat_r ? cache_dat_r : cache_dat_o_tag_hit);
 generate if (REGMASTROUT) begin
-always @ (posedge clk_i)
+always_ff @(posedge clk_i)
 	m_wb_dat_o <= m_wb_dat_o_;
 end else begin
-always @*
+always_comb
 	m_wb_dat_o = m_wb_dat_o_;
 end endgenerate
 
@@ -313,10 +313,10 @@ wire cache_miss = (m_wb_ack && !_cache_hit && !_use_cache_dat_r);
 
 wire m_wb_ack_o_ = (m_wb_ack ? (_use_cache_dat_r || (_cache_hit || m_wb_we_r)) : use_cache_dat_r);
 generate if (REGMASTROUT) begin
-always @ (posedge clk_i)
+always_ff @(posedge clk_i)
 	m_wb_ack_o <= m_wb_ack_o_;
 end else begin
-always @*
+always_comb
 	m_wb_ack_o = m_wb_ack_o_;
 end endgenerate
 
@@ -330,7 +330,7 @@ assign m_wb_bsy_o = (
 		(!m_wb_we_r || !cache_tag_hit || cache_drt_o_we_wayidx)) ||
 	(state != IDLE) || rst_r);
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 
 	if (rst_i) begin
 

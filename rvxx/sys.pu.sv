@@ -13,7 +13,7 @@ wire iD_isCSRvalid = (iD_isCSR && iD_insn_valid && !iD_isExcCsr_);
 wire [WORDBITSZ -1 : 0] csrIn = (iD_func3[2] ? {{(WORDBITSZ-CLOG2GPRCNT){1'b0}}, iD_rs1Id} : iD_rs1);
 
 wire [16 -1 : 0] csrInMedelegMask = 'b1011001111111111; // Non-null bits get modified.
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrMedeleg <= 0;
 	end else if (iD_isCSRvalid && iD_Iimm[11:0] == 12'h302) begin
@@ -28,7 +28,7 @@ always @ (posedge clk_i) begin
 end
 
 wire [16 -1 : 0] csrInMidelegMask = 'b0000100010001000; // Non-null bits get modified.
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrMideleg <= 0;
 	end else if (iD_isCSRvalid && iD_Iimm[11:0] == 12'h303) begin
@@ -46,7 +46,7 @@ wire [16 -1 : 0] csrInMipMask = // Non-null bits get modified.
 	csrCurPrivIsS ? 16'b0000001000100010 : // SEIP STIP SSIP.
 	                16'b0000101010101010 ; // All above plus MEIP MTIP MSIP.
 reg [16 -1 : 0] csrMip__;
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrMip__ <= 0;
 	end else if (iD_isCSRvalid && iD_Iimm[11:10] == 2'b00 && iD_Iimm[7:0] == 8'h44) begin
@@ -76,13 +76,13 @@ wire [16 -1 : 0] csrMip_ = {
 	1'b0,
 	csrMip__[1/*SSIP*/] && csrMideleg[3/*MSI*/],
 	1'b0};
-always @ (posedge clk_i)
+always_ff @(posedge clk_i)
 	csrMip <= csrMip_;
 
 wire [16 -1 : 0] csrInMieMask = // Non-null bits get modified.
 	csrCurPrivIsS ? 16'b0000001000100010 : // SEIE STIE SSIE.
 	                16'b0000101010101010 ; // All above plus MEIE MTIE MSIE.
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin // If (csrMhartid != 0) reset csrMie.MEIE to 1.
 		csrMie <= (csrMhartidIsNonNull ? 16'b0000100000000000 : 16'd0);
 	end else if (iD_isCSRvalid && iD_Iimm[11:10] == 2'b00 && iD_Iimm[7:0] == 8'h04) begin
@@ -97,7 +97,7 @@ always @ (posedge clk_i) begin
 end
 
 localparam h34d = 12'h34d;
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrMtimecmp <= 0;
 	end else if (iD_isCSRvalid && (iD_Iimm[11:5] == h34d[11:5]) && (iD_Iimm[3:0] == h34d[3:0])) begin
@@ -121,7 +121,7 @@ always @ (posedge clk_i) begin
 end
 
 localparam h14d = 12'h14d;
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrStimecmp <= 0;
 	end else if (iD_isCSRvalid && (iD_Iimm[11:5] == h14d[11:5]) && (iD_Iimm[3:0] == h14d[3:0])) begin
@@ -144,11 +144,11 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	csrCycle <= (rst_i ? 64'd0 : (csrCycle + 1'b1));
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrInstret <= 0;
 	end else if (eX_rW_stalled || (!eX_isExc && !eX_flushed && !eX_lateWritebackInsn && !halted_o)) begin
@@ -161,13 +161,13 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	csrClkFreq <= CLKFREQ;
 end
 
 `ifdef _SIMULATION_PERF
 `ifdef PUPREDICTBRANCH
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrBranchPredictHit <= 0;
 		csrBranchPredictMiss <= 0;
@@ -180,7 +180,7 @@ always @ (posedge clk_i) begin
 end
 `endif
 `ifdef PUPREDICTRET
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		csrRetPredictMiss <= 0;
 	else if (iD_isRet && eX_predictRetMiss_i && iD_insn_valid)
@@ -192,7 +192,7 @@ end
 // Indefinitely halt when an exception occurs and the trap vector address is null.
 wire fatalExc = (excTriggered && !excTvec);
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		halted_o <= csrMhartidIsNonNull;
 	else if ((iD_isWfi && iD_insn_valid) || fatalExc || halted_o)
@@ -205,13 +205,13 @@ end
 
 `ifdef SIMULATION
 reg endSimRq;
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		endSimRq <= 0;
 	else if (fatalExc)
 		endSimRq <= 1;
 end
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (endSimRq && !wb_pending_acks) begin
 		`ifdef _SIMULATION_PERF
 		`ifdef PUPREDICTBRANCH
@@ -230,7 +230,7 @@ end
 `endif
 
 wire [WORDBITSZ -1 : 0] csrInMtvecMask = {{(WORDBITSZ-2){1'b1}}, 2'b00}; // Non-null bits get modified.
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		// When starting from halt, mtvec must be non-null (to prevent fatalExc) and valid.
 		csrMtvec <= (csrMhartidIsNonNull ? rstaddr_i : {WORDBITSZ{1'b0}});
@@ -246,7 +246,7 @@ always @ (posedge clk_i) begin
 end
 
 wire [WORDBITSZ -1 : 0] csrInStvecMask = {{(WORDBITSZ-2){1'b1}}, 2'b00}; // Non-null bits get modified.
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrStvec <= 0;
 	end else if (iD_isCSRvalid && iD_Iimm[11:0] == 12'h105) begin
@@ -260,20 +260,20 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	irq_rdy_o <= (
 		(!csrMideleg[11/*MEI*/] && csrMie[11/*MEIE*/] && (csrCurPrivIsM ? csrMstatus[3/*MIE*/] : 1'b1)) ||
 		(csrMideleg[11/*MEI*/] && csrMie[9/*SEIE*/] && (csrCurPrivIsS ? csrMstatus[1/*SIE*/] : csrCurPrivIsU)));
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	irq_stb_o <= (
 		(csrMip_[11/*MEIP*/] && csrMie[11/*MEIE*/] && (csrCurPrivIsM ? csrMstatus[3/*MIE*/] : 1'b1)) ||
 		(csrMip_[9/*SEIP*/] && csrMie[9/*SEIE*/] && (csrCurPrivIsS ? csrMstatus[1/*SIE*/] : csrCurPrivIsU)));
 end
 
 reg [16 -1 : 0] excIrq;
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	// Set excIrq null when non-null in order to use only the up to date value of csrMstatus.
 	// Using excTriggered prevents an asynchronous exception from triggering if a synchronous
 	// exception has just triggered with csrMstatus not yet updated.
@@ -300,7 +300,7 @@ reg [WORDBITSZ -1 : 0] excTval2; // ### comb-block-reg.
 reg [2 -1 : 0] excNxtPriv; // ### comb-block-reg.
 // Interrupt handling is done in following decreasing
 // priority order: MEI, MSI, MTI, SEI, SSI, STI.
-always @* begin
+always_comb begin
 	excCause = 17'd0;
 	excEpc = (eX_JumpOrBranch ? iF_pc : iD_pc);
 	excTval = {WORDBITSZ{1'b0}};
@@ -390,7 +390,7 @@ wire excNxtPrivIsM = (excNxtPriv == 2'b11);
 
 assign excTvec = (excNxtPrivIsS ? csrStvec : csrMtvec);
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		csrCurPriv <= 2'b11;
 	else if (excTriggered)
@@ -402,7 +402,7 @@ end
 wire [WORDBITSZ -1 : 0] csrInMstatusMask = // Non-null bits get modified.
 	csrCurPrivIsS ? 'b00000000000011000000000100100010 : // MXR SUM SPP SPIE SIE.
 	                'b00000000000011100001100110101010 ; // All above plus MPRV MPP MPIE MIE.
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin // If (csrMhartid != 0) reset csrMstatus.MIE to 1.
 		csrMstatus <= (csrMhartidIsNonNull ? 'b1000 : 'd0);
 	end else if (excTriggered) begin
@@ -455,7 +455,7 @@ always @ (posedge clk_i) begin
 end
 
 wire [WORDBITSZ -1 : 0] csrInMepcMask = {{(WORDBITSZ-2){1'b1}}, 2'b00}; // Non-null bits get modified.
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrMepc <= 0;
 	end else if (excTriggered) begin
@@ -473,7 +473,7 @@ always @ (posedge clk_i) begin
 end
 
 wire [WORDBITSZ -1 : 0] csrInSepcMask = {{(WORDBITSZ-2){1'b1}}, 2'b00}; // Non-null bits get modified.
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrSepc <= 0;
 	end else if (excTriggered) begin
@@ -490,7 +490,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrMcause <= 0;
 	end else if (excTriggered) begin
@@ -507,7 +507,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrScause <= 0;
 	end else if (excTriggered) begin
@@ -524,7 +524,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrMtval <= 0;
 	end else if (excTriggered) begin
@@ -541,7 +541,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrStval <= 0;
 	end else if (excTriggered) begin
@@ -558,7 +558,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrMtval2 <= 0;
 	end else if (excTriggered) begin
@@ -575,7 +575,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrStval2 <= 0;
 	end else if (excTriggered) begin
@@ -592,7 +592,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrMscratch <= 0;
 	end else if (iD_isCSRvalid && iD_Iimm[11:0] == 12'h340) begin
@@ -606,7 +606,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrSscratch <= 0;
 	end else if (iD_isCSRvalid && iD_Iimm[11:0] == 12'h140) begin
@@ -620,11 +620,11 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i)
+always_ff @(posedge clk_i)
 	csrMhartid <= id_i;
 
 localparam MXL = (WORDBITSZ/32); // Valid only when WORDBITSZ == 32 or WORDBITSZ == 64.
-always @*
+always_comb
 	csrMisa = {MXL[1:0],
 		{(WORDBITSZ-28){1'b0}},
 		13'b0000010100000,
@@ -636,7 +636,7 @@ always @*
 		12'b000100000001};
 
 generate if (WORDBITSZ == 32) begin
-always @* begin
+always_comb begin
 	(* parallel_case *) case (iD_Iimm[11:0])
 	12'h100: eX_csrOut_i = (csrMstatus & 'b00000000000011000000000100110010);
 	12'h104: eX_csrOut_i = (csrMie & 16'b0000001000100010);
@@ -676,7 +676,7 @@ always @* begin
 end
 end endgenerate
 generate if (WORDBITSZ == 64) begin
-always @* begin
+always_comb begin
 	(* parallel_case *) case (iD_Iimm[11:0])
 	12'h100: eX_csrOut_i = (csrMstatus & 'b00000000000011000000000100110010);
 	12'h104: eX_csrOut_i = (csrMie & 16'b0000001000100010);

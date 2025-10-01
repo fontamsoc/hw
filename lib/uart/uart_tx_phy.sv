@@ -117,7 +117,7 @@ wire bsy = (txstate != TXIDLE || bitcnt);
 
 assign rdy_o = !bsy;
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 
 	if (rst_i) begin
 

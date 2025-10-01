@@ -98,7 +98,7 @@ assign usb_phy_rx_rcv_o = (usb_dp_io == 1'b1 && usb_dn_io == 1'b0) ? 1'b1 : 1'b0
 //      0    1    Differential Logic '1'
 //      1    0    Differential Logic '0'
 //      1    1    Illegal State
-always @ (mode_i or usb_phy_tx_dp_i or usb_phy_tx_dn_i)
+always_comb
 begin : MUX
  case(mode_i)
     1'b0:
@@ -121,7 +121,7 @@ begin : MUX
             out_dp = 1'b1;
             out_dn = 1'b0;
         end
-        else if (usb_phy_tx_dp_i == 1'b1 && usb_phy_tx_dn_i == 1'b1)
+        else//if (usb_phy_tx_dp_i == 1'b1 && usb_phy_tx_dn_i == 1'b1)
         begin
             // SE0 (both low)
             out_dp = 1'b0;
@@ -148,7 +148,7 @@ begin : MUX
             out_dp = 1'b1;
             out_dn = 1'b0;
         end
-        else if (usb_phy_tx_dp_i == 1'b1 && usb_phy_tx_dn_i == 1'b1)
+        else//if (usb_phy_tx_dp_i == 1'b1 && usb_phy_tx_dn_i == 1'b1)
         begin
             // Illegal
             out_dp = 1'b1;

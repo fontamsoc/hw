@@ -58,12 +58,12 @@ initial begin
 	end
 end
 
-always @ (posedge clk0_i) begin
+always_ff @(posedge clk0_i) begin
 	if (en0_i)
 		o0 <= u[addr0_i];
 end
 
-always @ (posedge clk1_i) begin
+always_ff @(posedge clk1_i) begin
 	if (en1_i) begin
 		o1 <= u[addr1_i];
 		if (we1_i)
@@ -95,12 +95,12 @@ initial begin
 	end
 end
 
-always @ (posedge clk0_i) begin
+always_ff @(posedge clk0_i) begin
 	if (en0_i)
 		o0 <= u[addr0_i];
 end
 
-always @ (posedge clk1_i) begin
+always_ff @(posedge clk1_i) begin
 	if (en1_i) begin
 		o1 <= u[addr1_i];
 		if (we1_i)

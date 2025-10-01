@@ -101,7 +101,7 @@ skidbuf #(
 
 reg [(clog2(MAXPENDINGACK) +1) -1 : 0] s_wb_pending_acks;
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		s_wb_pending_acks <= 0;
 	else if (s_wb_stb_o && !_s_wb_bsy_i && s_wb_ack_i);

@@ -119,11 +119,11 @@ reg [(WORDBITSZ/8) -1 : 0]        wb_sel_r;
 reg [WORDBITSZ -1 : 0]            wb_dat_r;
 
 wire wb_stb_r_ = (wb_cyc_i && wb_stb_i && !wb_bsy_o);
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	wb_stb_r <= wb_stb_r_ ;
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (wb_stb_r_) begin
 		wb_we_r <= wb_we_i;
 		wb_addr_r <= wb_addr_i;
@@ -137,11 +137,11 @@ wire [WORDBITSZ -1 : 0] _wb_sel_r;
 
 wire [WORDBITSZ -1 : 0] ram_i = ((wb_dat_r & _wb_sel_r) | (wb_dat_o & ~_wb_sel_r));
 reg  [WORDBITSZ -1 : 0] ram_o;
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (wb_stb_r_)
 		ram_o <= ram[wb_addr_i];
 end
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (wb_stb_r && wb_we_r) begin
 		ram[wb_addr_r] <= ram_i;
 	end
@@ -149,7 +149,7 @@ end
 
 reg use_ram_r;
 reg [WORDBITSZ -1 : 0] ram_r;
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (wb_stb_r_) begin
 		use_ram_r <= (wb_addr_i == wb_addr_r && wb_we_r);
 		ram_r <= ram_i;
@@ -158,7 +158,7 @@ end
 
 assign wb_dat_o = (use_ram_r ? ram_r : ram_o);
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		cntr <= 0;
 	else if (cntr)
@@ -167,7 +167,7 @@ always @ (posedge clk_i) begin
 		cntr <= DELAY;
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		wb_ack_o <= 0;
 	else if (DELAY)

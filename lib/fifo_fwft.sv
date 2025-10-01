@@ -162,14 +162,14 @@ assign empty_o = (usage_o == 0);
 
 assign near_empty_o = (usage_o == 1);
 
-always @ (posedge clk_pop_i) begin
+always_ff @(posedge clk_pop_i) begin
 	if (rst_i)
 		readidx <= 0;
 	else if (en)
 		readidx <= (readidx + 1'b1);
 end
 
-always @ (posedge clk_push_i) begin
+always_ff @(posedge clk_push_i) begin
 	if (rst_i)
 		writeidx <= 0;
 	else if (we)

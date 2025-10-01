@@ -84,7 +84,7 @@ assign m_wb_bsy_o = (m_wb_bsy_o_ || m_wb_pending_acks == MAXPENDINGACK);
 
 wire rqst_write_w = (m_wb_cyc_i && m_wb_stb_i && !m_wb_bsy_o);
 
-always @ (posedge m_clk_i) begin
+always_ff @(posedge m_clk_i) begin
 	if (rst_i)
 		m_wb_pending_acks <= 0;
 	else if (rqst_write_w && m_wb_ack_o);
@@ -98,11 +98,11 @@ wire rqst_read_w = (!s_wb_stb_o || !s_wb_bsy_i);
 
 wire rqst_empty_w;
 
-always @ (posedge s_clk_i) begin
+always_ff @(posedge s_clk_i) begin
 	s_wb_cyc_o <= (m_wb_cyc_i || (|m_wb_pending_acks));
 end
 
-always @ (posedge s_clk_i) begin
+always_ff @(posedge s_clk_i) begin
 	if (rst_i)
 		s_wb_stb_o <= 0;
 	else if (rqst_read_w)
@@ -149,7 +149,7 @@ end endgenerate
 
 wire rsp_empty_w;
 
-always @ (posedge m_clk_i) begin
+always_ff @(posedge m_clk_i) begin
 	if (rst_i)
 		m_wb_ack_o <= 0;
 	else

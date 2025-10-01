@@ -83,7 +83,7 @@ reg [STATE_W-1:0] next_state_r;
 reg data_pid_q;
 reg data_zlp_q;
 
-always @ (posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i or posedge rst_i)
 if (rst_i)
 begin
     data_pid_q <= 1'b0;
@@ -122,7 +122,7 @@ assign tx_accept_o = (state_q == STATE_TX_IDLE);
 //-----------------------------------------------------------------
 // Next state
 //-----------------------------------------------------------------
-always @ *
+always_comb
 begin
     next_state_r = state_q;
 
@@ -223,7 +223,7 @@ begin
 end
 
 // Update state
-always @ (posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i or posedge rst_i)
 if (rst_i)
     state_q   <= STATE_TX_IDLE;
 else
@@ -235,7 +235,7 @@ else
 reg       input_valid_r;
 reg [7:0] input_byte_r;
 reg       input_last_r;
-always @ *
+always_comb
 begin
     input_valid_r = data_strb_i & data_pid_q;
     input_byte_r  = data_i;
@@ -243,7 +243,7 @@ begin
 end
 
 reg data_accept_r;
-always @ *
+always_comb
 begin
     if (state_q == STATE_TX_DATA)
         data_accept_r = utmi_txready_i;
@@ -270,7 +270,7 @@ u_crc16
     .crc_out_o(crc_out_w)
 );
 
-always @ (posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i or posedge rst_i)
 if (rst_i)
     crc_sum_q   <= 16'hFFFF;
 else if (state_q == STATE_TX_IDLE)
@@ -284,7 +284,7 @@ else if (state_q == STATE_TX_DATA && utmi_txvalid_o && utmi_txready_i)
 reg       valid_q;
 reg [7:0] data_q;
 
-always @ (posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i or posedge rst_i)
 if (rst_i)
 begin
     valid_q <= 1'b0;
@@ -309,7 +309,7 @@ end
 reg       utmi_txvalid_r;
 reg [7:0] utmi_data_r;
 
-always @ *
+always_comb
 begin
     if (state_q == STATE_TX_CHIRP)
     begin

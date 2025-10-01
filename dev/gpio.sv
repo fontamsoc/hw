@@ -153,7 +153,7 @@ reg [WORDBITSZ -1 : 0]            wb_dat_r;
 
 wire wb_stb_r_ = (wb_cyc_i && wb_stb_i);
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	wb_stb_r <= wb_stb_r_ ;
 	if (wb_stb_r_) begin
 		wb_we_r <= wb_we_i;
@@ -162,7 +162,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	wb_ack_o <= wb_stb_r;
 end
 
@@ -231,12 +231,12 @@ reg irq_rdy_i_r;
 wire irq_rdy_i_negedge = (!irq_rdy_i && irq_rdy_i_r);
 
 reg devrd_r;
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	devrd_r <= devrd;
 end
 assign wb_dat_o = (devrd_r ? _i : wb_dat_o_);
 
-always @(posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	// Logic that set output "t".
 	if (rst_i)
 		t <= IODIR;
@@ -244,14 +244,14 @@ always @(posedge clk_i) begin
 		t <= wb_dat_r[WORDBITSZ-1:1];
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		dbncrthresh <= 0;
 	else if (cmdsetdebounce)
 		dbncrthresh <= wb_dat_r[WORDBITSZ-1:1];
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	// Logic that set output "o".
 	if (rst_i)
 		o <= 0;
@@ -259,7 +259,7 @@ always @ (posedge clk_i) begin
 		o <= wb_dat_r[WORDBITSZ-1:1];
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	// Logic that update i_change.
 	if (irq_rdy_i_negedge)
 		i_change <= 0;
@@ -267,14 +267,14 @@ always @ (posedge clk_i) begin
 		i_change <= (i_change | i_changed);
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (cmdconfigureio)
 		wb_dat_o_ <= {IOCOUNT[WORDBITSZ-2:0], wb_dat_r[0]};
 	else if (cmdsetdebounce)
 		wb_dat_o_ <= {CLKFREQ[WORDBITSZ-2:0], wb_dat_r[0]};
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	// Sampling used to detect whether _i has changed.
 	_i_r <= _i;
 	// Sampling used for irq_rdy_i edge detection.

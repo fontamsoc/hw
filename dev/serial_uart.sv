@@ -186,7 +186,7 @@ reg [WORDBITSZ -1 : 0]            wb_dat_r;
 
 wire wb_stb_r_ = (wb_cyc_i && wb_stb_i && !wb_bsy_o);
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	wb_stb_r <= wb_stb_r_ ;
 	if (wb_stb_r_) begin
 		wb_we_r <= wb_we_i;
@@ -195,7 +195,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	wb_ack_o <= wb_stb_r;
 end
 
@@ -261,7 +261,7 @@ reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] txclockcyclesperbit;
 
 localparam CLOCKCYCLESPERBIT = (PHYCLKFREQ/DEFAULTBAUD);
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	// Logic enabling/disabling interrupt.
 	if (rst_i) begin
 		// On reset, interrupt is disabled, and must be explicitely enabled.
@@ -274,7 +274,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i || cmddevrdy) begin
 		wb_dat_o_ <= {WORDBITSZ{1'b0}};
 	end else if (cmdsetint) begin
@@ -289,7 +289,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		rxclockcyclesperbit <= (CLOCKCYCLESPERBIT + (CLOCKCYCLESPERBIT>>5));
 		txclockcyclesperbit <= CLOCKCYCLESPERBIT;
@@ -302,7 +302,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	rx_read_w_sampled <= rx_read_w;
 	irq_rdy_i_r <= irq_rdy_i; // Sampling used for edge detection.
 end

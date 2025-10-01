@@ -7,7 +7,7 @@ wire ldUnit_memAck;
 
 wire ldUnit_rqsts_empty;
 reg ldUnit_rqsts_empty_r;
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		ldUnit_rqsts_empty_r <= 1'b1;
 	else if (ldUnit_rqsts_empty_r || ldUnit_memAck)
@@ -126,7 +126,7 @@ assign amoUnit_memAck = (ldUnit_memAck && ldUnit_rqsts_isAMO);
 
 wire iD_isLr_and_insn_valid = (iD_isLr && iD_insn_valid);
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i || eX_JumpOrBranch || (iD_cancelLr && iD_insn_valid)) begin
 		// Per spec, cancel load reservation on taken branch,
 		// jump, system, fence, loads, stores instructions.
@@ -138,7 +138,7 @@ end
 
 reg [WORDBITSZ -1 : 0] amoUnit_LrAddr;
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (iD_isLr_and_insn_valid)
 		amoUnit_LrAddr <= dCache_m_addr_i_;
 end

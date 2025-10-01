@@ -297,25 +297,25 @@ localparam BHTSETCNT = 4096;
 localparam CLOG2BHTSETCNT = clog2(BHTSETCNT);
 reg [2 -1 : 0] bht [BHTSETCNT]; // Branch History Table.
 reg [2 -1 : 0] bht_o;
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (iF_en)
 		bht_o <= bht[iF_pc_i[CLOG2BHTSETCNT+CLOG2INSNBITSZBY8-1:CLOG2INSNBITSZBY8]];
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (iF_iD_carryon && !halted_o)
 		iD_predictBranch <= bht_o;
 end
 `endif
 
 `ifdef PUPREDICTRET
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (iF_iD_carryon && !halted_o)
 		iD_predictRet <= ras0;
 end
 `endif
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		iF_flushed_ <= 1;
 		iF_pc <= rstaddr_i;
@@ -682,7 +682,7 @@ wire iD_insn_valid;
 
 wire _iF_flushed = ((iD_en ? iF_flushed : iD_flushed) || iF_eX_JumpOrBranch_i);
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	iD_rd_  <= gprDat[_iF_rdId];
 	iD_rs1_ <= gprDat[_iF_rs1Id];
 	iD_rs2_ <= gprDat[_iF_rs2Id];
@@ -691,28 +691,28 @@ always @ (posedge clk_i) begin
 	iD_rs2Rdy_ <= gprRdy[_iF_rs2Id];
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (iD_en)
 		iD_rdRdy__ <= 1'b0;
 	else if (iD_rdRdy)
 		iD_rdRdy__ <= 1'b1;
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (iD_en)
 		iD_rs1Rdy__ <= 1'b0;
 	else if (iD_rs1Rdy)
 		iD_rs1Rdy__ <= 1'b1;
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (iD_en)
 		iD_rs2Rdy__ <= 1'b0;
 	else if (iD_rs2Rdy)
 		iD_rs2Rdy__ <= 1'b1;
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		iD_flushed <= 1;
 	end else if (iD_en || excTriggered) begin
@@ -720,7 +720,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 
 	if (iD_en) begin
 
@@ -833,7 +833,7 @@ wire eX_eq_i = (eX_aluMinus_i[WORDBITSZ-1:0] == {WORDBITSZ{1'b0}});
 wire [(WORDBITSZ+1) -1 : 0] _eX_aluArg1_i = {iD_func7[5] & eX_aluArg1_i[WORDBITSZ-1], eX_aluArg1_i};
 
 reg [WORDBITSZ -1 : 0] eX_aluOut_i; // ### comb-block-reg.
-always @* begin
+always_comb begin
 	(* parallel_case *) case (iD_func3)
 	3'b000: eX_aluOut_i = ((iD_isALUreg && iD_func7[5]) ? eX_aluMinus_i[WORDBITSZ-1:0] : eX_aluPlus_i);
 	3'b001: eX_aluOut_i = (eX_aluArg1_i << eX_aluArg2_i[4:0]);
@@ -859,7 +859,7 @@ wire [WORDBITSZ -1 : 0] eX_rslt_i = (
 	                 eX_aluOut_i              );
 
 reg eX_takeBranch_i; // ### comb-block-reg.
-always @* begin
+always_comb begin
 	(* parallel_case *) case (iD_func3)
 	3'b000:  eX_takeBranch_i = eX_eq_i;
 	3'b001:  eX_takeBranch_i = !eX_eq_i;
@@ -903,7 +903,7 @@ assign iD_insn_valid = (iD_insn_valid_ && !excTriggered);
 
 `ifdef PUPREDICTBRANCH
 reg [2 -1 : 0] bht_i; // ### comb-block-reg.
-always @* begin
+always_comb begin
 	(* parallel_case *) case ({eX_takeBranch_i, eX_predictBranch_i})
 	3'b000:  bht_i = 2'b00;
 	3'b001:  bht_i = 2'b00;
@@ -915,14 +915,14 @@ always @* begin
 	default: bht_i = 2'b11;
 	endcase
 end
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (iD_isBranch && iD_insn_valid)
 		bht[iD_pc[CLOG2BHTSETCNT+CLOG2INSNBITSZBY8-1:CLOG2INSNBITSZBY8]] <= bht_i;
 end
 `endif
 
 `ifdef PUPREDICTRET
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (iD_insn_valid) begin
 		if (iD_isCall) begin
 			ras0 <= iD_pc_plus_INSNBITSzBy8;
@@ -979,7 +979,7 @@ assign dCache_invd_w = (iD_isFence  && iD_insn_valid);
 assign iCache_invd_w = (iD_isFencei && iD_insn_valid);
 
 reg eX_JumpOrBranch;
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i || excTriggered) begin
 		eX_flushed <= 1;
 		eX_JumpOrBranch <= 1;
@@ -993,7 +993,7 @@ reg rdWasLocked;
 
 reg eX_isExc;
 reg eX_lateWritebackInsn;
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (eX_en || excTriggered) begin
 		eX_pc   <= iD_pc;
 		eX_insn <= iD_insn;
@@ -1054,7 +1054,7 @@ wire rW_carryon = (!rW_stalled);
 
 assign eX_rW_carryon = rW_carryon;
 
-always @* begin
+always_comb begin
 
 	rW_we_i  = 0;
 	rW_idx_i = 0;
@@ -1100,7 +1100,7 @@ wire eX_isExc0_i = (excTriggered && excCause == {1'b0, 16'd0} && eX_JumpOrBranch
 // eX_isExc0_i is raised when iD_pc was at the instruction following
 // the exception causing instruction when excTriggered was high.
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (ldUnit_memAck) begin
 		iD_rW_rdId_isTrue <= (|ldUnit_rqsts_rIdx);
 		iD_rW_rdId <= ldUnit_rqsts_rIdx;
@@ -1146,7 +1146,7 @@ always @ (posedge clk_i) begin
 	end
 end
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i || (rW_we_i && (rW_stalled || (!eX_isExc && !eX_isExc0_i))))
 		gprDat[rst_i ? 2 : rW_idx_i] <= (rst_i ? spval_i : rW_dat_i);
 end
@@ -1160,7 +1160,7 @@ wire gprUnlock = (
 	!(gprLock && _iF_rdId == rW_idx_i) &&
 	!(!iD_flushed && iD_rdId == rW_idx_i && !excTriggered));
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i)
 		gprRdy <= {GPRCNT{1'b1}};
 	else begin
@@ -1172,7 +1172,7 @@ always @ (posedge clk_i) begin
 end
 
 // Capture whether a gpr was already locked when it got locked.
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (iD_en && gprLock)
 		rdWasLocked <= (!gprRdy[_iF_rdId] && (!rW_we_i || (_iF_rdId != rW_idx_i)));
 	else if (rdWasLocked && rW_we_i && iD_rdId == rW_idx_i)
@@ -1180,7 +1180,7 @@ always @ (posedge clk_i) begin
 end
 
 `ifdef SIMULATION
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rW_carryon) begin
 		rW_pc   <= eX_pc;
 		rW_insn <= eX_insn;
