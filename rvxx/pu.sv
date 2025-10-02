@@ -834,7 +834,7 @@ wire [(WORDBITSZ+1) -1 : 0] _eX_aluArg1_i = {iD_func7[5] & eX_aluArg1_i[WORDBITS
 
 reg [WORDBITSZ -1 : 0] eX_aluOut_i; // ### comb-block-reg.
 always_comb begin
-	(* parallel_case *) case (iD_func3)
+	unique case (iD_func3)
 	3'b000: eX_aluOut_i = ((iD_isALUreg && iD_func7[5]) ? eX_aluMinus_i[WORDBITSZ-1:0] : eX_aluPlus_i);
 	3'b001: eX_aluOut_i = (eX_aluArg1_i << eX_aluArg2_i[4:0]);
 	3'b010: eX_aluOut_i = {{(WORDBITSZ-1){1'b0}}, eX_lt_i};
@@ -850,17 +850,19 @@ reg [WORDBITSZ -1 : 0] eX_csrOut_i; // ### comb-block-reg.
 
 wire [WORDBITSZ -1 : 0] eX_StoreCondOut_i;
 
-wire [WORDBITSZ -1 : 0] eX_rslt_i = (
-	iD_isJAlOrJALR ? (iD_pc_plus_INSNBITSzBy8) :
-	iD_isLUI       ? iD_Uimm                   :
-	iD_isAUIPC     ? iD_pc_plus_iD_Uimm        :
-	iD_isCSR       ? eX_csrOut_i               :
-	iD_isSc        ? eX_StoreCondOut_i         :
-	                 eX_aluOut_i              );
+reg [WORDBITSZ -1 : 0] eX_rslt_i; // ### comb-block-reg.
+always_comb begin
+	unique if (iD_isJAlOrJALR) eX_rslt_i = iD_pc_plus_INSNBITSzBy8;
+	else   if (iD_isLUI)       eX_rslt_i = iD_Uimm;
+	else   if (iD_isAUIPC)     eX_rslt_i = iD_pc_plus_iD_Uimm;
+	else   if (iD_isCSR)       eX_rslt_i = eX_csrOut_i;
+	else   if (iD_isSc)        eX_rslt_i = eX_StoreCondOut_i;
+	else                       eX_rslt_i = eX_aluOut_i;
+end
 
 reg eX_takeBranch_i; // ### comb-block-reg.
 always_comb begin
-	(* parallel_case *) case (iD_func3)
+	unique case (iD_func3)
 	3'b000:  eX_takeBranch_i = eX_eq_i;
 	3'b001:  eX_takeBranch_i = !eX_eq_i;
 	3'b100:  eX_takeBranch_i = eX_lt_i;
@@ -904,7 +906,7 @@ assign iD_insn_valid = (iD_insn_valid_ && !excTriggered);
 `ifdef PUPREDICTBRANCH
 reg [2 -1 : 0] bht_i; // ### comb-block-reg.
 always_comb begin
-	(* parallel_case *) case ({eX_takeBranch_i, eX_predictBranch_i})
+	unique case ({eX_takeBranch_i, eX_predictBranch_i})
 	3'b000:  bht_i = 2'b00;
 	3'b001:  bht_i = 2'b00;
 	3'b010:  bht_i = 2'b01;

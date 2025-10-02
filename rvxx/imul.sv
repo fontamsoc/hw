@@ -171,7 +171,7 @@ assign gprid_o = operands[((WORDBITSZ*2)+CLOG2GPRCNT)-1:WORDBITSZ*2];
 always_comb begin
 	// Logic used by the multiplication; compute the multiplier
 	// times 0, 1, 2 or 3 based on cumulator[1:0].
-	if (cumulator[1:0] == 1)
+	unique if (cumulator[1:0] == 1)
 		mulx = {{2{1'b0}}, rval};
 	else if (cumulator[1:0] == 2)
 		mulx = {1'b0, rval, 1'b0};

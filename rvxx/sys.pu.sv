@@ -17,7 +17,7 @@ always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrMedeleg <= 0;
 	end else if (iD_isCSRvalid && iD_Iimm[11:0] == 12'h302) begin
-		if          (iD_func3[1:0] == 2'b01) begin // csrrw.
+		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			csrMedeleg <= ((csrMedeleg & ~csrInMedelegMask) | (csrIn[15:0] & csrInMedelegMask));
 		end else if (iD_func3[1:0] == 2'b10) begin // csrrs.
 			csrMedeleg <= (csrMedeleg | (csrIn[15:0] & csrInMedelegMask));
@@ -32,7 +32,7 @@ always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrMideleg <= 0;
 	end else if (iD_isCSRvalid && iD_Iimm[11:0] == 12'h303) begin
-		if          (iD_func3[1:0] == 2'b01) begin // csrrw.
+		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			csrMideleg <= ((csrMideleg & ~csrInMidelegMask) | (csrIn[15:0] & csrInMidelegMask));
 		end else if (iD_func3[1:0] == 2'b10) begin // csrrs.
 			csrMideleg <= (csrMideleg | (csrIn[15:0] & csrInMidelegMask));
@@ -50,7 +50,7 @@ always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrMip__ <= 0;
 	end else if (iD_isCSRvalid && iD_Iimm[11:10] == 2'b00 && iD_Iimm[7:0] == 8'h44) begin
-		if          (iD_func3[1:0] == 2'b01) begin // csrrw.
+		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			csrMip__ <= ((csrMip__ & ~csrInMipMask) | (csrIn[15:0] & csrInMipMask));
 		end else if (iD_func3[1:0] == 2'b10) begin // csrrs.
 			csrMip__ <= (csrMip__ | (csrIn[15:0] & csrInMipMask));
@@ -86,7 +86,7 @@ always_ff @(posedge clk_i) begin
 	if (rst_i) begin // If (csrMhartid != 0) reset csrMie.MEIE to 1.
 		csrMie <= (csrMhartidIsNonNull ? 16'b0000100000000000 : 16'd0);
 	end else if (iD_isCSRvalid && iD_Iimm[11:10] == 2'b00 && iD_Iimm[7:0] == 8'h04) begin
-		if          (iD_func3[1:0] == 2'b01) begin // csrrw.
+		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			csrMie <= ((csrMie & ~csrInMieMask) | (csrIn[15:0] & csrInMieMask));
 		end else if (iD_func3[1:0] == 2'b10) begin // csrrs.
 			csrMie <= (csrMie | (csrIn[15:0] & csrInMieMask));
@@ -101,7 +101,7 @@ always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrMtimecmp <= 0;
 	end else if (iD_isCSRvalid && (iD_Iimm[11:5] == h34d[11:5]) && (iD_Iimm[3:0] == h34d[3:0])) begin
-		if          (iD_func3[1:0] == 2'b01) begin // csrrw.
+		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			if (iD_Iimm[4])
 				csrMtimecmp[64-1:WORDBITSZ] <= csrIn;
 			else
@@ -125,7 +125,7 @@ always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrStimecmp <= 0;
 	end else if (iD_isCSRvalid && (iD_Iimm[11:5] == h14d[11:5]) && (iD_Iimm[3:0] == h14d[3:0])) begin
-		if          (iD_func3[1:0] == 2'b01) begin // csrrw.
+		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			if (iD_Iimm[4])
 				csrStimecmp[64-1:WORDBITSZ] <= csrIn;
 			else
@@ -235,7 +235,7 @@ always_ff @(posedge clk_i) begin
 		// When starting from halt, mtvec must be non-null (to prevent fatalExc) and valid.
 		csrMtvec <= (csrMhartidIsNonNull ? rstaddr_i : {WORDBITSZ{1'b0}});
 	end else if (iD_isCSRvalid && iD_Iimm[11:0] == 12'h305) begin
-		if          (iD_func3[1:0] == 2'b01) begin // csrrw.
+		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			csrMtvec <= ((csrMtvec & ~csrInMtvecMask) | (csrIn & csrInMtvecMask));
 		end else if (iD_func3[1:0] == 2'b10) begin // csrrs.
 			csrMtvec <= (csrMtvec | (csrIn & csrInMtvecMask));
@@ -250,7 +250,7 @@ always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrStvec <= 0;
 	end else if (iD_isCSRvalid && iD_Iimm[11:0] == 12'h105) begin
-		if          (iD_func3[1:0] == 2'b01) begin // csrrw.
+		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			csrStvec <= ((csrStvec & ~csrInStvecMask) | (csrIn & csrInStvecMask));
 		end else if (iD_func3[1:0] == 2'b10) begin // csrrs.
 			csrStvec <= (csrStvec | (csrIn & csrInStvecMask));
@@ -444,7 +444,7 @@ always_ff @(posedge clk_i) begin
 				csrMstatus[7], /*MIE*/
 				csrMstatus[2:0]};
 	end else if (iD_isCSRvalid && iD_Iimm[11:10] == 2'b00 && iD_Iimm[7:0] == 8'h00) begin
-		if          (iD_func3[1:0] == 2'b01) begin // csrrw.
+		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			csrMstatus <= ((csrMstatus & ~csrInMstatusMask) | (csrIn & csrInMstatusMask));
 		end else if (iD_func3[1:0] == 2'b10) begin // csrrs.
 			csrMstatus <= (csrMstatus | (csrIn & csrInMstatusMask));
@@ -462,7 +462,7 @@ always_ff @(posedge clk_i) begin
 		if (excNxtPrivIsM)
 			csrMepc <= excEpc;
 	end else if (iD_isCSRvalid && iD_Iimm[11:0] == 12'h341) begin
-		if          (iD_func3[1:0] == 2'b01) begin // csrrw.
+		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			csrMepc <= ((csrMepc & ~csrInMepcMask) | (csrIn & csrInMepcMask));
 		end else if (iD_func3[1:0] == 2'b10) begin // csrrs.
 			csrMepc <= (csrMepc | (csrIn & csrInMepcMask));
@@ -480,7 +480,7 @@ always_ff @(posedge clk_i) begin
 		if (excNxtPrivIsS)
 			csrSepc <= excEpc;
 	end else if (iD_isCSRvalid && iD_Iimm[11:0] == 12'h141) begin
-		if          (iD_func3[1:0] == 2'b01) begin // csrrw.
+		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			csrSepc <= ((csrSepc & ~csrInSepcMask) | (csrIn & csrInSepcMask));
 		end else if (iD_func3[1:0] == 2'b10) begin // csrrs.
 			csrSepc <= (csrSepc | (csrIn & csrInSepcMask));
@@ -497,7 +497,7 @@ always_ff @(posedge clk_i) begin
 		if (excNxtPrivIsM)
 			csrMcause <= {excCause[16], {(WORDBITSZ-17){1'b0}}, excCause[15:0]};
 	end else if (iD_isCSRvalid && iD_Iimm[11:0] == 12'h342) begin
-		if          (iD_func3[1:0] == 2'b01) begin // csrrw.
+		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			csrMcause <= csrIn;
 		end else if (iD_func3[1:0] == 2'b10) begin // csrrs.
 			csrMcause <= (csrMcause | csrIn);
@@ -514,7 +514,7 @@ always_ff @(posedge clk_i) begin
 		if (excNxtPrivIsS)
 			csrScause <= {excCause[16], {(WORDBITSZ-17){1'b0}}, excCause[15:0]};
 	end else if (iD_isCSRvalid && iD_Iimm[11:0] == 12'h142) begin
-		if          (iD_func3[1:0] == 2'b01) begin // csrrw.
+		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			csrScause <= csrIn;
 		end else if (iD_func3[1:0] == 2'b10) begin // csrrs.
 			csrScause <= (csrScause | csrIn);
@@ -531,7 +531,7 @@ always_ff @(posedge clk_i) begin
 		if (excNxtPrivIsM)
 			csrMtval <= excTval;
 	end else if (iD_isCSRvalid && iD_Iimm[11:0] == 12'h343) begin
-		if          (iD_func3[1:0] == 2'b01) begin // csrrw.
+		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			csrMtval <= csrIn;
 		end else if (iD_func3[1:0] == 2'b10) begin // csrrs.
 			csrMtval <= (csrMtval | csrIn);
@@ -548,7 +548,7 @@ always_ff @(posedge clk_i) begin
 		if (excNxtPrivIsS)
 			csrStval <= excTval;
 	end else if (iD_isCSRvalid && iD_Iimm[11:0] == 12'h143) begin
-		if          (iD_func3[1:0] == 2'b01) begin // csrrw.
+		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			csrStval <= csrIn;
 		end else if (iD_func3[1:0] == 2'b10) begin // csrrs.
 			csrStval <= (csrStval | csrIn);
@@ -565,7 +565,7 @@ always_ff @(posedge clk_i) begin
 		if (excNxtPrivIsM)
 			csrMtval2 <= excTval2;
 	end else if (iD_isCSRvalid && iD_Iimm[11:0] == 12'h34b) begin
-		if          (iD_func3[1:0] == 2'b01) begin // csrrw.
+		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			csrMtval2 <= csrIn;
 		end else if (iD_func3[1:0] == 2'b10) begin // csrrs.
 			csrMtval2 <= (csrMtval2 | csrIn);
@@ -582,7 +582,7 @@ always_ff @(posedge clk_i) begin
 		if (excNxtPrivIsS)
 			csrStval2 <= excTval2;
 	end else if (iD_isCSRvalid && iD_Iimm[11:0] == 12'h14b) begin
-		if          (iD_func3[1:0] == 2'b01) begin // csrrw.
+		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			csrStval2 <= csrIn;
 		end else if (iD_func3[1:0] == 2'b10) begin // csrrs.
 			csrStval2 <= (csrStval2 | csrIn);
@@ -596,7 +596,7 @@ always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrMscratch <= 0;
 	end else if (iD_isCSRvalid && iD_Iimm[11:0] == 12'h340) begin
-		if          (iD_func3[1:0] == 2'b01) begin // csrrw.
+		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			csrMscratch <= csrIn;
 		end else if (iD_func3[1:0] == 2'b10) begin // csrrs.
 			csrMscratch <= (csrMscratch | csrIn);
@@ -610,7 +610,7 @@ always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrSscratch <= 0;
 	end else if (iD_isCSRvalid && iD_Iimm[11:0] == 12'h140) begin
-		if          (iD_func3[1:0] == 2'b01) begin // csrrw.
+		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			csrSscratch <= csrIn;
 		end else if (iD_func3[1:0] == 2'b10) begin // csrrs.
 			csrSscratch <= (csrSscratch | csrIn);
@@ -637,7 +637,7 @@ always_comb
 
 generate if (WORDBITSZ == 32) begin
 always_comb begin
-	(* parallel_case *) case (iD_Iimm[11:0])
+	unique case (iD_Iimm[11:0])
 	12'h100: eX_csrOut_i = (csrMstatus & 'b00000000000011000000000100110010);
 	12'h104: eX_csrOut_i = (csrMie & 16'b0000001000100010);
 	12'h105: eX_csrOut_i = csrStvec;
@@ -677,7 +677,7 @@ end
 end endgenerate
 generate if (WORDBITSZ == 64) begin
 always_comb begin
-	(* parallel_case *) case (iD_Iimm[11:0])
+	unique case (iD_Iimm[11:0])
 	12'h100: eX_csrOut_i = (csrMstatus & 'b00000000000011000000000100110010);
 	12'h104: eX_csrOut_i = (csrMie & 16'b0000001000100010);
 	12'h105: eX_csrOut_i = csrStvec;

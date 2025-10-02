@@ -347,47 +347,71 @@ always_ff @(posedge clk_i) begin
 
 		state <= IDLE;
 
-	end else if (state == IDLE) begin
+	end else begin
 
-		if (rst_r) begin
+		unique if (state == IDLE) begin
 
-			if (m_wb_addr_r == (CACHESETCNT - 1)) begin
-				rst_r <= 0;
-			end else
-				m_wb_addr_r <= m_wb_addr_r + 1'b1;
+			if (rst_r) begin
 
-		end else if (_m_wb_stb_i || cache_miss) begin
+				if (m_wb_addr_r == (CACHESETCNT - 1)) begin
+					rst_r <= 0;
+				end else
+					m_wb_addr_r <= m_wb_addr_r + 1'b1;
 
-			if (cache_miss) begin
+			end else if (_m_wb_stb_i || cache_miss) begin
 
-				if (cache_drt_o_we_wayidx && !cache_tag_hit && !cmiss_r) begin
+				if (cache_miss) begin
 
-					m_wb_ack <= 0;
+					if (cache_drt_o_we_wayidx && !cache_tag_hit && !cmiss_r) begin
 
-					s_wb_cyc_o_ <= 1;
-					s_wb_stb_o <= 1;
-					s_wb_we_o <= 1;
-					s_wb_addr_o <= {cache_tag_o[cache_we_wayidx], cache_wridx};
-					s_wb_sel_o <= cache_sel_o[cache_we_wayidx];
-					s_wb_dat_o <= cache_dat_o[cache_we_wayidx];
+						m_wb_ack <= 0;
 
-					state <= EVICT;
+						s_wb_cyc_o_ <= 1;
+						s_wb_stb_o <= 1;
+						s_wb_we_o <= 1;
+						s_wb_addr_o <= {cache_tag_o[cache_we_wayidx], cache_wridx};
+						s_wb_sel_o <= cache_sel_o[cache_we_wayidx];
+						s_wb_dat_o <= cache_dat_o[cache_we_wayidx];
 
-				end else if (!m_wb_we_r || cmiss_r) begin
+						state <= EVICT;
 
-					m_wb_ack <= 0;
+					end else if (!m_wb_we_r || cmiss_r) begin
 
-					s_wb_cyc_o_ <= 1;
-					s_wb_stb_o <= 1;
-					s_wb_we_o <= m_wb_we_r;
-					s_wb_addr_o <= m_wb_addr_r;
-					s_wb_sel_o <= cmiss_r ? m_wb_sel_r : {(WORDBITSZ/8){1'b1}};
-					if (m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
-						s_wb_dat_o <= m_wb_dat_r;
+						m_wb_ack <= 0;
 
-					state <= REFILL;
+						s_wb_cyc_o_ <= 1;
+						s_wb_stb_o <= 1;
+						s_wb_we_o <= m_wb_we_r;
+						s_wb_addr_o <= m_wb_addr_r;
+						s_wb_sel_o <= cmiss_r ? m_wb_sel_r : {(WORDBITSZ/8){1'b1}};
+						if (m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
+							s_wb_dat_o <= m_wb_dat_r;
 
-				end else if (_m_wb_stb_i) begin
+						state <= REFILL;
+
+					end else if (_m_wb_stb_i) begin
+
+						m_wb_ack <= 1;
+
+						m_wb_we_r <= m_wb_we_i;
+						m_wb_addr_r <= m_wb_addr_i;
+						m_wb_sel_r <= m_wb_sel_i;
+						m_wb_dat_r <= m_wb_dat_i;
+
+						conly_r <= conly_i;
+						cmiss_r <= cmiss_i;
+
+					end else begin
+
+						m_wb_ack <= 0;
+
+						m_wb_we_r <= 0;
+
+						conly_r <= 0;
+						cmiss_r <= 0;
+					end
+
+				end else begin
 
 					m_wb_ack <= 1;
 
@@ -398,45 +422,50 @@ always_ff @(posedge clk_i) begin
 
 					conly_r <= conly_i;
 					cmiss_r <= cmiss_i;
-
-				end else begin
-
-					m_wb_ack <= 0;
-
-					m_wb_we_r <= 0;
-
-					conly_r <= 0;
-					cmiss_r <= 0;
 				end
 
 			end else begin
 
-				m_wb_ack <= 1;
+				m_wb_ack <= 0;
 
-				m_wb_we_r <= m_wb_we_i;
-				m_wb_addr_r <= m_wb_addr_i;
-				m_wb_sel_r <= m_wb_sel_i;
-				m_wb_dat_r <= m_wb_dat_i;
+				m_wb_we_r <= 0;
 
-				conly_r <= conly_i;
-				cmiss_r <= cmiss_i;
+				conly_r <= 0;
+				cmiss_r <= 0;
 			end
 
-		end else begin
+		end else if (state == EVICT) begin
 
-			m_wb_ack <= 0;
+			if (MAXPENDINGACK ? !s_wb_bsy_i : _s_wb_ack_i) begin
 
-			m_wb_we_r <= 0;
+				if (m_wb_we_r) begin
 
-			conly_r <= 0;
-			cmiss_r <= 0;
-		end
+					m_wb_we_r <= 0;
 
-	end else if (state == EVICT) begin
+					s_wb_cyc_o_ <= 0;
+					s_wb_stb_o <= 0;
 
-		if (MAXPENDINGACK ? !s_wb_bsy_i : _s_wb_ack_i) begin
+					conly_r <= 0;
+					cmiss_r <= 0;
 
-			if (m_wb_we_r) begin
+					state <= IDLE;
+
+				end else begin
+
+					s_wb_stb_o <= 1;
+					s_wb_we_o <= 0;
+					s_wb_addr_o <= m_wb_addr_r;
+					s_wb_sel_o <= {(WORDBITSZ/8){1'b1}};
+
+					state <= REFILL;
+				end
+
+			end else if (!s_wb_bsy_i && !MAXPENDINGACK)
+				s_wb_stb_o <= 0;
+
+		end else if (state == REFILL) begin
+
+			if ((m_wb_we_r && !s_wb_bsy_i && MAXPENDINGACK) || refill_ack) begin
 
 				m_wb_we_r <= 0;
 
@@ -448,35 +477,9 @@ always_ff @(posedge clk_i) begin
 
 				state <= IDLE;
 
-			end else begin
-
-				s_wb_stb_o <= 1;
-				s_wb_we_o <= 0;
-				s_wb_addr_o <= m_wb_addr_r;
-				s_wb_sel_o <= {(WORDBITSZ/8){1'b1}};
-
-				state <= REFILL;
-			end
-
-		end else if (!s_wb_bsy_i && !MAXPENDINGACK)
-			s_wb_stb_o <= 0;
-
-	end else if (state == REFILL) begin
-
-		if ((m_wb_we_r && !s_wb_bsy_i && MAXPENDINGACK) || refill_ack) begin
-
-			m_wb_we_r <= 0;
-
-			s_wb_cyc_o_ <= 0;
-			s_wb_stb_o <= 0;
-
-			conly_r <= 0;
-			cmiss_r <= 0;
-
-			state <= IDLE;
-
-		end else if (!s_wb_bsy_i)
-			s_wb_stb_o <= 0;
+			end else if (!s_wb_bsy_i)
+				s_wb_stb_o <= 0;
+		end
 	end
 end
 
