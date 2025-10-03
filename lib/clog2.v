@@ -2,23 +2,14 @@
 // (c) William Fonkou Tambe
 
 // Function which compute the ceiling of log2().
-// When the argument is 0 or 1, the value returned is 1.
+// When the argument is 0 or 1, the return value is 1.
 function automatic integer clog2;
-
-	input integer value;
-	integer retval;
-
+	input integer val;
 	begin
-		if (value > 1) begin
-
-			value = value - 1;
-
-			for (retval = 0; value > 0; retval = retval + 1)
-				value = value >> 1;
-
-		end else retval = 1;
-
-		clog2 = retval; // return result.
+		if (val > 1) begin
+			val = val - 1;
+			for (clog2 = 0; val > 0; clog2 = clog2 + 1)
+				val = val >> 1;
+		end else clog2 = 1;
 	end
-
 endfunction
