@@ -258,20 +258,3 @@ wb_mux #(
 	,.s_wb_dat_i   (__s_wbpi_dati_w)
 	,.s_wb_mapsz_i (__s_wbpi_mapsz_w)
 );
-
-`ifdef DEVTBL_V
-wire [(WORDBITSZ * WBPI_SLAVECOUNT) -1 : 0]                 devtbl_id_w;
-wire [WORDBITSZ -1 : 0]                                     dev_id_w[WBPI_SLAVECOUNT -1 : 0];
-wire [((WORDBITSZ-WBPI_MSBSZIGN) * WBPI_SLAVECOUNT) -1 : 0] devtbl_mapsz_w;
-wire [WBPI_SLAVECOUNT -1 : 0]                               devtbl_useirq_w;
-wire [WBPI_SLAVECOUNT -1 : 0]                               dev_useirq_w;
-genvar gen_devtbl_idx;
-generate for (
-	gen_devtbl_idx = 0;
-	gen_devtbl_idx < WBPI_SLAVECOUNT;
-	gen_devtbl_idx = gen_devtbl_idx + 1) begin :gen_devtbl
-assign devtbl_id_w[((gen_devtbl_idx+1) * WORDBITSZ) -1 : gen_devtbl_idx * WORDBITSZ] = dev_id_w[gen_devtbl_idx];
-assign devtbl_mapsz_w[((gen_devtbl_idx+1) * (WORDBITSZ-WBPI_MSBSZIGN)) -1 : gen_devtbl_idx * (WORDBITSZ-WBPI_MSBSZIGN)] = s_wbpi_mapsz_w[gen_devtbl_idx];
-end endgenerate
-assign devtbl_useirq_w = dev_useirq_w;
-`endif
