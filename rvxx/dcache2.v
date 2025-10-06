@@ -158,10 +158,10 @@ wire [CLOG2CACHESETCNT -1 : 0] cache_wridx = m_wb_addr_r[CLOG2CACHESETCNT -1 : 0
 
 wire [CLOG2CACHESETCNT -1 : 0] _cache_rdidx = (_m_wb_stb_i ? cache_rdidx : cache_wridx);
 
-reg [CACHETAGBITSIZE -1 : 0] cache_tag_o [CACHEWAYCNT -1 : 0];
-reg [(WORDBITSZ/8) -1 : 0]   cache_sel_o [CACHEWAYCNT -1 : 0];
-reg [WORDBITSZ -1 : 0]       cache_dat_o [CACHEWAYCNT -1 : 0];
-reg                          cache_drt_o [CACHEWAYCNT -1 : 0];
+reg [CACHETAGBITSIZE -1 : 0] cache_tag_o [CACHEWAYCNT];
+reg [(WORDBITSZ/8) -1 : 0]   cache_sel_o [CACHEWAYCNT];
+reg [WORDBITSZ -1 : 0]       cache_dat_o [CACHEWAYCNT];
+reg                          cache_drt_o [CACHEWAYCNT];
 
 wire [CACHEWAYCNT -1 : 0] cache_tag_hit_;
 wire cache_tag_hit = (|cache_tag_hit_);
@@ -218,10 +218,10 @@ generate for (
 	gen_cache_idx < CACHEWAYCNT;
 	gen_cache_idx = gen_cache_idx + 1) begin :gen_cache
 
-reg [CACHETAGBITSIZE -1 : 0] cache_tags [CACHESETCNT -1 : 0];
-reg [(WORDBITSZ/8) -1 : 0]   cache_sels [CACHESETCNT -1 : 0];
-reg [WORDBITSZ -1 : 0]       cache_dats [CACHESETCNT -1 : 0];
-reg                          cache_drts [CACHESETCNT -1 : 0];
+reg [CACHETAGBITSIZE -1 : 0] cache_tags [CACHESETCNT];
+reg [(WORDBITSZ/8) -1 : 0]   cache_sels [CACHESETCNT];
+reg [WORDBITSZ -1 : 0]       cache_dats [CACHESETCNT];
+reg                          cache_drts [CACHESETCNT];
 
 initial begin
 	if (INITFILE != "" && gen_cache_idx == 0 /* TODO: check whether worst logic */) begin

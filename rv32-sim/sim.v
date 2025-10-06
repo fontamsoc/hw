@@ -75,26 +75,26 @@ wire wbpi_rst_w = rst_w;
 wire wbpi_clk_w = clk_i;
 // The peripheral interconnect is instantiated in a separate file to keep this file clean.
 // Master devices must use the following signals to plug onto the peripheral interconnect:
-// 	input                                          m_wbpi_cyc_w  [WBPI_MASTERCOUNT -1 : 0];
-// 	input                                          m_wbpi_stb_w  [WBPI_MASTERCOUNT -1 : 0];
-// 	input                                          m_wbpi_we_w   [WBPI_MASTERCOUNT -1 : 0];
-// 	input  [(WBPI_ADDRBITSZ-WBPI_MSBSZIGN) -1 : 0] m_wbpi_addr_w [WBPI_MASTERCOUNT -1 : 0];
-// 	input  [(WBPI_WORDBITSZ/8) -1 : 0]             m_wbpi_sel_w  [WBPI_MASTERCOUNT -1 : 0];
-// 	input  [WBPI_WORDBITSZ -1 : 0]                 m_wbpi_dati_w [WBPI_MASTERCOUNT -1 : 0];
-// 	output                                         m_wbpi_bsy_w  [WBPI_MASTERCOUNT -1 : 0];
-// 	output                                         m_wbpi_ack_w  [WBPI_MASTERCOUNT -1 : 0];
-// 	output [WBPI_WORDBITSZ -1 : 0]                 m_wbpi_dato_w [WBPI_MASTERCOUNT -1 : 0];
+// 	input                                          m_wbpi_cyc_w  [WBPI_MASTERCOUNT];
+// 	input                                          m_wbpi_stb_w  [WBPI_MASTERCOUNT];
+// 	input                                          m_wbpi_we_w   [WBPI_MASTERCOUNT];
+// 	input  [(WBPI_ADDRBITSZ-WBPI_MSBSZIGN) -1 : 0] m_wbpi_addr_w [WBPI_MASTERCOUNT];
+// 	input  [(WBPI_WORDBITSZ/8) -1 : 0]             m_wbpi_sel_w  [WBPI_MASTERCOUNT];
+// 	input  [WBPI_WORDBITSZ -1 : 0]                 m_wbpi_dati_w [WBPI_MASTERCOUNT];
+// 	output                                         m_wbpi_bsy_w  [WBPI_MASTERCOUNT];
+// 	output                                         m_wbpi_ack_w  [WBPI_MASTERCOUNT];
+// 	output [WBPI_WORDBITSZ -1 : 0]                 m_wbpi_dato_w [WBPI_MASTERCOUNT];
 // Slave devices must use the following signals to plug onto the peripheral interconnect:
-// 	output                                         s_wbpi_cyc_w   [WBPI_SLAVECOUNT -1 : 0];
-// 	output                                         s_wbpi_stb_w   [WBPI_SLAVECOUNT -1 : 0];
-// 	output                                         s_wbpi_we_w    [WBPI_SLAVECOUNT -1 : 0];
-// 	output [(WBPI_ADDRBITSZ-WBPI_MSBSZIGN) -1 : 0] s_wbpi_addr_w  [WBPI_SLAVECOUNT -1 : 0];
-// 	output [(WBPI_WORDBITSZ/8) -1 : 0]             s_wbpi_sel_w   [WBPI_SLAVECOUNT -1 : 0];
-// 	output [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dato_w  [WBPI_SLAVECOUNT -1 : 0];
-// 	input                                          s_wbpi_bsy_w   [WBPI_SLAVECOUNT -1 : 0];
-// 	input                                          s_wbpi_ack_w   [WBPI_SLAVECOUNT -1 : 0];
-// 	input  [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dati_w  [WBPI_SLAVECOUNT -1 : 0];
-// 	input  [(WBPI_WORDBITSZ-WBPI_MSBSZIGN) -1 : 0] s_wbpi_mapsz_w [WBPI_SLAVECOUNT -1 : 0];
+// 	output                                         s_wbpi_cyc_w   [WBPI_SLAVECOUNT];
+// 	output                                         s_wbpi_stb_w   [WBPI_SLAVECOUNT];
+// 	output                                         s_wbpi_we_w    [WBPI_SLAVECOUNT];
+// 	output [(WBPI_ADDRBITSZ-WBPI_MSBSZIGN) -1 : 0] s_wbpi_addr_w  [WBPI_SLAVECOUNT];
+// 	output [(WBPI_WORDBITSZ/8) -1 : 0]             s_wbpi_sel_w   [WBPI_SLAVECOUNT];
+// 	output [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dato_w  [WBPI_SLAVECOUNT];
+// 	input                                          s_wbpi_bsy_w   [WBPI_SLAVECOUNT];
+// 	input                                          s_wbpi_ack_w   [WBPI_SLAVECOUNT];
+// 	input  [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dati_w  [WBPI_SLAVECOUNT];
+// 	input  [(WBPI_WORDBITSZ-WBPI_MSBSZIGN) -1 : 0] s_wbpi_mapsz_w [WBPI_SLAVECOUNT];
 `include "lib/wbpi_inst.v"
 
 localparam IRQ_SERIAL = 0;

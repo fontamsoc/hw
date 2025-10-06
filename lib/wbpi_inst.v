@@ -6,26 +6,26 @@
 // -1 account for the msb oring ignored bits.
 localparam WBPI_MSBSZIGN = (WBPI_WORDBITSZ-clog2(WBPI_ADDRLIMIT)-1);
 
-wire                                         m_wbpi_cyc_w  [WBPI_MASTERCOUNT -1 : 0];
-wire                                         m_wbpi_stb_w  [WBPI_MASTERCOUNT -1 : 0];
-wire                                         m_wbpi_we_w   [WBPI_MASTERCOUNT -1 : 0];
-wire [(WBPI_ADDRBITSZ-WBPI_MSBSZIGN) -1 : 0] m_wbpi_addr_w [WBPI_MASTERCOUNT -1 : 0];
-wire [(WBPI_WORDBITSZ/8) -1 : 0]             m_wbpi_sel_w  [WBPI_MASTERCOUNT -1 : 0];
-wire [WBPI_WORDBITSZ -1 : 0]                 m_wbpi_dati_w [WBPI_MASTERCOUNT -1 : 0];
-wire                                         m_wbpi_bsy_w  [WBPI_MASTERCOUNT -1 : 0];
-wire                                         m_wbpi_ack_w  [WBPI_MASTERCOUNT -1 : 0];
-wire [WBPI_WORDBITSZ -1 : 0]                 m_wbpi_dato_w [WBPI_MASTERCOUNT -1 : 0];
+wire                                         m_wbpi_cyc_w  [WBPI_MASTERCOUNT];
+wire                                         m_wbpi_stb_w  [WBPI_MASTERCOUNT];
+wire                                         m_wbpi_we_w   [WBPI_MASTERCOUNT];
+wire [(WBPI_ADDRBITSZ-WBPI_MSBSZIGN) -1 : 0] m_wbpi_addr_w [WBPI_MASTERCOUNT];
+wire [(WBPI_WORDBITSZ/8) -1 : 0]             m_wbpi_sel_w  [WBPI_MASTERCOUNT];
+wire [WBPI_WORDBITSZ -1 : 0]                 m_wbpi_dati_w [WBPI_MASTERCOUNT];
+wire                                         m_wbpi_bsy_w  [WBPI_MASTERCOUNT];
+wire                                         m_wbpi_ack_w  [WBPI_MASTERCOUNT];
+wire [WBPI_WORDBITSZ -1 : 0]                 m_wbpi_dato_w [WBPI_MASTERCOUNT];
 
-wire                                         s_wbpi_cyc_w   [WBPI_SLAVECOUNT -1 : 0];
-wire                                         s_wbpi_stb_w   [WBPI_SLAVECOUNT -1 : 0];
-wire                                         s_wbpi_we_w    [WBPI_SLAVECOUNT -1 : 0];
-wire [(WBPI_ADDRBITSZ-WBPI_MSBSZIGN) -1 : 0] s_wbpi_addr_w  [WBPI_SLAVECOUNT -1 : 0];
-wire [(WBPI_WORDBITSZ/8) -1 : 0]             s_wbpi_sel_w   [WBPI_SLAVECOUNT -1 : 0];
-wire [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dato_w  [WBPI_SLAVECOUNT -1 : 0];
-wire                                         s_wbpi_bsy_w   [WBPI_SLAVECOUNT -1 : 0];
-wire                                         s_wbpi_ack_w   [WBPI_SLAVECOUNT -1 : 0];
-wire [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dati_w  [WBPI_SLAVECOUNT -1 : 0];
-wire [(WBPI_WORDBITSZ-WBPI_MSBSZIGN) -1 : 0] s_wbpi_mapsz_w [WBPI_SLAVECOUNT -1 : 0];
+wire                                         s_wbpi_cyc_w   [WBPI_SLAVECOUNT];
+wire                                         s_wbpi_stb_w   [WBPI_SLAVECOUNT];
+wire                                         s_wbpi_we_w    [WBPI_SLAVECOUNT];
+wire [(WBPI_ADDRBITSZ-WBPI_MSBSZIGN) -1 : 0] s_wbpi_addr_w  [WBPI_SLAVECOUNT];
+wire [(WBPI_WORDBITSZ/8) -1 : 0]             s_wbpi_sel_w   [WBPI_SLAVECOUNT];
+wire [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dato_w  [WBPI_SLAVECOUNT];
+wire                                         s_wbpi_bsy_w   [WBPI_SLAVECOUNT];
+wire                                         s_wbpi_ack_w   [WBPI_SLAVECOUNT];
+wire [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dati_w  [WBPI_SLAVECOUNT];
+wire [(WBPI_WORDBITSZ-WBPI_MSBSZIGN) -1 : 0] s_wbpi_mapsz_w [WBPI_SLAVECOUNT];
 
 wire [(1 * WBPI_MASTERCOUNT) -1 : 0]                              _m_wbpi_cyc_w;
 wire [(1 * WBPI_MASTERCOUNT) -1 : 0]                              _m_wbpi_stb_w;
@@ -48,15 +48,15 @@ wire [(1 * WBPI_SLAVECOUNT) -1 : 0]                              __s_wbpi_ack_w;
 wire [(WBPI_WORDBITSZ * WBPI_SLAVECOUNT) -1 : 0]                 __s_wbpi_dati_w;
 wire [((WBPI_WORDBITSZ-WBPI_MSBSZIGN) * WBPI_SLAVECOUNT) -1 : 0] __s_wbpi_mapsz_w;
 
-wire                                         s_wbpi_cyc_w_  [WBPI_SLAVECOUNT -1 : 0];
-wire                                         s_wbpi_stb_w_  [WBPI_SLAVECOUNT -1 : 0];
-wire                                         s_wbpi_we_w_   [WBPI_SLAVECOUNT -1 : 0];
-wire [(WBPI_ADDRBITSZ-WBPI_MSBSZIGN) -1 : 0] s_wbpi_addr_w_ [WBPI_SLAVECOUNT -1 : 0];
-wire [(WBPI_WORDBITSZ/8) -1 : 0]             s_wbpi_sel_w_  [WBPI_SLAVECOUNT -1 : 0];
-wire [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dato_w_ [WBPI_SLAVECOUNT -1 : 0];
-wire                                         _s_wbpi_bsy_w  [WBPI_SLAVECOUNT -1 : 0];
-wire                                         _s_wbpi_ack_w  [WBPI_SLAVECOUNT -1 : 0];
-wire [WBPI_WORDBITSZ -1 : 0]                 _s_wbpi_dati_w [WBPI_SLAVECOUNT -1 : 0];
+wire                                         s_wbpi_cyc_w_  [WBPI_SLAVECOUNT];
+wire                                         s_wbpi_stb_w_  [WBPI_SLAVECOUNT];
+wire                                         s_wbpi_we_w_   [WBPI_SLAVECOUNT];
+wire [(WBPI_ADDRBITSZ-WBPI_MSBSZIGN) -1 : 0] s_wbpi_addr_w_ [WBPI_SLAVECOUNT];
+wire [(WBPI_WORDBITSZ/8) -1 : 0]             s_wbpi_sel_w_  [WBPI_SLAVECOUNT];
+wire [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dato_w_ [WBPI_SLAVECOUNT];
+wire                                         _s_wbpi_bsy_w  [WBPI_SLAVECOUNT];
+wire                                         _s_wbpi_ack_w  [WBPI_SLAVECOUNT];
+wire [WBPI_WORDBITSZ -1 : 0]                 _s_wbpi_dati_w [WBPI_SLAVECOUNT];
 
 genvar gen_m_wbpi_idx;
 generate for (

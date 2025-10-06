@@ -106,10 +106,10 @@ addr #(
 	,.addr_o (_m_wb_addr_i)
 );
 
-wire [(WORDBITSZ-MSBSZIGN) -1 : 0] _s_wb_mapsz_i [SLAVECOUNT -1 : 0];
-wire [WORDBITSZ -1 : 0]            _s_wb_dat_i   [SLAVECOUNT -1 : 0];
+wire [(WORDBITSZ-MSBSZIGN) -1 : 0] _s_wb_mapsz_i [SLAVECOUNT];
+wire [WORDBITSZ -1 : 0]            _s_wb_dat_i   [SLAVECOUNT];
 
-reg [(WORDBITSZ-MSBSZIGN) -1 : 0] addrspace [SLAVECOUNT -1 : 0];
+reg [(WORDBITSZ-MSBSZIGN) -1 : 0] addrspace [SLAVECOUNT];
 reg addrspace_rdy;
 
 reg [CLOG2SLAVECOUNT -1 : 0] slvidx;

@@ -112,15 +112,15 @@ input wire [WORDBITSZ -1 : 0] spval_i;
 
 input wire [WORDBITSZ -1 : 0] id_i;
 
-wire                                 arbiter_wb_cyc_i  [0 : PUCNT -1];
-wire                                 arbiter_wb_stb_i  [0 : PUCNT -1];
-wire                                 arbiter_wb_we_i   [0 : PUCNT -1];
-wire [(XADDRBITSZ-XMSBSZIGN) -1 : 0] arbiter_wb_addr_i [0 : PUCNT -1];
-wire [(XWORDBITSZ/8) -1 : 0]         arbiter_wb_sel_i  [0 : PUCNT -1];
-wire [XWORDBITSZ -1 : 0]             arbiter_wb_dat_i  [0 : PUCNT -1];
-wire                                 arbiter_wb_bsy_o  [0 : PUCNT -1];
-wire                                 arbiter_wb_ack_o  [0 : PUCNT -1];
-wire [XWORDBITSZ -1 : 0]             arbiter_wb_dat_o  [0 : PUCNT -1];
+wire                                 arbiter_wb_cyc_i  [PUCNT];
+wire                                 arbiter_wb_stb_i  [PUCNT];
+wire                                 arbiter_wb_we_i   [PUCNT];
+wire [(XADDRBITSZ-XMSBSZIGN) -1 : 0] arbiter_wb_addr_i [PUCNT];
+wire [(XWORDBITSZ/8) -1 : 0]         arbiter_wb_sel_i  [PUCNT];
+wire [XWORDBITSZ -1 : 0]             arbiter_wb_dat_i  [PUCNT];
+wire                                 arbiter_wb_bsy_o  [PUCNT];
+wire                                 arbiter_wb_ack_o  [PUCNT];
+wire [XWORDBITSZ -1 : 0]             arbiter_wb_dat_o  [PUCNT];
 
 wire [(1 * PUCNT) -1 : 0]                      _arbiter_wb_cyc_i;
 wire [(1 * PUCNT) -1 : 0]                      _arbiter_wb_stb_i;

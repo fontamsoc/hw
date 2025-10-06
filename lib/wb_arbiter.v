@@ -71,9 +71,9 @@ input  wire [WORDBITSZ -1 : 0]            s_wb_dat_i;
 
 reg [CLOG2MASTERCOUNT -1 : 0] mstridx;
 
-wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] _m_wb_addr_i [MASTERCOUNT -1 : 0];
-wire [(WORDBITSZ/8) -1 : 0]        _m_wb_sel_i  [MASTERCOUNT -1 : 0];
-wire [WORDBITSZ -1 : 0]            _m_wb_dat_i  [MASTERCOUNT -1 : 0];
+wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] _m_wb_addr_i [MASTERCOUNT];
+wire [(WORDBITSZ/8) -1 : 0]        _m_wb_sel_i  [MASTERCOUNT];
+wire [WORDBITSZ -1 : 0]            _m_wb_dat_i  [MASTERCOUNT];
 
 genvar gen_m_wb_idx;
 generate for (

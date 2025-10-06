@@ -121,9 +121,9 @@ always @ (posedge clk_i) begin
 		rtag_r <= rtag_i;
 end
 
-wire [TAGBITSZ -1 : 0] tago [0 : WAYCNT -1];
-wire [DATBITSZ -1 : 0] dato [0 : WAYCNT -1];
-wire                   vldo [0 : WAYCNT -1];
+wire [TAGBITSZ -1 : 0] tago [WAYCNT];
+wire [DATBITSZ -1 : 0] dato [WAYCNT];
+wire                   vldo [WAYCNT];
 
 genvar gen_ways_idx;
 generate for (

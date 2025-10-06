@@ -295,7 +295,7 @@ assign iCache_rtag_w = iF_pc_i[WORDBITSZ-1:CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8]
 reg [2 -1 : 0] iD_predictBranch;
 localparam BHTSETCNT = 4096;
 localparam CLOG2BHTSETCNT = clog2(BHTSETCNT);
-reg [2 -1 : 0] bht [0 : BHTSETCNT - 1]; // Branch History Table.
+reg [2 -1 : 0] bht [BHTSETCNT]; // Branch History Table.
 reg [2 -1 : 0] bht_o;
 always @ (posedge clk_i) begin
 	if (iF_en)
@@ -577,7 +577,7 @@ wire iD_rdRdy;
 wire iD_rs1Rdy;
 wire iD_rs2Rdy;
 
-reg [WORDBITSZ -1 : 0] gprDat [0 : GPRCNT -1];
+reg [WORDBITSZ -1 : 0] gprDat [GPRCNT];
 reg [GPRCNT    -1 : 0] gprRdy;
 
 `ifdef PURV32M
