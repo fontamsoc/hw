@@ -8,8 +8,6 @@
 // to be valid since its values are wired as-is from m_wb_sel_i.
 // By convention, devices mapsz must be aligned to 128 bytes (1024 bits).
 
-`include "lib/addr.v"
-
 module wb_mux (
 
 	 rst_i
@@ -96,43 +94,33 @@ always @ (posedge clk_i) begin
 		ack_pending <= ack_pending + 1'b1;
 end
 
-wire [(WORDBITSZ-MSBSZIGN) -1 : 0] _m_wb_addr_i;
-addr #(
-	 .WORDBITSZ (WORDBITSZ)
-	,.ADDRLIMIT (ADDRLIMIT)
-) addr (
-	 .addr_i (m_wb_addr_i)
-	,.sel_i  (m_wb_sel_i)
-	,.addr_o (_m_wb_addr_i)
-);
-
-wire [(WORDBITSZ-MSBSZIGN) -1 : 0] _s_wb_mapsz_i [SLAVECOUNT];
+wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] _s_wb_mapsz_i [SLAVECOUNT];
 wire [WORDBITSZ -1 : 0]            _s_wb_dat_i   [SLAVECOUNT];
 
-reg [(WORDBITSZ-MSBSZIGN) -1 : 0] addrspace [SLAVECOUNT];
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace [SLAVECOUNT];
 reg addrspace_rdy;
 
 reg [CLOG2SLAVECOUNT -1 : 0] slvidx;
 reg slvidx_rdy;
 reg slvidx_dflt;
 
-reg [(WORDBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_lo; // Also used to initialize addrspace.
-reg [(WORDBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_hi;
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_lo; // Also used to initialize addrspace.
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_hi;
 
 wire slvidx_not_max = (slvidx < (SLAVECOUNT-1));
 
 // Determine whether slvidx needs to be recomputed.
 wire slvidx_invalid = (!addrspace_rdy || (!slvidx_dflt &&
-	!(_m_wb_addr_i >= addrspace_slvidx_lo &&
-	  _m_wb_addr_i <= addrspace_slvidx_hi)));
+	!(m_wb_addr_i >= addrspace_slvidx_lo &&
+	  m_wb_addr_i <= addrspace_slvidx_hi)));
 
 wire _slvidx_invalid = (slvidx_invalid && !ack_pending);
 
-wire [(WORDBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_nxt = (addrspace_slvidx_lo + _s_wb_mapsz_i[slvidx]);
-wire [(WORDBITSZ-MSBSZIGN) -1 : 0] _addrspace_slvidx_nxt = (addrspace_slvidx_nxt - 1'b1);
+wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_nxt = (addrspace_slvidx_lo + _s_wb_mapsz_i[slvidx]);
+wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] _addrspace_slvidx_nxt = (addrspace_slvidx_nxt - 1'b1);
 
-reg [(WORDBITSZ-MSBSZIGN) -1 : 0] slvidx_dflt_lo;
-reg [(WORDBITSZ-MSBSZIGN) -1 : 0] slvidx_dflt_hi;
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] slvidx_dflt_lo;
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] slvidx_dflt_hi;
 
 always @ (posedge clk_i) begin
 
@@ -141,7 +129,7 @@ always @ (posedge clk_i) begin
 	// and after reset computes slvidx using addrspace.
 	if (rst_i) begin
 
-		addrspace_slvidx_lo <= FIRSTSLAVEADDR;
+		addrspace_slvidx_lo <= FIRSTSLAVEADDR[CLOG2WORDBITSZBY8 +: (ADDRBITSZ-MSBSZIGN)];
 		slvidx <= 0;
 		slvidx_rdy <= 0;
 		slvidx_dflt <= 0;
@@ -158,7 +146,7 @@ always @ (posedge clk_i) begin
 			addrspace_slvidx_lo <= addrspace_slvidx_nxt;
 			slvidx <= slvidx + 1'b1;
 		end else begin
-			addrspace_slvidx_lo <= FIRSTSLAVEADDR;
+			addrspace_slvidx_lo <= FIRSTSLAVEADDR[CLOG2WORDBITSZBY8 +: (ADDRBITSZ-MSBSZIGN)];
 			addrspace_slvidx_hi <= addrspace[0];
 			slvidx <= 0;
 			addrspace_rdy <= 1;
@@ -193,7 +181,7 @@ always @ (posedge clk_i) begin
 
 	end else if (_m_wb_stb_i && _slvidx_invalid) begin
 
-		addrspace_slvidx_lo <= FIRSTSLAVEADDR;
+		addrspace_slvidx_lo <= FIRSTSLAVEADDR[CLOG2WORDBITSZBY8 +: (ADDRBITSZ-MSBSZIGN)];
 		addrspace_slvidx_hi <= addrspace[0];
 		slvidx <= 0;
 		slvidx_rdy <= 0;
@@ -203,12 +191,10 @@ always @ (posedge clk_i) begin
 end
 
 assign m_wb_bsy_o = ((slvidx_invalid ? 1'b1 : s_wb_bsy_i[slvidx]) || max_pending);
-
 assign m_wb_ack_o = s_wb_ack_i[slvidx];
-
 assign m_wb_dat_o = _s_wb_dat_i[slvidx];
 
-wire [(WORDBITSZ-MSBSZIGN) -1 : 0] s_wb_addr_o_ = (_m_wb_addr_i - addrspace_slvidx_lo);
+wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] s_wb_addr_o_ = (m_wb_addr_i - addrspace_slvidx_lo);
 
 genvar gen_s_wb_idx;
 generate for (
@@ -217,20 +203,13 @@ generate for (
 	gen_s_wb_idx = gen_s_wb_idx + 1) begin :gen_s_wb
 
 assign s_wb_cyc_o[gen_s_wb_idx] = ((slvidx != gen_s_wb_idx || _slvidx_invalid) ? 1'b0 : m_wb_cyc_i);
-
 assign s_wb_stb_o[gen_s_wb_idx] = ((slvidx != gen_s_wb_idx || slvidx_invalid || max_pending) ? 1'b0 : m_wb_stb_i);
-
 assign s_wb_we_o[gen_s_wb_idx] = m_wb_we_i;
-
-assign s_wb_addr_o[((gen_s_wb_idx+1) * (ADDRBITSZ-MSBSZIGN)) -1 : (gen_s_wb_idx * (ADDRBITSZ-MSBSZIGN))] = s_wb_addr_o_[(WORDBITSZ-MSBSZIGN) -1 : CLOG2WORDBITSZBY8];
-
-assign s_wb_sel_o[((gen_s_wb_idx+1) * (WORDBITSZ/8)) -1 : (gen_s_wb_idx * (WORDBITSZ/8))] = m_wb_sel_i;
-
-assign s_wb_dat_o[((gen_s_wb_idx+1) * WORDBITSZ) -1 : (gen_s_wb_idx * WORDBITSZ)] = m_wb_dat_i;
-
-assign _s_wb_dat_i[gen_s_wb_idx] = s_wb_dat_i[((gen_s_wb_idx+1) * WORDBITSZ) -1 : (gen_s_wb_idx * WORDBITSZ)];
-
-assign _s_wb_mapsz_i[gen_s_wb_idx] = s_wb_mapsz_i[((gen_s_wb_idx+1) * (WORDBITSZ-MSBSZIGN)) -1 : (gen_s_wb_idx * (WORDBITSZ-MSBSZIGN))];
+assign s_wb_addr_o[(gen_s_wb_idx * (ADDRBITSZ-MSBSZIGN)) +: (ADDRBITSZ-MSBSZIGN)] = s_wb_addr_o_;
+assign s_wb_sel_o[(gen_s_wb_idx * (WORDBITSZ/8)) +: (WORDBITSZ/8)] = m_wb_sel_i;
+assign s_wb_dat_o[(gen_s_wb_idx * WORDBITSZ) +: WORDBITSZ] = m_wb_dat_i;
+assign _s_wb_dat_i[gen_s_wb_idx] = s_wb_dat_i[(gen_s_wb_idx * WORDBITSZ) +: WORDBITSZ];
+assign _s_wb_mapsz_i[gen_s_wb_idx] = s_wb_mapsz_i[((gen_s_wb_idx * (WORDBITSZ-MSBSZIGN)) + CLOG2WORDBITSZBY8) +: (ADDRBITSZ-MSBSZIGN)];
 
 end endgenerate
 
