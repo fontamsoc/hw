@@ -28,7 +28,7 @@ updsram: ${TOP}.sram.hex ${TOP}.bak.config
 		read_verilog -I../../ $<; synth_ecp5 -top ${TOP} -json $@" &>$@.synth.log
 %.out.config: %.json ../%.lpf
 	cntr=0; until \
-		nextpnr-ecp5 -r --json $< --textcfg $@ --85k --package CSFBGA285 --lpf ../${TOP}.lpf &>$@.pnr.log; \
+		nextpnr-ecp5 -r --ignore-rel-clk --json $< --textcfg $@ --85k --package CSFBGA285 --lpf ../${TOP}.lpf &>$@.pnr.log; \
 	do \
 		echo -n '-- '; \
 		fgrep 'ERROR: Max frequency' $@.pnr.log; \
