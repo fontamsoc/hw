@@ -82,27 +82,31 @@ wire _m_wb_stb_i = (m_wb_cyc_i && m_wb_stb_i);
 
 reg [clog2(MAXPENDINGACK +1) -1 : 0] ack_pending;
 
-wire max_pending = (ack_pending == MAXPENDINGACK);
+wire _m_wb_stb_i_and_not_m_wb_bsy_o = (_m_wb_stb_i && !m_wb_bsy_o);
 
 always @ (posedge clk_i) begin
 	if (rst_i)
 		ack_pending <= 0;
-	else if (_m_wb_stb_i && !m_wb_bsy_o && m_wb_ack_o);
+	else if (_m_wb_stb_i_and_not_m_wb_bsy_o && m_wb_ack_o);
 	else if (m_wb_ack_o)
 		ack_pending <= ack_pending - 1'b1;
-	else if (_m_wb_stb_i && !m_wb_bsy_o)
+	else if (_m_wb_stb_i_and_not_m_wb_bsy_o)
 		ack_pending <= ack_pending + 1'b1;
 end
 
 wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] _s_wb_mapsz_i [SLAVECOUNT];
 wire [WORDBITSZ -1 : 0]            _s_wb_dat_i   [SLAVECOUNT];
 
-reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace [SLAVECOUNT];
-reg addrspace_rdy;
-
 reg [CLOG2SLAVECOUNT -1 : 0] slvidx;
+
+wire [CLOG2SLAVECOUNT -1 : 0] slvidx_plus_one = (slvidx + 1'b1);
+
 reg slvidx_rdy;
 reg slvidx_dflt;
+
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace [SLAVECOUNT];
+
+reg addrspace_rdy;
 
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_lo; // Also used to initialize addrspace.
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_hi;
@@ -123,7 +127,6 @@ reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] slvidx_dflt_lo;
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] slvidx_dflt_hi;
 
 always @ (posedge clk_i) begin
-
 	// Logic which on reset computes addrspace
 	// using the size of each slave device mapping;
 	// and after reset computes slvidx using addrspace.
@@ -144,7 +147,7 @@ always @ (posedge clk_i) begin
 
 		if (slvidx_not_max) begin
 			addrspace_slvidx_lo <= addrspace_slvidx_nxt;
-			slvidx <= slvidx + 1'b1;
+			slvidx <= slvidx_plus_one;
 		end else begin
 			addrspace_slvidx_lo <= FIRSTSLAVEADDR[CLOG2WORDBITSZBY8 +: (ADDRBITSZ-MSBSZIGN)];
 			addrspace_slvidx_hi <= addrspace[0];
@@ -169,8 +172,8 @@ always @ (posedge clk_i) begin
 			slvidx_rdy <= 1;
 		else if (slvidx_not_max) begin
 			addrspace_slvidx_lo <= addrspace[slvidx] + 1'b1;
-			addrspace_slvidx_hi <= addrspace[slvidx + 1'b1];
-			slvidx <= slvidx + 1'b1;
+			addrspace_slvidx_hi <= addrspace[slvidx_plus_one];
+			slvidx <= slvidx_plus_one;
 		end else begin
 			addrspace_slvidx_lo <= slvidx_dflt_lo;
 			addrspace_slvidx_hi <= slvidx_dflt_hi;
@@ -189,6 +192,8 @@ always @ (posedge clk_i) begin
 	end else if (slvidx_dflt)
 		slvidx_dflt <= m_wb_bsy_o;
 end
+
+wire max_pending = (ack_pending == MAXPENDINGACK);
 
 assign m_wb_bsy_o = ((slvidx_invalid ? 1'b1 : s_wb_bsy_i[slvidx]) || max_pending);
 assign m_wb_ack_o = s_wb_ack_i[slvidx];
