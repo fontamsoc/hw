@@ -88,7 +88,7 @@
 // 	High when the fifo is empty.
 //  Asynchronous-safe with respect to "clk_push_i" and "clk_pop_i".
 
-`include "lib/ram/ram1i2o.v"
+`include "lib/ram/dram.v"
 
 module fifo_fwft_async (
 
@@ -135,7 +135,7 @@ output wire                full_o;
 wire en = (pop_i && !empty_o);
 wire we = (push_i && !full_o);
 
-// Read and write index within ram1i2o.
+// Read and write index within dram.
 // Only the CLOG2DEPTH lsb are used for indexing.
 reg [(CLOG2DEPTH +1) -1 : 0] readidx = 0;
 reg [(CLOG2DEPTH +1) -1 : 0] writeidx = 0;
@@ -149,14 +149,12 @@ wire [(CLOG2DEPTH +1) -1 : 0] gray_next_writeidx = (next_writeidx ^ (next_writei
 reg [(CLOG2DEPTH +1) -1 : 0] gray_readidx = 0;
 reg [(CLOG2DEPTH +1) -1 : 0] gray_writeidx = 0;
 
-ram1i2o #(
+dram #(
 	 .SZ (DEPTH)
 	,.DW (WIDTH)
+	,.NO_RW_CHECK (1)
 ) fifobuf (
-
-	  .rst_i (rst_i)
-
-	,.clk0_i  (clk_pop_i)                  ,.clk1_i  (clk_push_i)
+	                                        .clk1_i  (clk_push_i)
 	                                       ,.we1_i   (we)
 	,.addr0_i (readidx[0+:CLOG2DEPTH])     ,.addr1_i (writeidx[0+:CLOG2DEPTH])
 	                                       ,.i1      (data_i)

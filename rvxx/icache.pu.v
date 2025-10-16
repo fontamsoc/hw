@@ -21,6 +21,7 @@ icache #(
 	,.SETCNT   (ICACHESETCNT)
 	,.TAGBITSZ (ICACHETAGBITSZ)
 	,.DATBITSZ (XWORDBITSZ)
+	,.NO_RW_CHECK (1)
 ) iCache (
 	 .rst_i    (rst_i)
 	,.clk_i    (clk_i)

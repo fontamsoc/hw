@@ -143,8 +143,8 @@ reg [(CLOG2DEPTH +1) -1 : 0] writeidx = 0;
 bram #(
 	 .SZ (DEPTH)
 	,.DW (WIDTH)
+	,.NO_RW_CHECK (1)
 ) fifobuf (
-
 	 .clk0_i  (clk_read_i)                  ,.clk1_i  (clk_write_i)
 	,.en0_i   (en)                          ,.en1_i   (1'b1)
 	                                        ,.we1_i   (we)

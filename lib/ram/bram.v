@@ -18,6 +18,8 @@ module bram (
 parameter SZ = 2;
 parameter DW = 32;
 
+parameter NO_RW_CHECK = 0;
+
 parameter INITFILE = "";
 
 input wire                 clk0_i;
@@ -31,7 +33,11 @@ input wire [DW-1:0]        i1;
 output reg [DW-1:0]        o0;
 output reg [DW-1:0]        o1;
 
-reg [DW-1:0] u [0:SZ-1];
+generate if (NO_RW_CHECK) begin: gen_no_rw_check
+
+(* no_rw_check, ramstyle = "no_rw_check", ram_style = "no_rw_check" *)
+reg [DW-1:0] u [SZ];
+
 `ifdef SIMULATION
 integer init_u_idx;
 `endif
@@ -64,6 +70,45 @@ always @ (posedge clk1_i) begin
 			u[addr1_i] <= i1;
 	end
 end
+
+end else begin: gen_rw_check
+
+reg [DW-1:0] u [SZ];
+
+`ifdef SIMULATION
+integer init_u_idx;
+`endif
+initial begin
+	`ifdef SIMULATION
+	for (init_u_idx = 0; init_u_idx < SZ; init_u_idx = init_u_idx + 1)
+		u[init_u_idx] = 0;
+	`endif
+	if (INITFILE != "") begin
+		$readmemh (INITFILE, u);
+		`ifdef SIMULATION
+		$display ("%s loaded", INITFILE);
+		`endif
+		// Initial state initialized here, otherwise
+		// block ram fails to be inferred by yosys.
+		o0 = 0;
+		o1 = 0;
+	end
+end
+
+always @ (posedge clk0_i) begin
+	if (en0_i)
+		o0 <= u[addr0_i];
+end
+
+always @ (posedge clk1_i) begin
+	if (en1_i) begin
+		o1 <= u[addr1_i];
+		if (we1_i)
+			u[addr1_i] <= i1;
+	end
+end
+
+end endgenerate
 
 endmodule
 
