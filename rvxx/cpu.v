@@ -132,6 +132,74 @@ wire [(1 * PUCNT) -1 : 0]                      arbiter_wb_bsy_o_;
 wire [(1 * PUCNT) -1 : 0]                      arbiter_wb_ack_o_;
 wire [(XWORDBITSZ * PUCNT) -1 : 0]             arbiter_wb_dat_o_;
 
+wire [PUCNT -1 : 0] rst_ow;
+assign rst_o = |rst_ow;
+
+genvar genpu_idx;
+generate for (
+	genpu_idx = 0;
+	genpu_idx < PUCNT;
+	genpu_idx = genpu_idx + 1) begin :genpu
+
+pu #(
+	 .WORDBITSZ     (WORDBITSZ)
+	,.XWORDBITSZ    (XWORDBITSZ)
+	,.ADDRLIMIT     (ADDRLIMIT)
+	,.CLKFREQ       (CLKFREQ)
+	,.ICACHESETCNT  (ICACHESETCNT)
+	,.DCACHESETCNT  ((PUCNT > 1) ? 0 : DCACHESETCNT) /* TODO: cache-coherence */
+	,.ICACHEWAYCNT  (ICACHEWAYCNT)
+	,.DCACHEWAYCNT  (DCACHEWAYCNT)
+	,.IMULCNT       (IMULCNT)
+	,.IDIVCNT       (IDIVCNT)
+	,.MAXPENDINGACK (MAXPENDINGACK)
+) pu (
+
+	 .rst_i (rst_i)
+
+	,.rst_o (rst_ow[genpu_idx])
+
+	,.clk_i      (clk_i)
+	,.clk_imul_i (clk_imul_i)
+	,.clk_idiv_i (clk_idiv_i)
+
+	,.wb_cyc_o  (arbiter_wb_cyc_i[genpu_idx])
+	,.wb_stb_o  (arbiter_wb_stb_i[genpu_idx])
+	,.wb_we_o   (arbiter_wb_we_i[genpu_idx])
+	,.wb_addr_o (arbiter_wb_addr_i[genpu_idx])
+	,.wb_sel_o  (arbiter_wb_sel_i[genpu_idx])
+	,.wb_dat_o  (arbiter_wb_dat_i[genpu_idx])
+	,.wb_bsy_i  (arbiter_wb_bsy_o[genpu_idx])
+	,.wb_ack_i  (arbiter_wb_ack_o[genpu_idx])
+	,.wb_dat_i  (arbiter_wb_dat_o[genpu_idx])
+
+	,.dcache_addr_o (dcache_addr_o[(genpu_idx * (XWORDBITSZ-XMSBSZIGN)) +: (XWORDBITSZ-XMSBSZIGN)])
+	,.dcache_miss_i (dcache_miss_i[genpu_idx])
+
+	,.irq_stb_i (irq_stb_i[genpu_idx])
+	,.irq_stb_o (irq_stb_o[genpu_idx])
+	,.irq_rdy_o (irq_rdy_o[genpu_idx])
+	,.halted_o  (halted_o[genpu_idx])
+
+	,.rstaddr_i (genpu_idx ? rstaddr2_i : rstaddr_i)
+
+	,.spval_i (spval_i)
+
+	,.id_i (id_i + genpu_idx)
+);
+
+assign _arbiter_wb_cyc_i[genpu_idx] = arbiter_wb_cyc_i[genpu_idx];
+assign _arbiter_wb_stb_i[genpu_idx] = arbiter_wb_stb_i[genpu_idx];
+assign _arbiter_wb_we_i[genpu_idx] = arbiter_wb_we_i[genpu_idx];
+assign _arbiter_wb_addr_i[(genpu_idx * (XADDRBITSZ-XMSBSZIGN)) +: (XADDRBITSZ-XMSBSZIGN)] = arbiter_wb_addr_i[genpu_idx];
+assign _arbiter_wb_sel_i[(genpu_idx * (XWORDBITSZ/8)) +: (XWORDBITSZ/8)] = arbiter_wb_sel_i[genpu_idx];
+assign _arbiter_wb_dat_i[(genpu_idx * XWORDBITSZ) +: XWORDBITSZ] = arbiter_wb_dat_i[genpu_idx];
+assign arbiter_wb_bsy_o[genpu_idx] = arbiter_wb_bsy_o_[genpu_idx];
+assign arbiter_wb_ack_o[genpu_idx] = arbiter_wb_ack_o_[genpu_idx];
+assign arbiter_wb_dat_o[genpu_idx] = arbiter_wb_dat_o_[(genpu_idx * XWORDBITSZ) +: XWORDBITSZ];
+
+end endgenerate
+
 wire                                 wb_cyc_o_;
 wire                                 wb_stb_o_;
 wire                                 wb_we_o_;
@@ -220,77 +288,5 @@ wb_cdc #(
 	,.s_wb_ack_i  (wb_ack_i)
 	,.s_wb_dat_i  (wb_dat_i)
 );
-
-wire [PUCNT -1 : 0] rst_ow;
-assign rst_o = |rst_ow;
-
-genvar genpu_idx;
-generate for (
-	genpu_idx = 0;
-	genpu_idx < PUCNT;
-	genpu_idx = genpu_idx + 1) begin :genpu
-
-pu #(
-	 .WORDBITSZ     (WORDBITSZ)
-	,.XWORDBITSZ    (XWORDBITSZ)
-	,.ADDRLIMIT     (ADDRLIMIT)
-	,.CLKFREQ       (CLKFREQ)
-	,.ICACHESETCNT  (ICACHESETCNT)
-	,.DCACHESETCNT  ((PUCNT > 1) ? 0 : DCACHESETCNT) /* TODO: cache-coherence */
-	,.ICACHEWAYCNT  (ICACHEWAYCNT)
-	,.DCACHEWAYCNT  (DCACHEWAYCNT)
-	,.IMULCNT       (IMULCNT)
-	,.IDIVCNT       (IDIVCNT)
-	,.MAXPENDINGACK (MAXPENDINGACK)
-) pu (
-
-	 .rst_i (rst_i)
-
-	,.rst_o (rst_ow[genpu_idx])
-
-	,.clk_i      (clk_i)
-	,.clk_imul_i (clk_imul_i)
-	,.clk_idiv_i (clk_idiv_i)
-
-	,.wb_cyc_o  (arbiter_wb_cyc_i[genpu_idx])
-	,.wb_stb_o  (arbiter_wb_stb_i[genpu_idx])
-	,.wb_we_o   (arbiter_wb_we_i[genpu_idx])
-	,.wb_addr_o (arbiter_wb_addr_i[genpu_idx])
-	,.wb_sel_o  (arbiter_wb_sel_i[genpu_idx])
-	,.wb_dat_o  (arbiter_wb_dat_i[genpu_idx])
-	,.wb_bsy_i  (arbiter_wb_bsy_o[genpu_idx])
-	,.wb_ack_i  (arbiter_wb_ack_o[genpu_idx])
-	,.wb_dat_i  (arbiter_wb_dat_o[genpu_idx])
-
-	,.dcache_addr_o (dcache_addr_o[((genpu_idx+1) * (XWORDBITSZ-XMSBSZIGN)) -1 : genpu_idx * (XWORDBITSZ-XMSBSZIGN)])
-	,.dcache_miss_i (dcache_miss_i[genpu_idx])
-
-	,.irq_stb_i (irq_stb_i[genpu_idx])
-	,.irq_stb_o (irq_stb_o[genpu_idx])
-	,.irq_rdy_o (irq_rdy_o[genpu_idx])
-	,.halted_o  (halted_o[genpu_idx])
-
-	,.rstaddr_i (genpu_idx ? rstaddr2_i : rstaddr_i)
-
-	,.spval_i (spval_i)
-
-	,.id_i (id_i + genpu_idx)
-);
-
-assign _arbiter_wb_cyc_i[genpu_idx] = arbiter_wb_cyc_i[genpu_idx];
-assign _arbiter_wb_stb_i[genpu_idx] = arbiter_wb_stb_i[genpu_idx];
-assign _arbiter_wb_we_i[genpu_idx] = arbiter_wb_we_i[genpu_idx];
-assign _arbiter_wb_addr_i[((genpu_idx+1) * (XADDRBITSZ-XMSBSZIGN)) -1 : (genpu_idx * (XADDRBITSZ-XMSBSZIGN))] =
-	arbiter_wb_addr_i[genpu_idx];
-assign _arbiter_wb_sel_i[((genpu_idx+1) * (XWORDBITSZ/8)) -1 : (genpu_idx * (XWORDBITSZ/8))] =
-	arbiter_wb_sel_i[genpu_idx];
-assign _arbiter_wb_dat_i[((genpu_idx+1) * XWORDBITSZ) -1 : (genpu_idx * XWORDBITSZ)] =
-	arbiter_wb_dat_i[genpu_idx];
-assign arbiter_wb_bsy_o[genpu_idx] = arbiter_wb_bsy_o_[genpu_idx];
-assign arbiter_wb_ack_o[genpu_idx] = arbiter_wb_ack_o_[genpu_idx];
-assign arbiter_wb_dat_o[genpu_idx] =
-	arbiter_wb_dat_o_[((genpu_idx+1) * XWORDBITSZ) -1 : (genpu_idx * XWORDBITSZ)];
-
-end endgenerate
 
 endmodule
