@@ -153,8 +153,8 @@ wire cache_we = (!cmiss_r &&
 
 localparam CACHETAGBITSIZE = ((ADDRBITSZ-MSBSZIGN) - CLOG2CACHESETCNT);
 
-wire [CLOG2CACHESETCNT -1 : 0] cache_rdidx = m_wb_addr_i[CLOG2CACHESETCNT -1 : 0];
-wire [CLOG2CACHESETCNT -1 : 0] cache_wridx = m_wb_addr_r[CLOG2CACHESETCNT -1 : 0];
+wire [CLOG2CACHESETCNT -1 : 0] cache_rdidx = m_wb_addr_i[0 +: CLOG2CACHESETCNT];
+wire [CLOG2CACHESETCNT -1 : 0] cache_wridx = m_wb_addr_r[0 +: CLOG2CACHESETCNT];
 
 wire [CLOG2CACHESETCNT -1 : 0] _cache_rdidx = (_m_wb_stb_i ? cache_rdidx : cache_wridx);
 
