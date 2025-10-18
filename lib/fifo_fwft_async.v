@@ -158,7 +158,7 @@ ram1i2o #(
 
 	,.clk0_i  (clk_pop_i)                  ,.clk1_i  (clk_push_i)
 	                                       ,.we1_i   (we)
-	,.addr0_i (readidx[CLOG2DEPTH -1 : 0]) ,.addr1_i (writeidx[CLOG2DEPTH -1 : 0])
+	,.addr0_i (readidx[0+:CLOG2DEPTH])     ,.addr1_i (writeidx[0+:CLOG2DEPTH])
 	                                       ,.i1      (data_i)
 	,.o0      (data_o)                     ,.o1      ()
 );
@@ -172,19 +172,19 @@ always @ (posedge clk_write_i) // Synchronize gray_readidx to clk_write_i.
 wire near_full_o_;
 generate
 if (CLOG2DEPTH < 2) begin
-assign near_full_o_ = (gray_next_writeidx[CLOG2DEPTH:CLOG2DEPTH-1] == ~_gray_readidx[CLOG2DEPTH:CLOG2DEPTH-1]);
+assign near_full_o_ = (gray_next_writeidx[(CLOG2DEPTH-1)+:2] == ~_gray_readidx[(CLOG2DEPTH-1)+:2]);
 end else begin
-assign near_full_o_ = (gray_next_writeidx[CLOG2DEPTH:CLOG2DEPTH-1] == ~_gray_readidx[CLOG2DEPTH:CLOG2DEPTH-1]) &&
-	(gray_next_writeidx[CLOG2DEPTH-2:0] == _gray_readidx[CLOG2DEPTH-2:0]);
+assign near_full_o_ = (gray_next_writeidx[(CLOG2DEPTH-1)+:2] == ~_gray_readidx[(CLOG2DEPTH-1)+:2]) &&
+	(gray_next_writeidx[0+:(CLOG2DEPTH-1)] == _gray_readidx[0+:(CLOG2DEPTH-1)]);
 end
 endgenerate
 
 generate
 if (CLOG2DEPTH < 2) begin
-assign full_o = (gray_writeidx[CLOG2DEPTH:CLOG2DEPTH-1] == ~_gray_readidx[CLOG2DEPTH:CLOG2DEPTH-1]);
+assign full_o = (gray_writeidx[(CLOG2DEPTH-1)+:2] == ~_gray_readidx[(CLOG2DEPTH-1)+:2]);
 end else begin
-assign full_o = (gray_writeidx[CLOG2DEPTH:CLOG2DEPTH-1] == ~_gray_readidx[CLOG2DEPTH:CLOG2DEPTH-1]) &&
-	(gray_writeidx[CLOG2DEPTH-2:0] == _gray_readidx[CLOG2DEPTH-2:0]);
+assign full_o = (gray_writeidx[(CLOG2DEPTH-1)+:2] == ~_gray_readidx[(CLOG2DEPTH-1)+:2]) &&
+	(gray_writeidx[0+:(CLOG2DEPTH-1)] == _gray_readidx[0+:(CLOG2DEPTH-1)]);
 end
 endgenerate
 

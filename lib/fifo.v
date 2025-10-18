@@ -148,7 +148,7 @@ bram #(
 	 .clk0_i  (clk_read_i)                  ,.clk1_i  (clk_write_i)
 	,.en0_i   (en)                          ,.en1_i   (1'b1)
 	                                        ,.we1_i   (we)
-	,.addr0_i (readidx[CLOG2DEPTH -1 : 0])  ,.addr1_i (writeidx[CLOG2DEPTH -1 : 0])
+	,.addr0_i (readidx[0+:CLOG2DEPTH])      ,.addr1_i (writeidx[0+:CLOG2DEPTH])
 	                                        ,.i1      (data_i)
 	,.o0      (data_o)                      ,.o1      ()
 );
@@ -167,14 +167,14 @@ always @ (posedge clk_read_i) begin
 	if (rst_i)
 		readidx <= 0;
 	else if (en)
-		readidx <= readidx + 1'b1;
+		readidx <= (readidx + 1'b1);
 end
 
 always @ (posedge clk_write_i) begin
 	if (rst_i)
 		writeidx <= 0;
 	else if (we)
-		writeidx <= writeidx + 1'b1;
+		writeidx <= (writeidx + 1'b1);
 end
 
 endmodule
