@@ -300,7 +300,7 @@ generate for (
 	gen_cpu_dcache_miss_w_idx = 0;
 	gen_cpu_dcache_miss_w_idx < CPU_COUNT;
 	gen_cpu_dcache_miss_w_idx = gen_cpu_dcache_miss_w_idx + 1) begin :gen_cpu_dcache_miss_w
-	wire [(WBPI_WORDBITSZ-WBPI_MSBSZIGN) -1 : 0] addr_w = cpu_dcache_addr_w[((gen_cpu_dcache_miss_w_idx+1)*(WBPI_WORDBITSZ-WBPI_MSBSZIGN)) -1 : gen_cpu_dcache_miss_w_idx*(WBPI_WORDBITSZ-WBPI_MSBSZIGN)];
+	wire [(WBPI_WORDBITSZ-WBPI_MSBSZIGN) -1 : 0] addr_w = cpu_dcache_addr_w[(gen_cpu_dcache_miss_w_idx*(WBPI_WORDBITSZ-WBPI_MSBSZIGN))+:(WBPI_WORDBITSZ-WBPI_MSBSZIGN)];
 assign cpu_dcache_miss_w[gen_cpu_dcache_miss_w_idx] = (
 	(addr_w < 'h1000) || (addr_w >= ('h1000 + s_wbpi_mapsz_w[S_WBPI_SRAM])));
 end endgenerate
