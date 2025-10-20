@@ -25,7 +25,7 @@ wire [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dato_w  [WBPI_SLAVECOUNT -1 
 wire                                         s_wbpi_bsy_w   [WBPI_SLAVECOUNT -1 : 0];
 wire                                         s_wbpi_ack_w   [WBPI_SLAVECOUNT -1 : 0];
 wire [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dati_w  [WBPI_SLAVECOUNT -1 : 0];
-wire [(WORDBITSZ-WBPI_MSBSZIGN) -1 : 0]      s_wbpi_mapsz_w [WBPI_SLAVECOUNT -1 : 0];
+wire [(WBPI_WORDBITSZ-WBPI_MSBSZIGN) -1 : 0] s_wbpi_mapsz_w [WBPI_SLAVECOUNT -1 : 0];
 
 wire [(1 * WBPI_MASTERCOUNT) -1 : 0]                              _m_wbpi_cyc_w;
 wire [(1 * WBPI_MASTERCOUNT) -1 : 0]                              _m_wbpi_stb_w;
@@ -46,7 +46,7 @@ wire [(WBPI_WORDBITSZ * WBPI_SLAVECOUNT) -1 : 0]                 s_wbpi_dato_w__
 wire [(1 * WBPI_SLAVECOUNT) -1 : 0]                              __s_wbpi_bsy_w;
 wire [(1 * WBPI_SLAVECOUNT) -1 : 0]                              __s_wbpi_ack_w;
 wire [(WBPI_WORDBITSZ * WBPI_SLAVECOUNT) -1 : 0]                 __s_wbpi_dati_w;
-wire [((WORDBITSZ-WBPI_MSBSZIGN) * WBPI_SLAVECOUNT) -1 : 0]      __s_wbpi_mapsz_w;
+wire [((WBPI_WORDBITSZ-WBPI_MSBSZIGN) * WBPI_SLAVECOUNT) -1 : 0] __s_wbpi_mapsz_w;
 
 wire                                         s_wbpi_cyc_w_  [WBPI_SLAVECOUNT -1 : 0];
 wire                                         s_wbpi_stb_w_  [WBPI_SLAVECOUNT -1 : 0];
@@ -109,7 +109,7 @@ assign __s_wbpi_ack_w[gen_s_wbpi_idx] = _s_wbpi_ack_w[gen_s_wbpi_idx];
 
 assign __s_wbpi_dati_w[((gen_s_wbpi_idx+1) * WBPI_WORDBITSZ) -1 : (gen_s_wbpi_idx * WBPI_WORDBITSZ)] = _s_wbpi_dati_w[gen_s_wbpi_idx];
 
-assign __s_wbpi_mapsz_w[((gen_s_wbpi_idx+1) * (WORDBITSZ-WBPI_MSBSZIGN)) -1 : (gen_s_wbpi_idx * (WORDBITSZ-WBPI_MSBSZIGN))] = s_wbpi_mapsz_w[gen_s_wbpi_idx];
+assign __s_wbpi_mapsz_w[((gen_s_wbpi_idx+1) * (WBPI_WORDBITSZ-WBPI_MSBSZIGN)) -1 : (gen_s_wbpi_idx * (WBPI_WORDBITSZ-WBPI_MSBSZIGN))] = s_wbpi_mapsz_w[gen_s_wbpi_idx];
 
 if (WBPI_DNSIZR[gen_s_wbpi_idx] && WBPI_WORDBITSZ > WORDBITSZ) begin :gen_s_wbpi_dnsizr
 

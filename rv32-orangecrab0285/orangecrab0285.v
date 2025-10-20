@@ -155,7 +155,7 @@ wire wbpi_clk_w = clk48mhz;
 // 	input                                          s_wbpi_bsy_w   [WBPI_SLAVECOUNT -1 : 0];
 // 	input                                          s_wbpi_ack_w   [WBPI_SLAVECOUNT -1 : 0];
 // 	input  [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dati_w  [WBPI_SLAVECOUNT -1 : 0];
-// 	input  [WORDBITSZ -1 : 0]                      s_wbpi_mapsz_w [WBPI_SLAVECOUNT -1 : 0];
+// 	input  [(WBPI_WORDBITSZ-WBPI_MSBSZIGN) -1 : 0] s_wbpi_mapsz_w [WBPI_SLAVECOUNT -1 : 0];
 // If "dev/devtbl.v" was included, slave devices must also use following signals:
 // 	input  [WORDBITSZ -1 : 0]                      dev_id_w       [WBPI_SLAVECOUNT -1 : 0];
 // 	input                                          dev_useirq_w   [WBPI_SLAVECOUNT -1 : 0];
