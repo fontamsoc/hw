@@ -301,14 +301,14 @@ always @ (posedge clk_i) begin
 			dCache_m_we_i <= 0;
 			dCache_m_addr_i <= { // MSB oring of ignored bits.
 				|dCache_m_addr_i_[WORDBITSZ-1:(WORDBITSZ-MSBSZIGN-1)],
-				dCache_m_addr_i_[(WORDBITSZ-MSBSZIGN-1)-1:CLOG2XWORDBITSZBY8]};
+				dCache_m_addr_i_[(WORDBITSZ-MSBSZIGN-1)-1:CLOG2WORDBITSZBY8]};
 			dCache_m_sel_i <= dCache_m_sel_i_;
 		end else if (iD_isStore || (iD_isSc && _amoUnit_lrValid)) begin
 			dCache_m_stb_i <= 1'b1;
 			dCache_m_we_i <= 1;
 			dCache_m_addr_i <= { // MSB oring of ignored bits.
 				|dCache_m_addr_i_[WORDBITSZ-1:(WORDBITSZ-MSBSZIGN-1)],
-				dCache_m_addr_i_[(WORDBITSZ-MSBSZIGN-1)-1:CLOG2XWORDBITSZBY8]};
+				dCache_m_addr_i_[(WORDBITSZ-MSBSZIGN-1)-1:CLOG2WORDBITSZBY8]};
 			dCache_m_sel_i <= dCache_m_sel_i_;
 			dCache_m_dat_i <= dCache_m_dat_i_;
 		end else if (iD_isAMO && !(iD_isLr || iD_isSc)) begin
@@ -318,7 +318,7 @@ always @ (posedge clk_i) begin
 			dCache_m_we_i_ <= 1'b1;
 			dCache_m_addr_i <= { // MSB oring of ignored bits.
 				|dCache_m_addr_i_[WORDBITSZ-1:(WORDBITSZ-MSBSZIGN-1)],
-				dCache_m_addr_i_[(WORDBITSZ-MSBSZIGN-1)-1:CLOG2XWORDBITSZBY8]};
+				dCache_m_addr_i_[(WORDBITSZ-MSBSZIGN-1)-1:CLOG2WORDBITSZBY8]};
 			dCache_m_sel_i <= dCache_m_sel_i_;
 			dCache_m_dat_i <= dCache_m_dat_i_;
 		end else if (!_dCache_m_bsy_o) begin
