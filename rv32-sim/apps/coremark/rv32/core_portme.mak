@@ -72,7 +72,7 @@ PORT_CLEAN = *$(OEXT) ${OPATH}*.su ${OPATH}*.bin ${OPATH}*.objdump ${OPATH}*.rea
 # Target : port_pre% and port_post%
 # For the purpose of this simple port, no pre or post steps needed.
 
-WORDBITSZ ?= 32
+XWORDBITSZ ?= 32
 
 .PHONY : port_prebuild port_postbuild port_prerun port_postrun port_preload port_postload
 port_pre% port_post% :
@@ -91,7 +91,7 @@ port_postbuild:
 	truncate --size=%32 ${OPATH}coremark.bin
 	hexdump -v -e '/4 "%08x "' ${OPATH}coremark.bin | \
 		{ while IFS=' ' read -n 72 V0 V1 V2 V3 V4 V5 V6 V7; do echo -n "$$V7$$V6$$V5$$V4$$V3$$V2$$V1$$V0 "; done; } > ${OPATH}coremark.256.he_ # 256bits.
-	ln -nf ${OPATH}coremark.${WORDBITSZ}.he_ ${OPATH}coremark.hex
+	ln -nf ${OPATH}coremark.${XWORDBITSZ}.he_ ${OPATH}coremark.hex
 	ls -lh ${OPATH}coremark.{bin,elf}*
 
 # FLAG : OPATH
