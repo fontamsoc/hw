@@ -275,7 +275,7 @@ reg [WORDBITSZ -1 : 0] ras4;
 reg [WORDBITSZ -1 : 0] ras5;
 reg [WORDBITSZ -1 : 0] ras6;
 reg [WORDBITSZ -1 : 0] ras7;
-reg [WORDBITSZ -1 : 0] iD_predictRet;
+wire [WORDBITSZ -1 : 0] iF_predictRet = ras0;
 `endif
 
 `ifdef PUPREDICTJALR
@@ -292,26 +292,13 @@ assign iCache_ridx_w = iF_pc_i[CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8-1:CLOG2XWORD
 assign iCache_rtag_w = iF_pc_i[WORDBITSZ-1:CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8];
 
 `ifdef PUPREDICTBRANCH
-reg [2 -1 : 0] iD_predictBranch;
 localparam BHTSETCNT = 4096;
 localparam CLOG2BHTSETCNT = clog2(BHTSETCNT);
 reg [2 -1 : 0] bht [BHTSETCNT]; // Branch History Table.
-reg [2 -1 : 0] bht_o;
+reg [2 -1 : 0] iF_predictBranch;
 always_ff @(posedge clk_i) begin
 	if (iF_en)
-		bht_o <= bht[iF_pc_i[CLOG2BHTSETCNT+CLOG2INSNBITSZBY8-1:CLOG2INSNBITSZBY8]];
-end
-
-always_ff @(posedge clk_i) begin
-	if (iF_iD_carryon && !halted_o)
-		iD_predictBranch <= bht_o;
-end
-`endif
-
-`ifdef PUPREDICTRET
-always_ff @(posedge clk_i) begin
-	if (iF_iD_carryon && !halted_o)
-		iD_predictRet <= ras0;
+		iF_predictBranch <= bht[iF_pc_i[CLOG2BHTSETCNT+CLOG2INSNBITSZBY8-1:CLOG2INSNBITSZBY8]];
 end
 `endif
 
@@ -432,13 +419,13 @@ assign iF_pc_i = ((
 	iF_pc) + (
 	iF_flushed_or_not_iF_iD_carryon ? {WORDBITSZ{1'b0}} :
 	`ifdef PUPREDICTBRANCH
-	(iF_isBranch && bht_o[1]) ? iF_Bimm :
+	(iF_isBranch && iF_predictBranch[1]) ? iF_Bimm :
 	`endif
 	`ifdef PUPREDICTJAL
 	iF_isJAL ? iF_Jimm :
 	`endif
 	`ifdef PUPREDICTRET
-	iF_isRet ? ras0 :
+	iF_isRet ? iF_predictRet :
 	`endif
 	(INSNBITSZ/8)));
 
@@ -615,6 +602,22 @@ wire iD_carryon = (iD_flushed || !iD_stalled);
 assign iF_iD_carryon = iD_carryon;
 
 wire iD_en = (iD_carryon && !halted_o);
+
+`ifdef PUPREDICTBRANCH
+reg [2 -1 : 0] iD_predictBranch;
+always_ff @(posedge clk_i) begin
+	if (iD_en)
+		iD_predictBranch <= iF_predictBranch;
+end
+`endif
+
+`ifdef PUPREDICTRET
+reg [WORDBITSZ -1 : 0] iD_predictRet;
+always_ff @(posedge clk_i) begin
+	if (iD_en)
+		iD_predictRet <= iF_predictRet;
+end
+`endif
 
 wire [CLOG2GPRCNT -1 : 0] _iF_rdId  = (iD_en ? iF_rdId  : iD_rdId);
 wire [CLOG2GPRCNT -1 : 0] _iF_rs1Id = (iD_en ? iF_rs1Id : iD_rs1Id);
