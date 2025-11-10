@@ -326,11 +326,10 @@ always_ff @(posedge clk_i) begin
 end
 
 wire [INSNBITSZ -1 : 0] iF_insn;
-wire [XWORDBITSZ -1 : 0] iF_insn_ = iCache_dato_w;
 generate if (XWORDBITSZ > INSNBITSZ) begin :gen_iF_insn
-assign iF_insn = (iF_insn_ >> (INSNBITSZ*iF_pc[CLOG2XWORDBITSZBY8-1:CLOG2INSNBITSZBY8]));
+assign iF_insn = (iCache_dato_w >> (INSNBITSZ*iF_pc[CLOG2XWORDBITSZBY8-1:CLOG2INSNBITSZBY8]));
 end else begin
-assign iF_insn = iF_insn_;
+assign iF_insn = iCache_dato_w;
 end endgenerate
 
 wire [CLOG2GPRCNT -1 : 0] iF_rdId  = iF_insn[11:7];
