@@ -151,7 +151,7 @@ end
 always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrInstret <= 0;
-	end else if (eX_rW_stalled || (!eX_isExc && !eX_flushed && !eX_lateWritebackInsn && !halted_o)) begin
+	end else if (eX_rW_stalled || (!eX_isExc && !eX_flushed && !eX_lateResultInsn && !halted_o)) begin
 		csrInstret <= (csrInstret + 1'b1);
 		`ifdef _SIMULATION
 		if (!csrInstret[20:0]) begin

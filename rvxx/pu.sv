@@ -400,7 +400,7 @@ wire iF_isALUregOrBranch = (iF_isALUreg || iF_isBranch);
 wire iF_isALUregOrAMOandSc = (iF_isALUreg || iF_isAMOandSc);
 wire iF_isJAlOrJALR = (iF_isJAL || iF_isJALR);
 
-wire iF_lateWritebackInsn = (
+wire iF_lateResultInsn = (
 	`ifdef PURV32M
 	iF_isRV32M ||
 	`endif
@@ -551,7 +551,7 @@ reg iD_isALUregOrBranch;
 reg iD_isALUregOrAMOandSc;
 reg iD_isJAlOrJALR;
 
-reg iD_lateWritebackInsn;
+reg iD_lateResultInsn;
 
 reg iD_use_rdId;
 
@@ -807,7 +807,7 @@ always_ff @(posedge clk_i) begin
 		iD_isALUregOrAMOandSc        <= iF_isALUregOrAMOandSc;
 		iD_isJAlOrJALR               <= iF_isJAlOrJALR;
 
-		iD_lateWritebackInsn <= iF_lateWritebackInsn;
+		iD_lateResultInsn <= iF_lateResultInsn;
 
 		iD_use_rdId <= iF_use_rdId;
 	end
@@ -996,19 +996,19 @@ end
 reg rdWasLocked;
 
 reg eX_isExc;
-reg eX_lateWritebackInsn;
+reg eX_lateResultInsn;
 always_ff @(posedge clk_i) begin
 	if (eX_en || excTriggered) begin
 		eX_pc   <= iD_pc;
 		eX_insn <= iD_insn;
 		eX_isExc <= excTriggered;
-		eX_lateWritebackInsn <= iD_lateWritebackInsn;
-		// For a late writeback instruction being interrupted by an exception,
+		eX_lateResultInsn <= iD_lateResultInsn;
+		// For a lateResult instruction being interrupted by an exception,
 		// iD_eX_rdId_isTrue must be set true so that the gpr can be unlocked.
 		// Also, when there is an exception and the gpr was already locked when
 		// it got locked, iD_eX_rdId_isTrue must be set null so that the gpr gets
-		// unlocked by the late writeback instruction that locked it.
-		if (iD_flushed || ((iD_lateWritebackInsn || iD_stalled) && !excTriggered) ||
+		// unlocked by the lateResult instruction that locked it.
+		if (iD_flushed || ((iD_lateResultInsn || iD_stalled) && !excTriggered) ||
 			(excTriggered && rdWasLocked)) begin
 			iD_eX_rdId_isTrue <= 1'b0;
 			iD_eX_rdId <= 5'd0;
@@ -1128,7 +1128,7 @@ always_ff @(posedge clk_i) begin
 		add     a3,a3,a1
 		lw      a3,0(a3)       (Multi-cycle instruction)
 		jr      a3                                                        */
-		if (!iD_flushed && !iD_stalled && iD_lateWritebackInsn && iD_eX_rdId == iD_rdId) begin
+		if (!iD_flushed && !iD_stalled && iD_lateResultInsn && iD_eX_rdId == iD_rdId) begin
 			iD_rW_rdId_isTrue <= 1'b0;
 			iD_rW_rdId <= {CLOG2GPRCNT{1'b0}};
 		end else begin
