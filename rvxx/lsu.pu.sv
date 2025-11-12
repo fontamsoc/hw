@@ -47,7 +47,8 @@ end end endgenerate
 
 // This signal is connected to ldUnit_rqsts.near_full_o instead
 // of ldUnit_rqsts.full_o because ldUnit_rqstSeqs will become full
-// before ldUnit_rqsts.
+// before ldUnit_rqsts, due to ldUnit_rqsts_empty_r being used to
+// make ldUnit_rqsts behave as a fifo_fwft.
 wire ldUnit_rqsts_full;
 
 assign iD_ldUnit_bsy = (ldUnit_rqsts_full || __dCache_m_bsy);
