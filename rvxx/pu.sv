@@ -832,17 +832,25 @@ wire eX_lt_i = (
 wire eX_ltu_i = eX_aluMinus_i[WORDBITSZ];
 wire eX_eq_i = (eX_aluMinus_i[WORDBITSZ-1:0] == {WORDBITSZ{1'b0}});
 
-wire [(WORDBITSZ+1) -1 : 0] _eX_aluArg1_i = {iD_func7[5] & eX_aluArg1_i[WORDBITSZ-1], eX_aluArg1_i};
+function automatic bit [WORDBITSZ -1 : 0] reverseBits;
+	input bit [WORDBITSZ -1 : 0] bits;
+	for (int i = 0; i < WORDBITSZ; ++i)
+		reverseBits[i] = bits[(WORDBITSZ -1) - i];
+endfunction
+
+wire [WORDBITSZ -1 : 0] eX_aluShift_i_ = ((iD_func3 == 3'b001) ? reverseBits(eX_aluArg1_i) : eX_aluArg1_i);
+wire [WORDBITSZ -1 : 0] eX_aluShift_i = // Single shifter for left and right shifts.
+	($signed({iD_func7[5] & eX_aluArg1_i[WORDBITSZ-1], eX_aluShift_i_}) >>> eX_aluArg2_i[4:0]);
 
 reg [WORDBITSZ -1 : 0] eX_aluOut_i; // ### comb-block-reg.
 always_comb begin
 	unique case (iD_func3)
 	3'b000: eX_aluOut_i = ((iD_isALUreg && iD_func7[5]) ? eX_aluMinus_i[WORDBITSZ-1:0] : eX_aluPlus_i);
-	3'b001: eX_aluOut_i = (eX_aluArg1_i << eX_aluArg2_i[4:0]);
+	3'b001: eX_aluOut_i = reverseBits(eX_aluShift_i);
 	3'b010: eX_aluOut_i = {{(WORDBITSZ-1){1'b0}}, eX_lt_i};
 	3'b011: eX_aluOut_i = {{(WORDBITSZ-1){1'b0}}, eX_ltu_i};
 	3'b100: eX_aluOut_i = (eX_aluArg1_i ^ eX_aluArg2_i);
-	3'b101: eX_aluOut_i = ($signed(_eX_aluArg1_i) >>> eX_aluArg2_i[4:0]);
+	3'b101: eX_aluOut_i = eX_aluShift_i;
 	3'b110: eX_aluOut_i = (eX_aluArg1_i | eX_aluArg2_i);
 	3'b111: eX_aluOut_i = (eX_aluArg1_i & eX_aluArg2_i);
 	endcase
