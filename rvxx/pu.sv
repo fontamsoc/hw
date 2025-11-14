@@ -393,12 +393,13 @@ wire iF_isAMOandSc = (iF_isAMO && iF_func5 != 5'b00010);
 
 wire iF_cancelLr = (iF_isSystem || iF_isMiscMem || iF_isLoad || iF_isStore || iF_isAMOandSc);
 
-wire iF_isALUimmOrJALrOrLoadOrCSR = (iF_isALUimm || iF_isJALR || iF_ldUnit_stb || (iF_isCSR && !iF_func3[2]));
-wire iF_isBranchOrStore = (iF_isBranch || iF_isStore);
-wire iF_isJAlOrAUIPcOrLUIorCSR = (iF_isJAL || iF_isAUIPC || iF_isLUI || (iF_isCSR && iF_func3[2]));
 wire iF_isALUregOrBranch = (iF_isALUreg || iF_isBranch);
-wire iF_isALUregOrAMOandSc = (iF_isALUreg || iF_isAMOandSc);
 wire iF_isJAlOrJALR = (iF_isJAL || iF_isJALR);
+
+wire iF_is3OprndD12 = (iF_isALUreg || iF_isAMOandSc);
+wire iF_is2OprndD1  = (iF_isALUimm || iF_isJALR || iF_ldUnit_stb || (iF_isCSR && !iF_func3[2]));
+wire iF_is2Oprnd12  = (iF_isBranch || iF_isStore);
+wire iF_is1OprndD   = (iF_isJAL || iF_isAUIPC || iF_isLUI || (iF_isCSR && iF_func3[2]));
 
 wire iF_lateResultInsn = (
 	`ifdef PURV32M
@@ -407,7 +408,7 @@ wire iF_lateResultInsn = (
 	iF_ldUnit_stb);
 
 wire iF_use_rdId = (iF_rdId && // iF_rdId is null when iF_isMiscMem true.
-	!(iF_isBranchOrStore || /*iF_isMiscMem ||*/
+	!(iF_is2Oprnd12 || /*iF_isMiscMem ||*/
 		(iF_isSystem && !iF_func3[1:0] /* non-CSR instructions */)));
 
 wire iF_flushed_or_not_iF_iD_carryon = (iF_flushed || !iF_iD_carryon);
@@ -544,12 +545,13 @@ reg iD_stUnit_stb;
 
 reg iD_cancelLr;
 
-reg iD_isALUimmOrJALrOrLoadOrCSR;
-reg iD_isBranchOrStore;
-reg iD_isJAlOrAUIPcOrLUIorCSR;
 reg iD_isALUregOrBranch;
-reg iD_isALUregOrAMOandSc;
 reg iD_isJAlOrJALR;
+
+reg iD_is3OprndD12;
+reg iD_is2OprndD1;
+reg iD_is2Oprnd12;
+reg iD_is1OprndD;
 
 reg iD_lateResultInsn;
 
@@ -586,10 +588,10 @@ wire iD_stalled = (!iD_eX_carryon ||
 	(iD_ldUnit_stb ? iD_ldUnit_bsy : 1'b0) ||
 	(iD_stUnit_stb ? iD_stUnit_bsy : 1'b0) || (
 	// Stall if any of the operand is locked.
-	iD_isALUregOrAMOandSc ? !(iD_rdRdy && iD_rs1Rdy && iD_rs2Rdy) :
-	iD_isALUimmOrJALrOrLoadOrCSR ? !(iD_rdRdy && iD_rs1Rdy) :
-	iD_isBranchOrStore ? !(iD_rs1Rdy && iD_rs2Rdy) :
-	iD_isJAlOrAUIPcOrLUIorCSR ? !iD_rdRdy : 0));
+	iD_is3OprndD12 ? !(iD_rdRdy && iD_rs1Rdy && iD_rs2Rdy) :
+	iD_is2OprndD1  ? !(iD_rdRdy && iD_rs1Rdy) :
+	iD_is2Oprnd12  ? !(iD_rs1Rdy && iD_rs2Rdy) :
+	iD_is1OprndD   ? !iD_rdRdy : 0));
 
 assign iF_iD_stalled = iD_stalled;
 
@@ -800,12 +802,13 @@ always_ff @(posedge clk_i) begin
 
 		iD_cancelLr <= iF_cancelLr;
 
-		iD_isALUimmOrJALrOrLoadOrCSR <= iF_isALUimmOrJALrOrLoadOrCSR;
-		iD_isBranchOrStore           <= iF_isBranchOrStore;
-		iD_isJAlOrAUIPcOrLUIorCSR    <= iF_isJAlOrAUIPcOrLUIorCSR;
 		iD_isALUregOrBranch          <= iF_isALUregOrBranch;
-		iD_isALUregOrAMOandSc        <= iF_isALUregOrAMOandSc;
 		iD_isJAlOrJALR               <= iF_isJAlOrJALR;
+
+		iD_is3OprndD12 <= iF_is3OprndD12;
+		iD_is2OprndD1  <= iF_is2OprndD1;
+		iD_is2Oprnd12  <= iF_is2Oprnd12;
+		iD_is1OprndD   <= iF_is1OprndD;
 
 		iD_lateResultInsn <= iF_lateResultInsn;
 
