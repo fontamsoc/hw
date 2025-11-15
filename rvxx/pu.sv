@@ -267,15 +267,15 @@ assign iCache_nxtway_w = iF_eX_JumpOrBranch_i;
 assign iCache_re_w = iF_en;
 
 `ifdef PUPREDICTRET
-reg [WORDBITSZ -1 : 0] ras0;
-reg [WORDBITSZ -1 : 0] ras1;
-reg [WORDBITSZ -1 : 0] ras2;
-reg [WORDBITSZ -1 : 0] ras3;
-reg [WORDBITSZ -1 : 0] ras4;
-reg [WORDBITSZ -1 : 0] ras5;
-reg [WORDBITSZ -1 : 0] ras6;
-reg [WORDBITSZ -1 : 0] ras7;
-wire [WORDBITSZ -1 : 0] iF_predictRet = ras0;
+reg [(WORDBITSZ-2) -1 : 0] ras0;
+reg [(WORDBITSZ-2) -1 : 0] ras1;
+reg [(WORDBITSZ-2) -1 : 0] ras2;
+reg [(WORDBITSZ-2) -1 : 0] ras3;
+reg [(WORDBITSZ-2) -1 : 0] ras4;
+reg [(WORDBITSZ-2) -1 : 0] ras5;
+reg [(WORDBITSZ-2) -1 : 0] ras6;
+reg [(WORDBITSZ-2) -1 : 0] ras7;
+wire [(WORDBITSZ-2) -1 : 0] iF_predictRet = ras0;
 `endif
 
 `ifdef PUPREDICTJALR
@@ -425,7 +425,7 @@ assign iF_pc_i = ((
 	iF_isJAL ? iF_Jimm :
 	`endif
 	`ifdef PUPREDICTRET
-	iF_isRet ? iF_predictRet :
+	iF_isRet ? {iF_predictRet, 2'b0} :
 	`endif
 	(INSNBITSZ/8)));
 
@@ -612,7 +612,7 @@ end
 `endif
 
 `ifdef PUPREDICTRET
-reg [WORDBITSZ -1 : 0] iD_predictRet;
+reg [(WORDBITSZ-2) -1 : 0] iD_predictRet;
 always_ff @(posedge clk_i) begin
 	if (iD_en)
 		iD_predictRet <= iF_predictRet;
@@ -891,7 +891,7 @@ wire [2 -1 : 0] eX_predictBranch_i = 2'b00;
 wire _eX_takeBranch_i = (eX_takeBranch_i ^ eX_predictBranch_i[1]);
 
 `ifdef PUPREDICTRET
-wire eX_predictRetMiss_i = (iD_predictRet != {eX_aluPlus_i[WORDBITSZ-1:1], 1'b0});
+wire eX_predictRetMiss_i = (iD_predictRet != eX_aluPlus_i[WORDBITSZ-1:2]);
 `endif
 
 wire eX_rW_stalled;
@@ -939,7 +939,7 @@ end
 always_ff @(posedge clk_i) begin
 	if (iD_insn_valid) begin
 		if (iD_isCall) begin
-			ras0 <= iD_pc_plus_INSNBITSzBy8;
+			ras0 <= iD_pc_plus_INSNBITSzBy8[WORDBITSZ-1:2];
 			ras1 <= ras0;
 			ras2 <= ras1;
 			ras3 <= ras2;
@@ -955,7 +955,7 @@ always_ff @(posedge clk_i) begin
 			ras4 <= ras5;
 			ras5 <= ras6;
 			ras6 <= ras7;
-			//ras7 <= {WORDBITSZ{1'b0}};
+			//ras7 <= {(WORDBITSZ-2){1'b0}};
 		end
 	end
 end
