@@ -889,6 +889,8 @@ wire eX_predictRetMiss_i = (iD_predictRet != {eX_aluPlus_i[WORDBITSZ-1:1], 1'b0}
 wire eX_rW_stalled;
 wire eX_rW_carryon;
 
+// The Execute state does not need to stall if there is no
+// RegisterWriteBack to do (ie: when iD_eX_rdId_isTrue false).
 wire eX_stalled = (!eX_rW_carryon ? iD_eX_rdId_isTrue : 1'b0);
 
 // Jumps or Branchs are triggered only at the iDecoded stage.
