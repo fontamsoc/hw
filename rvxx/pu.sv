@@ -361,8 +361,8 @@ wire iF_isFence         = (iF_isMiscMem && iF_func3 == 3'b000);
 wire iF_isFencei        = (iF_isMiscMem && iF_func3 == 3'b001);
 wire iF_isFenceOrFencei = (iF_isMiscMem && iF_func3[2:1] == 2'b00);
 
-wire iF_isIllInsn = !(iF_isALUreg || iF_isALUimm || iF_isBranch || iF_isJALR || iF_isJAL ||
-	iF_isAUIPC || iF_isLUI || iF_isLoad || iF_isStore || iF_isSystem || iF_isAMO || iF_isMiscMem);
+wire iF_isALUregOrBranch = (iF_isALUreg || iF_isBranch);
+wire iF_isJAlOrJALR = (iF_isJAL || iF_isJALR);
 
 wire [WORDBITSZ -1 : 0] iF_addrImm = (iF_isLoad ? iF_Iimm : iF_isStore ? iF_Simm : {WORDBITSZ{1'b0}});
 
@@ -393,8 +393,8 @@ wire iF_isAMOandSc = (iF_isAMO && iF_func5 != 5'b00010);
 
 wire iF_cancelLr = (iF_isSystem || iF_isMiscMem || iF_isLoad || iF_isStore || iF_isAMOandSc);
 
-wire iF_isALUregOrBranch = (iF_isALUreg || iF_isBranch);
-wire iF_isJAlOrJALR = (iF_isJAL || iF_isJALR);
+wire iF_isIllInsn = !(iF_isALUreg || iF_isALUimm || iF_isBranch || iF_isJALR || iF_isJAL ||
+	iF_isAUIPC || iF_isLUI || iF_isLoad || iF_isStore || iF_isSystem || iF_isAMO || iF_isMiscMem);
 
 wire iF_is3OprndD12 = (iF_isALUreg || iF_isAMOandSc);
 wire iF_is2OprndD1  = (iF_isALUimm || iF_isJALR || iF_ldUnit_stb || (iF_isCSR && !iF_func3[2]));
@@ -518,7 +518,8 @@ reg iD_isFence;
 reg iD_isFencei;
 reg iD_isFenceOrFencei;
 
-reg iD_isIllInsn;
+reg iD_isALUregOrBranch;
+reg iD_isJAlOrJALR;
 
 reg [WORDBITSZ -1 : 0] iD_addrImm;
 
@@ -545,8 +546,7 @@ reg iD_stUnit_stb;
 
 reg iD_cancelLr;
 
-reg iD_isALUregOrBranch;
-reg iD_isJAlOrJALR;
+reg iD_isIllInsn;
 
 reg iD_is3OprndD12;
 reg iD_is2OprndD1;
@@ -775,7 +775,8 @@ always_ff @(posedge clk_i) begin
 		iD_isFencei        <= iF_isFencei;
 		iD_isFenceOrFencei <= iF_isFenceOrFencei;
 
-		iD_isIllInsn <= iF_isIllInsn;
+		iD_isALUregOrBranch <= iF_isALUregOrBranch;
+		iD_isJAlOrJALR <= iF_isJAlOrJALR;
 
 		iD_addrImm <= iF_addrImm;
 
@@ -802,8 +803,7 @@ always_ff @(posedge clk_i) begin
 
 		iD_cancelLr <= iF_cancelLr;
 
-		iD_isALUregOrBranch          <= iF_isALUregOrBranch;
-		iD_isJAlOrJALR               <= iF_isJAlOrJALR;
+		iD_isIllInsn <= iF_isIllInsn;
 
 		iD_is3OprndD12 <= iF_is3OprndD12;
 		iD_is2OprndD1  <= iF_is2OprndD1;
