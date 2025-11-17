@@ -117,7 +117,6 @@
 // 	otherwise must be 0. Non-zero pu index are halted on reset
 // 	waiting for an external interrupt.
 
-`include "lib/fifo.sv"
 `include "lib/fifo_fwft.sv"
 `include "lib/wb_skidbuf.sv"
 `include "lib/wb_upsizr.sv"

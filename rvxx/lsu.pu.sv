@@ -3,17 +3,6 @@
 
 // Load Unit.
 
-wire ldUnit_memAck;
-
-wire ldUnit_rqsts_empty;
-reg ldUnit_rqsts_empty_r;
-always_ff @(posedge clk_i) begin
-	if (rst_i)
-		ldUnit_rqsts_empty_r <= 1'b1;
-	else if (ldUnit_rqsts_empty_r || ldUnit_memAck)
-		ldUnit_rqsts_empty_r <= ldUnit_rqsts_empty;
-end
-
 reg  [WORDBITSZ -1 : 0]     ldUnit_rqsts_dato; // ### comb-block-reg.
 wire [(WORDBITSZ/8) -1 : 0] ldUnit_rqsts_sel;
 wire                        ldUnit_rqsts_zxt;
@@ -45,10 +34,6 @@ generate if (WORDBITSZ == 64) begin always_comb begin
 	else                                        ldUnit_rqsts_dato = dCache_m_dat_o;
 end end endgenerate
 
-// This signal is connected to ldUnit_rqsts.near_full_o instead
-// of ldUnit_rqsts.full_o because ldUnit_rqstSeqs will become full
-// before ldUnit_rqsts, due to ldUnit_rqsts_empty_r being used to
-// make ldUnit_rqsts behave as a fifo_fwft.
 wire ldUnit_rqsts_full;
 
 assign iD_ldUnit_bsy = (ldUnit_rqsts_full || __dCache_m_bsy);
@@ -58,42 +43,28 @@ wire ldUnit_stb = (iD_ldUnit_stb && iD_insn_valid);
 wire [CLOG2GPRCNT -1 : 0] ldUnit_rqsts_rIdx;
 wire                      ldUnit_rqsts_isAMO;
 
-fifo #(
-	 .WIDTH (1 + 1 + CLOG2GPRCNT + (WORDBITSZ/8))
-	,.DEPTH (MAXPENDINGACK)
-) ldUnit_rqsts (
-	 .rst_i       (rst_i)
-	,.clk_write_i (clk_i)
-	,.write_i     (ldUnit_stb)
-	,.data_i      ({iD_isAMO, iD_func3[2], iD_rdId, dCache_m_sel_i_})
-	,.near_full_o (ldUnit_rqsts_full)
-	,.clk_read_i  (clk_i)
-	,.read_i      (ldUnit_rqsts_empty_r || ldUnit_memAck)
-	,.data_o      ({ldUnit_rqsts_isAMO, ldUnit_rqsts_zxt, ldUnit_rqsts_rIdx, ldUnit_rqsts_sel})
-	,.empty_o     (ldUnit_rqsts_empty)
-);
+wire [(CLOG2MAXPENDINGACK +1) -1 : 0] ldUnit_rqsts_seq;
 
-wire [(CLOG2MAXPENDINGACK +1) -1 : 0] ldUnit_rqstSeqs_seq;
+wire ldUnit_rqsts_empty;
 
-wire ldUnit_rqstSeqs_empty;
+wire ldUnit_memAck = (
+	dCache_m_ack_o && !ldUnit_rqsts_empty &&
+	ldUnit_rqsts_seq == dCache_m_rsp_cnt);
 
 fifo_fwft #(
-	 .WIDTH (CLOG2MAXPENDINGACK +1)
+	 .WIDTH (1 + 1 + CLOG2GPRCNT + (WORDBITSZ/8) + (CLOG2MAXPENDINGACK +1))
 	,.DEPTH (MAXPENDINGACK)
-) ldUnit_rqstSeqs (
+) ldUnit_rqsts (
 	 .rst_i      (rst_i)
 	,.clk_push_i (clk_i)
-	,.push_i     (__dCache_m_stb_i && !dCache_m_we_i)
-	,.data_i     (dCache_m_rqst_cnt)
+	,.push_i     (ldUnit_stb)
+	,.data_i     ({iD_isAMO, iD_func3[2], iD_rdId, dCache_m_sel_i_, dCache_m_rqst_cnt})
+	,.full_o     (ldUnit_rqsts_full)
 	,.clk_pop_i  (clk_i)
 	,.pop_i      (ldUnit_memAck)
-	,.data_o     (ldUnit_rqstSeqs_seq)
-	,.empty_o    (ldUnit_rqstSeqs_empty)
+	,.data_o     ({ldUnit_rqsts_isAMO, ldUnit_rqsts_zxt, ldUnit_rqsts_rIdx, ldUnit_rqsts_sel, ldUnit_rqsts_seq})
+	,.empty_o    (ldUnit_rqsts_empty)
 );
-
-assign ldUnit_memAck = (
-	dCache_m_ack_o && !ldUnit_rqstSeqs_empty &&
-	ldUnit_rqstSeqs_seq == dCache_m_rsp_cnt);
 
 // Store Unit.
 
