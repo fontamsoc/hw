@@ -1119,16 +1119,16 @@ wire eX_isExc0_i = (excTriggered && excCause == {1'b0, 16'd0} && eX_JumpOrBranch
 
 always_ff @(posedge clk_i) begin
 	if (ldUnit_memAck) begin
-		iD_rW_rdId_isTrue <= (|ldUnit_rqsts_rIdx);
+		iD_rW_rdId_isTrue <= 1'b1;
 		iD_rW_rdId <= ldUnit_rqsts_rIdx;
 		iD_rW_rslt <= ldUnit_rqsts_dato;
 	`ifdef PURV32M
 	end else if (opImul_done) begin
-		iD_rW_rdId_isTrue <= (|opImul_rIdx);
+		iD_rW_rdId_isTrue <= 1'b1;
 		iD_rW_rdId <= opImul_rIdx;
 		iD_rW_rslt <= opImul_rslt;
 	end else if (opIdiv_done) begin
-		iD_rW_rdId_isTrue <= (|opIdiv_rIdx);
+		iD_rW_rdId_isTrue <= 1'b1;
 		iD_rW_rdId <= opIdiv_rIdx;
 		iD_rW_rslt <= opIdiv_rslt;
 	`endif
@@ -1145,7 +1145,7 @@ always_ff @(posedge clk_i) begin
 			iD_rW_rdId_isTrue <= 1'b0;
 			iD_rW_rdId <= {CLOG2GPRCNT{1'b0}};
 		end else begin
-			iD_rW_rdId_isTrue <= (|iD_eX_rdId);
+			iD_rW_rdId_isTrue <= 1'b1;
 			iD_rW_rdId <= iD_eX_rdId;
 		end
 		iD_rW_rslt <= iD_eX_rslt;
