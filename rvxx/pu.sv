@@ -627,9 +627,9 @@ wire [CLOG2GPRCNT -1 : 0] _iF_rs2Id = (iD_en ? iF_rs2Id : iD_rs2Id);
 
 wire _iF_use_rdId = (iD_en ? iF_use_rdId : iD_use_rdId);
 
-reg iD_eX_rdId_isTrue;
-reg [CLOG2GPRCNT -1 : 0] iD_eX_rdId;
-reg [WORDBITSZ -1 : 0]   iD_eX_rslt;
+wire iD_eX_rdId_isTrue;
+wire [CLOG2GPRCNT -1 : 0] iD_eX_rdId;
+wire [WORDBITSZ -1 : 0]   iD_eX_rslt;
 
 wire iD_rdId_eq_iD_eX_rdId  = ((iD_rdId  == iD_eX_rdId) && iD_eX_rdId_isTrue);
 wire iD_rs1Id_eq_iD_eX_rdId = ((iD_rs1Id == iD_eX_rdId) && iD_eX_rdId_isTrue);
@@ -897,12 +897,16 @@ wire _eX_takeBranch_i = (eX_takeBranch_i ^ eX_predictBranch_i[1]);
 wire eX_predictRetMiss_i = (iD_predictRet != eX_aluPlus_i[WORDBITSZ-1:2]);
 `endif
 
+reg eX_rdId_isTrue;
+reg [CLOG2GPRCNT -1 : 0] eX_rdId;
+reg [WORDBITSZ -1 : 0]   eX_rslt;
+
 wire eX_rW_stalled;
 wire eX_rW_carryon;
 
 // The Execute state does not need to stall if there is no
-// RegisterWriteBack to do (ie: when iD_eX_rdId_isTrue false).
-wire eX_stalled = (!eX_rW_carryon ? iD_eX_rdId_isTrue : 1'b0);
+// RegisterWriteBack to do (ie: when eX_rdId_isTrue false).
+wire eX_stalled = (!eX_rW_carryon ? eX_rdId_isTrue : 1'b0);
 
 // Jumps or Branchs are triggered only at the iDecoded stage.
 // Interrupts and exceptions set eX_flushed_i to prevent eXecution.
@@ -1017,21 +1021,21 @@ always_ff @(posedge clk_i) begin
 		eX_isExc <= excTriggered;
 		eX_lateResultInsn <= iD_lateResultInsn;
 		// For a lateResult instruction being interrupted by an exception,
-		// iD_eX_rdId_isTrue must be set true so that the gpr can be unlocked.
+		// eX_rdId_isTrue must be set true so that the gpr can be unlocked.
 		// Also, when there is an exception and the gpr was already locked when
-		// it got locked, iD_eX_rdId_isTrue must be set null so that the gpr gets
+		// it got locked, eX_rdId_isTrue must be set null so that the gpr gets
 		// unlocked by the lateResult instruction that locked it.
 		if (iD_flushed || ((iD_lateResultInsn || iD_stalled) && !excTriggered) ||
 			(excTriggered && rdWasLocked)) begin
-			iD_eX_rdId_isTrue <= 1'b0;
-			iD_eX_rdId <= 5'd0;
+			eX_rdId_isTrue <= 1'b0;
+			eX_rdId <= 5'd0;
 		end else begin
-			iD_eX_rdId_isTrue <= (|iD_rdId);
-			iD_eX_rdId <= iD_rdId;
+			eX_rdId_isTrue <= (|iD_rdId);
+			eX_rdId <= iD_rdId;
 		end
-		// When there is an exception, iD_eX_rslt value is taken from
+		// When there is an exception, eX_rslt value is taken from
 		// the gpr being locked so that iD_rW_rslt can be properly set.
-		iD_eX_rslt <= (excTriggered ? iD_rd : eX_rslt_i);
+		eX_rslt <= (excTriggered ? iD_rd : eX_rslt_i);
 	end
 end
 
@@ -1045,6 +1049,16 @@ reg [INSNBITSZ -1 : 0] rW_insn;
 reg                      rW_we_i;  // ### comb-block-reg.
 reg [CLOG2GPRCNT -1 : 0] rW_idx_i; // ### comb-block-reg.
 reg [WORDBITSZ -1 : 0]   rW_dat_i; // ### comb-block-reg.
+
+`ifdef PUFWDALL
+assign iD_eX_rdId_isTrue  = rW_we_i;
+assign iD_eX_rdId         = rW_idx_i;
+assign iD_eX_rslt         = rW_dat_i;
+`else
+assign iD_eX_rdId_isTrue  = eX_rdId_isTrue;
+assign iD_eX_rdId         = eX_rdId;
+assign iD_eX_rslt         = eX_rslt;
+`endif
 
 `ifdef PURV32M
 reg rW_opImul_done; // ### comb-block-reg.
@@ -1099,10 +1113,10 @@ always_comb begin
 		rW_opIdiv_done = 1;
 	`endif
 	end else if (halted_o) begin
-	end else if (iD_eX_rdId_isTrue) begin
+	end else if (eX_rdId_isTrue) begin
 		rW_we_i  = 1;
-		rW_idx_i = iD_eX_rdId;
-		rW_dat_i = iD_eX_rslt;
+		rW_idx_i = eX_rdId;
+		rW_dat_i = eX_rslt;
 	end
 end
 
@@ -1133,7 +1147,7 @@ always_ff @(posedge clk_i) begin
 		iD_rW_rslt <= opIdiv_rslt;
 	`endif
 	end else if (halted_o) begin
-	end else if (iD_eX_rdId_isTrue && !eX_isExc && !eX_isExc0_i) begin
+	end else if (eX_rdId_isTrue && !eX_isExc && !eX_isExc0_i) begin
 		/* Considering the instruction sequence below, the check below
 		prevents the result of `add a3,a3,a1` to be forwarded to `jr a3`,
 		when the result of `lw a3,0(a3)` should be used but has been deferred
@@ -1141,22 +1155,22 @@ always_ff @(posedge clk_i) begin
 		add     a3,a3,a1
 		lw      a3,0(a3)       (Multi-cycle instruction)
 		jr      a3                                                        */
-		if (!iD_flushed && !iD_stalled && iD_lateResultInsn && iD_eX_rdId == iD_rdId) begin
+		if (!iD_flushed && !iD_stalled && iD_lateResultInsn && eX_rdId == iD_rdId) begin
 			iD_rW_rdId_isTrue <= 1'b0;
 			iD_rW_rdId <= {CLOG2GPRCNT{1'b0}};
 		end else begin
 			iD_rW_rdId_isTrue <= 1'b1;
-			iD_rW_rdId <= iD_eX_rdId;
+			iD_rW_rdId <= eX_rdId;
 		end
-		iD_rW_rslt <= iD_eX_rslt;
+		iD_rW_rslt <= eX_rslt;
 	end else if (eX_isExc) begin
 		// iD_rW_rdId_isTrue and iD_rW_rdId values are needed
 		// to properly unlock the gpr of the interrupted instruction.
 		// iD_rW_rslt is the result value of the interrupted instruction,
 		// which can be needed right after the exception.
-		iD_rW_rdId_isTrue <= (|iD_eX_rdId);
-		iD_rW_rdId <= iD_eX_rdId;
-		iD_rW_rslt <= iD_eX_rslt;
+		iD_rW_rdId_isTrue <= (|eX_rdId);
+		iD_rW_rdId <= eX_rdId;
+		iD_rW_rslt <= eX_rslt;
 	end else begin
 		iD_rW_rdId_isTrue <= 1'b0;
 		iD_rW_rdId <= {CLOG2GPRCNT{1'b0}};
