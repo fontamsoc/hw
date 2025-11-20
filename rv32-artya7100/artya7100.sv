@@ -147,8 +147,8 @@ wire [IRQDSTCOUNT -1 : 0] irq_dst_stb_w1;
 wire [IRQDSTCOUNT -1 : 0] irq_dst_rdy_w;
 wire [IRQDSTCOUNT -1 : 0] irq_dst_pri_w;
 
-localparam ICACHESZ = 8;
-localparam DCACHESZ = 0;
+localparam ICACHESZ = 16;
+localparam DCACHESZ = 16;
 
 localparam ICACHEWAYCNT = 1;
 localparam DCACHEWAYCNT = 1;
