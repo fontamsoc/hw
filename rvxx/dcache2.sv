@@ -47,7 +47,6 @@ parameter ADDRLIMIT = 'h2000;
 parameter CACHESETCNT = 2;
 parameter CACHEWAYCNT = 1;
 
-parameter REGMASTROUT = 1;
 parameter REGSLVINPUT = 0;
 
 parameter MAXPENDINGACK = 0; // Enables faster eviction when non-null.
@@ -77,8 +76,8 @@ input  wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] m_wb_addr_i;
 input  wire [(WORDBITSZ/8) -1 : 0]        m_wb_sel_i;
 input  wire [WORDBITSZ -1 : 0]            m_wb_dat_i;
 output wire                               m_wb_bsy_o;
-output reg                                m_wb_ack_o;
-output reg  [WORDBITSZ -1 : 0]            m_wb_dat_o;
+output wire                               m_wb_ack_o;
+output wire [WORDBITSZ -1 : 0]            m_wb_dat_o;
 
 output wire                               s_wb_cyc_o;
 output reg                                s_wb_stb_o;
@@ -191,14 +190,13 @@ wire [(WORDBITSZ/8) -1 : 0] cache_sel_i = (
 	m_wb_ack ? (cache_tag_hit ? (m_wb_sel_r | _cache_sel_o) : m_wb_sel_r) :
 	(state == REFILL) ? {(WORDBITSZ/8){1'b1}} : {(WORDBITSZ/8){1'b0}});
 
-wire [WORDBITSZ -1 : 0] m_wb_dat_o_;
 wire [WORDBITSZ -1 : 0] _m_wb_sel_r;
 wire [WORDBITSZ -1 : 0] _m_wb_sel_r_n = ~_m_wb_sel_r;
 wire [WORDBITSZ -1 : 0] _cache_sel_o_tag_hit;
 wire [WORDBITSZ -1 : 0] _cache_sel_o_tag_hit_n = ~_cache_sel_o_tag_hit;
 wire [WORDBITSZ -1 : 0] cache_dat_o_tag_hit = cache_dat_o[cache_tag_hit_wayidx];
 wire [WORDBITSZ -1 : 0] cache_dat_i = (m_wb_ack ?
-	((m_wb_dat_r & _m_wb_sel_r) | (m_wb_dat_o_ & _m_wb_sel_r_n)) :
+	((m_wb_dat_r & _m_wb_sel_r) | (m_wb_dat_o & _m_wb_sel_r_n)) :
 	(cache_tag_hit ?
 		((cache_dat_o_tag_hit & _cache_sel_o_tag_hit) |
 			(_s_wb_dat_i & _cache_sel_o_tag_hit_n)) :
@@ -283,7 +281,7 @@ reg [(WORDBITSZ/8) -1 : 0] cache_sel_r;
 always_ff @(posedge clk_i) begin
 	if (state == REFILL && !s_wb_we_o && refill_ack) begin
 		// Note that when set here, cache_dat_r is not used
-		// to update the cache, but only to set m_wb_dat_o_.
+		// to update the cache, but only to set m_wb_dat_o.
 		use_cache_dat_r <= 1'b1;
 		cache_dat_r <= cache_dat_i;
 	end else if (_m_wb_stb_i && !cmiss_i) begin
@@ -294,14 +292,7 @@ always_ff @(posedge clk_i) begin
 		use_cache_dat_r <= 1'b0;
 end
 
-assign m_wb_dat_o_ = (use_cache_dat_r ? cache_dat_r : cache_dat_o_tag_hit);
-generate if (REGMASTROUT) begin
-always_ff @(posedge clk_i)
-	m_wb_dat_o <= m_wb_dat_o_;
-end else begin
-always_comb
-	m_wb_dat_o = m_wb_dat_o_;
-end endgenerate
+assign m_wb_dat_o = (use_cache_dat_r ? cache_dat_r : cache_dat_o_tag_hit);
 
 assign _cache_sel_o = (use_cache_dat_r ? cache_sel_r : cache_sel_o_tag_hit);
 
@@ -311,14 +302,7 @@ wire _use_cache_dat_r = (use_cache_dat_r && ((m_wb_sel_r & cache_sel_r) == m_wb_
 
 wire cache_miss = (m_wb_ack && !_cache_hit && !_use_cache_dat_r);
 
-wire m_wb_ack_o_ = (m_wb_ack ? (_use_cache_dat_r || (_cache_hit || m_wb_we_r)) : use_cache_dat_r);
-generate if (REGMASTROUT) begin
-always_ff @(posedge clk_i)
-	m_wb_ack_o <= m_wb_ack_o_;
-end else begin
-always_comb
-	m_wb_ack_o = m_wb_ack_o_;
-end endgenerate
+assign m_wb_ack_o = (m_wb_ack ? (_use_cache_dat_r || (_cache_hit || m_wb_we_r)) : use_cache_dat_r);
 
 wire cache_drt_o_we_wayidx = cache_drt_o[cache_we_wayidx];
 
