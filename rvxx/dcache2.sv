@@ -149,7 +149,8 @@ wire refill_ack = (_s_wb_ack_i && (!MAXPENDINGACK || (!s_wb_stb_o && ack_pending
 reg m_wb_ack;
 
 wire cache_we = (!cmiss_r &&
-	((m_wb_ack && m_wb_we_r) || (!s_wb_we_o && refill_ack)));
+	((m_wb_ack && m_wb_we_r) ||
+		(!s_wb_we_o && refill_ack)));
 
 localparam CACHETAGBITSIZE = ((ADDRBITSZ-MSBSZIGN) - CLOG2CACHESETCNT);
 
@@ -190,13 +191,12 @@ wire [(WORDBITSZ/8) -1 : 0] cache_sel_i = (
 	m_wb_ack ? (cache_tag_hit ? (m_wb_sel_r | _cache_sel_o) : m_wb_sel_r) :
 	(state == REFILL) ? {(WORDBITSZ/8){1'b1}} : {(WORDBITSZ/8){1'b0}});
 
-wire [WORDBITSZ -1 : 0] cache_dat_o_tag_hit = cache_dat_o[cache_tag_hit_wayidx];
-
 wire [WORDBITSZ -1 : 0] m_wb_dat_o_;
 wire [WORDBITSZ -1 : 0] _m_wb_sel_r;
 wire [WORDBITSZ -1 : 0] _m_wb_sel_r_n = ~_m_wb_sel_r;
 wire [WORDBITSZ -1 : 0] _cache_sel_o_tag_hit;
 wire [WORDBITSZ -1 : 0] _cache_sel_o_tag_hit_n = ~_cache_sel_o_tag_hit;
+wire [WORDBITSZ -1 : 0] cache_dat_o_tag_hit = cache_dat_o[cache_tag_hit_wayidx];
 wire [WORDBITSZ -1 : 0] cache_dat_i = (m_wb_ack ?
 	((m_wb_dat_r & _m_wb_sel_r) | (m_wb_dat_o_ & _m_wb_sel_r_n)) :
 	(cache_tag_hit ?
