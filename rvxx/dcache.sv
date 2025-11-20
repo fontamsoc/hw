@@ -47,7 +47,6 @@ parameter ADDRLIMIT = 'h2000;
 parameter CACHESETCNT = 2;
 parameter CACHEWAYCNT = 1;
 
-parameter REGCACHEHIT = 0;
 parameter REGSLVINPUT = 0;
 
 parameter MAXPENDINGACK = 0; // Enables faster eviction when non-null.
@@ -147,10 +146,8 @@ assign s_wb_cyc_o = (s_wb_cyc_o_ || (MAXPENDINGACK && ack_pending));
 // REFILL, because we could still be waiting for the ack of EVICT.
 wire refill_ack = (_s_wb_ack_i && (!MAXPENDINGACK || (!s_wb_stb_o && ack_pending == 1)));
 
-reg cache_bsy;
-
 wire cache_we = (!cmiss_r &&
-	((state == TESTHIT && !cache_bsy && m_wb_we_r) ||
+	((state == TESTHIT && m_wb_we_r) ||
 		(!s_wb_we_o && refill_ack)));
 
 localparam CACHETAGBITSIZE = ((ADDRBITSZ-MSBSZIGN) - CLOG2CACHESETCNT);
@@ -164,34 +161,18 @@ reg [WORDBITSZ -1 : 0]       cache_dat_o [CACHEWAYCNT];
 reg                          cache_drt_o [CACHEWAYCNT];
 
 wire [CACHEWAYCNT -1 : 0] cache_tag_hit_;
-reg cache_tag_hit;
-generate if (REGCACHEHIT) begin
-always_ff @(posedge clk_i)
-	cache_tag_hit <= (|cache_tag_hit_);
-end else begin
-always_comb
-	cache_tag_hit = (|cache_tag_hit_);
-end endgenerate
+wire cache_tag_hit = (|cache_tag_hit_);
 
-reg [CLOG2CACHEWAYCNT -1 : 0] cache_tag_hit_wayidx_; // ### comb-block-reg.
-reg [CLOG2CACHEWAYCNT -1 : 0] cache_tag_hit_wayidx;
-generate if (REGCACHEHIT) begin
-always_ff @(posedge clk_i)
-	cache_tag_hit_wayidx <= cache_tag_hit_wayidx_;
-end else begin
-always_comb
-	cache_tag_hit_wayidx = cache_tag_hit_wayidx_;
-end endgenerate
-
+reg [CLOG2CACHEWAYCNT -1 : 0] cache_tag_hit_wayidx; // ### comb-block-reg.
 integer gen_hitidx_idx;
 always_comb begin
-	cache_tag_hit_wayidx_ = 0;
+	cache_tag_hit_wayidx = 0;
 	for (
 		gen_hitidx_idx = CACHEWAYCNT;
 		gen_hitidx_idx > 0;
 		gen_hitidx_idx = gen_hitidx_idx-1) begin
 		if (cache_tag_hit_[gen_hitidx_idx-1])
-			cache_tag_hit_wayidx_ = (gen_hitidx_idx-1);
+			cache_tag_hit_wayidx = (gen_hitidx_idx-1);
 	end
 end
 
@@ -334,8 +315,6 @@ always_ff @(posedge clk_i) begin
 				conly_r <= conly_i;
 				cmiss_r <= cmiss_i;
 
-				cache_bsy <= (REGCACHEHIT && !(conly_i || cmiss_i));
-
 				state <= TESTHIT;
 
 			end else begin
@@ -346,9 +325,7 @@ always_ff @(posedge clk_i) begin
 
 		end else if (state == TESTHIT) begin
 
-			if (cache_bsy) // 1 clock cycle needed to compute cache_hit.
-				cache_bsy <= 0;
-			else if ((conly_r || cache_hit || (cache_tag_hit && m_wb_we_r)) && !cmiss_r) begin
+			if ((conly_r || cache_hit || (cache_tag_hit && m_wb_we_r)) && !cmiss_r) begin
 
 				m_wb_bsy_o_ <= 0;
 				m_wb_ack_o <= 1;
