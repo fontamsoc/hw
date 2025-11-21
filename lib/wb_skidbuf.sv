@@ -46,6 +46,8 @@ localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 // -1 account for the msb oring ignored bits.
 localparam MSBSZIGN = (WORDBITSZ-clog2(ADDRLIMIT)-1);
 
+localparam CLOG2MAXPENDINGACK = clog2(MAXPENDINGACK);
+
 input wire rst_i;
 
 input wire clk_i;
@@ -73,10 +75,10 @@ input  wire [WORDBITSZ -1 : 0]            s_wb_dat_i;
 assign m_wb_ack_o = s_wb_ack_i;
 assign m_wb_dat_o = s_wb_dat_i;
 
-wire s_wb_max_pending;
+reg [(CLOG2MAXPENDINGACK +1) -1 : 0] s_wb_pending_acks;
 
 wire s_wb_stb_o_;
-assign s_wb_stb_o = (s_wb_stb_o_ && !s_wb_max_pending);
+assign s_wb_stb_o = (s_wb_stb_o_ && !s_wb_pending_acks[CLOG2MAXPENDINGACK]);
 
 wire _s_wb_bsy_i;
 
@@ -99,8 +101,6 @@ skidbuf #(
 	,.bsy_i (_s_wb_bsy_i)
 );
 
-reg [(clog2(MAXPENDINGACK) +1) -1 : 0] s_wb_pending_acks;
-
 always_ff @(posedge clk_i) begin
 	if (rst_i)
 		s_wb_pending_acks <= 0;
@@ -113,9 +113,7 @@ end
 
 assign s_wb_cyc_o = (s_wb_stb_o || (|s_wb_pending_acks));
 
-assign s_wb_max_pending = (s_wb_pending_acks == MAXPENDINGACK);
-
-assign _s_wb_bsy_i = (s_wb_bsy_i || s_wb_max_pending);
+assign _s_wb_bsy_i = (s_wb_bsy_i || s_wb_pending_acks[CLOG2MAXPENDINGACK]);
 
 endmodule
 
