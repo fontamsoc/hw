@@ -41,7 +41,7 @@ parameter WORDBITSZ = 32;
 
 parameter ADDRLIMIT = 'h2000;
 
-parameter MAXPENDINGACK = 2;
+parameter MAXPENDINGACK = 16; // Must be non-null and a power of 2.
 
 parameter ASYNC = 0;
 
@@ -50,6 +50,8 @@ localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
 // -1 account for the msb oring ignored bits.
 localparam MSBSZIGN = (WORDBITSZ-clog2(ADDRLIMIT)-1);
+
+localparam CLOG2MAXPENDINGACK = clog2(MAXPENDINGACK);
 
 input wire rst_i;
 
@@ -78,9 +80,9 @@ input  wire [WORDBITSZ -1 : 0]            s_wb_dat_i;
 
 wire m_wb_bsy_o_;
 
-reg [(clog2(MAXPENDINGACK) +1) -1 : 0] m_wb_pending_acks;
+reg [(CLOG2MAXPENDINGACK +1) -1 : 0] m_wb_pending_acks;
 
-assign m_wb_bsy_o = (m_wb_bsy_o_ || m_wb_pending_acks == MAXPENDINGACK);
+assign m_wb_bsy_o = (m_wb_bsy_o_ || m_wb_pending_acks[CLOG2MAXPENDINGACK]);
 
 wire rqst_write_w = (m_wb_cyc_i && m_wb_stb_i && !m_wb_bsy_o);
 
