@@ -62,6 +62,8 @@ localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 // -1 account for the msb oring ignored bits.
 localparam MSBSZIGN = (WORDBITSZ-clog2(ADDRLIMIT)-1);
 
+localparam CLOG2MAXPENDINGACK = clog2(MAXPENDINGACK);
+
 input wire rst_i;
 
 input wire clk_i;
@@ -75,7 +77,7 @@ input  wire                               m_wb_we_i;
 input  wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] m_wb_addr_i;
 input  wire [(WORDBITSZ/8) -1 : 0]        m_wb_sel_i;
 input  wire [WORDBITSZ -1 : 0]            m_wb_dat_i;
-output wire                               m_wb_bsy_o;
+output reg                                m_wb_bsy_o;
 output reg                                m_wb_ack_o;
 output reg  [WORDBITSZ -1 : 0]            m_wb_dat_o;
 
@@ -121,10 +123,7 @@ end else begin
 end
 endgenerate
 
-// (MAXPENDINGACK+2) is used instead of just MAXPENDINGACK
-// otherwise parameter MAXPENDINGACK must be >= 3, where +2
-// account for the sequencing of EVICT followed by REFILL.
-reg [clog2((MAXPENDINGACK+2)+1) -1 : 0] ack_pending;
+reg [(CLOG2MAXPENDINGACK +1) -1 : 0] ack_pending;
 generate if (MAXPENDINGACK) begin
 always_ff @(posedge clk_i) begin
 	if (rst_i)
@@ -269,14 +268,11 @@ always_ff @(posedge clk_i) begin
 	end
 end
 
-reg m_wb_bsy_o_;
-assign m_wb_bsy_o = (m_wb_bsy_o_ || (MAXPENDINGACK && (ack_pending > ((MAXPENDINGACK+2)-2))));
-
 always_ff @(posedge clk_i) begin
 
 	if (rst_i) begin
 
-		m_wb_bsy_o_ <= 1;
+		m_wb_bsy_o <= 1;
 		m_wb_ack_o <= 0;
 
 		s_wb_cyc_o_ <= 0;
@@ -297,14 +293,14 @@ always_ff @(posedge clk_i) begin
 			if (rst_r) begin
 
 				if (m_wb_addr_r == (CACHESETCNT - 1)) begin
-					m_wb_bsy_o_ <= 0;
+					m_wb_bsy_o <= 0;
 					rst_r <= 0;
 				end else
 					m_wb_addr_r <= m_wb_addr_r + 1'b1;
 
 			end else if (_m_wb_stb_i) begin
 
-				m_wb_bsy_o_ <= 1;
+				m_wb_bsy_o <= 1;
 				m_wb_ack_o <= 0;
 
 				m_wb_we_r <= m_wb_we_i;
@@ -319,7 +315,7 @@ always_ff @(posedge clk_i) begin
 
 			end else begin
 
-				m_wb_bsy_o_ <= 0;
+				m_wb_bsy_o <= 0;
 				m_wb_ack_o <= 0;
 			end
 
@@ -327,7 +323,7 @@ always_ff @(posedge clk_i) begin
 
 			if ((conly_r || cache_hit || (cache_tag_hit && m_wb_we_r)) && !cmiss_r) begin
 
-				m_wb_bsy_o_ <= 0;
+				m_wb_bsy_o <= 0;
 				m_wb_ack_o <= 1;
 
 				if (!m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
@@ -351,7 +347,7 @@ always_ff @(posedge clk_i) begin
 
 			end else if (m_wb_we_r && !cmiss_r) begin
 
-				m_wb_bsy_o_ <= 0;
+				m_wb_bsy_o <= 0;
 				m_wb_ack_o <= 1;
 
 				conly_r <= 0;
@@ -378,7 +374,7 @@ always_ff @(posedge clk_i) begin
 
 				if (m_wb_we_r) begin
 
-					m_wb_bsy_o_ <= 0;
+					m_wb_bsy_o <= 0;
 					m_wb_ack_o <= 1;
 
 					s_wb_cyc_o_ <= 0;
@@ -406,7 +402,7 @@ always_ff @(posedge clk_i) begin
 
 			if ((m_wb_we_r && !s_wb_bsy_i && MAXPENDINGACK) || refill_ack) begin
 
-				m_wb_bsy_o_ <= 0;
+				m_wb_bsy_o <= 0;
 				m_wb_ack_o <= 1;
 
 				if (!m_wb_we_r) // For power-efficiency, otherwise this test is not needed.

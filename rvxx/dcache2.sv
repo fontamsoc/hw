@@ -62,6 +62,8 @@ localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 // -1 account for the msb oring ignored bits.
 localparam MSBSZIGN = (WORDBITSZ-clog2(ADDRLIMIT)-1);
 
+localparam CLOG2MAXPENDINGACK = clog2(MAXPENDINGACK);
+
 input wire rst_i;
 
 input wire clk_i;
@@ -120,10 +122,7 @@ end else begin
 end
 endgenerate
 
-// (MAXPENDINGACK+2) is used instead of just MAXPENDINGACK
-// otherwise parameter MAXPENDINGACK must be >= 3, where +2
-// account for the sequencing of EVICT followed by REFILL.
-reg [clog2((MAXPENDINGACK+2)+1) -1 : 0] ack_pending;
+reg [(CLOG2MAXPENDINGACK +1) -1 : 0] ack_pending;
 generate if (MAXPENDINGACK) begin
 always_ff @(posedge clk_i) begin
 	if (rst_i)
