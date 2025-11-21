@@ -43,7 +43,7 @@ parameter SLAVECOUNT        = 1;
 parameter DEFAULTSLAVEINDEX = 0;
 parameter FIRSTSLAVEADDR    = 0;
 parameter ADDRLIMIT         = 'h2000;
-parameter MAXPENDINGACK     = 16; // Must be non-null.
+parameter MAXPENDINGACK     = 16; // Must be non-null and a power of 2.
 
 localparam CLOG2SLAVECOUNT  = clog2(SLAVECOUNT);
 
@@ -52,6 +52,8 @@ localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
 // -1 account for the msb oring ignored bits.
 localparam MSBSZIGN = (WORDBITSZ-clog2(ADDRLIMIT)-1);
+
+localparam CLOG2MAXPENDINGACK = clog2(MAXPENDINGACK);
 
 input wire rst_i;
 
@@ -80,7 +82,7 @@ input  wire [((WORDBITSZ-MSBSZIGN) * SLAVECOUNT) -1 : 0] s_wb_mapsz_i;
 
 wire _m_wb_stb_i = (m_wb_cyc_i && m_wb_stb_i);
 
-reg [clog2(MAXPENDINGACK +1) -1 : 0] ack_pending;
+reg [(CLOG2MAXPENDINGACK +1) -1 : 0] ack_pending;
 
 wire _m_wb_stb_i_and_not_m_wb_bsy_o = (_m_wb_stb_i && !m_wb_bsy_o);
 
@@ -193,9 +195,7 @@ always_ff @(posedge clk_i) begin
 		slvidx_dflt <= m_wb_bsy_o;
 end
 
-wire max_pending = (ack_pending == MAXPENDINGACK);
-
-assign m_wb_bsy_o = ((slvidx_invalid ? 1'b1 : s_wb_bsy_i[slvidx]) || max_pending);
+assign m_wb_bsy_o = ((slvidx_invalid ? 1'b1 : s_wb_bsy_i[slvidx]) || ack_pending[CLOG2MAXPENDINGACK]);
 assign m_wb_ack_o = s_wb_ack_i[slvidx];
 assign m_wb_dat_o = _s_wb_dat_i[slvidx];
 
@@ -208,7 +208,7 @@ generate for (
 	gen_s_wb_idx = gen_s_wb_idx + 1) begin :gen_s_wb
 
 assign s_wb_cyc_o[gen_s_wb_idx] = ((slvidx != gen_s_wb_idx || _slvidx_invalid) ? 1'b0 : m_wb_cyc_i);
-assign s_wb_stb_o[gen_s_wb_idx] = ((slvidx != gen_s_wb_idx || slvidx_invalid || max_pending) ? 1'b0 : m_wb_stb_i);
+assign s_wb_stb_o[gen_s_wb_idx] = ((slvidx != gen_s_wb_idx || slvidx_invalid || ack_pending[CLOG2MAXPENDINGACK]) ? 1'b0 : m_wb_stb_i);
 assign s_wb_we_o[gen_s_wb_idx] = m_wb_we_i;
 assign s_wb_addr_o[(gen_s_wb_idx * (ADDRBITSZ-MSBSZIGN)) +: (ADDRBITSZ-MSBSZIGN)] = s_wb_addr_o_;
 assign s_wb_sel_o[(gen_s_wb_idx * (WORDBITSZ/8)) +: (WORDBITSZ/8)] = m_wb_sel_i;
