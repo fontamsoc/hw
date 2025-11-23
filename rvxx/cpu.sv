@@ -63,6 +63,7 @@ parameter WORDBITSZ     = 32;
 parameter XWORDBITSZ    = 32; // TODO: Support all the way up to 1024 ...
 parameter ADDRLIMIT     = 'h2000;
 parameter CLKFREQ       = 1;
+parameter DCACHETYPE    = 0;
 parameter ICACHESETCNT  = 2;
 parameter DCACHESETCNT  = 0;
 parameter ICACHEWAYCNT  = 1;
@@ -146,6 +147,7 @@ pu #(
 	,.XWORDBITSZ    (XWORDBITSZ)
 	,.ADDRLIMIT     (ADDRLIMIT)
 	,.CLKFREQ       (CLKFREQ)
+	,.DCACHETYPE    (DCACHETYPE)
 	,.ICACHESETCNT  (ICACHESETCNT)
 	,.DCACHESETCNT  ((PUCNT > 1) ? 0 : DCACHESETCNT) /* TODO: cache-coherence */
 	,.ICACHEWAYCNT  (ICACHEWAYCNT)
