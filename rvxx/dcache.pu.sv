@@ -218,7 +218,7 @@ wire _dCache_m_bsy_o = (dCache_m_bsy_o || dCache_m_max_pending);
 
 assign _dCache_m_stb_i = (dCache_m_stb_i && !dCache_m_max_pending);
 
-wire __dCache_m_stb_i = (_dCache_m_stb_i && !_dCache_m_bsy_o);
+wire __dCache_m_stb_i = (_dCache_m_stb_i && !dCache_m_bsy_o);
 
 reg[(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_breather;
 // Logic used to force wb_cyc low when it has been high for too long;
