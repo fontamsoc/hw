@@ -312,7 +312,7 @@ always_ff @(posedge clk_i) begin
 				dCache_m_addr_i_[(WORDBITSZ-MSBSZIGN-1)-1:CLOG2WORDBITSZBY8]};
 			dCache_m_sel_i <= dCache_m_sel_i_;
 			dCache_m_dat_i <= dCache_m_dat_i_;
-		end else if (iD_isAMO && !(iD_isLr || iD_isSc)) begin
+		end else if (iD_isAMOonly) begin
 			amoUnit_opType <= iD_func5;
 			dCache_m_stb_i <= 1'b1;
 			dCache_m_we_i <= 1'b0;

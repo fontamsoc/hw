@@ -384,20 +384,22 @@ wire iF_opIdiv_stb = (iF_isRV32M &&  iF_func3[2] && iF_rdId);
 wire iF_isLr = (iF_isAMO && iF_func5 == 5'b00010);
 wire iF_isSc = (iF_isAMO && iF_func5 == 5'b00011);
 
+wire iF_isAMOwithSc = (iF_isAMO && iF_func5 != 5'b00010);
+
+wire iF_isAMOonly = (iF_isAMOwithSc && iF_func5 != 5'b00011);
+
 wire iF_isLoadOrLr = (iF_isLoad || iF_isLr);
-wire iF_isStoreOrScOrAMO = (iF_isStore || (iF_isAMO && iF_func5 != 5'b00010));
+wire iF_isStoreOrScOrAMO = (iF_isStore || iF_isAMOwithSc);
 
 wire iF_ldUnit_stb = (iF_isLoad || (iF_isAMO && iF_func5 != 5'b00011));
 wire iF_stUnit_stb = (iF_isStore || iF_isSc);
 
-wire iF_isAMOandSc = (iF_isAMO && iF_func5 != 5'b00010);
-
-wire iF_cancelLr = (iF_isSystem || iF_isMiscMem || iF_isLoad || iF_isStore || iF_isAMOandSc);
+wire iF_cancelLr = (iF_isSystem || iF_isMiscMem || iF_isLoad || iF_isStore || iF_isAMOwithSc);
 
 wire iF_isIllInsn = !(iF_isALUreg || iF_isALUimm || iF_isBranch || iF_isJALR || iF_isJAL ||
 	iF_isAUIPC || iF_isLUI || iF_isLoad || iF_isStore || iF_isSystem || iF_isAMO || iF_isMiscMem);
 
-wire iF_is3OprndD12 = (iF_isALUreg || iF_isAMOandSc);
+wire iF_is3OprndD12 = (iF_isALUreg || iF_isAMOwithSc);
 wire iF_is2OprndD1  = (iF_isALUimm || iF_isJALR || iF_ldUnit_stb || (iF_isCSR && !iF_func3[2]));
 wire iF_is2Oprnd12  = (iF_isBranch || iF_isStore);
 wire iF_is1OprndD   = (iF_isJAL || iF_isAUIPC || iF_isLUI || (iF_isCSR && iF_func3[2]));
@@ -538,6 +540,8 @@ reg iD_opIdiv_stb;
 
 reg iD_isLr;
 reg iD_isSc;
+
+reg iD_isAMOonly;
 
 reg iD_isLoadOrLr;
 reg iD_isStoreOrScOrAMO;
@@ -795,6 +799,8 @@ always_ff @(posedge clk_i) begin
 
 		iD_isLr <= iF_isLr;
 		iD_isSc <= iF_isSc;
+
+		iD_isAMOonly <= iF_isAMOonly;
 
 		iD_isLoadOrLr <= iF_isLoadOrLr;
 		iD_isStoreOrScOrAMO <= iF_isStoreOrScOrAMO;
