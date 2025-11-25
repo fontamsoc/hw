@@ -251,11 +251,11 @@ always_ff @(posedge clk_i) begin
 		dCache_m_rsp_cnt <= dCache_m_rsp_cnt + 1'b1;
 end
 
-assign dCache_m_pending = (dCache_m_stb_i || dCache_m_pending_acks);
+assign dCache_m_pending = ((|dCache_m_pending_acks) || dCache_m_stb_i);
 
 reg amoUnit_lrValid;
 
-assign dCache_m_cyc_i = (amoUnit_lrValid || dCache_m_stb_i || dCache_m_we_i_ || (|dCache_m_pending_acks));
+assign dCache_m_cyc_i = (amoUnit_lrValid || dCache_m_pending || dCache_m_we_i_);
 
 wire [WORDBITSZ -1 : 0] dCache_m_addr_i_ = (iD_rs1 + iD_addrImm);
 
