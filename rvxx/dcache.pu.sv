@@ -4,11 +4,11 @@
 wire dCache_invd_w;
 
 wire                               dCache_m_cyc_i;
-reg                                dCache_m_stb_i;
-reg                                dCache_m_we_i;
-reg  [(ADDRBITSZ-MSBSZIGN) -1 : 0] dCache_m_addr_i;
-reg  [(WORDBITSZ/8) -1 : 0]        dCache_m_sel_i;
-reg  [WORDBITSZ -1 : 0]            dCache_m_dat_i;
+reg                                dCache_m_stb_i;  // ### comb-block-reg.
+reg                                dCache_m_we_i;   // ### comb-block-reg.
+reg  [(ADDRBITSZ-MSBSZIGN) -1 : 0] dCache_m_addr_i; // ### comb-block-reg.
+reg  [(WORDBITSZ/8) -1 : 0]        dCache_m_sel_i;  // ### comb-block-reg.
+reg  [WORDBITSZ -1 : 0]            dCache_m_dat_i;  // ### comb-block-reg.
 wire                               dCache_m_bsy_o;
 wire                               dCache_m_ack_o;
 wire [WORDBITSZ -1 : 0]            dCache_m_dat_o;
@@ -33,8 +33,6 @@ wire                               skidBuf_dCache_m_bsy_i;
 wire                               skidBuf_dCache_m_ack_i;
 wire [WORDBITSZ -1 : 0]            skidBuf_dCache_m_dat_i;
 
-wire _dCache_m_stb_i;
-
 generate if (USE_DCACHE) begin: gen_skidBuf_dCache
 
 wb_skidbuf #(
@@ -49,7 +47,7 @@ wb_skidbuf #(
 	,.clk_i (clk_i)
 
 	,.m_wb_cyc_i  (dCache_m_cyc_i)
-	,.m_wb_stb_i  (_dCache_m_stb_i)
+	,.m_wb_stb_i  (dCache_m_stb_i)
 	,.m_wb_we_i   (dCache_m_we_i)
 	,.m_wb_addr_i (dCache_m_addr_i)
 	,.m_wb_sel_i  (dCache_m_sel_i)
@@ -72,7 +70,7 @@ wb_skidbuf #(
 end else begin
 
 assign skidBuf_dCache_m_cyc_o = dCache_m_cyc_i;
-assign skidBuf_dCache_m_stb_o = _dCache_m_stb_i;
+assign skidBuf_dCache_m_stb_o = dCache_m_stb_i;
 assign skidBuf_dCache_m_we_o = dCache_m_we_i;
 assign skidBuf_dCache_m_addr_o = dCache_m_addr_i;
 assign skidBuf_dCache_m_sel_o = dCache_m_sel_i;
@@ -203,9 +201,10 @@ assign dcache_addr_o = {upSizr_dCache_m_addr_o, {CLOG2XWORDBITSZBY8{1'b0}}};
 assign dCache_s_bsy_i = _wb_bsy_i;
 assign dCache_s_dat_i = wb_dat_i;
 
-reg                         dCache_m_we_i_;  // Used for atomic load-store.
-reg  [(WORDBITSZ/8) -1 : 0] dCache_m_sel_i_; // ### comb-block-reg.
-reg  [WORDBITSZ -1 : 0]     dCache_m_dat_i_; // ### comb-block-reg.
+reg dCache_m_isAMOonly;
+
+reg [(WORDBITSZ/8) -1 : 0] dCache_m_sel_i_; // ### comb-block-reg.
+reg [WORDBITSZ -1 : 0]     dCache_m_dat_i_; // ### comb-block-reg.
 
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_rqst_cnt;
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_rsp_cnt;
@@ -214,11 +213,9 @@ wire [(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_pending_acks = (dCache_m_rqst_cnt
 
 wire dCache_m_max_pending = dCache_m_pending_acks[CLOG2MAXPENDINGACK];
 
-wire _dCache_m_bsy_o = (dCache_m_bsy_o || dCache_m_max_pending);
+reg dCache_m_bsy_r;
 
-assign _dCache_m_stb_i = (dCache_m_stb_i && !dCache_m_max_pending);
-
-wire __dCache_m_stb_i = (_dCache_m_stb_i && !dCache_m_bsy_o);
+wire __dCache_m_stb_i = (dCache_m_stb_i && !dCache_m_bsy_r);
 
 reg[(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_breather;
 // Logic used to force wb_cyc low when it has been high for too long;
@@ -234,8 +231,7 @@ always_ff @(posedge clk_i) begin
 end
 
 // Signal set to 1 when the logic setting dCache_m_stb_i cannot accept a new operation.
-wire __dCache_m_bsy = ((dCache_m_stb_i && _dCache_m_bsy_o) || dCache_m_we_i_ ||
-	dCache_m_breather[CLOG2MAXPENDINGACK]);
+wire __dCache_m_bsy = (dCache_m_bsy_r || dCache_m_max_pending || dCache_m_isAMOonly || dCache_m_breather[CLOG2MAXPENDINGACK]);
 
 always_ff @(posedge clk_i) begin
 	if (rst_i)
@@ -251,11 +247,11 @@ always_ff @(posedge clk_i) begin
 		dCache_m_rsp_cnt <= dCache_m_rsp_cnt + 1'b1;
 end
 
-assign dCache_m_pending = ((|dCache_m_pending_acks) || dCache_m_stb_i);
+assign dCache_m_pending = ((|dCache_m_pending_acks) || dCache_m_bsy_r);
 
 reg amoUnit_lrValid;
 
-assign dCache_m_cyc_i = (amoUnit_lrValid || dCache_m_pending || dCache_m_we_i_);
+assign dCache_m_cyc_i = (amoUnit_lrValid || dCache_m_stb_i || (|dCache_m_pending_acks) || dCache_m_isAMOonly);
 
 wire [WORDBITSZ -1 : 0] dCache_m_addr_i_ = (iD_rs1 + iD_addrImm);
 
@@ -263,70 +259,96 @@ wire            amoUnit_memAck;
 reg  [5 -1 : 0] amoUnit_opType;
 
 wire [(WORDBITSZ+1) -1 : 0] dCache_m_dat_i_minus_dCache_m_dat_o = (
-	({1'b1, ~dCache_m_dat_o} + {1'b0, dCache_m_dat_i}) + 1'b1);
+	({1'b1, ~dCache_m_dat_o} + {1'b0, dCache_m_dat_r}) + 1'b1);
 wire dCache_m_dat_i_lt_dCache_m_dat_o = (
-	(dCache_m_dat_i[WORDBITSZ-1] ^ dCache_m_dat_o[WORDBITSZ-1]) ?
-		dCache_m_dat_i[WORDBITSZ-1] : dCache_m_dat_i_minus_dCache_m_dat_o[WORDBITSZ]);
+	(dCache_m_dat_r[WORDBITSZ-1] ^ dCache_m_dat_o[WORDBITSZ-1]) ?
+		dCache_m_dat_r[WORDBITSZ-1] : dCache_m_dat_i_minus_dCache_m_dat_o[WORDBITSZ]);
 wire dCache_m_dat_i_ltu_dCache_m_dat_o = dCache_m_dat_i_minus_dCache_m_dat_o[WORDBITSZ];
 
 wire _amoUnit_lrValid;
 
+reg                               dCache_m_we_r;
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] dCache_m_addr_r;
+reg [(WORDBITSZ/8) -1 : 0]        dCache_m_sel_r;
+reg [WORDBITSZ -1 : 0]            dCache_m_dat_r;
+
+always_comb begin
+
+	dCache_m_stb_i = 1'b0;
+	dCache_m_we_i = dCache_m_we_r;
+	dCache_m_addr_i = dCache_m_addr_r;
+	dCache_m_sel_i = dCache_m_sel_r;
+	dCache_m_dat_i = dCache_m_dat_r;
+
+	if (dCache_m_bsy_r) begin
+		dCache_m_stb_i = 1'b1;
+	end else if (dCache_m_isAMOonly) begin
+		if (amoUnit_memAck)
+			dCache_m_stb_i = 1'b1;
+		dCache_m_we_i = 1'b1;
+		dCache_m_dat_i = (
+			(amoUnit_opType == 5'b00000) ? (dCache_m_dat_r + dCache_m_dat_o) :
+			(amoUnit_opType == 5'b00100) ? (dCache_m_dat_r ^ dCache_m_dat_o) :
+			(amoUnit_opType == 5'b01100) ? (dCache_m_dat_r & dCache_m_dat_o) :
+			(amoUnit_opType == 5'b01000) ? (dCache_m_dat_r | dCache_m_dat_o) :
+			(amoUnit_opType == 5'b10000) ? // amomin.w
+				(dCache_m_dat_i_lt_dCache_m_dat_o ? dCache_m_dat_r : dCache_m_dat_o) :
+			(amoUnit_opType == 5'b10100) ? // amomax.w
+				(!dCache_m_dat_i_lt_dCache_m_dat_o ? dCache_m_dat_r : dCache_m_dat_o) :
+			(amoUnit_opType == 5'b11000) ? // amominu.w
+				(dCache_m_dat_i_ltu_dCache_m_dat_o ? dCache_m_dat_r : dCache_m_dat_o) :
+			(amoUnit_opType == 5'b11100) ? // amomaxu.w
+				(!dCache_m_dat_i_ltu_dCache_m_dat_o ? dCache_m_dat_r : dCache_m_dat_o) :
+			dCache_m_dat_r);
+	end else if (iD_isLoadOrLr && iD_insn_valid) begin
+		dCache_m_stb_i = 1'b1;
+		dCache_m_we_i = 1'b0;
+		dCache_m_addr_i = { // MSB oring of ignored bits.
+			|dCache_m_addr_i_[WORDBITSZ-1:(WORDBITSZ-MSBSZIGN-1)],
+			dCache_m_addr_i_[(WORDBITSZ-MSBSZIGN-1)-1:CLOG2WORDBITSZBY8]};
+		dCache_m_sel_i = dCache_m_sel_i_;
+	end else if ((iD_isStore || (iD_isSc && _amoUnit_lrValid)) && iD_insn_valid) begin
+		dCache_m_stb_i = 1'b1;
+		dCache_m_we_i = 1'b1;
+		dCache_m_addr_i = { // MSB oring of ignored bits.
+			|dCache_m_addr_i_[WORDBITSZ-1:(WORDBITSZ-MSBSZIGN-1)],
+			dCache_m_addr_i_[(WORDBITSZ-MSBSZIGN-1)-1:CLOG2WORDBITSZBY8]};
+		dCache_m_sel_i = dCache_m_sel_i_;
+		dCache_m_dat_i = dCache_m_dat_i_;
+	end else if (iD_isAMOonly && iD_insn_valid) begin
+		dCache_m_stb_i = 1'b1;
+		dCache_m_we_i = 1'b0;
+		dCache_m_addr_i = { // MSB oring of ignored bits.
+			|dCache_m_addr_i_[WORDBITSZ-1:(WORDBITSZ-MSBSZIGN-1)],
+			dCache_m_addr_i_[(WORDBITSZ-MSBSZIGN-1)-1:CLOG2WORDBITSZBY8]};
+		dCache_m_sel_i = dCache_m_sel_i_;
+		dCache_m_dat_i = dCache_m_dat_i_;
+	end
+end
+
 always_ff @(posedge clk_i) begin
 	if (rst_i) begin
-		dCache_m_stb_i <= 1'b0;
-		dCache_m_we_i_ <= 1'b0;
-	end else if (dCache_m_we_i_) begin
-		if (amoUnit_memAck) begin
-			dCache_m_stb_i <= 1'b1;
-			dCache_m_we_i <= 1'b1;
-			dCache_m_we_i_ <= 1'b0;
-			dCache_m_dat_i <= (
-				(amoUnit_opType == 5'b00000) ? (dCache_m_dat_i + dCache_m_dat_o) :
-				(amoUnit_opType == 5'b00100) ? (dCache_m_dat_i ^ dCache_m_dat_o) :
-				(amoUnit_opType == 5'b01100) ? (dCache_m_dat_i & dCache_m_dat_o) :
-				(amoUnit_opType == 5'b01000) ? (dCache_m_dat_i | dCache_m_dat_o) :
-				(amoUnit_opType == 5'b10000) ? // amomin.w
-					(dCache_m_dat_i_lt_dCache_m_dat_o ? dCache_m_dat_i : dCache_m_dat_o) :
-				(amoUnit_opType == 5'b10100) ? // amomax.w
-					(!dCache_m_dat_i_lt_dCache_m_dat_o ? dCache_m_dat_i : dCache_m_dat_o) :
-				(amoUnit_opType == 5'b11000) ? // amominu.w
-					(dCache_m_dat_i_ltu_dCache_m_dat_o ? dCache_m_dat_i : dCache_m_dat_o) :
-				(amoUnit_opType == 5'b11100) ? // amomaxu.w
-					(!dCache_m_dat_i_ltu_dCache_m_dat_o ? dCache_m_dat_i : dCache_m_dat_o) :
-				dCache_m_dat_i);
-		end else if (!_dCache_m_bsy_o)
-			dCache_m_stb_i <= 1'b0;
+		dCache_m_isAMOonly <= 1'b0;
+	end else if (dCache_m_isAMOonly) begin
+		if (amoUnit_memAck)
+			dCache_m_isAMOonly <= 1'b0;
 	end else if (iD_insn_valid) begin
-		if (iD_isLoadOrLr) begin
-			dCache_m_stb_i <= 1'b1;
-			dCache_m_we_i <= 0;
-			dCache_m_addr_i <= { // MSB oring of ignored bits.
-				|dCache_m_addr_i_[WORDBITSZ-1:(WORDBITSZ-MSBSZIGN-1)],
-				dCache_m_addr_i_[(WORDBITSZ-MSBSZIGN-1)-1:CLOG2WORDBITSZBY8]};
-			dCache_m_sel_i <= dCache_m_sel_i_;
-		end else if (iD_isStore || (iD_isSc && _amoUnit_lrValid)) begin
-			dCache_m_stb_i <= 1'b1;
-			dCache_m_we_i <= 1;
-			dCache_m_addr_i <= { // MSB oring of ignored bits.
-				|dCache_m_addr_i_[WORDBITSZ-1:(WORDBITSZ-MSBSZIGN-1)],
-				dCache_m_addr_i_[(WORDBITSZ-MSBSZIGN-1)-1:CLOG2WORDBITSZBY8]};
-			dCache_m_sel_i <= dCache_m_sel_i_;
-			dCache_m_dat_i <= dCache_m_dat_i_;
-		end else if (iD_isAMOonly) begin
+		if (iD_isAMOonly) begin
 			amoUnit_opType <= iD_func5;
-			dCache_m_stb_i <= 1'b1;
-			dCache_m_we_i <= 1'b0;
-			dCache_m_we_i_ <= 1'b1;
-			dCache_m_addr_i <= { // MSB oring of ignored bits.
-				|dCache_m_addr_i_[WORDBITSZ-1:(WORDBITSZ-MSBSZIGN-1)],
-				dCache_m_addr_i_[(WORDBITSZ-MSBSZIGN-1)-1:CLOG2WORDBITSZBY8]};
-			dCache_m_sel_i <= dCache_m_sel_i_;
-			dCache_m_dat_i <= dCache_m_dat_i_;
-		end else if (!_dCache_m_bsy_o) begin
-			dCache_m_stb_i <= 1'b0;
+			dCache_m_isAMOonly <= 1'b1;
 		end
-	end else if (!_dCache_m_bsy_o) begin
-		dCache_m_stb_i <= 1'b0;
+	end
+end
+
+always_ff @(posedge clk_i) begin
+	// Note that dCache_m_stb_i is false when dCache_m_max_pending is true,
+	// because __dCache_m_bsy would be false causing iD_insn_valid to be false as well.
+	dCache_m_bsy_r <= (dCache_m_bsy_o && dCache_m_stb_i);
+	if (dCache_m_stb_i) begin
+		dCache_m_we_r <= dCache_m_we_i;
+		dCache_m_addr_r <= dCache_m_addr_i;
+		dCache_m_sel_r <= dCache_m_sel_i;
+		dCache_m_dat_r <= dCache_m_dat_i;
 	end
 end
 
@@ -440,7 +462,7 @@ always_ff @(posedge clk_i) begin
 	// Note that keep_wb_cyc_o_high is not cleared by dCache_s_ack_i because it
 	// needs to be cleared when the write portion of the AMO instruction is captured.
 	if (dCache_s_stb_o)
-		keep_wb_cyc_o_high <= (amoUnit_lrValid || dCache_m_we_i_);
+		keep_wb_cyc_o_high <= (amoUnit_lrValid || dCache_m_isAMOonly);
 	else if (amoUnit_lrValid_negedge)
 		keep_wb_cyc_o_high <= 0;
 end
