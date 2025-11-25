@@ -104,7 +104,7 @@ reg cmiss_r;
 
 localparam IDLE    = 0;
 localparam TESTHIT = 1;
-localparam EVICT   = 2;
+localparam FLUSH   = 2;
 localparam REFILL  = 3;
 reg [2 -1 : 0] state;
 
@@ -140,9 +140,9 @@ endgenerate
 reg s_wb_cyc_o_;
 assign s_wb_cyc_o = (s_wb_cyc_o_ || (MAXPENDINGACK && (|ack_pending)));
 
-// When MAXPENDINGACK is non-null, and the sequencing of EVICT followed by REFILL
+// When MAXPENDINGACK is non-null, and the sequencing of FLUSH followed by REFILL
 // occurs, the expression (!s_wb_stb_o && ack_pending == 1) identifies the ack of
-// REFILL, because we could still be waiting for the ack of EVICT.
+// REFILL, because we could still be waiting for the ack of FLUSH.
 wire refill_ack = (_s_wb_ack_i && (!MAXPENDINGACK || (!s_wb_stb_o && ack_pending == 1)));
 
 wire cache_we = (!cmiss_r &&
@@ -343,7 +343,7 @@ always_ff @(posedge clk_i) begin
 				s_wb_sel_o <= cache_sel_o[cache_we_wayidx];
 				s_wb_dat_o <= cache_dat_o[cache_we_wayidx];
 
-				state <= EVICT;
+				state <= FLUSH;
 
 			end else if (m_wb_we_r && !cmiss_r) begin
 
@@ -368,7 +368,7 @@ always_ff @(posedge clk_i) begin
 				state <= REFILL;
 			end
 
-		end else if (state == EVICT) begin
+		end else if (state == FLUSH) begin
 
 			if (MAXPENDINGACK ? !s_wb_bsy_i : _s_wb_ack_i) begin
 
@@ -581,7 +581,7 @@ reg conly_r;
 reg cmiss_r;
 
 localparam IDLE    = 0;
-localparam EVICT   = 2;
+localparam FLUSH   = 2;
 localparam REFILL  = 3;
 reg [2 -1 : 0] state;
 
@@ -617,9 +617,9 @@ endgenerate
 reg s_wb_cyc_o_;
 assign s_wb_cyc_o = (s_wb_cyc_o_ || (MAXPENDINGACK && (|ack_pending)));
 
-// When MAXPENDINGACK is non-null, and the sequencing of EVICT followed by REFILL
+// When MAXPENDINGACK is non-null, and the sequencing of FLUSH followed by REFILL
 // occurs, the expression (!s_wb_stb_o && ack_pending == 1) identifies the ack of
-// REFILL, because we could still be waiting for the ack of EVICT.
+// REFILL, because we could still be waiting for the ack of FLUSH.
 wire refill_ack = (_s_wb_ack_i && (!MAXPENDINGACK || (!s_wb_stb_o && ack_pending == 1)));
 
 reg m_wb_ack;
@@ -786,8 +786,8 @@ wire cache_drt_o_we_wayidx = cache_drt_o[cache_we_wayidx];
 assign m_wb_bsy_o = (
 	(cache_miss &&
 		// On cache_miss, m_wb_bsy_o should be high because we can transition
-		// to EVICT or REFILL, but when m_wb_we_r is true, the check below
-		// identifies the state for which there is no transition to EVICT.
+		// to FLUSH or REFILL, but when m_wb_we_r is true, the check below
+		// identifies the state for which there is no transition to FLUSH.
 		(!m_wb_we_r || !cache_tag_hit || cache_drt_o_we_wayidx)) ||
 	(state != IDLE) || rst_r);
 
@@ -834,7 +834,7 @@ always_ff @(posedge clk_i) begin
 						s_wb_sel_o <= cache_sel_o[cache_we_wayidx];
 						s_wb_dat_o <= cache_dat_o[cache_we_wayidx];
 
-						state <= EVICT;
+						state <= FLUSH;
 
 					end else if (!m_wb_we_r || cmiss_r) begin
 
@@ -895,7 +895,7 @@ always_ff @(posedge clk_i) begin
 				cmiss_r <= 0;
 			end
 
-		end else if (state == EVICT) begin
+		end else if (state == FLUSH) begin
 
 			if (MAXPENDINGACK ? !s_wb_bsy_i : _s_wb_ack_i) begin
 
