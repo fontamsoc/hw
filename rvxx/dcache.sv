@@ -138,7 +138,7 @@ end
 end
 endgenerate
 reg s_wb_cyc_o_;
-assign s_wb_cyc_o = (s_wb_cyc_o_ || (MAXPENDINGACK && ack_pending));
+assign s_wb_cyc_o = (s_wb_cyc_o_ || (MAXPENDINGACK && (|ack_pending)));
 
 // When MAXPENDINGACK is non-null, and the sequencing of EVICT followed by REFILL
 // occurs, the expression (!s_wb_stb_o && ack_pending == 1) identifies the ack of
@@ -615,7 +615,7 @@ end
 end
 endgenerate
 reg s_wb_cyc_o_;
-assign s_wb_cyc_o = (s_wb_cyc_o_ || (MAXPENDINGACK && ack_pending));
+assign s_wb_cyc_o = (s_wb_cyc_o_ || (MAXPENDINGACK && (|ack_pending)));
 
 // When MAXPENDINGACK is non-null, and the sequencing of EVICT followed by REFILL
 // occurs, the expression (!s_wb_stb_o && ack_pending == 1) identifies the ack of
