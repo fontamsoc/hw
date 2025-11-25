@@ -208,7 +208,7 @@ reg tx_phy_rdy_w_sampled;
 
 // Logic that set the net tx_phy_rdy_w_negedge
 // when a falling edge of tx_phy_rdy_w occurs.
-wire tx_phy_rdy_w_negedge = (tx_phy_rdy_w < tx_phy_rdy_w_sampled);
+wire tx_phy_rdy_w_negedge = (!tx_phy_rdy_w && tx_phy_rdy_w_sampled);
 
 always_ff @(posedge clk_phy_i) begin
 	// Logic that update tx_read_done.
