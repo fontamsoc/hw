@@ -84,8 +84,7 @@ always_comb begin
 	wb_sel_o = 0;
 	wb_dat_o = 0;
 
-	if (rst_i);
-	else if (wb_max_pending)
+	if (wb_max_pending)
 		wb_cyc_o = 1;
 	else if (dCache_s_stb_o) begin
 		wb_cyc_o = 1;
@@ -97,7 +96,6 @@ always_comb begin
 	end else if (iF_mem_stb) begin
 		wb_cyc_o = 1;
 		wb_stb_o = 1;
-		wb_we_o = 0;
 		wb_addr_o = iF_mem_addr;
 		wb_sel_o = {(XWORDBITSZ/8){1'b1}};
 	end else
