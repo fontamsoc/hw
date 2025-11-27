@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
+localparam DCACHEWBTAGBITSZ = 1;
+
 wire dCache_invd_w;
 
-wire                               dCache_m_cyc_i;
 reg                                dCache_m_stb_i;  // ### comb-block-reg.
+reg  [DCACHEWBTAGBITSZ -1 : 0]     dCache_m_tag_i;  // ### comb-block-reg.
 reg                                dCache_m_we_i;   // ### comb-block-reg.
 reg  [(ADDRBITSZ-MSBSZIGN) -1 : 0] dCache_m_addr_i; // ### comb-block-reg.
 reg  [(WORDBITSZ/8) -1 : 0]        dCache_m_sel_i;  // ### comb-block-reg.
@@ -13,8 +15,8 @@ wire                               dCache_m_bsy_o;
 wire                               dCache_m_ack_o;
 wire [WORDBITSZ -1 : 0]            dCache_m_dat_o;
 
-wire                                 dCache_s_cyc_o;
 wire                                 dCache_s_stb_o;
+wire [DCACHEWBTAGBITSZ -1 : 0]       dCache_s_tag_o;
 wire                                 dCache_s_we_o;
 wire [(XADDRBITSZ-XMSBSZIGN) -1 : 0] dCache_s_addr_o;
 wire [(XWORDBITSZ/8) -1 : 0]         dCache_s_sel_o;
@@ -23,8 +25,8 @@ wire                                 dCache_s_bsy_i;
 wire                                 dCache_s_ack_i;
 wire [XWORDBITSZ -1 : 0]             dCache_s_dat_i;
 
-wire                               skidBuf_dCache_m_cyc_o;
 wire                               skidBuf_dCache_m_stb_o;
+wire [DCACHEWBTAGBITSZ -1 : 0]     skidBuf_dCache_m_tag_o;
 wire                               skidBuf_dCache_m_we_o;
 wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] skidBuf_dCache_m_addr_o;
 wire [(WORDBITSZ/8) -1 : 0]        skidBuf_dCache_m_sel_o;
@@ -38,6 +40,7 @@ generate if (USE_DCACHE) begin: gen_skidBuf_dCache
 wb_skidbuf #(
 	 .WORDBITSZ     (WORDBITSZ)
 	,.ADDRLIMIT     (ADDRLIMIT)
+	,.WBTAGBITSZ    (DCACHEWBTAGBITSZ)
 	,.MAXPENDINGACK (MAXPENDINGACK)
 	,.USEFWFTFIFO   (1)
 ) skidBuf_dCache (
@@ -46,8 +49,8 @@ wb_skidbuf #(
 
 	,.clk_i (clk_i)
 
-	,.m_wb_cyc_i  (dCache_m_cyc_i)
 	,.m_wb_stb_i  (dCache_m_stb_i)
+	,.m_wb_tag_i  (dCache_m_tag_i)
 	,.m_wb_we_i   (dCache_m_we_i)
 	,.m_wb_addr_i (dCache_m_addr_i)
 	,.m_wb_sel_i  (dCache_m_sel_i)
@@ -56,8 +59,8 @@ wb_skidbuf #(
 	,.m_wb_ack_o  (dCache_m_ack_o)
 	,.m_wb_dat_o  (dCache_m_dat_o)
 
-	,.s_wb_cyc_o  (skidBuf_dCache_m_cyc_o)
 	,.s_wb_stb_o  (skidBuf_dCache_m_stb_o)
+	,.s_wb_tag_o  (skidBuf_dCache_m_tag_o)
 	,.s_wb_we_o   (skidBuf_dCache_m_we_o)
 	,.s_wb_addr_o (skidBuf_dCache_m_addr_o)
 	,.s_wb_sel_o  (skidBuf_dCache_m_sel_o)
@@ -69,8 +72,8 @@ wb_skidbuf #(
 
 end else begin
 
-assign skidBuf_dCache_m_cyc_o = dCache_m_cyc_i;
 assign skidBuf_dCache_m_stb_o = dCache_m_stb_i;
+assign skidBuf_dCache_m_tag_o = dCache_m_tag_i;
 assign skidBuf_dCache_m_we_o = dCache_m_we_i;
 assign skidBuf_dCache_m_addr_o = dCache_m_addr_i;
 assign skidBuf_dCache_m_sel_o = dCache_m_sel_i;
@@ -81,8 +84,8 @@ assign dCache_m_dat_o = skidBuf_dCache_m_dat_i;
 
 end endgenerate
 
-wire                                 upSizr_dCache_m_cyc_o;
 wire                                 upSizr_dCache_m_stb_o;
+wire [DCACHEWBTAGBITSZ -1 : 0]       upSizr_dCache_m_tag_o;
 wire                                 upSizr_dCache_m_we_o;
 wire [(XADDRBITSZ-XMSBSZIGN) -1 : 0] upSizr_dCache_m_addr_o;
 wire [(XWORDBITSZ/8) -1 : 0]         upSizr_dCache_m_sel_o;
@@ -97,6 +100,7 @@ wb_upsizr #(
 	 .MWORDBITSZ    (WORDBITSZ)
 	,.SWORDBITSZ    (XWORDBITSZ)
 	,.ADDRLIMIT     (ADDRLIMIT)
+	,.WBTAGBITSZ    (DCACHEWBTAGBITSZ)
 	,.MAXPENDINGACK (MAXPENDINGACK)
 	,.USEFWFTFIFO   (1)
 ) upSizr_dCache (
@@ -105,8 +109,8 @@ wb_upsizr #(
 
 	,.clk_i (clk_i)
 
-	,.m_wb_cyc_i  (skidBuf_dCache_m_cyc_o)
 	,.m_wb_stb_i  (skidBuf_dCache_m_stb_o)
+	,.m_wb_tag_i  (skidBuf_dCache_m_tag_o)
 	,.m_wb_we_i   (skidBuf_dCache_m_we_o)
 	,.m_wb_addr_i (skidBuf_dCache_m_addr_o)
 	,.m_wb_sel_i  (skidBuf_dCache_m_sel_o)
@@ -115,8 +119,8 @@ wb_upsizr #(
 	,.m_wb_ack_o  (skidBuf_dCache_m_ack_i)
 	,.m_wb_dat_o  (skidBuf_dCache_m_dat_i)
 
-	,.s_wb_cyc_o  (upSizr_dCache_m_cyc_o)
 	,.s_wb_stb_o  (upSizr_dCache_m_stb_o)
+	,.s_wb_tag_o  (upSizr_dCache_m_tag_o)
 	,.s_wb_we_o   (upSizr_dCache_m_we_o)
 	,.s_wb_addr_o (upSizr_dCache_m_addr_o)
 	,.s_wb_sel_o  (upSizr_dCache_m_sel_o)
@@ -128,8 +132,8 @@ wb_upsizr #(
 
 end else begin
 
-assign upSizr_dCache_m_cyc_o = skidBuf_dCache_m_cyc_o;
 assign upSizr_dCache_m_stb_o = skidBuf_dCache_m_stb_o;
+assign upSizr_dCache_m_tag_o = skidBuf_dCache_m_tag_o;
 assign upSizr_dCache_m_we_o = skidBuf_dCache_m_we_o;
 assign upSizr_dCache_m_addr_o = skidBuf_dCache_m_addr_o;
 assign upSizr_dCache_m_sel_o = skidBuf_dCache_m_sel_o;
@@ -146,6 +150,7 @@ dcache #(
 	 .TYPE          (DCACHETYPE)
 	,.WORDBITSZ     (XWORDBITSZ)
 	,.ADDRLIMIT     (ADDRLIMIT)
+	,.WBTAGBITSZ    (DCACHEWBTAGBITSZ)
 	,.CACHESETCNT   (DCACHESETCNT)
 	,.CACHEWAYCNT   (DCACHEWAYCNT)
 	,.MAXPENDINGACK (MAXPENDINGACK)
@@ -160,8 +165,8 @@ dcache #(
 	,.conly_i (1'b0)
 	,.cmiss_i (dcache_miss_i)
 
-	,.m_wb_cyc_i  (upSizr_dCache_m_cyc_o)
 	,.m_wb_stb_i  (upSizr_dCache_m_stb_o)
+	,.m_wb_tag_i  (upSizr_dCache_m_tag_o)
 	,.m_wb_we_i   (upSizr_dCache_m_we_o)
 	,.m_wb_addr_i (upSizr_dCache_m_addr_o)
 	,.m_wb_sel_i  (upSizr_dCache_m_sel_o)
@@ -170,8 +175,8 @@ dcache #(
 	,.m_wb_ack_o  (upSizr_dCache_m_ack_i)
 	,.m_wb_dat_o  (upSizr_dCache_m_dat_i)
 
-	,.s_wb_cyc_o  (dCache_s_cyc_o)
 	,.s_wb_stb_o  (dCache_s_stb_o)
+	,.s_wb_tag_o  (dCache_s_tag_o)
 	,.s_wb_we_o   (dCache_s_we_o)
 	,.s_wb_addr_o (dCache_s_addr_o)
 	,.s_wb_sel_o  (dCache_s_sel_o)
@@ -183,8 +188,8 @@ dcache #(
 
 end else begin
 
-assign dCache_s_cyc_o = upSizr_dCache_m_cyc_o;
 assign dCache_s_stb_o = upSizr_dCache_m_stb_o;
+assign dCache_s_tag_o = upSizr_dCache_m_tag_o;
 assign dCache_s_we_o = upSizr_dCache_m_we_o;
 assign dCache_s_addr_o = upSizr_dCache_m_addr_o;
 assign dCache_s_sel_o = upSizr_dCache_m_sel_o;
@@ -217,21 +222,8 @@ reg dCache_m_bsy_r;
 
 wire __dCache_m_stb_i = (dCache_m_stb_i && !dCache_m_bsy_r);
 
-reg[(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_breather;
-// Logic used to force wb_cyc low when it has been high for too long;
-// otherwise in a multi-core soc, the arbiter will not switch to other cores.
-always_ff @(posedge clk_i) begin
-	if (rst_i)
-		dCache_m_breather <= 0;
-	else if (!dCache_m_cyc_i || dCache_m_breather[CLOG2MAXPENDINGACK]) begin
-		if (!dCache_m_cyc_i)
-			dCache_m_breather <= 0;
-	end else if (__dCache_m_stb_i)
-		dCache_m_breather <= dCache_m_breather + 1'b1;
-end
-
 // Signal set to 1 when the logic setting dCache_m_stb_i cannot accept a new operation.
-wire __dCache_m_bsy = (dCache_m_bsy_r || dCache_m_max_pending || dCache_m_isAMOonly || dCache_m_breather[CLOG2MAXPENDINGACK]);
+wire __dCache_m_bsy = (dCache_m_bsy_r || dCache_m_max_pending || dCache_m_isAMOonly);
 
 always_ff @(posedge clk_i) begin
 	if (rst_i)
@@ -251,8 +243,6 @@ assign dCache_m_pending = ((|dCache_m_pending_acks) || dCache_m_bsy_r);
 
 reg amoUnit_lrValid;
 
-assign dCache_m_cyc_i = (amoUnit_lrValid || dCache_m_stb_i || (|dCache_m_pending_acks) || dCache_m_isAMOonly);
-
 wire [WORDBITSZ -1 : 0] dCache_m_addr_i_ = (iD_rs1 + iD_addrImm);
 
 wire            amoUnit_memAck;
@@ -267,6 +257,7 @@ wire dCache_m_dat_i_ltu_dCache_m_dat_o = dCache_m_dat_i_minus_dCache_m_dat_o[WOR
 
 wire _amoUnit_lrValid;
 
+reg [DCACHEWBTAGBITSZ -1 : 0]     dCache_m_tag_r;
 reg                               dCache_m_we_r;
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] dCache_m_addr_r;
 reg [(WORDBITSZ/8) -1 : 0]        dCache_m_sel_r;
@@ -275,6 +266,7 @@ reg [WORDBITSZ -1 : 0]            dCache_m_dat_r;
 always_comb begin
 
 	dCache_m_stb_i = 1'b0;
+	dCache_m_tag_i = dCache_m_tag_r;
 	dCache_m_we_i = dCache_m_we_r;
 	dCache_m_addr_i = dCache_m_addr_r;
 	dCache_m_sel_i = dCache_m_sel_r;
@@ -285,6 +277,7 @@ always_comb begin
 	end else if (dCache_m_isAMOonly) begin
 		if (amoUnit_memAck)
 			dCache_m_stb_i = 1'b1;
+		dCache_m_tag_i[LOCK] = 1'b0;
 		dCache_m_we_i = 1'b1;
 		dCache_m_dat_i = (
 			(amoUnit_opType == 5'b00000) ? (dCache_m_dat_r + dCache_m_dat_o) :
@@ -302,6 +295,7 @@ always_comb begin
 			dCache_m_dat_r);
 	end else if (iD_isLoadOrLr && iD_insn_valid) begin
 		dCache_m_stb_i = 1'b1;
+		dCache_m_tag_i[LOCK] = iD_isLr;
 		dCache_m_we_i = 1'b0;
 		dCache_m_addr_i = { // MSB oring of ignored bits.
 			|dCache_m_addr_i_[WORDBITSZ-1:(WORDBITSZ-MSBSZIGN-1)],
@@ -309,6 +303,7 @@ always_comb begin
 		dCache_m_sel_i = dCache_m_sel_i_;
 	end else if ((iD_isStore || (iD_isSc && _amoUnit_lrValid)) && iD_insn_valid) begin
 		dCache_m_stb_i = 1'b1;
+		dCache_m_tag_i[LOCK] = 1'b0;
 		dCache_m_we_i = 1'b1;
 		dCache_m_addr_i = { // MSB oring of ignored bits.
 			|dCache_m_addr_i_[WORDBITSZ-1:(WORDBITSZ-MSBSZIGN-1)],
@@ -317,6 +312,7 @@ always_comb begin
 		dCache_m_dat_i = dCache_m_dat_i_;
 	end else if (iD_isAMOonly && iD_insn_valid) begin
 		dCache_m_stb_i = 1'b1;
+		dCache_m_tag_i[LOCK] = 1'b1;
 		dCache_m_we_i = 1'b0;
 		dCache_m_addr_i = { // MSB oring of ignored bits.
 			|dCache_m_addr_i_[WORDBITSZ-1:(WORDBITSZ-MSBSZIGN-1)],
@@ -345,6 +341,7 @@ always_ff @(posedge clk_i) begin
 	// because __dCache_m_bsy would be false causing iD_insn_valid to be false as well.
 	dCache_m_bsy_r <= (dCache_m_bsy_o && dCache_m_stb_i);
 	if (dCache_m_stb_i) begin
+		dCache_m_tag_r <= dCache_m_tag_i;
 		dCache_m_we_r <= dCache_m_we_i;
 		dCache_m_addr_r <= dCache_m_addr_i;
 		dCache_m_sel_r <= dCache_m_sel_i;
@@ -451,18 +448,3 @@ always_comb begin
 	end
 end
 end endgenerate
-
-reg amoUnit_lrValid_r;
-always_ff @(posedge clk_i)
-	amoUnit_lrValid_r <= amoUnit_lrValid;
-wire amoUnit_lrValid_negedge = (!amoUnit_lrValid && amoUnit_lrValid_r);
-
-reg keep_wb_cyc_o_high; // Used by AMO and Lr instructions to keep wb_cyc_o high.
-always_ff @(posedge clk_i) begin
-	// Note that keep_wb_cyc_o_high is not cleared by dCache_s_ack_i because it
-	// needs to be cleared when the write portion of the AMO instruction is captured.
-	if (dCache_s_stb_o)
-		keep_wb_cyc_o_high <= (amoUnit_lrValid || dCache_m_isAMOonly);
-	else if (amoUnit_lrValid_negedge)
-		keep_wb_cyc_o_high <= 0;
-end

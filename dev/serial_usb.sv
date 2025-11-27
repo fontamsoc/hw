@@ -32,7 +32,6 @@
 // 	its frequency must be 48 MHz or 60 MHz for full speed,
 // 	60 MHz for high speed.
 //
-// wb_cyc_i
 // wb_stb_i
 // wb_we_i
 // wb_addr_i
@@ -69,7 +68,6 @@ module serial_usb (
 	,clk_i
 	,clk_phy_i
 
-	,wb_cyc_i
 	,wb_stb_i
 	,wb_we_i
 	,wb_addr_i
@@ -116,7 +114,6 @@ input wire rst_i;
 input wire clk_i;
 input wire clk_phy_i;
 
-input  wire                               wb_cyc_i;
 input  wire                               wb_stb_i;
 input  wire                               wb_we_i;
 input  wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] wb_addr_i;
@@ -140,18 +137,15 @@ reg                               wb_we_r;
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] wb_addr_r;
 reg [WORDBITSZ -1 : 0]            wb_dat_r;
 
-wire wb_stb_r_ = (wb_cyc_i && wb_stb_i && !wb_bsy_o);
+wire wb_stb_r_ = (wb_stb_i && !wb_bsy_o);
 
 always_ff @(posedge clk_i) begin
-	wb_stb_r <= wb_stb_r_ ;
+	wb_stb_r <= wb_stb_r_;
 	if (wb_stb_r_) begin
 		wb_we_r <= wb_we_i;
 		wb_addr_r <= wb_addr_i;
 		wb_dat_r <= wb_dat_i;
 	end
-end
-
-always_ff @(posedge clk_i) begin
 	wb_ack_o <= wb_stb_r;
 end
 

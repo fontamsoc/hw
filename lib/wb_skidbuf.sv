@@ -12,8 +12,8 @@ module wb_skidbuf (
 
 	,clk_i
 
-	,m_wb_cyc_i
 	,m_wb_stb_i
+	,m_wb_tag_i
 	,m_wb_we_i
 	,m_wb_addr_i
 	,m_wb_sel_i
@@ -22,8 +22,8 @@ module wb_skidbuf (
 	,m_wb_ack_o
 	,m_wb_dat_o
 
-	,s_wb_cyc_o
 	,s_wb_stb_o
+	,s_wb_tag_o
 	,s_wb_we_o
 	,s_wb_addr_o
 	,s_wb_sel_o
@@ -37,6 +37,7 @@ module wb_skidbuf (
 
 parameter WORDBITSZ     = 32;
 parameter ADDRLIMIT     = 'h2000;
+parameter WBTAGBITSZ    = 1;
 parameter MAXPENDINGACK = 16;
 parameter USEFWFTFIFO   = 0;
 
@@ -52,8 +53,8 @@ input wire rst_i;
 
 input wire clk_i;
 
-input  wire                               m_wb_cyc_i;
 input  wire                               m_wb_stb_i;
+input  wire [WBTAGBITSZ -1 : 0]           m_wb_tag_i;
 input  wire                               m_wb_we_i;
 input  wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] m_wb_addr_i;
 input  wire [(WORDBITSZ/8) -1 : 0]        m_wb_sel_i;
@@ -62,8 +63,8 @@ output wire                               m_wb_bsy_o;
 output wire                               m_wb_ack_o;
 output wire [WORDBITSZ -1 : 0]            m_wb_dat_o;
 
-output wire                               s_wb_cyc_o;
 output wire                               s_wb_stb_o;
+output wire [WBTAGBITSZ -1 : 0]           s_wb_tag_o;
 output wire                               s_wb_we_o;
 output wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] s_wb_addr_o;
 output wire [(WORDBITSZ/8) -1 : 0]        s_wb_sel_o;
@@ -75,15 +76,8 @@ input  wire [WORDBITSZ -1 : 0]            s_wb_dat_i;
 assign m_wb_ack_o = s_wb_ack_i;
 assign m_wb_dat_o = s_wb_dat_i;
 
-reg [(CLOG2MAXPENDINGACK +1) -1 : 0] s_wb_pending_acks;
-
-wire s_wb_stb_o_;
-assign s_wb_stb_o = (s_wb_stb_o_ && !s_wb_pending_acks[CLOG2MAXPENDINGACK]);
-
-wire _s_wb_bsy_i;
-
 skidbuf #(
-	 .WIDTH       (1 + (ADDRBITSZ-MSBSZIGN) + (WORDBITSZ/8) + WORDBITSZ)
+	 .WIDTH       (1 + WBTAGBITSZ + (ADDRBITSZ-MSBSZIGN) + (WORDBITSZ/8) + WORDBITSZ)
 	,.DEPTH       (MAXPENDINGACK)
 	,.USEFWFTFIFO (USEFWFTFIFO)
 ) skidbuf (
@@ -92,28 +86,14 @@ skidbuf #(
 
 	,.clk_i (clk_i)
 
-	,.stb_i (m_wb_cyc_i && m_wb_stb_i)
-	,.dat_i ({m_wb_we_i, m_wb_addr_i, m_wb_sel_i, m_wb_dat_i})
+	,.stb_i (m_wb_stb_i)
+	,.dat_i ({m_wb_tag_i, m_wb_we_i, m_wb_addr_i, m_wb_sel_i, m_wb_dat_i})
 	,.bsy_o (m_wb_bsy_o)
 
-	,.stb_o (s_wb_stb_o_)
-	,.dat_o ({s_wb_we_o, s_wb_addr_o, s_wb_sel_o, s_wb_dat_o})
-	,.bsy_i (_s_wb_bsy_i)
+	,.stb_o (s_wb_stb_o)
+	,.dat_o ({s_wb_tag_o, s_wb_we_o, s_wb_addr_o, s_wb_sel_o, s_wb_dat_o})
+	,.bsy_i (s_wb_bsy_i)
 );
-
-always_ff @(posedge clk_i) begin
-	if (rst_i)
-		s_wb_pending_acks <= 0;
-	else if (s_wb_stb_o && !_s_wb_bsy_i && s_wb_ack_i);
-	else if (s_wb_ack_i)
-		s_wb_pending_acks <= s_wb_pending_acks - 1'b1;
-	else if (s_wb_stb_o && !_s_wb_bsy_i)
-		s_wb_pending_acks <= s_wb_pending_acks + 1'b1;
-end
-
-assign s_wb_cyc_o = (s_wb_stb_o || (|s_wb_pending_acks));
-
-assign _s_wb_bsy_i = (s_wb_bsy_i || s_wb_pending_acks[CLOG2MAXPENDINGACK]);
 
 endmodule
 

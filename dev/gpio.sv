@@ -49,7 +49,6 @@
 // clk_i
 // 	Clock signal.
 //
-// wb_cyc_i
 // wb_stb_i
 // wb_we_i
 // wb_addr_i
@@ -83,7 +82,6 @@ module gpio (
 
 	,clk_i
 
-	,wb_cyc_i
 	,wb_stb_i
 	,wb_we_i
 	,wb_addr_i
@@ -121,7 +119,6 @@ input wire rst_i;
 
 input wire clk_i;
 
-input  wire                               wb_cyc_i;
 input  wire                               wb_stb_i;
 input  wire                               wb_we_i;
 input  wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] wb_addr_i;
@@ -151,18 +148,13 @@ reg                               wb_we_r;
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] wb_addr_r;
 reg [WORDBITSZ -1 : 0]            wb_dat_r;
 
-wire wb_stb_r_ = (wb_cyc_i && wb_stb_i);
-
 always_ff @(posedge clk_i) begin
-	wb_stb_r <= wb_stb_r_ ;
-	if (wb_stb_r_) begin
+	wb_stb_r <= wb_stb_i;
+	if (wb_stb_i) begin
 		wb_we_r <= wb_we_i;
 		wb_addr_r <= wb_addr_i;
 		wb_dat_r <= wb_dat_i;
 	end
-end
-
-always_ff @(posedge clk_i) begin
 	wb_ack_o <= wb_stb_r;
 end
 

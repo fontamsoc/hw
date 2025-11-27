@@ -78,8 +78,8 @@
 // 	Clock signal used by idiv.
 // 	Its frequency must be a power-of-2 multiple of clk_i frequency.
 //
-// wb_cyc_o
 // wb_stb_o
+// wb_tag_o
 // wb_we_o
 // wb_addr_o
 // wb_sel_o
@@ -138,8 +138,8 @@ module pu (
 	,clk_imul_i
 	,clk_idiv_i
 
-	,wb_cyc_o
 	,wb_stb_o
+	,wb_tag_o
 	,wb_we_o
 	,wb_addr_o
 	,wb_sel_o
@@ -168,6 +168,7 @@ module pu (
 parameter WORDBITSZ     = 32;
 parameter XWORDBITSZ    = 32; // TODO: Support all the way up to 1024 ...
 parameter ADDRLIMIT     = 'h2000;
+parameter WBTAGBITSZ    = 1;
 parameter CLKFREQ       = 1;
 parameter DCACHETYPE    = 0;
 parameter ICACHESETCNT  = 2;
@@ -208,6 +209,9 @@ localparam CLOG2INSNBITSZBY8 = clog2(INSNBITSZ/8);
 localparam MSBSZIGN  = (WORDBITSZ-clog2(ADDRLIMIT)-1);
 localparam XMSBSZIGN = (XWORDBITSZ-clog2(ADDRLIMIT)-1);
 
+// Constants used to index wb_tag bits.
+localparam LOCK = 0;
+
 input wire rst_i;
 
 output reg rst_o = 0;
@@ -216,8 +220,8 @@ input wire clk_i;
 input wire clk_imul_i;
 input wire clk_idiv_i;
 
-output reg                                  wb_cyc_o;  // ### comb-block-reg.
 output reg                                  wb_stb_o;  // ### comb-block-reg.
+output reg  [WBTAGBITSZ -1 : 0]             wb_tag_o;  // ### comb-block-reg.
 output reg                                  wb_we_o;   // ### comb-block-reg.
 output reg  [(XADDRBITSZ-XMSBSZIGN) -1 : 0] wb_addr_o; // ### comb-block-reg.
 output reg  [(XWORDBITSZ/8) -1 : 0]         wb_sel_o;  // ### comb-block-reg.

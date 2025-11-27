@@ -77,27 +77,24 @@ end
 
 always_comb begin
 
-	wb_cyc_o = 0;
 	wb_stb_o = 0;
+	wb_tag_o = 0;
 	wb_we_o = 0;
 	wb_addr_o = 0;
 	wb_sel_o = 0;
 	wb_dat_o = 0;
 
-	if (wb_max_pending)
-		wb_cyc_o = 1;
+	if (wb_max_pending);
 	else if (dCache_s_stb_o) begin
-		wb_cyc_o = 1;
 		wb_stb_o = 1;
+		wb_tag_o[LOCK] = dCache_s_tag_o[LOCK];
 		wb_we_o = dCache_s_we_o;
 		wb_addr_o = dCache_s_addr_o;
 		wb_sel_o = dCache_s_sel_o;
 		wb_dat_o = dCache_s_dat_o;
 	end else if (iF_mem_stb) begin
-		wb_cyc_o = 1;
 		wb_stb_o = 1;
 		wb_addr_o = iF_mem_addr;
 		wb_sel_o = {(XWORDBITSZ/8){1'b1}};
-	end else
-		wb_cyc_o = (keep_wb_cyc_o_high || (|wb_pending_acks));
+	end
 end

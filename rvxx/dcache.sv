@@ -17,8 +17,8 @@ module dCacheType0 (
 	,conly_i
 	,cmiss_i
 
-	,m_wb_cyc_i
 	,m_wb_stb_i
+	,m_wb_tag_i
 	,m_wb_we_i
 	,m_wb_addr_i
 	,m_wb_sel_i
@@ -27,8 +27,8 @@ module dCacheType0 (
 	,m_wb_ack_o
 	,m_wb_dat_o
 
-	,s_wb_cyc_o
 	,s_wb_stb_o
+	,s_wb_tag_o
 	,s_wb_we_o
 	,s_wb_addr_o
 	,s_wb_sel_o
@@ -43,6 +43,8 @@ module dCacheType0 (
 parameter WORDBITSZ = 32;
 
 parameter ADDRLIMIT = 'h2000;
+
+parameter WBTAGBITSZ = 1;
 
 parameter CACHESETCNT = 2;
 parameter CACHEWAYCNT = 1;
@@ -71,8 +73,8 @@ input wire clk_i;
 input wire conly_i;
 input wire cmiss_i;
 
-input  wire                               m_wb_cyc_i;
 input  wire                               m_wb_stb_i;
+input  wire [WBTAGBITSZ -1 : 0]           m_wb_tag_i;
 input  wire                               m_wb_we_i;
 input  wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] m_wb_addr_i;
 input  wire [(WORDBITSZ/8) -1 : 0]        m_wb_sel_i;
@@ -81,8 +83,8 @@ output reg                                m_wb_bsy_o;
 output reg                                m_wb_ack_o;
 output reg  [WORDBITSZ -1 : 0]            m_wb_dat_o;
 
-output wire                               s_wb_cyc_o;
 output reg                                s_wb_stb_o;
+output reg  [WBTAGBITSZ -1 : 0]           s_wb_tag_o;
 output reg                                s_wb_we_o;
 output reg  [(ADDRBITSZ-MSBSZIGN) -1 : 0] s_wb_addr_o;
 output reg  [(WORDBITSZ/8) -1 : 0]        s_wb_sel_o;
@@ -91,8 +93,7 @@ input  wire                               s_wb_bsy_i;
 input  wire                               s_wb_ack_i;
 input  wire [WORDBITSZ -1 : 0]            s_wb_dat_i;
 
-wire _m_wb_stb_i = (m_wb_cyc_i && m_wb_stb_i);
-
+reg [WBTAGBITSZ -1 : 0]           m_wb_tag_r;
 reg                               m_wb_we_r;
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] m_wb_addr_r;
 reg [(WORDBITSZ/8) -1 : 0]        m_wb_sel_r;
@@ -137,8 +138,6 @@ always_ff @(posedge clk_i) begin
 end
 end
 endgenerate
-reg s_wb_cyc_o_;
-assign s_wb_cyc_o = (s_wb_cyc_o_ || (MAXPENDINGACK && (|ack_pending)));
 
 // When MAXPENDINGACK is non-null, and the sequencing of FLUSH followed by REFILL
 // occurs, the expression (!s_wb_stb_o && ack_pending == 1) identifies the ack of
@@ -230,7 +229,7 @@ wire _cache_we = (cache_we &&
 	gen_cache_idx == (cache_tag_hit ? cache_tag_hit_wayidx : cache_we_wayidx));
 
 always_ff @(posedge clk_i) begin
-	if (state == IDLE && _m_wb_stb_i) begin
+	if (state == IDLE && m_wb_stb_i) begin
 		cache_tag_o[gen_cache_idx] <= cache_tags[cache_rdidx];
 		cache_sel_o[gen_cache_idx] <= cache_sels[cache_rdidx];
 		cache_dat_o[gen_cache_idx] <= cache_dats[cache_rdidx];
@@ -261,7 +260,7 @@ end endgenerate
 wire cache_hit = (cache_tag_hit && ((m_wb_sel_r & cache_sel_o_tag_hit) == m_wb_sel_r));
 
 always_ff @(posedge clk_i) begin
-	if (CACHEWAYCNT == 1 || ((state == IDLE && _m_wb_stb_i) && conly_i) || conly_r) begin
+	if (CACHEWAYCNT == 1 || ((state == IDLE && m_wb_stb_i) && conly_i) || conly_r) begin
 		cache_we_wayidx <= 0;
 	end else if (cache_we && !cache_tag_hit) begin
 		cache_we_wayidx <= cache_we_wayidx + 1'b1;
@@ -275,7 +274,6 @@ always_ff @(posedge clk_i) begin
 		m_wb_bsy_o <= 1;
 		m_wb_ack_o <= 0;
 
-		s_wb_cyc_o_ <= 0;
 		s_wb_stb_o <= 0;
 
 		m_wb_addr_r <= 0;
@@ -298,11 +296,12 @@ always_ff @(posedge clk_i) begin
 				end else
 					m_wb_addr_r <= m_wb_addr_r + 1'b1;
 
-			end else if (_m_wb_stb_i) begin
+			end else if (m_wb_stb_i) begin
 
 				m_wb_bsy_o <= 1;
 				m_wb_ack_o <= 0;
 
+				m_wb_tag_r <= m_wb_tag_i;
 				m_wb_we_r <= m_wb_we_i;
 				m_wb_addr_r <= m_wb_addr_i;
 				m_wb_sel_r <= m_wb_sel_i;
@@ -336,8 +335,8 @@ always_ff @(posedge clk_i) begin
 
 			end else if (cache_drt_o[cache_we_wayidx] && !cache_tag_hit && !cmiss_r) begin
 
-				s_wb_cyc_o_ <= 1;
 				s_wb_stb_o <= 1;
+				s_wb_tag_o <= 0;
 				s_wb_we_o <= 1;
 				s_wb_addr_o <= {cache_tag_o[cache_we_wayidx], cache_wridx};
 				s_wb_sel_o <= cache_sel_o[cache_we_wayidx];
@@ -357,8 +356,8 @@ always_ff @(posedge clk_i) begin
 
 			end else begin
 
-				s_wb_cyc_o_ <= 1;
 				s_wb_stb_o <= 1;
+				s_wb_tag_o <= m_wb_tag_r;
 				s_wb_we_o <= m_wb_we_r;
 				s_wb_addr_o <= m_wb_addr_r;
 				s_wb_sel_o <= cmiss_r ? m_wb_sel_r : {(WORDBITSZ/8){1'b1}};
@@ -377,7 +376,6 @@ always_ff @(posedge clk_i) begin
 					m_wb_bsy_o <= 0;
 					m_wb_ack_o <= 1;
 
-					s_wb_cyc_o_ <= 0;
 					s_wb_stb_o <= 0;
 
 					conly_r <= 0;
@@ -388,6 +386,7 @@ always_ff @(posedge clk_i) begin
 				end else begin
 
 					s_wb_stb_o <= 1;
+					s_wb_tag_o <= m_wb_tag_r;
 					s_wb_we_o <= 0;
 					s_wb_addr_o <= m_wb_addr_r;
 					s_wb_sel_o <= {(WORDBITSZ/8){1'b1}};
@@ -408,7 +407,6 @@ always_ff @(posedge clk_i) begin
 				if (!m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
 					m_wb_dat_o <= cache_dat_i;
 
-				s_wb_cyc_o_ <= 0;
 				s_wb_stb_o <= 0;
 
 				conly_r <= 0;
@@ -495,8 +493,8 @@ module dCacheType1 (
 	,conly_i
 	,cmiss_i
 
-	,m_wb_cyc_i
 	,m_wb_stb_i
+	,m_wb_tag_i
 	,m_wb_we_i
 	,m_wb_addr_i
 	,m_wb_sel_i
@@ -505,8 +503,8 @@ module dCacheType1 (
 	,m_wb_ack_o
 	,m_wb_dat_o
 
-	,s_wb_cyc_o
 	,s_wb_stb_o
+	,s_wb_tag_o
 	,s_wb_we_o
 	,s_wb_addr_o
 	,s_wb_sel_o
@@ -521,6 +519,8 @@ module dCacheType1 (
 parameter WORDBITSZ = 32;
 
 parameter ADDRLIMIT = 'h2000;
+
+parameter WBTAGBITSZ = 1;
 
 parameter CACHESETCNT = 2;
 parameter CACHEWAYCNT = 1;
@@ -549,8 +549,8 @@ input wire clk_i;
 input wire conly_i;
 input wire cmiss_i;
 
-input  wire                               m_wb_cyc_i;
 input  wire                               m_wb_stb_i;
+input  wire [WBTAGBITSZ -1 : 0]           m_wb_tag_i;
 input  wire                               m_wb_we_i;
 input  wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] m_wb_addr_i;
 input  wire [(WORDBITSZ/8) -1 : 0]        m_wb_sel_i;
@@ -559,8 +559,8 @@ output wire                               m_wb_bsy_o;
 output wire                               m_wb_ack_o;
 output wire [WORDBITSZ -1 : 0]            m_wb_dat_o;
 
-output wire                               s_wb_cyc_o;
 output reg                                s_wb_stb_o;
+output reg  [WBTAGBITSZ -1 : 0]           s_wb_tag_o;
 output reg                                s_wb_we_o;
 output reg  [(ADDRBITSZ-MSBSZIGN) -1 : 0] s_wb_addr_o;
 output reg  [(WORDBITSZ/8) -1 : 0]        s_wb_sel_o;
@@ -569,8 +569,9 @@ input  wire                               s_wb_bsy_i;
 input  wire                               s_wb_ack_i;
 input  wire [WORDBITSZ -1 : 0]            s_wb_dat_i;
 
-wire _m_wb_stb_i = (m_wb_cyc_i && m_wb_stb_i && !m_wb_bsy_o);
+wire _m_wb_stb_i = (m_wb_stb_i && !m_wb_bsy_o);
 
+reg [WBTAGBITSZ -1 : 0]           m_wb_tag_r;
 reg                               m_wb_we_r;
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] m_wb_addr_r;
 reg [(WORDBITSZ/8) -1 : 0]        m_wb_sel_r;
@@ -614,8 +615,6 @@ always_ff @(posedge clk_i) begin
 end
 end
 endgenerate
-reg s_wb_cyc_o_;
-assign s_wb_cyc_o = (s_wb_cyc_o_ || (MAXPENDINGACK && (|ack_pending)));
 
 // When MAXPENDINGACK is non-null, and the sequencing of FLUSH followed by REFILL
 // occurs, the expression (!s_wb_stb_o && ack_pending == 1) identifies the ack of
@@ -797,7 +796,6 @@ always_ff @(posedge clk_i) begin
 
 		m_wb_ack <= 0;
 
-		s_wb_cyc_o_ <= 0;
 		s_wb_stb_o <= 0;
 
 		m_wb_addr_r <= 0;
@@ -827,8 +825,8 @@ always_ff @(posedge clk_i) begin
 
 						m_wb_ack <= 0;
 
-						s_wb_cyc_o_ <= 1;
 						s_wb_stb_o <= 1;
+						s_wb_tag_o <= 0;
 						s_wb_we_o <= 1;
 						s_wb_addr_o <= {cache_tag_o[cache_we_wayidx], cache_wridx};
 						s_wb_sel_o <= cache_sel_o[cache_we_wayidx];
@@ -840,8 +838,8 @@ always_ff @(posedge clk_i) begin
 
 						m_wb_ack <= 0;
 
-						s_wb_cyc_o_ <= 1;
 						s_wb_stb_o <= 1;
+						s_wb_tag_o <= m_wb_tag_r;
 						s_wb_we_o <= m_wb_we_r;
 						s_wb_addr_o <= m_wb_addr_r;
 						s_wb_sel_o <= cmiss_r ? m_wb_sel_r : {(WORDBITSZ/8){1'b1}};
@@ -854,6 +852,7 @@ always_ff @(posedge clk_i) begin
 
 						m_wb_ack <= 1;
 
+						m_wb_tag_r <= m_wb_tag_i;
 						m_wb_we_r <= m_wb_we_i;
 						m_wb_addr_r <= m_wb_addr_i;
 						m_wb_sel_r <= m_wb_sel_i;
@@ -876,6 +875,7 @@ always_ff @(posedge clk_i) begin
 
 					m_wb_ack <= 1;
 
+					m_wb_tag_r <= m_wb_tag_i;
 					m_wb_we_r <= m_wb_we_i;
 					m_wb_addr_r <= m_wb_addr_i;
 					m_wb_sel_r <= m_wb_sel_i;
@@ -903,7 +903,6 @@ always_ff @(posedge clk_i) begin
 
 					m_wb_we_r <= 0;
 
-					s_wb_cyc_o_ <= 0;
 					s_wb_stb_o <= 0;
 
 					conly_r <= 0;
@@ -914,6 +913,7 @@ always_ff @(posedge clk_i) begin
 				end else begin
 
 					s_wb_stb_o <= 1;
+					s_wb_tag_o <= m_wb_tag_r;
 					s_wb_we_o <= 0;
 					s_wb_addr_o <= m_wb_addr_r;
 					s_wb_sel_o <= {(WORDBITSZ/8){1'b1}};
@@ -930,7 +930,6 @@ always_ff @(posedge clk_i) begin
 
 				m_wb_we_r <= 0;
 
-				s_wb_cyc_o_ <= 0;
 				s_wb_stb_o <= 0;
 
 				conly_r <= 0;
@@ -1017,8 +1016,8 @@ module dcache (
 	,conly_i
 	,cmiss_i
 
-	,m_wb_cyc_i
 	,m_wb_stb_i
+	,m_wb_tag_i
 	,m_wb_we_i
 	,m_wb_addr_i
 	,m_wb_sel_i
@@ -1027,8 +1026,8 @@ module dcache (
 	,m_wb_ack_o
 	,m_wb_dat_o
 
-	,s_wb_cyc_o
 	,s_wb_stb_o
+	,s_wb_tag_o
 	,s_wb_we_o
 	,s_wb_addr_o
 	,s_wb_sel_o
@@ -1045,6 +1044,8 @@ parameter TYPE = 0;
 parameter WORDBITSZ = 32;
 
 parameter ADDRLIMIT = 'h2000;
+
+parameter WBTAGBITSZ = 1;
 
 parameter CACHESETCNT = 2;
 parameter CACHEWAYCNT = 1;
@@ -1068,8 +1069,8 @@ input wire clk_i;
 input wire conly_i;
 input wire cmiss_i;
 
-input  wire                               m_wb_cyc_i;
 input  wire                               m_wb_stb_i;
+input  wire [WBTAGBITSZ -1 : 0]           m_wb_tag_i;
 input  wire                               m_wb_we_i;
 input  wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] m_wb_addr_i;
 input  wire [(WORDBITSZ/8) -1 : 0]        m_wb_sel_i;
@@ -1078,8 +1079,8 @@ output wire                               m_wb_bsy_o;
 output wire                               m_wb_ack_o;
 output wire [WORDBITSZ -1 : 0]            m_wb_dat_o;
 
-output wire                               s_wb_cyc_o;
 output wire                               s_wb_stb_o;
+output wire [WBTAGBITSZ -1 : 0]           s_wb_tag_o;
 output wire                               s_wb_we_o;
 output wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] s_wb_addr_o;
 output wire [(WORDBITSZ/8) -1 : 0]        s_wb_sel_o;
@@ -1093,6 +1094,7 @@ generate if (TYPE == 0) begin: gen_dCacheType0
 dCacheType0 #(
 	 .WORDBITSZ     (WORDBITSZ)
 	,.ADDRLIMIT     (ADDRLIMIT)
+	,.WBTAGBITSZ    (WBTAGBITSZ)
 	,.CACHESETCNT   (CACHESETCNT)
 	,.CACHEWAYCNT   (CACHEWAYCNT)
 	,.REGSLVINPUT   (REGSLVINPUT)
@@ -1107,8 +1109,8 @@ dCacheType0 #(
 	,.conly_i (conly_i)
 	,.cmiss_i (cmiss_i)
 
-	,.m_wb_cyc_i  (m_wb_cyc_i)
 	,.m_wb_stb_i  (m_wb_stb_i)
+	,.m_wb_tag_i  (m_wb_tag_i)
 	,.m_wb_we_i   (m_wb_we_i)
 	,.m_wb_addr_i (m_wb_addr_i)
 	,.m_wb_sel_i  (m_wb_sel_i)
@@ -1117,8 +1119,8 @@ dCacheType0 #(
 	,.m_wb_ack_o  (m_wb_ack_o)
 	,.m_wb_dat_o  (m_wb_dat_o)
 
-	,.s_wb_cyc_o  (s_wb_cyc_o)
 	,.s_wb_stb_o  (s_wb_stb_o)
+	,.s_wb_tag_o  (s_wb_tag_o)
 	,.s_wb_we_o   (s_wb_we_o)
 	,.s_wb_addr_o (s_wb_addr_o)
 	,.s_wb_sel_o  (s_wb_sel_o)
@@ -1133,6 +1135,7 @@ end else begin: gen_dCacheType1
 dCacheType1 #(
 	 .WORDBITSZ     (WORDBITSZ)
 	,.ADDRLIMIT     (ADDRLIMIT)
+	,.WBTAGBITSZ    (WBTAGBITSZ)
 	,.CACHESETCNT   (CACHESETCNT)
 	,.CACHEWAYCNT   (CACHEWAYCNT)
 	,.REGSLVINPUT   (REGSLVINPUT)
@@ -1147,8 +1150,8 @@ dCacheType1 #(
 	,.conly_i (conly_i)
 	,.cmiss_i (cmiss_i)
 
-	,.m_wb_cyc_i  (m_wb_cyc_i)
 	,.m_wb_stb_i  (m_wb_stb_i)
+	,.m_wb_tag_i  (m_wb_tag_i)
 	,.m_wb_we_i   (m_wb_we_i)
 	,.m_wb_addr_i (m_wb_addr_i)
 	,.m_wb_sel_i  (m_wb_sel_i)
@@ -1157,8 +1160,8 @@ dCacheType1 #(
 	,.m_wb_ack_o  (m_wb_ack_o)
 	,.m_wb_dat_o  (m_wb_dat_o)
 
-	,.s_wb_cyc_o  (s_wb_cyc_o)
 	,.s_wb_stb_o  (s_wb_stb_o)
+	,.s_wb_tag_o  (s_wb_tag_o)
 	,.s_wb_we_o   (s_wb_we_o)
 	,.s_wb_addr_o (s_wb_addr_o)
 	,.s_wb_sel_o  (s_wb_sel_o)

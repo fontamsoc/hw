@@ -27,7 +27,6 @@
 // clk_i
 // 	Clock signal.
 //
-// wb_cyc_i
 // wb_stb_i
 // wb_we_i
 // wb_addr_i
@@ -47,7 +46,6 @@ module sram (
 
 	,clk_i
 
-	,wb_cyc_i
 	,wb_stb_i
 	,wb_we_i
 	,wb_addr_i
@@ -78,7 +76,6 @@ input wire rst_i;
 
 input wire clk_i;
 
-input  wire                               wb_cyc_i;
 input  wire                               wb_stb_i;
 input  wire                               wb_we_i;
 input  wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] wb_addr_i;
@@ -118,7 +115,7 @@ reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] wb_addr_r;
 reg [(WORDBITSZ/8) -1 : 0]        wb_sel_r;
 reg [WORDBITSZ -1 : 0]            wb_dat_r;
 
-wire wb_stb_r_ = (wb_cyc_i && wb_stb_i && !wb_bsy_o);
+wire wb_stb_r_ = (wb_stb_i && !wb_bsy_o);
 always_ff @(posedge clk_i) begin
 	wb_stb_r <= wb_stb_r_ ;
 end

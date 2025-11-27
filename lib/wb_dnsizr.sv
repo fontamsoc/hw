@@ -16,8 +16,8 @@ module wb_dnsizr (
 
 	,clk_i
 
-	,m_wb_cyc_i
 	,m_wb_stb_i
+	,m_wb_tag_i
 	,m_wb_we_i
 	,m_wb_addr_i
 	,m_wb_sel_i
@@ -26,8 +26,8 @@ module wb_dnsizr (
 	,m_wb_ack_o
 	,m_wb_dat_o
 
-	,s_wb_cyc_o
 	,s_wb_stb_o
+	,s_wb_tag_o
 	,s_wb_we_o
 	,s_wb_addr_o
 	,s_wb_sel_o
@@ -43,6 +43,8 @@ parameter MWORDBITSZ = 0;
 parameter SWORDBITSZ = 0;
 
 parameter ADDRLIMIT = 'h2000;
+
+parameter WBTAGBITSZ = 1;
 
 parameter MAXPENDINGACK = 8; // It must be at least 2 and a power of 2.
 
@@ -64,8 +66,8 @@ input wire rst_i;
 
 input wire clk_i;
 
-input  wire                                 m_wb_cyc_i;
 input  wire                                 m_wb_stb_i;
+input  wire [WBTAGBITSZ -1 : 0]             m_wb_tag_i;
 input  wire                                 m_wb_we_i;
 input  wire [(MADDRBITSZ-MMSBSZIGN) -1 : 0] m_wb_addr_i;
 input  wire [(MWORDBITSZ/8) -1 : 0]         m_wb_sel_i;
@@ -74,8 +76,8 @@ output wire                                 m_wb_bsy_o;
 output reg                                  m_wb_ack_o;
 output wire [MWORDBITSZ -1 : 0]             m_wb_dat_o;
 
-output wire                                 s_wb_cyc_o;
 output wire                                 s_wb_stb_o;
+output wire [WBTAGBITSZ -1 : 0]             s_wb_tag_o;
 output wire                                 s_wb_we_o;
 output wire [(SADDRBITSZ-SMSBSZIGN) -1 : 0] s_wb_addr_o;
 output wire [(SWORDBITSZ/8) -1 : 0]         s_wb_sel_o;
@@ -85,8 +87,9 @@ input  wire                                 s_wb_ack_i;
 input  wire [SWORDBITSZ -1 : 0]             s_wb_dat_i;
 
 wire m_wb_bsy_o_;
-assign s_wb_cyc_o = m_wb_cyc_i;
+
 assign s_wb_stb_o = (m_wb_stb_i && !m_wb_bsy_o_);
+assign s_wb_tag_o = m_wb_tag_i;
 assign s_wb_we_o = m_wb_we_i;
 assign m_wb_bsy_o = (m_wb_bsy_o_ || s_wb_bsy_i);
 
@@ -113,7 +116,7 @@ generate if (MWORDBITSZ > SWORDBITSZ) begin :gen_dnsizr
 	) fifo_fwft (
 		 .rst_i      (rst_i)
 		,.clk_push_i (clk_i)
-		,.push_i     (m_wb_cyc_i && m_wb_stb_i && !s_wb_bsy_i)
+		,.push_i     (m_wb_stb_i && !s_wb_bsy_i)
 		,.data_i     (s_wb_addr_o)
 		,.full_o     (m_wb_bsy_o_)
 		,.clk_pop_i  (clk_i)
@@ -127,7 +130,7 @@ generate if (MWORDBITSZ > SWORDBITSZ) begin :gen_dnsizr
 	) fifo (
 		 .rst_i       (rst_i)
 		,.clk_write_i (clk_i)
-		,.write_i     (m_wb_cyc_i && m_wb_stb_i && !s_wb_bsy_i)
+		,.write_i     (m_wb_stb_i && !s_wb_bsy_i)
 		,.data_i      (s_wb_addr_o)
 		,.full_o      (m_wb_bsy_o_)
 		,.clk_read_i  (clk_i)

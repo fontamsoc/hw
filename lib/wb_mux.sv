@@ -14,8 +14,8 @@ module wb_mux (
 
 	,clk_i
 
-	,m_wb_cyc_i
 	,m_wb_stb_i
+	,m_wb_tag_i
 	,m_wb_we_i
 	,m_wb_addr_i
 	,m_wb_sel_i
@@ -24,8 +24,8 @@ module wb_mux (
 	,m_wb_ack_o
 	,m_wb_dat_o
 
-	,s_wb_cyc_o
 	,s_wb_stb_o
+	,s_wb_tag_o
 	,s_wb_we_o
 	,s_wb_addr_o
 	,s_wb_sel_o
@@ -43,6 +43,7 @@ parameter SLAVECOUNT        = 1;
 parameter DEFAULTSLAVEINDEX = 0;
 parameter FIRSTSLAVEADDR    = 0;
 parameter ADDRLIMIT         = 'h2000;
+parameter WBTAGBITSZ        = 1;
 parameter MAXPENDINGACK     = 16; // Must be non-null and a power of 2.
 
 localparam CLOG2SLAVECOUNT  = clog2(SLAVECOUNT);
@@ -59,8 +60,8 @@ input wire rst_i;
 
 input wire clk_i;
 
-input  wire                               m_wb_cyc_i;
 input  wire                               m_wb_stb_i;
+input  wire [WBTAGBITSZ -1 : 0]           m_wb_tag_i;
 input  wire                               m_wb_we_i;
 input  wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] m_wb_addr_i;
 input  wire [(WORDBITSZ/8) -1 : 0]        m_wb_sel_i;
@@ -69,8 +70,8 @@ output wire                               m_wb_bsy_o;
 output wire                               m_wb_ack_o;
 output wire [WORDBITSZ -1 : 0]            m_wb_dat_o;
 
-output wire [(1 * SLAVECOUNT) -1 : 0]                    s_wb_cyc_o;
 output wire [(1 * SLAVECOUNT) -1 : 0]                    s_wb_stb_o;
+output wire [(WBTAGBITSZ * SLAVECOUNT) -1 : 0]           s_wb_tag_o;
 output wire [(1 * SLAVECOUNT) -1 : 0]                    s_wb_we_o;
 output wire [((ADDRBITSZ-MSBSZIGN) * SLAVECOUNT) -1 : 0] s_wb_addr_o;
 output wire [((WORDBITSZ/8) * SLAVECOUNT) -1 : 0]        s_wb_sel_o;
@@ -80,19 +81,17 @@ input  wire [(1 * SLAVECOUNT) -1 : 0]                    s_wb_ack_i;
 input  wire [(WORDBITSZ * SLAVECOUNT) -1 : 0]            s_wb_dat_i;
 input  wire [((WORDBITSZ-MSBSZIGN) * SLAVECOUNT) -1 : 0] s_wb_mapsz_i;
 
-wire _m_wb_stb_i = (m_wb_cyc_i && m_wb_stb_i);
+wire wb_stb = (m_wb_stb_i && !m_wb_bsy_o);
 
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] ack_pending;
-
-wire _m_wb_stb_i_and_not_m_wb_bsy_o = (_m_wb_stb_i && !m_wb_bsy_o);
 
 always_ff @(posedge clk_i) begin
 	if (rst_i)
 		ack_pending <= 0;
-	else if (_m_wb_stb_i_and_not_m_wb_bsy_o && m_wb_ack_o);
+	else if (wb_stb && m_wb_ack_o);
 	else if (m_wb_ack_o)
 		ack_pending <= ack_pending - 1'b1;
-	else if (_m_wb_stb_i_and_not_m_wb_bsy_o)
+	else if (wb_stb)
 		ack_pending <= ack_pending + 1'b1;
 end
 
@@ -170,7 +169,7 @@ always_ff @(posedge clk_i) begin
 
 	end else if (!slvidx_rdy) begin
 
-		if (!slvidx_invalid && _m_wb_stb_i)
+		if (!slvidx_invalid && m_wb_stb_i)
 			slvidx_rdy <= 1;
 		else if (slvidx_not_max) begin
 			addrspace_slvidx_lo <= addrspace[slvidx] + 1'b1;
@@ -184,7 +183,7 @@ always_ff @(posedge clk_i) begin
 			slvidx_dflt <= 1;
 		end
 
-	end else if (_m_wb_stb_i && _slvidx_invalid) begin
+	end else if (m_wb_stb_i && _slvidx_invalid) begin
 
 		addrspace_slvidx_lo <= FIRSTSLAVEADDR[CLOG2WORDBITSZBY8 +: (ADDRBITSZ-MSBSZIGN)];
 		addrspace_slvidx_hi <= addrspace[0];
@@ -207,8 +206,8 @@ generate for (
 	gen_s_wb_idx < SLAVECOUNT;
 	gen_s_wb_idx = gen_s_wb_idx + 1) begin :gen_s_wb
 
-assign s_wb_cyc_o[gen_s_wb_idx] = ((slvidx != gen_s_wb_idx || _slvidx_invalid) ? 1'b0 : m_wb_cyc_i);
 assign s_wb_stb_o[gen_s_wb_idx] = ((slvidx != gen_s_wb_idx || slvidx_invalid || ack_pending[CLOG2MAXPENDINGACK]) ? 1'b0 : m_wb_stb_i);
+assign s_wb_tag_o[gen_s_wb_idx] = m_wb_tag_i;
 assign s_wb_we_o[gen_s_wb_idx] = m_wb_we_i;
 assign s_wb_addr_o[(gen_s_wb_idx * (ADDRBITSZ-MSBSZIGN)) +: (ADDRBITSZ-MSBSZIGN)] = s_wb_addr_o_;
 assign s_wb_sel_o[(gen_s_wb_idx * (WORDBITSZ/8)) +: (WORDBITSZ/8)] = m_wb_sel_i;
