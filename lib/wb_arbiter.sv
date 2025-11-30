@@ -4,6 +4,8 @@
 `ifndef WB_ARBITER_V
 `define WB_ARBITER_V
 
+`include "lib/fifo_fwft.sv"
+
 module wb_arbiter (
 
 	 rst_i
@@ -47,8 +49,6 @@ localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 // -1 account for the msb oring ignored bits.
 localparam MSBSZIGN = (WORDBITSZ-clog2(ADDRLIMIT)-1);
 
-localparam CLOG2MAXPENDINGACK = clog2(MAXPENDINGACK);
-
 // Constants used to index wb_tag bits.
 localparam LOCK = 0;
 
@@ -76,24 +76,32 @@ input  wire                               s_wb_bsy_i;
 input  wire                               s_wb_ack_i;
 input  wire [WORDBITSZ -1 : 0]            s_wb_dat_i;
 
-wire wb_stb = (s_wb_stb_o && !s_wb_bsy_i);
-
-reg [(CLOG2MAXPENDINGACK +1) -1 : 0] ack_pending;
-
-always_ff @(posedge clk_i) begin
-	if (MASTERCOUNT > 1) begin
-		if (rst_i)
-			ack_pending <= 0;
-		else if (wb_stb && s_wb_ack_i);
-		else if (s_wb_ack_i)
-			ack_pending <= ack_pending - 1'b1;
-		else if (wb_stb)
-			ack_pending <= ack_pending + 1'b1;
-	end else
-		ack_pending <= 0;
-end
-
 reg [CLOG2MASTERCOUNT -1 : 0] mstridx;
+
+wire [CLOG2MASTERCOUNT -1 : 0] slvidx;
+
+wire _s_wb_stb_o = (s_wb_stb_o && !s_wb_bsy_i);
+
+wire pendingAcksFull;
+
+generate if (MASTERCOUNT > 1) begin
+fifo_fwft #(
+	 .WIDTH (CLOG2MASTERCOUNT)
+	,.DEPTH (MAXPENDINGACK)
+) pendingAcks (
+	 .rst_i (rst_i)
+	,.clk_push_i (clk_i)
+	,.push_i     (_s_wb_stb_o)
+	,.data_i     (mstridx)
+	,.full_o     (pendingAcksFull)
+	,.clk_pop_i  (clk_i)
+	,.pop_i      (s_wb_ack_i)
+	,.data_o     (slvidx)
+);
+end else begin
+assign pendingAcksFull = 1'b0;
+assign slvidx = 0;
+end endgenerate
 
 wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] _m_wb_addr_i [MASTERCOUNT];
 wire [(WORDBITSZ/8) -1 : 0]        _m_wb_sel_i  [MASTERCOUNT];
@@ -114,9 +122,9 @@ assign _m_wb_sel_i[gen_m_wb_idx] =
 assign _m_wb_dat_i[gen_m_wb_idx] =
 	m_wb_dat_i[((gen_m_wb_idx+1) * WORDBITSZ) -1 : (gen_m_wb_idx * WORDBITSZ)];
 
-assign m_wb_bsy_o[gen_m_wb_idx] = ((mstridx == gen_m_wb_idx) ? (s_wb_bsy_i || ack_pending[CLOG2MAXPENDINGACK]) : 1'b1);
+assign m_wb_bsy_o[gen_m_wb_idx] = ((mstridx == gen_m_wb_idx) ? (s_wb_bsy_i || pendingAcksFull) : 1'b1);
 
-assign m_wb_ack_o[gen_m_wb_idx] = ((mstridx == gen_m_wb_idx) ? s_wb_ack_i : 1'b0);
+assign m_wb_ack_o[gen_m_wb_idx] = ((slvidx == gen_m_wb_idx) ? s_wb_ack_i : 1'b0);
 
 assign m_wb_dat_o[((gen_m_wb_idx+1) * WORDBITSZ) -1 : (gen_m_wb_idx * WORDBITSZ)] = s_wb_dat_i;
 
@@ -124,7 +132,7 @@ end endgenerate
 
 wire _m_wb_stb_i = m_wb_stb_i[mstridx];
 
-assign s_wb_stb_o = (ack_pending[CLOG2MAXPENDINGACK] ? 1'b0 : _m_wb_stb_i);
+assign s_wb_stb_o = (pendingAcksFull ? 1'b0 : _m_wb_stb_i);
 assign s_wb_tag_o = m_wb_tag_i[mstridx];
 assign s_wb_we_o = m_wb_we_i[mstridx];
 assign s_wb_addr_o = _m_wb_addr_i[mstridx];
@@ -164,7 +172,7 @@ always_ff @(posedge clk_i) begin
 	if (MASTERCOUNT > 1) begin
 		if (rst_i)
 			wb_lock <= 1'b0;
-		else if (wb_stb)
+		else if (_s_wb_stb_o)
 			wb_lock <= s_wb_tag_o[LOCK];
 	end else
 		wb_lock <= 1'b0;
@@ -176,7 +184,7 @@ always_ff @(posedge clk_i) begin
 	if (MASTERCOUNT > 1) begin
 		if (rst_i)
 			mstrhi <= (MASTERCOUNT - 1);
-		else if (!(wb_lock || _m_wb_stb_i || (|ack_pending))) begin
+		else if (!(wb_lock || _m_wb_stb_i)) begin
 			if (mstridx < mstrhi)
 				mstridx <= mstridx + 1'b1;
 			else begin
