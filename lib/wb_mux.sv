@@ -81,6 +81,12 @@ input  wire [(1 * SLAVECOUNT) -1 : 0]                    s_wb_ack_i;
 input  wire [(WORDBITSZ * SLAVECOUNT) -1 : 0]            s_wb_dat_i;
 input  wire [((WORDBITSZ-MSBSZIGN) * SLAVECOUNT) -1 : 0] s_wb_mapsz_i;
 
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] m_wb_addr_r;
+always_ff @(posedge clk_i) begin
+	if (m_wb_stb_i)
+		m_wb_addr_r <= m_wb_addr_i;
+end
+
 wire wb_stb = (m_wb_stb_i && !m_wb_bsy_o);
 
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] ack_pending;
@@ -167,7 +173,7 @@ always_ff @(posedge clk_i) begin
 			slvidx_dflt_hi <= _addrspace_slvidx_nxt;
 		end
 
-	end else if (!slvidx_rdy) begin
+	end else if (!slvidx_rdy && m_wb_addr_r == m_wb_addr_i) begin
 
 		if (!slvidx_invalid && m_wb_stb_i)
 			slvidx_rdy <= 1;
