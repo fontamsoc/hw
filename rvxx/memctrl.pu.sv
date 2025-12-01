@@ -30,9 +30,12 @@ reg                                  iF_mem_seq_valid;
 assign dCache_s_ack_i = (wb_ack_i && (!iF_mem_seq_valid || wb_rsp_cnt != iF_mem_seq));
 
 reg iF_mem_stb;
+reg iF_mem_stb_r;
 reg [(XADDRBITSZ-XMSBSZIGN) -1 : 0] iF_mem_addr;
-wire iF_mem_bsy = (dCache_s_stb_o || _wb_bsy_i);
+wire iF_mem_bsy = ((dCache_s_stb_o && !iF_mem_stb_r) || _wb_bsy_i);
 wire iF_mem_ack = (wb_ack_i && iF_mem_seq_valid && wb_rsp_cnt == iF_mem_seq);
+
+assign dCache_s_bsy_i = (iF_mem_stb_r || _wb_bsy_i);
 
 assign iCache_we_w   = iF_mem_ack;
 assign iCache_dati_w = wb_dat_i;
@@ -44,6 +47,7 @@ reg iF_mem_wait;
 always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		iF_mem_stb <= 0;
+		iF_mem_stb_r <= 0;
 		iF_mem_seq_valid <= 0;
 		iF_mem_wait <= 1;
 	end else if (iF_mem_stb) begin
@@ -51,7 +55,9 @@ always_ff @(posedge clk_i) begin
 			iF_mem_seq <= wb_rqst_cnt;
 			iF_mem_seq_valid <= 1;
 			iF_mem_stb <= 0;
-		end
+			iF_mem_stb_r <= 0;
+		end else
+			iF_mem_stb_r <= 1;
 	end else if (iF_mem_seq_valid) begin
 		if (iF_mem_ack) begin
 			iF_mem_seq_valid <= 0;
@@ -85,7 +91,7 @@ always_comb begin
 	wb_dat_o = 0;
 
 	if (wb_max_pending);
-	else if (dCache_s_stb_o) begin
+	else if (dCache_s_stb_o && !iF_mem_stb_r) begin
 		wb_stb_o = 1;
 		wb_tag_o[LOCK] = dCache_s_tag_o[LOCK];
 		wb_we_o = dCache_s_we_o;

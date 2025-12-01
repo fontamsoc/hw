@@ -203,7 +203,6 @@ end endgenerate
 
 assign dcache_addr_o = {upSizr_dCache_m_addr_o, {CLOG2XWORDBITSZBY8{1'b0}}};
 
-assign dCache_s_bsy_i = _wb_bsy_i;
 assign dCache_s_dat_i = wb_dat_i;
 
 reg dCache_m_isAMOonly;
