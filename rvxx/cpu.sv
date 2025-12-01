@@ -64,6 +64,7 @@ parameter XWORDBITSZ    = 32; // TODO: Support all the way up to 1024 ...
 parameter ADDRLIMIT     = 'h2000;
 parameter WBTAGBITSZ    = 1;
 parameter CLKFREQ       = 1;
+parameter USEMEMCLKDOM  = 0;
 parameter DCACHETYPE    = 0;
 parameter ICACHESETCNT  = 2;
 parameter DCACHESETCNT  = 0;
@@ -263,6 +264,8 @@ assign arbiter_wb_dat_o_ = _wb_dat_i;
 
 end endgenerate
 
+generate if (USEMEMCLKDOM) begin: gen_wb_cdc
+
 wb_cdc #(
 	 .WORDBITSZ     (XWORDBITSZ)
 	,.ADDRLIMIT     (ADDRLIMIT)
@@ -295,5 +298,19 @@ wb_cdc #(
 	,.s_wb_ack_i  (wb_ack_i)
 	,.s_wb_dat_i  (wb_dat_i)
 );
+
+end else begin
+
+assign wb_stb_o = wb_stb_o_;
+assign wb_tag_o = wb_tag_o_;
+assign wb_we_o = wb_we_o_;
+assign wb_addr_o = wb_addr_o_;
+assign wb_sel_o = wb_sel_o_;
+assign wb_dat_o = wb_dat_o_;
+assign _wb_bsy_i = wb_bsy_i;
+assign _wb_ack_i = wb_ack_i;
+assign _wb_dat_i = wb_dat_i;
+
+end endgenerate
 
 endmodule
