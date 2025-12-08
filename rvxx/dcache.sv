@@ -3,7 +3,7 @@
 
 // TODO: Comments to use:
 // TODO: conly_i; // Make cache behave like an sram; no slave memory operation occur.
-// TODO: cmiss_i; // cache-miss to force slave memory operation; any cachehit entry is left untouched.
+// TODO: cmiss_i; // cache-miss to force slave memory operation; any cachehit entry get flushed and invalidated.
 
 `ifndef DCACHE_V
 `define DCACHE_V
@@ -176,7 +176,7 @@ wire [(WORDBITSZ/8) -1 : 0] cache_sel_o_tag_hit = cache_sel_o[cache_tag_hit_wayi
 wire [WORDBITSZ -1 : 0] cache_dat_o_tag_hit = cache_dat_o[cache_tag_hit_wayidx];
 
 wire [(WORDBITSZ/8) -1 : 0] cache_sel_i = (
-	conly_r ? {(WORDBITSZ/8){1'b0}} :
+	(conly_r || cmiss_r) ? {(WORDBITSZ/8){1'b0}} :
 	(state == TESTHIT) ? (cache_tag_hit ? (m_wb_sel_r | cache_sel_o_tag_hit) : m_wb_sel_r) :
 	(state == REFILL) ? {(WORDBITSZ/8){1'b1}} : {(WORDBITSZ/8){1'b0}});
 
@@ -188,7 +188,7 @@ wire [WORDBITSZ -1 : 0] cache_dat_i = ((state == TESTHIT) ?
 			m_wb_dat_r) :
 		s_wb_dat_i);
 
-wire cache_drt_i = (!(rst_r || conly_r) && m_wb_we_r);
+wire cache_drt_i = (!(rst_r || conly_r || cmiss_r) && m_wb_we_r);
 
 genvar gen_cache_idx;
 generate for (
@@ -232,7 +232,7 @@ always_ff @(posedge clk_i) begin
 end
 
 always_ff @(posedge clk_i) begin
-	if (rst_r || _cache_we) begin
+	if (rst_r || (state == TESTHIT && cmiss_r && cache_tag_hit_[gen_cache_idx]) || _cache_we) begin
 		cache_sels[cache_wridx] <= cache_sel_i;
 		cache_drts[cache_wridx] <= cache_drt_i;
 	end
@@ -309,7 +309,7 @@ always_ff @(posedge clk_i) begin
 
 				state <= READY;
 
-			end else if (cache_drt_o[cache_we_wayidx] && !cmiss_r) begin
+			end else if (cache_drt_o[cache_we_wayidx] && (!cmiss_r || cache_tag_hit)) begin
 
 				s_wb_stb_o <= 1;
 				s_wb_tag_o <= 0;
@@ -347,7 +347,7 @@ always_ff @(posedge clk_i) begin
 
 			if (MAXPENDINGACK ? !s_wb_bsy_i : s_wb_ack_i) begin
 
-				if (m_wb_we_r) begin
+				if (m_wb_we_r && !cmiss_r) begin
 
 					m_wb_bsy_o <= 0;
 					m_wb_ack_o <= 1;
@@ -363,9 +363,11 @@ always_ff @(posedge clk_i) begin
 
 					s_wb_stb_o <= 1;
 					s_wb_tag_o <= m_wb_tag_r;
-					s_wb_we_o <= 0;
+					s_wb_we_o <= m_wb_we_r;
 					s_wb_addr_o <= m_wb_addr_r;
-					s_wb_sel_o <= {(WORDBITSZ/8){1'b1}};
+					s_wb_sel_o <= cmiss_r ? m_wb_sel_r : {(WORDBITSZ/8){1'b1}};
+					if (m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
+						s_wb_dat_o <= m_wb_dat_r;
 
 					state <= REFILL;
 				end
@@ -600,7 +602,7 @@ wire [(WORDBITSZ/8) -1 : 0] cache_sel_o_tag_hit = cache_sel_o[cache_tag_hit_wayi
 wire [WORDBITSZ -1 : 0] cache_dat_o_tag_hit = cache_dat_o[cache_tag_hit_wayidx];
 
 wire [(WORDBITSZ/8) -1 : 0] cache_sel_i = (
-	conly_r ? {(WORDBITSZ/8){1'b0}} :
+	(conly_r || cmiss_r) ? {(WORDBITSZ/8){1'b0}} :
 	m_wb_ack ? (cache_tag_hit ? (m_wb_sel_r | cache_sel_o_tag_hit) : m_wb_sel_r) :
 	(state == REFILL) ? {(WORDBITSZ/8){1'b1}} : {(WORDBITSZ/8){1'b0}});
 
@@ -612,7 +614,7 @@ wire [WORDBITSZ -1 : 0] cache_dat_i = (m_wb_ack ?
 			m_wb_dat_r) :
 		s_wb_dat_i);
 
-wire cache_drt_i = (!(/*rst_r ||*/ conly_r) && m_wb_we_r);
+wire cache_drt_i = (!(/*rst_r ||*/ conly_r || cmiss_r) && m_wb_we_r);
 
 genvar gen_cache_idx;
 generate for (
@@ -656,7 +658,7 @@ always_ff @(posedge clk_i) begin
 end
 
 always_ff @(posedge clk_i) begin
-	if (rst_r || _cache_we) begin
+	if (rst_r || (m_wb_ack && cmiss_r && cache_tag_hit_[gen_cache_idx]) || _cache_we) begin
 		cache_sels[cache_wridx] <= cache_sel_i;
 		cache_drts[cache_wridx] <= cache_drt_i;
 	end
@@ -715,7 +717,8 @@ always_ff @(posedge clk_i) begin
 				end else
 					m_wb_addr_r <= m_wb_addr_r + 1'b1;
 
-			end else if (cache_miss && cache_flush && !cmiss_r) begin
+			end else if (cmiss_r ? (cache_tag_hit && cache_drt_o_we_wayidx) :
+				(cache_miss && cache_flush)) begin
 
 				m_wb_ack <= 0;
 
@@ -769,7 +772,7 @@ always_ff @(posedge clk_i) begin
 
 			if (MAXPENDINGACK ? !s_wb_bsy_i : s_wb_ack_i) begin
 
-				if (m_wb_we_r) begin
+				if (m_wb_we_r && !cmiss_r) begin
 
 					m_wb_we_r <= 0;
 
@@ -784,9 +787,11 @@ always_ff @(posedge clk_i) begin
 
 					s_wb_stb_o <= 1;
 					s_wb_tag_o <= m_wb_tag_r;
-					s_wb_we_o <= 0;
+					s_wb_we_o <= m_wb_we_r;
 					s_wb_addr_o <= m_wb_addr_r;
-					s_wb_sel_o <= {(WORDBITSZ/8){1'b1}};
+					s_wb_sel_o <= cmiss_r ? m_wb_sel_r : {(WORDBITSZ/8){1'b1}};
+					//if (m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
+						s_wb_dat_o <= m_wb_dat_r;
 
 					state <= REFILL;
 				end
@@ -957,6 +962,15 @@ end else begin
 	end
 end endgenerate
 
+reg lock_r;
+always_ff @(posedge clk_i) begin
+	if (rst_i)
+		lock_r <= 0;
+	else if (m_wb_stb_i && !m_wb_bsy_o)
+		lock_r <= m_wb_tag_i[0];
+end
+wire _cmiss_i = (cmiss_i || m_wb_tag_i[0] || lock_r);
+
 generate if (TYPE == 0) begin: gen_dCacheType0
 
 dCacheType0 #(
@@ -974,7 +988,7 @@ dCacheType0 #(
 	,.clk_i (clk_i)
 
 	,.conly_i (conly_i)
-	,.cmiss_i (cmiss_i)
+	,.cmiss_i (_cmiss_i)
 
 	,.m_wb_stb_i  (m_wb_stb_i)
 	,.m_wb_tag_i  (m_wb_tag_i)
@@ -1014,7 +1028,7 @@ dCacheType1 #(
 	,.clk_i (clk_i)
 
 	,.conly_i (conly_i)
-	,.cmiss_i (cmiss_i)
+	,.cmiss_i (_cmiss_i)
 
 	,.m_wb_stb_i  (m_wb_stb_i)
 	,.m_wb_tag_i  (m_wb_tag_i)
