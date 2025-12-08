@@ -679,11 +679,12 @@ assign m_wb_ack_o = (m_wb_ack ? (cache_hit || m_wb_we_r) : (state == REFILL && !
 
 wire cache_drt_o_we_wayidx = cache_drt_o[cache_we_wayidx];
 
+wire cache_flush = (cache_drt_o_we_wayidx && (!m_wb_we_r || !cache_tag_hit));
+
 assign m_wb_bsy_o = (rst_r || cmiss_r || state != IDLE ||
 	(m_wb_we_r && cache_rdidx == cache_wridx) /* wait for cache-write */ ||
 	(cache_miss && ( /* keep m_wb_bsy_o low if not transitioning from IDLE */
-		(cache_drt_o_we_wayidx && (!m_wb_we_r || !cache_tag_hit)) ||
-		!m_wb_we_r)));
+		cache_flush || !m_wb_we_r)));
 
 always_ff @(posedge clk_i) begin
 
@@ -714,57 +715,32 @@ always_ff @(posedge clk_i) begin
 				end else
 					m_wb_addr_r <= m_wb_addr_r + 1'b1;
 
-			end else if (cache_miss) begin
+			end else if (cache_miss && cache_flush && !cmiss_r) begin
 
-				if (cache_drt_o_we_wayidx && (!m_wb_we_r || !cache_tag_hit) && !cmiss_r) begin
+				m_wb_ack <= 0;
 
-					m_wb_ack <= 0;
+				s_wb_stb_o <= 1;
+				s_wb_tag_o <= 0;
+				s_wb_we_o <= 1;
+				s_wb_addr_o <= {cache_tag_o[cache_we_wayidx], cache_wridx};
+				s_wb_sel_o <= cache_sel_o[cache_we_wayidx];
+				s_wb_dat_o <= cache_dat_o[cache_we_wayidx];
 
-					s_wb_stb_o <= 1;
-					s_wb_tag_o <= 0;
-					s_wb_we_o <= 1;
-					s_wb_addr_o <= {cache_tag_o[cache_we_wayidx], cache_wridx};
-					s_wb_sel_o <= cache_sel_o[cache_we_wayidx];
-					s_wb_dat_o <= cache_dat_o[cache_we_wayidx];
+				state <= FLUSH;
 
-					state <= FLUSH;
+			end else if ((cache_miss && !m_wb_we_r) || cmiss_r) begin
 
-				end else if (!m_wb_we_r || cmiss_r) begin
+				m_wb_ack <= 0;
 
-					m_wb_ack <= 0;
+				s_wb_stb_o <= 1;
+				s_wb_tag_o <= m_wb_tag_r;
+				s_wb_we_o <= m_wb_we_r;
+				s_wb_addr_o <= m_wb_addr_r;
+				s_wb_sel_o <= cmiss_r ? m_wb_sel_r : {(WORDBITSZ/8){1'b1}};
+				if (m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
+					s_wb_dat_o <= m_wb_dat_r;
 
-					s_wb_stb_o <= 1;
-					s_wb_tag_o <= m_wb_tag_r;
-					s_wb_we_o <= m_wb_we_r;
-					s_wb_addr_o <= m_wb_addr_r;
-					s_wb_sel_o <= cmiss_r ? m_wb_sel_r : {(WORDBITSZ/8){1'b1}};
-					if (m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
-						s_wb_dat_o <= m_wb_dat_r;
-
-					state <= REFILL;
-
-				end else if (_m_wb_stb_i) begin
-
-					m_wb_ack <= 1;
-
-					m_wb_tag_r <= m_wb_tag_i;
-					m_wb_we_r <= m_wb_we_i;
-					m_wb_addr_r <= m_wb_addr_i;
-					m_wb_sel_r <= m_wb_sel_i;
-					m_wb_dat_r <= m_wb_dat_i;
-
-					conly_r <= conly_i;
-					cmiss_r <= cmiss_i;
-
-				end else begin
-
-					m_wb_ack <= 0;
-
-					m_wb_we_r <= 0;
-
-					conly_r <= 0;
-					cmiss_r <= 0;
-				end
+				state <= REFILL;
 
 			end else if (_m_wb_stb_i) begin
 
