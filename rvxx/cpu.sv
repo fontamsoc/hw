@@ -65,7 +65,6 @@ parameter ADDRLIMIT     = 'h2000;
 parameter WBTAGBITSZ    = 1;
 parameter CLKFREQ       = 1;
 parameter USEMEMCLKDOM  = 0;
-parameter DCACHETYPE    = 0;
 parameter ICACHESETCNT  = 2;
 parameter DCACHESETCNT  = 0;
 parameter ICACHEWAYCNT  = 1;
@@ -150,7 +149,6 @@ pu #(
 	,.ADDRLIMIT     (ADDRLIMIT)
 	,.WBTAGBITSZ    (WBTAGBITSZ)
 	,.CLKFREQ       (CLKFREQ)
-	,.DCACHETYPE    (DCACHETYPE)
 	,.ICACHESETCNT  (ICACHESETCNT)
 	,.DCACHESETCNT  ((PUCNT > 1) ? 0 : DCACHESETCNT) /* TODO: cache-coherence */
 	,.ICACHEWAYCNT  (ICACHEWAYCNT)

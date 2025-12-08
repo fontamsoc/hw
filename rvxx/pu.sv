@@ -170,7 +170,6 @@ parameter XWORDBITSZ    = 32; // TODO: Support all the way up to 1024 ...
 parameter ADDRLIMIT     = 'h2000;
 parameter WBTAGBITSZ    = 1;
 parameter CLKFREQ       = 1;
-parameter DCACHETYPE    = 0;
 parameter ICACHESETCNT  = 2;
 parameter DCACHESETCNT  = 0;
 parameter ICACHEWAYCNT  = 1;
