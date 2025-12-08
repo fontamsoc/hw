@@ -101,7 +101,7 @@ reg rst_r;
 reg conly_r;
 reg cmiss_r;
 
-localparam IDLE    = 0;
+localparam READY   = 0;
 localparam TESTHIT = 1;
 localparam FLUSH   = 2;
 localparam REFILL  = 3;
@@ -127,9 +127,9 @@ endgenerate
 // REFILL, because we could still be waiting for the ack of FLUSH.
 wire refill_ack = (s_wb_ack_i && (!MAXPENDINGACK || (!s_wb_stb_o && ack_pending == 1)));
 
-wire cache_we = (!cmiss_r &&
-	((state == TESTHIT && m_wb_we_r) ||
-		(state == REFILL && !s_wb_we_o && refill_ack)));
+wire cache_we = (!cmiss_r && (
+	(state == TESTHIT && m_wb_we_r) ||
+	(state == REFILL && !s_wb_we_o && refill_ack)));
 
 localparam CACHETAGBITSIZE = ((ADDRBITSZ-MSBSZIGN) - CLOG2CACHESETCNT);
 
@@ -160,7 +160,7 @@ end
 reg [CLOG2CACHEWAYCNT -1 : 0] cache_we_wayidx_;
 
 always_ff @(posedge clk_i) begin
-	if (CACHEWAYCNT == 1 || (state == IDLE && m_wb_stb_i && conly_i) || conly_r) begin
+	if (CACHEWAYCNT == 1 || (state == READY && m_wb_stb_i && conly_i) || conly_r) begin
 		cache_we_wayidx_ <= 0;
 	end else if (cache_we && !cache_tag_hit) begin
 		cache_we_wayidx_ <= cache_we_wayidx_ + 1'b1;
@@ -214,7 +214,7 @@ initial begin
 end
 
 always_ff @(posedge clk_i) begin
-	if (state == IDLE && m_wb_stb_i) begin
+	if (state == READY && m_wb_stb_i) begin
 		cache_tag_o[gen_cache_idx] <= cache_tags[cache_rdidx];
 		cache_sel_o[gen_cache_idx] <= cache_sels[cache_rdidx];
 		cache_dat_o[gen_cache_idx] <= cache_dats[cache_rdidx];
@@ -261,11 +261,11 @@ always_ff @(posedge clk_i) begin
 		conly_r <= 0;
 		cmiss_r <= 0;
 
-		state <= IDLE;
+		state <= READY;
 
 	end else begin
 
-		unique if (state == IDLE) begin
+		unique if (state == READY) begin
 
 			if (rst_r) begin
 
@@ -307,7 +307,7 @@ always_ff @(posedge clk_i) begin
 				conly_r <= 0;
 				cmiss_r <= 0;
 
-				state <= IDLE;
+				state <= READY;
 
 			end else if (cache_drt_o[cache_we_wayidx] && !cmiss_r) begin
 
@@ -328,7 +328,7 @@ always_ff @(posedge clk_i) begin
 				conly_r <= 0;
 				cmiss_r <= 0;
 
-				state <= IDLE;
+				state <= READY;
 
 			end else begin
 
@@ -357,7 +357,7 @@ always_ff @(posedge clk_i) begin
 					conly_r <= 0;
 					cmiss_r <= 0;
 
-					state <= IDLE;
+					state <= READY;
 
 				end else begin
 
@@ -388,7 +388,7 @@ always_ff @(posedge clk_i) begin
 				conly_r <= 0;
 				cmiss_r <= 0;
 
-				state <= IDLE;
+				state <= READY;
 
 			end else if (!s_wb_bsy_i)
 				s_wb_stb_o <= 0;
@@ -524,9 +524,9 @@ reg rst_r;
 reg conly_r;
 reg cmiss_r;
 
-localparam IDLE    = 0;
-localparam FLUSH   = 2;
-localparam REFILL  = 3;
+localparam READY  = 0;
+localparam FLUSH  = 2;
+localparam REFILL = 3;
 reg [2 -1 : 0] state;
 
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] ack_pending;
@@ -551,9 +551,9 @@ wire refill_ack = (s_wb_ack_i && (!MAXPENDINGACK || (!s_wb_stb_o && ack_pending 
 
 reg m_wb_ack;
 
-wire cache_we = (!cmiss_r &&
-	((m_wb_ack && m_wb_we_r) ||
-		(state == REFILL && !s_wb_we_o && refill_ack)));
+wire cache_we = (!cmiss_r && (
+	(m_wb_ack && m_wb_we_r) ||
+	(state == REFILL && !s_wb_we_o && refill_ack)));
 
 localparam CACHETAGBITSIZE = ((ADDRBITSZ-MSBSZIGN) - CLOG2CACHESETCNT);
 
@@ -681,9 +681,9 @@ wire cache_drt_o_we_wayidx = cache_drt_o[cache_we_wayidx];
 
 wire cache_flush = (cache_drt_o_we_wayidx && (!m_wb_we_r || !cache_tag_hit));
 
-assign m_wb_bsy_o = (rst_r || cmiss_r || state != IDLE ||
+assign m_wb_bsy_o = (rst_r || cmiss_r || state != READY ||
 	(m_wb_we_r && cache_rdidx == cache_wridx) /* wait for cache-write */ ||
-	(cache_miss && ( /* keep m_wb_bsy_o low if not transitioning from IDLE */
+	(cache_miss && ( /* keep m_wb_bsy_o low if not transitioning from READY */
 		cache_flush || !m_wb_we_r)));
 
 always_ff @(posedge clk_i) begin
@@ -702,11 +702,11 @@ always_ff @(posedge clk_i) begin
 		conly_r <= 0;
 		cmiss_r <= 0;
 
-		state <= IDLE;
+		state <= READY;
 
 	end else begin
 
-		unique if (state == IDLE) begin
+		unique if (state == READY) begin
 
 			if (rst_r) begin
 
@@ -778,7 +778,7 @@ always_ff @(posedge clk_i) begin
 					conly_r <= 0;
 					cmiss_r <= 0;
 
-					state <= IDLE;
+					state <= READY;
 
 				end else begin
 
@@ -796,7 +796,7 @@ always_ff @(posedge clk_i) begin
 
 		end else if (state == REFILL) begin
 
-			if ((m_wb_we_r && !s_wb_bsy_i && MAXPENDINGACK) || refill_ack) begin
+			if (refill_ack || (MAXPENDINGACK && m_wb_we_r && !s_wb_bsy_i)) begin
 
 				m_wb_we_r <= 0;
 
@@ -805,7 +805,7 @@ always_ff @(posedge clk_i) begin
 				conly_r <= 0;
 				cmiss_r <= 0;
 
-				state <= IDLE;
+				state <= READY;
 
 			end else if (!s_wb_bsy_i)
 				s_wb_stb_o <= 0;
