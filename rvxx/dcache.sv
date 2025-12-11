@@ -673,13 +673,14 @@ end endgenerate
 
 assign m_wb_dat_o = (m_wb_ack ? cache_dat_o_tag_hit : s_wb_dat_i);
 
-wire cache_hit = (!cmiss_r && (conly_r ||
+wire cache_hit = (conly_r ||
 	// There is a cachehit when there is a cache tag hit and the selected bits are in the cache.
-	(cache_tag_hit && (m_wb_sel_r & cache_sel_o_tag_hit) == m_wb_sel_r)));
+	(cache_tag_hit && (m_wb_sel_r & cache_sel_o_tag_hit) == m_wb_sel_r));
 
 wire cache_miss = (m_wb_ack && !cache_hit);
 
-assign m_wb_ack_o = (m_wb_ack ? (cache_hit || m_wb_we_r) : (state == REFILL && !s_wb_we_o && refill_ack));
+assign m_wb_ack_o = (m_wb_ack ? ((!cmiss_r && cache_hit) || m_wb_we_r) :
+	(state == REFILL && !s_wb_we_o && refill_ack));
 
 wire cache_drt_o_we_wayidx = cache_drt_o[cache_we_wayidx];
 
