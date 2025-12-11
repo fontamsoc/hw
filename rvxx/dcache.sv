@@ -301,7 +301,7 @@ always_ff @(posedge clk_i) begin
 				m_wb_bsy_o <= 0;
 				m_wb_ack_o <= 1;
 
-				if (!m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
+				//if (!m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
 					m_wb_dat_o <= cache_dat_o_tag_hit;
 
 				conly_r <= 0;
@@ -337,7 +337,7 @@ always_ff @(posedge clk_i) begin
 				s_wb_we_o <= m_wb_we_r;
 				s_wb_addr_o <= m_wb_addr_r;
 				s_wb_sel_o <= cmiss_r ? m_wb_sel_r : {(WORDBITSZ/8){1'b1}};
-				if (m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
+				//if (m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
 					s_wb_dat_o <= m_wb_dat_r;
 
 				state <= REFILL;
@@ -366,7 +366,7 @@ always_ff @(posedge clk_i) begin
 					s_wb_we_o <= m_wb_we_r;
 					s_wb_addr_o <= m_wb_addr_r;
 					s_wb_sel_o <= cmiss_r ? m_wb_sel_r : {(WORDBITSZ/8){1'b1}};
-					if (m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
+					//if (m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
 						s_wb_dat_o <= m_wb_dat_r;
 
 					state <= REFILL;
@@ -382,7 +382,7 @@ always_ff @(posedge clk_i) begin
 				m_wb_bsy_o <= 0;
 				m_wb_ack_o <= 1;
 
-				if (!m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
+				//if (!m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
 					m_wb_dat_o <= s_wb_dat_i;
 
 				s_wb_stb_o <= 0;
