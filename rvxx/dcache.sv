@@ -188,7 +188,7 @@ wire [WORDBITSZ -1 : 0] cache_dat_i = ((state == TESTHIT) ?
 			m_wb_dat_r) :
 		s_wb_dat_i);
 
-wire cache_drt_i = (!(rst_r || conly_r || cmiss_r) && m_wb_we_r);
+wire cache_drt_i = (!(/*rst_r ||*/ conly_r || cmiss_r) && m_wb_we_r);
 
 genvar gen_cache_idx;
 generate for (
@@ -250,14 +250,16 @@ always_ff @(posedge clk_i) begin
 
 	if (rst_i) begin
 
+		rst_r <= 1;
+
 		m_wb_bsy_o <= 1;
 		m_wb_ack_o <= 0;
-
-		s_wb_stb_o <= 0;
+		m_wb_we_r <= 0;
 
 		m_wb_addr_r <= 0;
 
-		rst_r <= 1;
+		s_wb_stb_o <= 0;
+
 		conly_r <= 0;
 		cmiss_r <= 0;
 
