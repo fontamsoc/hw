@@ -243,8 +243,9 @@ assign cache_tag_hit_[gen_cache_idx] = ((|cache_sel_o[gen_cache_idx]) &&
 
 end endgenerate
 
-// There is a cachehit when there is a cache tag hit and the selected bits are in the cache.
-wire cache_hit = (cache_tag_hit && (m_wb_sel_r & cache_sel_o_tag_hit) == m_wb_sel_r);
+wire cache_hit = (conly_r ||
+	// There is a cachehit when there is a cache tag hit and the selected bits are in the cache.
+	(cache_tag_hit && (m_wb_sel_r & cache_sel_o_tag_hit) == m_wb_sel_r));
 
 always_ff @(posedge clk_i) begin
 
@@ -298,7 +299,7 @@ always_ff @(posedge clk_i) begin
 
 		end else if (state == TESTHIT) begin
 
-			if ((conly_r || cache_hit || (cache_tag_hit && m_wb_we_r)) && !cmiss_r) begin
+			if ((cache_hit || (cache_tag_hit && m_wb_we_r)) && !cmiss_r) begin
 
 				m_wb_bsy_o <= 0;
 				m_wb_ack_o <= 1;
