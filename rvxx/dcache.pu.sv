@@ -221,15 +221,13 @@ wire dCache_m_max_pending = dCache_m_pending_acks[CLOG2MAXPENDINGACK];
 
 reg dCache_m_bsy_r;
 
-wire __dCache_m_stb_i = (dCache_m_stb_i && !dCache_m_bsy_r);
-
 // Signal set to 1 when the logic setting dCache_m_stb_i cannot accept a new operation.
 wire __dCache_m_bsy = (dCache_m_bsy_r || dCache_m_max_pending || dCache_m_isAMOonly);
 
 always_ff @(posedge clk_i) begin
 	if (rst_i)
 		dCache_m_rqst_cnt <= 0;
-	else if (__dCache_m_stb_i)
+	else if (dCache_m_stb_i && !dCache_m_bsy_r)
 		dCache_m_rqst_cnt <= dCache_m_rqst_cnt + 1'b1;
 end
 
