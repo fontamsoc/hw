@@ -9,7 +9,7 @@
 // Ports:
 //
 // rstaddr2_i
-// 	Address where PUs with non-null id_i begin executing
+// 	Address where PUs with non-null PUID begin executing
 // 	instructions when woken-up. It is to be a 32bits address
 // 	for which the least significant bit has been discarded.
 //
@@ -53,8 +53,6 @@ module cpu (
 	,rstaddr2_i
 
 	,spval_i
-
-	,id_i
 );
 
 `include "lib/clog2.sv"
@@ -73,6 +71,7 @@ parameter IMULCNT       = 2;
 parameter IDIVCNT       = 2;
 parameter MAXPENDINGACK = 16;
 parameter PUCNT         = 1;
+parameter CPUID         = 0;
 
 localparam CLOG2XWORDBITSZBY8 = clog2(XWORDBITSZ/8);
 localparam XADDRBITSZ = (XWORDBITSZ-CLOG2XWORDBITSZBY8);
@@ -111,8 +110,6 @@ input wire [WORDBITSZ -1 : 0] rstaddr_i;
 input wire [WORDBITSZ -1 : 0] rstaddr2_i;
 
 input wire [WORDBITSZ -1 : 0] spval_i;
-
-input wire [WORDBITSZ -1 : 0] id_i;
 
 wire                                 arbiter_wb_stb_i  [PUCNT];
 wire [WBTAGBITSZ -1 : 0]             arbiter_wb_tag_i  [PUCNT];
@@ -156,6 +153,7 @@ pu #(
 	,.IMULCNT       (IMULCNT)
 	,.IDIVCNT       (IDIVCNT)
 	,.MAXPENDINGACK (MAXPENDINGACK)
+	,.PUID          (CPUID + genpu_idx)
 ) pu (
 
 	 .rst_i (rst_i)
@@ -187,8 +185,6 @@ pu #(
 	,.rstaddr_i (genpu_idx ? rstaddr2_i : rstaddr_i)
 
 	,.spval_i (spval_i)
-
-	,.id_i (id_i + genpu_idx)
 );
 
 assign _arbiter_wb_stb_i[genpu_idx] = arbiter_wb_stb_i[genpu_idx];

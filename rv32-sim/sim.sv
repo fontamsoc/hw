@@ -167,8 +167,6 @@ cpu #(
 	,.rstaddr2_i ('h1000)
 
 	,.spval_i (spval_r)
-
-	,.id_i (0)
 );
 
 // Logic used by sim_use_vcd verilator testbench.

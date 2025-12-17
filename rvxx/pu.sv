@@ -60,6 +60,11 @@
 // MAXPENDINGACK
 // 	TODO: Describe ...
 // 	It must be at least 2 and a power of 2.
+//
+// PUID
+// 	Index of the pu when used in a multi-pu configuration,
+// 	otherwise must be 0. Non-zero pu index are halted on reset
+// 	waiting for an external interrupt.
 
 // Ports:
 //
@@ -111,11 +116,6 @@
 //
 // halted_o
 // 	When this signal is high, the pu is halted.
-//
-// id_i
-// 	Index of the pu when used in a multi-pu configuration,
-// 	otherwise must be 0. Non-zero pu index are halted on reset
-// 	waiting for an external interrupt.
 
 `include "lib/fifo_fwft.sv"
 `include "lib/wb_skidbuf.sv"
@@ -159,8 +159,6 @@ module pu (
 	,rstaddr_i
 
 	,spval_i
-
-	,id_i
 );
 
 `include "lib/clog2.sv"
@@ -177,6 +175,7 @@ parameter DCACHEWAYCNT  = 1;
 parameter IMULCNT       = 2;
 parameter IDIVCNT       = 2;
 parameter MAXPENDINGACK = 16;
+parameter PUID          = 0;
 
 localparam USE_DCACHE = (DCACHESETCNT > 0);
 
@@ -240,8 +239,6 @@ output reg  halted_o;
 input wire [WORDBITSZ -1 : 0] rstaddr_i;
 
 input wire [WORDBITSZ -1 : 0] spval_i;
-
-input wire [WORDBITSZ -1 : 0] id_i;
 
 wire _wb_bsy_i;
 
@@ -461,8 +458,6 @@ reg [WORDBITSZ -1 : 0] csrStval2;
 reg [WORDBITSZ -1 : 0] csrMscratch;
 reg [WORDBITSZ -1 : 0] csrSscratch;
 reg [WORDBITSZ -1 : 0] csrMisa; // ### comb-block-reg.
-reg [WORDBITSZ -1 : 0] csrMhartid;
-wire csrMhartidIsNonNull = (csrMhartid != 0);
 reg [64 -1 : 0] csrCycle;
 reg [64 -1 : 0] csrInstret;
 reg [WORDBITSZ -1 : 0] csrClkFreq;

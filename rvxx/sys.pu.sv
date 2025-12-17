@@ -83,8 +83,8 @@ wire [16 -1 : 0] csrInMieMask = // Non-null bits get modified.
 	csrCurPrivIsS ? 16'b0000001000100010 : // SEIE STIE SSIE.
 	                16'b0000101010101010 ; // All above plus MEIE MTIE MSIE.
 always_ff @(posedge clk_i) begin
-	if (rst_i) begin // If (csrMhartid != 0) reset csrMie.MEIE to 1.
-		csrMie <= (csrMhartidIsNonNull ? 16'b0000100000000000 : 16'd0);
+	if (rst_i) begin // If (PUID != 0) reset csrMie.MEIE to 1.
+		csrMie <= ((PUID != 0) ? 16'b0000100000000000 : 16'd0);
 	end else if (iD_isCSRvalid && iD_Iimm[11:10] == 2'b00 && iD_Iimm[7:0] == 8'h04) begin
 		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			csrMie <= ((csrMie & ~csrInMieMask) | (csrIn[15:0] & csrInMieMask));
@@ -194,7 +194,7 @@ wire fatalExc = (excTriggered && !excTvec);
 
 always_ff @(posedge clk_i) begin
 	if (rst_i)
-		halted_o <= csrMhartidIsNonNull;
+		halted_o <= (PUID != 0);
 	else if ((iD_isWfi && iD_insn_valid) || fatalExc || halted_o)
 		halted_o <= !(
 			(csrMip_[11/*MEIP*/] && csrMie[11/*MEIE*/] && (csrCurPrivIsM ? csrMstatus[3/*MIE*/] : 1'b1)) ||
@@ -233,7 +233,7 @@ wire [WORDBITSZ -1 : 0] csrInMtvecMask = {{(WORDBITSZ-2){1'b1}}, 2'b00}; // Non-
 always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		// When starting from halt, mtvec must be non-null (to prevent fatalExc) and valid.
-		csrMtvec <= (csrMhartidIsNonNull ? rstaddr_i : {WORDBITSZ{1'b0}});
+		csrMtvec <= ((PUID != 0) ? rstaddr_i : {WORDBITSZ{1'b0}});
 	end else if (iD_isCSRvalid && iD_Iimm[11:0] == 12'h305) begin
 		unique if   (iD_func3[1:0] == 2'b01) begin // csrrw.
 			csrMtvec <= ((csrMtvec & ~csrInMtvecMask) | (csrIn & csrInMtvecMask));
@@ -403,8 +403,8 @@ wire [WORDBITSZ -1 : 0] csrInMstatusMask = // Non-null bits get modified.
 	csrCurPrivIsS ? 'b00000000000011000000000100100010 : // MXR SUM SPP SPIE SIE.
 	                'b00000000000011100001100110101010 ; // All above plus MPRV MPP MPIE MIE.
 always_ff @(posedge clk_i) begin
-	if (rst_i) begin // If (csrMhartid != 0) reset csrMstatus.MIE to 1.
-		csrMstatus <= (csrMhartidIsNonNull ? 'b1000 : 'd0);
+	if (rst_i) begin // If (PUID != 0) reset csrMstatus.MIE to 1.
+		csrMstatus <= ((PUID != 0) ? 'b1000 : 'd0);
 	end else if (excTriggered) begin
 		if (excNxtPrivIsS)
 			csrMstatus <= {
@@ -620,9 +620,6 @@ always_ff @(posedge clk_i) begin
 	end
 end
 
-always_ff @(posedge clk_i)
-	csrMhartid <= id_i;
-
 localparam MXL = (WORDBITSZ/32); // Valid only when WORDBITSZ == 32 or WORDBITSZ == 64.
 always_comb
 	csrMisa = {MXL[1:0],
@@ -670,7 +667,7 @@ always_comb begin
 	12'hc81: eX_csrOut_i = csrCycle[64-1:WORDBITSZ];
 	12'hc82: eX_csrOut_i = csrInstret[64-1:WORDBITSZ];
 	12'hcc0: eX_csrOut_i = csrClkFreq; // Using User CSRs Non-standard read-only.
-	12'hf14: eX_csrOut_i = csrMhartid;
+	12'hf14: eX_csrOut_i = PUID;
 	default: eX_csrOut_i = {WORDBITSZ{1'b0}};
 	endcase
 end
@@ -705,7 +702,7 @@ always_comb begin
 	12'hc01: eX_csrOut_i = csrCycle;
 	12'hc02: eX_csrOut_i = csrInstret;
 	12'hcc0: eX_csrOut_i = csrClkFreq; // Using User CSRs Non-standard read-only.
-	12'hf14: eX_csrOut_i = csrMhartid;
+	12'hf14: eX_csrOut_i = PUID;
 	default: eX_csrOut_i = {WORDBITSZ{1'b0}};
 	endcase
 end
