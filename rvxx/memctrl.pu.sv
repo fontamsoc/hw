@@ -84,7 +84,7 @@ end
 always_comb begin
 
 	wb_stb_o = 0;
-	wb_tag_o = 0;
+	wb_lock_o = 0;
 	wb_we_o = 0;
 	wb_addr_o = 0;
 	wb_sel_o = 0;
@@ -93,7 +93,7 @@ always_comb begin
 	if (wb_max_pending);
 	else if (dCache_s_stb_o && !iF_mem_stb_r) begin
 		wb_stb_o = 1;
-		wb_tag_o[LOCK] = dCache_s_tag_o[LOCK];
+		wb_lock_o = dCache_s_lock_o;
 		wb_we_o = dCache_s_we_o;
 		wb_addr_o = dCache_s_addr_o;
 		wb_sel_o = dCache_s_sel_o;

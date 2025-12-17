@@ -13,7 +13,7 @@ module wb_arbiter (
 	,clk_i
 
 	,m_wb_stb_i
-	,m_wb_tag_i
+	,m_wb_lock_i
 	,m_wb_we_i
 	,m_wb_addr_i
 	,m_wb_sel_i
@@ -23,7 +23,7 @@ module wb_arbiter (
 	,m_wb_dat_o
 
 	,s_wb_stb_o
-	,s_wb_tag_o
+	,s_wb_lock_o
 	,s_wb_we_o
 	,s_wb_addr_o
 	,s_wb_sel_o
@@ -37,7 +37,6 @@ module wb_arbiter (
 
 parameter WORDBITSZ     = 32;
 parameter ADDRLIMIT     = 'h2000;
-parameter WBTAGBITSZ    = 1;
 parameter MASTERCOUNT   = 1;
 parameter MAXPENDINGACK = 16; // Must be non-null and a power of 2.
 
@@ -49,15 +48,12 @@ localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 // -1 account for the msb oring ignored bits.
 localparam MSBSZIGN = (WORDBITSZ-clog2(ADDRLIMIT)-1);
 
-// Constants used to index wb_tag bits.
-localparam LOCK = 0;
-
 input wire rst_i;
 
 input wire clk_i;
 
 input  wire [(1 * MASTERCOUNT) -1 : 0]                    m_wb_stb_i;
-input  wire [(WBTAGBITSZ * MASTERCOUNT) -1 : 0]           m_wb_tag_i;
+input  wire [(1 * MASTERCOUNT) -1 : 0]                    m_wb_lock_i;
 input  wire [(1 * MASTERCOUNT) -1 : 0]                    m_wb_we_i;
 input  wire [((ADDRBITSZ-MSBSZIGN) * MASTERCOUNT) -1 : 0] m_wb_addr_i;
 input  wire [((WORDBITSZ/8) * MASTERCOUNT) -1 : 0]        m_wb_sel_i;
@@ -67,7 +63,7 @@ output wire [(1 * MASTERCOUNT) -1 : 0]                    m_wb_ack_o;
 output wire [(WORDBITSZ * MASTERCOUNT) -1 : 0]            m_wb_dat_o;
 
 output wire                               s_wb_stb_o;
-output wire [WBTAGBITSZ -1 : 0]           s_wb_tag_o;
+output wire                               s_wb_lock_o;
 output wire                               s_wb_we_o;
 output wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] s_wb_addr_o;
 output wire [(WORDBITSZ/8) -1 : 0]        s_wb_sel_o;
@@ -133,7 +129,7 @@ end endgenerate
 wire _m_wb_stb_i = m_wb_stb_i[mstridx];
 
 assign s_wb_stb_o = (pendingAcksFull ? 1'b0 : _m_wb_stb_i);
-assign s_wb_tag_o = m_wb_tag_i[mstridx];
+assign s_wb_lock_o = m_wb_lock_i[mstridx];
 assign s_wb_we_o = m_wb_we_i[mstridx];
 assign s_wb_addr_o = _m_wb_addr_i[mstridx];
 assign s_wb_sel_o = _m_wb_sel_i[mstridx];
@@ -173,7 +169,7 @@ always_ff @(posedge clk_i) begin
 		if (rst_i)
 			wb_lock <= 1'b0;
 		else if (_s_wb_stb_o)
-			wb_lock <= s_wb_tag_o[LOCK];
+			wb_lock <= s_wb_lock_o;
 	end else
 		wb_lock <= 1'b0;
 end

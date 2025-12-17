@@ -15,7 +15,7 @@ module wb_mux (
 	,clk_i
 
 	,m_wb_stb_i
-	,m_wb_tag_i
+	,m_wb_lock_i
 	,m_wb_we_i
 	,m_wb_addr_i
 	,m_wb_sel_i
@@ -25,7 +25,7 @@ module wb_mux (
 	,m_wb_dat_o
 
 	,s_wb_stb_o
-	,s_wb_tag_o
+	,s_wb_lock_o
 	,s_wb_we_o
 	,s_wb_addr_o
 	,s_wb_sel_o
@@ -43,7 +43,6 @@ parameter SLAVECOUNT        = 1;
 parameter DEFAULTSLAVEINDEX = 0;
 parameter FIRSTSLAVEADDR    = 0;
 parameter ADDRLIMIT         = 'h2000;
-parameter WBTAGBITSZ        = 1;
 parameter MAXPENDINGACK     = 16; // Must be non-null and a power of 2.
 
 localparam CLOG2SLAVECOUNT  = clog2(SLAVECOUNT);
@@ -61,7 +60,7 @@ input wire rst_i;
 input wire clk_i;
 
 input  wire                               m_wb_stb_i;
-input  wire [WBTAGBITSZ -1 : 0]           m_wb_tag_i;
+input  wire                               m_wb_lock_i;
 input  wire                               m_wb_we_i;
 input  wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] m_wb_addr_i;
 input  wire [(WORDBITSZ/8) -1 : 0]        m_wb_sel_i;
@@ -71,7 +70,7 @@ output wire                               m_wb_ack_o;
 output wire [WORDBITSZ -1 : 0]            m_wb_dat_o;
 
 output wire [(1 * SLAVECOUNT) -1 : 0]                    s_wb_stb_o;
-output wire [(WBTAGBITSZ * SLAVECOUNT) -1 : 0]           s_wb_tag_o;
+output wire [(1 * SLAVECOUNT) -1 : 0]                    s_wb_lock_o;
 output wire [(1 * SLAVECOUNT) -1 : 0]                    s_wb_we_o;
 output wire [((ADDRBITSZ-MSBSZIGN) * SLAVECOUNT) -1 : 0] s_wb_addr_o;
 output wire [((WORDBITSZ/8) * SLAVECOUNT) -1 : 0]        s_wb_sel_o;
@@ -213,7 +212,7 @@ generate for (
 	gen_s_wb_idx = gen_s_wb_idx + 1) begin :gen_s_wb
 
 assign s_wb_stb_o[gen_s_wb_idx] = ((slvidx != gen_s_wb_idx || slvidx_invalid || ack_pending[CLOG2MAXPENDINGACK]) ? 1'b0 : m_wb_stb_i);
-assign s_wb_tag_o[gen_s_wb_idx] = m_wb_tag_i;
+assign s_wb_lock_o[gen_s_wb_idx] = m_wb_lock_i;
 assign s_wb_we_o[gen_s_wb_idx] = m_wb_we_i;
 assign s_wb_addr_o[(gen_s_wb_idx * (ADDRBITSZ-MSBSZIGN)) +: (ADDRBITSZ-MSBSZIGN)] = s_wb_addr_o_;
 assign s_wb_sel_o[(gen_s_wb_idx * (WORDBITSZ/8)) +: (WORDBITSZ/8)] = m_wb_sel_i;

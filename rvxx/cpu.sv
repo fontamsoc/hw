@@ -32,7 +32,7 @@ module cpu (
 	,clk_idiv_i
 
 	,wb_stb_o
-	,wb_tag_o
+	,wb_lock_o
 	,wb_we_o
 	,wb_addr_o
 	,wb_sel_o
@@ -60,7 +60,6 @@ module cpu (
 parameter WORDBITSZ     = 32;
 parameter XWORDBITSZ    = 32; // TODO: Support all the way up to 1024 ...
 parameter ADDRLIMIT     = 'h2000;
-parameter WBTAGBITSZ    = 1;
 parameter CLKFREQ       = 1;
 parameter USEMEMCLKDOM  = 0;
 parameter ICACHESETCNT  = 2;
@@ -89,7 +88,7 @@ input wire clk_imul_i;
 input wire clk_idiv_i;
 
 output wire                                 wb_stb_o;
-output wire [WBTAGBITSZ -1 : 0]             wb_tag_o;
+output wire                                 wb_lock_o;
 output wire                                 wb_we_o;
 output wire [(XADDRBITSZ-XMSBSZIGN) -1 : 0] wb_addr_o;
 output wire [(XWORDBITSZ/8) -1 : 0]         wb_sel_o;
@@ -112,7 +111,7 @@ input wire [WORDBITSZ -1 : 0] rstaddr2_i;
 input wire [WORDBITSZ -1 : 0] spval_i;
 
 wire                                 arbiter_wb_stb_i  [PUCNT];
-wire [WBTAGBITSZ -1 : 0]             arbiter_wb_tag_i  [PUCNT];
+wire                                 arbiter_wb_lock_i [PUCNT];
 wire                                 arbiter_wb_we_i   [PUCNT];
 wire [(XADDRBITSZ-XMSBSZIGN) -1 : 0] arbiter_wb_addr_i [PUCNT];
 wire [(XWORDBITSZ/8) -1 : 0]         arbiter_wb_sel_i  [PUCNT];
@@ -122,7 +121,7 @@ wire                                 arbiter_wb_ack_o  [PUCNT];
 wire [XWORDBITSZ -1 : 0]             arbiter_wb_dat_o  [PUCNT];
 
 wire [(1 * PUCNT) -1 : 0]                      _arbiter_wb_stb_i;
-wire [(WBTAGBITSZ * PUCNT) -1 : 0]             _arbiter_wb_tag_i;
+wire [(1 * PUCNT) -1 : 0]                      _arbiter_wb_lock_i;
 wire [(1 * PUCNT) -1 : 0]                      _arbiter_wb_we_i;
 wire [((XADDRBITSZ-XMSBSZIGN) * PUCNT) -1 : 0] _arbiter_wb_addr_i;
 wire [((XWORDBITSZ/8) * PUCNT) -1 : 0]         _arbiter_wb_sel_i;
@@ -144,7 +143,6 @@ pu #(
 	 .WORDBITSZ     (WORDBITSZ)
 	,.XWORDBITSZ    (XWORDBITSZ)
 	,.ADDRLIMIT     (ADDRLIMIT)
-	,.WBTAGBITSZ    (WBTAGBITSZ)
 	,.CLKFREQ       (CLKFREQ)
 	,.ICACHESETCNT  (ICACHESETCNT)
 	,.DCACHESETCNT  ((PUCNT > 1) ? 0 : DCACHESETCNT) /* TODO: cache-coherence */
@@ -165,7 +163,7 @@ pu #(
 	,.clk_idiv_i (clk_idiv_i)
 
 	,.wb_stb_o  (arbiter_wb_stb_i[genpu_idx])
-	,.wb_tag_o  (arbiter_wb_tag_i[genpu_idx])
+	,.wb_lock_o (arbiter_wb_lock_i[genpu_idx])
 	,.wb_we_o   (arbiter_wb_we_i[genpu_idx])
 	,.wb_addr_o (arbiter_wb_addr_i[genpu_idx])
 	,.wb_sel_o  (arbiter_wb_sel_i[genpu_idx])
@@ -188,7 +186,7 @@ pu #(
 );
 
 assign _arbiter_wb_stb_i[genpu_idx] = arbiter_wb_stb_i[genpu_idx];
-assign _arbiter_wb_tag_i[genpu_idx] = arbiter_wb_tag_i[genpu_idx];
+assign _arbiter_wb_lock_i[genpu_idx] = arbiter_wb_lock_i[genpu_idx];
 assign _arbiter_wb_we_i[genpu_idx] = arbiter_wb_we_i[genpu_idx];
 assign _arbiter_wb_addr_i[(genpu_idx * (XADDRBITSZ-XMSBSZIGN)) +: (XADDRBITSZ-XMSBSZIGN)] = arbiter_wb_addr_i[genpu_idx];
 assign _arbiter_wb_sel_i[(genpu_idx * (XWORDBITSZ/8)) +: (XWORDBITSZ/8)] = arbiter_wb_sel_i[genpu_idx];
@@ -200,7 +198,7 @@ assign arbiter_wb_dat_o[genpu_idx] = arbiter_wb_dat_o_[(genpu_idx * XWORDBITSZ) 
 end endgenerate
 
 wire                                 wb_stb_o_;
-wire [WBTAGBITSZ -1 : 0]             wb_tag_o_;
+wire                                 wb_lock_o_;
 wire                                 wb_we_o_;
 wire [(XADDRBITSZ-XMSBSZIGN) -1 : 0] wb_addr_o_;
 wire [(XWORDBITSZ/8) -1 : 0]         wb_sel_o_;
@@ -214,7 +212,6 @@ generate if (PUCNT > 1) begin: gen_wb_arbiter
 wb_arbiter #(
 	 .WORDBITSZ     (XWORDBITSZ)
 	,.ADDRLIMIT     (ADDRLIMIT)
-	,.WBTAGBITSZ    (WBTAGBITSZ)
 	,.MASTERCOUNT   (PUCNT)
 	,.MAXPENDINGACK (MAXPENDINGACK)
 ) wb_arbiter (
@@ -224,7 +221,7 @@ wb_arbiter #(
 	,.clk_i (clk_i)
 
 	,.m_wb_stb_i  (_arbiter_wb_stb_i)
-	,.m_wb_tag_i  (_arbiter_wb_tag_i)
+	,.m_wb_lock_i (_arbiter_wb_lock_i)
 	,.m_wb_we_i   (_arbiter_wb_we_i)
 	,.m_wb_addr_i (_arbiter_wb_addr_i)
 	,.m_wb_sel_i  (_arbiter_wb_sel_i)
@@ -234,7 +231,7 @@ wb_arbiter #(
 	,.m_wb_dat_o  (arbiter_wb_dat_o_)
 
 	,.s_wb_stb_o  (wb_stb_o_)
-	,.s_wb_tag_o  (wb_tag_o_)
+	,.s_wb_lock_o (wb_lock_o_)
 	,.s_wb_we_o   (wb_we_o_)
 	,.s_wb_addr_o (wb_addr_o_)
 	,.s_wb_sel_o  (wb_sel_o_)
@@ -247,7 +244,7 @@ wb_arbiter #(
 end else begin
 
 assign wb_stb_o_ = _arbiter_wb_stb_i;
-assign wb_tag_o_ = _arbiter_wb_tag_i;
+assign wb_lock_o_ = _arbiter_wb_lock_i;
 assign wb_we_o_ = _arbiter_wb_we_i;
 assign wb_addr_o_ = _arbiter_wb_addr_i;
 assign wb_sel_o_ = _arbiter_wb_sel_i;
@@ -263,7 +260,6 @@ generate if (USEMEMCLKDOM) begin: gen_wb_cdc
 wb_cdc #(
 	 .WORDBITSZ     (XWORDBITSZ)
 	,.ADDRLIMIT     (ADDRLIMIT)
-	,.WBTAGBITSZ    (WBTAGBITSZ)
 	,.MAXPENDINGACK (MAXPENDINGACK)
 ) wb_cdc (
 
@@ -273,7 +269,7 @@ wb_cdc #(
 	,.s_clk_i (clk_mem_i)
 
 	,.m_wb_stb_i  (wb_stb_o_)
-	,.m_wb_tag_i  (wb_tag_o_)
+	,.m_wb_lock_i (wb_lock_o_)
 	,.m_wb_we_i   (wb_we_o_)
 	,.m_wb_addr_i (wb_addr_o_)
 	,.m_wb_sel_i  (wb_sel_o_)
@@ -283,7 +279,7 @@ wb_cdc #(
 	,.m_wb_dat_o  (_wb_dat_i)
 
 	,.s_wb_stb_o  (wb_stb_o)
-	,.s_wb_tag_o  (wb_tag_o)
+	,.s_wb_lock_o (wb_lock_o)
 	,.s_wb_we_o   (wb_we_o)
 	,.s_wb_addr_o (wb_addr_o)
 	,.s_wb_sel_o  (wb_sel_o)
@@ -296,7 +292,7 @@ wb_cdc #(
 end else begin
 
 assign wb_stb_o = wb_stb_o_;
-assign wb_tag_o = wb_tag_o_;
+assign wb_lock_o = wb_lock_o_;
 assign wb_we_o = wb_we_o_;
 assign wb_addr_o = wb_addr_o_;
 assign wb_sel_o = wb_sel_o_;

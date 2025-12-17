@@ -133,14 +133,13 @@ localparam WBPI_WORDBITSZ         = WORDBITSZ;
 localparam WBPI_CLOG2WORDBITSZBY8 = clog2(WBPI_WORDBITSZ/8);
 localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
 localparam WBPI_ADDRLIMIT         = ('h2000 + (`SRAM_KBSIZE * 1024));
-localparam WBPI_WBTAGBITSZ        = 1;
 localparam WBPI_CLKFREQ           = CLKFREQ48MHZ;
 wire wbpi_rst_w = rst_w;
 wire wbpi_clk_w = clk48mhz;
 // The peripheral interconnect is instantiated in a separate file to keep this file clean.
 // Master devices must use the following signals to plug onto the peripheral interconnect:
 // 	input                                          m_wbpi_stb_w  [WBPI_MASTERCOUNT];
-// 	input  [WBPI_WBTAGBITSZ -1 : 0]                m_wbpi_tag_w  [WBPI_MASTERCOUNT];
+// 	input                                          m_wbpi_lock_w [WBPI_MASTERCOUNT];
 // 	input                                          m_wbpi_we_w   [WBPI_MASTERCOUNT];
 // 	input  [(WBPI_ADDRBITSZ-WBPI_MSBSZIGN) -1 : 0] m_wbpi_addr_w [WBPI_MASTERCOUNT];
 // 	input  [(WBPI_WORDBITSZ/8) -1 : 0]             m_wbpi_sel_w  [WBPI_MASTERCOUNT];
@@ -150,7 +149,7 @@ wire wbpi_clk_w = clk48mhz;
 // 	output [WBPI_WORDBITSZ -1 : 0]                 m_wbpi_dato_w [WBPI_MASTERCOUNT];
 // Slave devices must use the following signals to plug onto the peripheral interconnect:
 // 	output                                         s_wbpi_stb_w   [WBPI_SLAVECOUNT];
-// 	output [WBPI_WBTAGBITSZ -1 : 0]                s_wbpi_tag_w   [WBPI_SLAVECOUNT];
+// 	output                                         s_wbpi_lock_w  [WBPI_SLAVECOUNT];
 // 	output                                         s_wbpi_we_w    [WBPI_SLAVECOUNT];
 // 	output [(WBPI_ADDRBITSZ-WBPI_MSBSZIGN) -1 : 0] s_wbpi_addr_w  [WBPI_SLAVECOUNT];
 // 	output [(WBPI_WORDBITSZ/8) -1 : 0]             s_wbpi_sel_w   [WBPI_SLAVECOUNT];
@@ -191,7 +190,6 @@ cpu #(
 	 .WORDBITSZ     (WORDBITSZ)
 	,.XWORDBITSZ    (WBPI_WORDBITSZ)
 	,.ADDRLIMIT     (WBPI_ADDRLIMIT)
-	,.WBTAGBITSZ    (WBPI_WBTAGBITSZ)
 	,.CLKFREQ       (WBPI_CLKFREQ)
 	,.ICACHESETCNT  ((1024/(WBPI_WORDBITSZ/8))*(ICACHESZ/ICACHEWAYCNT))
 	,.DCACHESETCNT  ((1024/(WBPI_WORDBITSZ/8))*(DCACHESZ/DCACHEWAYCNT))
@@ -209,7 +207,7 @@ cpu #(
 	,.clk_mem_i (wbpi_clk_w)
 
 	,.wb_stb_o  (m_wbpi_stb_w[M_WBPI_CPU])
-	,.wb_tag_o  (m_wbpi_tag_w[M_WBPI_CPU])
+	,.wb_lock_o (m_wbpi_lock_w[M_WBPI_CPU])
 	,.wb_we_o   (m_wbpi_we_w[M_WBPI_CPU])
 	,.wb_addr_o (m_wbpi_addr_w[M_WBPI_CPU])
 	,.wb_sel_o  (m_wbpi_sel_w[M_WBPI_CPU])
