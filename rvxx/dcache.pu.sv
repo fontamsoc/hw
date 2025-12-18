@@ -154,6 +154,8 @@ dCache #(
 	,.CACHESETCNT   (DCACHESETCNT)
 	,.CACHEWAYCNT   (DCACHEWAYCNT)
 	,.MAXPENDINGACK (MAXPENDINGACK)
+	,.PUIDBITSZ     (PUIDBITSZ)
+	,.PUID          (PUID)
 ) dCache (
 
 	 .rst_i (rst_i)
@@ -184,6 +186,26 @@ dCache #(
 	,.s_wb_bsy_i  (dCache_s_bsy_i)
 	,.s_wb_ack_i  (dCache_s_ack_i)
 	,.s_wb_dat_i  (dCache_s_dat_i)
+
+	,.coherency_en_i (dcache_coherency_en_i)
+
+	,.coherency_stb_i  (dcache_coherency_stb_i)
+	,.coherency_rqid_i (dcache_coherency_rqid_i)
+	,.coherency_we_i   (dcache_coherency_we_i)
+	,.coherency_addr_i (dcache_coherency_addr_i)
+	,.coherency_sel_i  (dcache_coherency_sel_i)
+	,.coherency_dat_i  (dcache_coherency_dat_i)
+	,.coherency_shr_i  (dcache_coherency_shr_i)
+	,.coherency_bsy_o  (dcache_coherency_bsy_o)
+
+	,.coherency_stb_o  (dcache_coherency_stb_o)
+	,.coherency_rqid_o (dcache_coherency_rqid_o)
+	,.coherency_we_o   (dcache_coherency_we_o)
+	,.coherency_addr_o (dcache_coherency_addr_o)
+	,.coherency_sel_o  (dcache_coherency_sel_o)
+	,.coherency_dat_o  (dcache_coherency_dat_o)
+	,.coherency_shr_o  (dcache_coherency_shr_o)
+	,.coherency_bsy_i  (dcache_coherency_bsy_i)
 );
 
 end else begin

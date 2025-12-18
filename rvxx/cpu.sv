@@ -72,6 +72,8 @@ parameter MAXPENDINGACK = 16;
 parameter PUCNT         = 1;
 parameter CPUID         = 0;
 
+localparam PUIDBITSZ = clog2(PUCNT);
+
 localparam CLOG2XWORDBITSZBY8 = clog2(XWORDBITSZ/8);
 localparam XADDRBITSZ = (XWORDBITSZ-CLOG2XWORDBITSZBY8);
 
@@ -110,6 +112,15 @@ input wire [WORDBITSZ -1 : 0] rstaddr2_i;
 
 input wire [WORDBITSZ -1 : 0] spval_i;
 
+wire                                 dcache_coherency_stb_w  [PUCNT];
+wire [PUIDBITSZ -1 : 0]              dcache_coherency_rqid_w [PUCNT];
+wire                                 dcache_coherency_we_w   [PUCNT];
+wire [(XADDRBITSZ-XMSBSZIGN) -1 : 0] dcache_coherency_addr_w [PUCNT];
+wire [(XWORDBITSZ/8) -1 : 0]         dcache_coherency_sel_w  [PUCNT];
+wire [XWORDBITSZ -1 : 0]             dcache_coherency_dat_w  [PUCNT];
+wire                                 dcache_coherency_shr_w  [PUCNT];
+wire                                 dcache_coherency_bsy_w  [PUCNT];
+
 wire                                 arbiter_wb_stb_i  [PUCNT];
 wire                                 arbiter_wb_lock_i [PUCNT];
 wire                                 arbiter_wb_we_i   [PUCNT];
@@ -145,12 +156,13 @@ pu #(
 	,.ADDRLIMIT     (ADDRLIMIT)
 	,.CLKFREQ       (CLKFREQ)
 	,.ICACHESETCNT  (ICACHESETCNT)
-	,.DCACHESETCNT  ((PUCNT > 1) ? 0 : DCACHESETCNT) /* TODO: cache-coherence */
+	,.DCACHESETCNT  (DCACHESETCNT)
 	,.ICACHEWAYCNT  (ICACHEWAYCNT)
 	,.DCACHEWAYCNT  (DCACHEWAYCNT)
 	,.IMULCNT       (IMULCNT)
 	,.IDIVCNT       (IDIVCNT)
 	,.MAXPENDINGACK (MAXPENDINGACK)
+	,.PUIDBITSZ     (PUIDBITSZ)
 	,.PUID          (CPUID + genpu_idx)
 ) pu (
 
@@ -174,6 +186,26 @@ pu #(
 
 	,.dcache_addr_o (dcache_addr_o[(genpu_idx * (XWORDBITSZ-XMSBSZIGN)) +: (XWORDBITSZ-XMSBSZIGN)])
 	,.dcache_miss_i (dcache_miss_i[genpu_idx])
+
+	,.dcache_coherency_en_i (PUCNT > 1)
+
+	,.dcache_coherency_stb_i  (dcache_coherency_stb_w [((genpu_idx == 0) ? PUCNT : genpu_idx) - 1])
+	,.dcache_coherency_rqid_i (dcache_coherency_rqid_w[((genpu_idx == 0) ? PUCNT : genpu_idx) - 1])
+	,.dcache_coherency_we_i   (dcache_coherency_we_w  [((genpu_idx == 0) ? PUCNT : genpu_idx) - 1])
+	,.dcache_coherency_addr_i (dcache_coherency_addr_w[((genpu_idx == 0) ? PUCNT : genpu_idx) - 1])
+	,.dcache_coherency_sel_i  (dcache_coherency_sel_w [((genpu_idx == 0) ? PUCNT : genpu_idx) - 1])
+	,.dcache_coherency_dat_i  (dcache_coherency_dat_w [((genpu_idx == 0) ? PUCNT : genpu_idx) - 1])
+	,.dcache_coherency_shr_i  (dcache_coherency_shr_w [((genpu_idx == 0) ? PUCNT : genpu_idx) - 1])
+	,.dcache_coherency_bsy_o  (dcache_coherency_bsy_w [((genpu_idx == 0) ? PUCNT : genpu_idx) - 1])
+
+	,.dcache_coherency_stb_o  (dcache_coherency_stb_w [genpu_idx])
+	,.dcache_coherency_rqid_o (dcache_coherency_rqid_w[genpu_idx])
+	,.dcache_coherency_we_o   (dcache_coherency_we_w  [genpu_idx])
+	,.dcache_coherency_addr_o (dcache_coherency_addr_w[genpu_idx])
+	,.dcache_coherency_sel_o  (dcache_coherency_sel_w [genpu_idx])
+	,.dcache_coherency_dat_o  (dcache_coherency_dat_w [genpu_idx])
+	,.dcache_coherency_shr_o  (dcache_coherency_shr_w [genpu_idx])
+	,.dcache_coherency_bsy_i  (dcache_coherency_bsy_w [genpu_idx])
 
 	,.irq_stb_i (irq_stb_i[genpu_idx])
 	,.irq_stb_o (irq_stb_o[genpu_idx])

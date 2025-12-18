@@ -151,6 +151,26 @@ module pu (
 	,dcache_addr_o
 	,dcache_miss_i
 
+	,dcache_coherency_en_i
+
+	,dcache_coherency_stb_i
+	,dcache_coherency_rqid_i
+	,dcache_coherency_we_i
+	,dcache_coherency_addr_i
+	,dcache_coherency_sel_i
+	,dcache_coherency_dat_i
+	,dcache_coherency_shr_i
+	,dcache_coherency_bsy_o
+
+	,dcache_coherency_stb_o
+	,dcache_coherency_rqid_o
+	,dcache_coherency_we_o
+	,dcache_coherency_addr_o
+	,dcache_coherency_sel_o
+	,dcache_coherency_dat_o
+	,dcache_coherency_shr_o
+	,dcache_coherency_bsy_i
+
 	,irq_stb_i
 	,irq_stb_o
 	,irq_rdy_o
@@ -174,6 +194,7 @@ parameter DCACHEWAYCNT  = 1;
 parameter IMULCNT       = 2;
 parameter IDIVCNT       = 2;
 parameter MAXPENDINGACK = 16;
+parameter PUIDBITSZ     = 1;
 parameter PUID          = 0;
 
 localparam USE_DCACHE = (DCACHESETCNT > 0);
@@ -226,6 +247,26 @@ input  wire [XWORDBITSZ -1 : 0]             wb_dat_i;
 
 output wire [(XWORDBITSZ-XMSBSZIGN) -1 : 0] dcache_addr_o;
 input  wire                                 dcache_miss_i;
+
+input wire dcache_coherency_en_i;
+
+input  wire                                 dcache_coherency_stb_i;
+input  wire [PUIDBITSZ -1 : 0]              dcache_coherency_rqid_i;
+input  wire                                 dcache_coherency_we_i;
+input  wire [(XADDRBITSZ-XMSBSZIGN) -1 : 0] dcache_coherency_addr_i;
+input  wire [(XWORDBITSZ/8) -1 : 0]         dcache_coherency_sel_i;
+input  wire [XWORDBITSZ -1 : 0]             dcache_coherency_dat_i;
+input  wire                                 dcache_coherency_shr_i;
+output wire                                 dcache_coherency_bsy_o;
+
+output wire                                 dcache_coherency_stb_o;
+output wire [PUIDBITSZ -1 : 0]              dcache_coherency_rqid_o;
+output wire                                 dcache_coherency_we_o;
+output wire [(XADDRBITSZ-XMSBSZIGN) -1 : 0] dcache_coherency_addr_o;
+output wire [(XWORDBITSZ/8) -1 : 0]         dcache_coherency_sel_o;
+output wire [XWORDBITSZ -1 : 0]             dcache_coherency_dat_o;
+output wire                                 dcache_coherency_shr_o;
+input  wire                                 dcache_coherency_bsy_i;
 
 input  wire irq_stb_i;
 output reg  irq_stb_o;
