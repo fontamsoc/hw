@@ -160,7 +160,7 @@ reg [CLOG2CACHEWAYCNT -1 : 0] cache_we_wayidx_;
 always_ff @(posedge clk_i) begin
 	if (CACHEWAYCNT == 1 || (state == READY && m_wb_stb_i && conly_i) || conly_r) begin
 		cache_we_wayidx_ <= 0;
-	end else if (cache_we && !cache_tag_hit) begin
+	end else if (cache_we && (cache_tag_hit && cache_we_wayidx_ == cache_tag_hit_wayidx)) begin
 		cache_we_wayidx_ <= cache_we_wayidx_ + 1'b1;
 	end
 end
@@ -587,7 +587,7 @@ reg [CLOG2CACHEWAYCNT -1 : 0] cache_we_wayidx_;
 always_ff @(posedge clk_i) begin
 	if (CACHEWAYCNT == 1 || (_m_wb_stb_i && conly_i) || conly_r) begin
 		cache_we_wayidx_ <= 0;
-	end else if (cache_we && !cache_tag_hit) begin
+	end else if (cache_we && (cache_tag_hit && cache_we_wayidx_ == cache_tag_hit_wayidx)) begin
 		cache_we_wayidx_ <= cache_we_wayidx_ + 1'b1;
 	end
 end
