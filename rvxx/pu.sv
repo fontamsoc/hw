@@ -288,13 +288,13 @@ assign iCache_ridx_w = iF_pc_i[CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8-1:CLOG2XWORD
 assign iCache_rtag_w = iF_pc_i[WORDBITSZ-1:CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8];
 
 `ifdef PUPREDICTBRANCH
-localparam BHTSETCNT = 4096;
-localparam CLOG2BHTSETCNT = clog2(BHTSETCNT);
-reg [2 -1 : 0] bht [BHTSETCNT]; // Branch History Table.
+localparam BPTSETCNT = 4096;
+localparam CLOG2BPTSETCNT = clog2(BPTSETCNT);
+reg [2 -1 : 0] bpt [BPTSETCNT]; // Branch Prediction Table.
 reg [2 -1 : 0] iF_predictBranch;
 always_ff @(posedge clk_i) begin
 	if (iF_en)
-		iF_predictBranch <= bht[iF_pc_i[CLOG2BHTSETCNT+CLOG2INSNBITSZBY8-1:CLOG2INSNBITSZBY8]];
+		iF_predictBranch <= bpt[iF_pc_i[CLOG2INSNBITSZBY8+:CLOG2BPTSETCNT]];
 end
 `endif
 
@@ -923,22 +923,22 @@ wire iD_insn_valid_ = (!eX_flushed_i && eX_en);
 assign iD_insn_valid = (iD_insn_valid_ && !excTriggered);
 
 `ifdef PUPREDICTBRANCH
-reg [2 -1 : 0] bht_i; // ### comb-block-reg.
+reg [2 -1 : 0] bpt_i; // ### comb-block-reg.
 always_comb begin
 	unique case ({eX_takeBranch_i, eX_predictBranch_i})
-	3'b000:  bht_i = 2'b00;
-	3'b001:  bht_i = 2'b00;
-	3'b010:  bht_i = 2'b01;
-	3'b011:  bht_i = 2'b10;
-	3'b100:  bht_i = 2'b01;
-	3'b101:  bht_i = 2'b10;
-	3'b110:  bht_i = 2'b11;
-	default: bht_i = 2'b11;
+	3'b000:  bpt_i = 2'b00;
+	3'b001:  bpt_i = 2'b00;
+	3'b010:  bpt_i = 2'b01;
+	3'b011:  bpt_i = 2'b10;
+	3'b100:  bpt_i = 2'b01;
+	3'b101:  bpt_i = 2'b10;
+	3'b110:  bpt_i = 2'b11;
+	default: bpt_i = 2'b11;
 	endcase
 end
 always_ff @(posedge clk_i) begin
 	if (iD_isBranch && iD_insn_valid)
-		bht[iD_pc[CLOG2BHTSETCNT+CLOG2INSNBITSZBY8-1:CLOG2INSNBITSZBY8]] <= bht_i;
+		bpt[iD_pc[CLOG2INSNBITSZBY8+:CLOG2BPTSETCNT]] <= bpt_i;
 end
 `endif
 
