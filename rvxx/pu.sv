@@ -287,17 +287,6 @@ wire [WORDBITSZ -1 : 0] iF_pc_i;
 assign iCache_ridx_w = iF_pc_i[CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8-1:CLOG2XWORDBITSZBY8];
 assign iCache_rtag_w = iF_pc_i[WORDBITSZ-1:CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8];
 
-`ifdef PUPREDICTBRANCH
-localparam BPTSETCNT = 4096;
-localparam CLOG2BPTSETCNT = clog2(BPTSETCNT);
-reg [2 -1 : 0] bpt [BPTSETCNT]; // Branch Prediction Table.
-reg [2 -1 : 0] iF_predictBranch;
-always_ff @(posedge clk_i) begin
-	if (iF_en)
-		iF_predictBranch <= bpt[iF_pc_i[CLOG2INSNBITSZBY8+:CLOG2BPTSETCNT]];
-end
-`endif
-
 always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		iF_flushed_ <= 1;
@@ -408,6 +397,17 @@ wire iF_lateResultInsn = (
 wire iF_use_rdId = (iF_rdId && // iF_rdId is null when iF_isMiscMem true.
 	!(iF_is2Oprnd12 || /*iF_isMiscMem ||*/
 		(iF_isSystem && !iF_func3[1:0] /* non-CSR instructions */)));
+
+`ifdef PUPREDICTBRANCH
+localparam BPTSETCNT = 4096;
+localparam CLOG2BPTSETCNT = clog2(BPTSETCNT);
+reg [2 -1 : 0] bpt [BPTSETCNT]; // Branch Prediction Table.
+reg [2 -1 : 0] iF_predictBranch;
+always_ff @(posedge clk_i) begin
+	if (iF_en)
+		iF_predictBranch <= bpt[iF_pc_i[CLOG2INSNBITSZBY8+:CLOG2BPTSETCNT]];
+end
+`endif
 
 wire iF_flushed_or_not_iF_iD_carryon = (iF_flushed || !iF_iD_carryon);
 
