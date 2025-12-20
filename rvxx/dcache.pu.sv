@@ -242,13 +242,6 @@ wire [WORDBITSZ -1 : 0] dCache_m_addr_i_ = (iD_rs1 + iD_addrImm);
 wire            amoUnit_memAck;
 reg  [5 -1 : 0] amoUnit_opType;
 
-wire [(WORDBITSZ+1) -1 : 0] dCache_m_dat_i_minus_dCache_m_dat_o = (
-	({1'b1, ~dCache_m_dat_o} + {1'b0, dCache_m_dat_r}) + 1'b1);
-wire dCache_m_dat_i_lt_dCache_m_dat_o = (
-	(dCache_m_dat_r[WORDBITSZ-1] ^ dCache_m_dat_o[WORDBITSZ-1]) ?
-		dCache_m_dat_r[WORDBITSZ-1] : dCache_m_dat_i_minus_dCache_m_dat_o[WORDBITSZ]);
-wire dCache_m_dat_i_ltu_dCache_m_dat_o = dCache_m_dat_i_minus_dCache_m_dat_o[WORDBITSZ];
-
 wire _amoUnit_lrValid;
 
 reg                               dCache_m_lock_r;
@@ -256,6 +249,13 @@ reg                               dCache_m_we_r;
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] dCache_m_addr_r;
 reg [(WORDBITSZ/8) -1 : 0]        dCache_m_sel_r;
 reg [WORDBITSZ -1 : 0]            dCache_m_dat_r;
+
+wire [(WORDBITSZ+1) -1 : 0] dCache_m_dat_i_minus_dCache_m_dat_o = (
+	({1'b1, ~dCache_m_dat_o} + {1'b0, dCache_m_dat_r}) + 1'b1);
+wire dCache_m_dat_i_lt_dCache_m_dat_o = (
+	(dCache_m_dat_r[WORDBITSZ-1] ^ dCache_m_dat_o[WORDBITSZ-1]) ?
+		dCache_m_dat_r[WORDBITSZ-1] : dCache_m_dat_i_minus_dCache_m_dat_o[WORDBITSZ]);
+wire dCache_m_dat_i_ltu_dCache_m_dat_o = dCache_m_dat_i_minus_dCache_m_dat_o[WORDBITSZ];
 
 always_comb begin
 
