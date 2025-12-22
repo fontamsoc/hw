@@ -32,7 +32,9 @@ updsram: ${TOP}.sram.hex ${TOP}.bak.config
 		echo -n '-- '; \
 		fgrep 'ERROR: Max frequency' $*.pnr.log; \
 		((cntr++)); [[ cntr -eq ${RETRY_COUNT} ]] && exit 1; \
-	done; test -f $@ # using `test` to workaround unexpected fail.
+	done; \
+	fgrep 'Max frequency' $*.pnr.log | fgrep PASS; \
+	test -f $@ # using `test` to workaround unexpected fail.
 	rm -rf abc.history # empty file that gets created sometime.
 %.dfu: %.out.config
 	mv $< ${TOP}.bak.config
