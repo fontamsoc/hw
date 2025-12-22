@@ -8,34 +8,46 @@
 // to see actual phase shifts
 // diamond log/*.mrp  : search for "Phase", "Desired"
 
-module ecp5pll
-#(
-  parameter integer in_hz      =  25000000,
-  parameter integer out0_hz    =  25000000,
-  parameter integer out0_deg   =         0, // keep 0
-  parameter integer out0_tol_hz=         0, // tolerance: if freq differs more, then error
-  parameter integer out1_hz    =         0,
-  parameter integer out1_deg   =         0,
-  parameter integer out1_tol_hz=         0,
-  parameter integer out2_hz    =         0,
-  parameter integer out2_deg   =         0,
-  parameter integer out2_tol_hz=         0,
-  parameter integer out3_hz    =         0,
-  parameter integer out3_deg   =         0,
-  parameter integer out3_tol_hz=         0,
-  parameter integer reset_en   =         0,
-  parameter integer standby_en =         0,
-  parameter integer dynamic_en =         0
-)
-(
-  input        clk_i,
-  output [3:0] clk_o,
-  input        reset,
-  input        standby,
-  input  [1:0] phasesel,
-  input        phasedir, phasestep, phaseloadreg,
-  output       locked
+module ecp5pll (
+  clk_i,
+  clk_o,
+  locked
 );
+
+  parameter integer in_hz        = 25000000;
+  parameter integer out0_hz      = 25000000;
+  parameter integer out0_deg     =        0; // keep 0
+  parameter integer out0_tol_hz  =        0; // tolerance: if freq differs more, then error
+  parameter integer out1_hz      =        0;
+  parameter integer out1_deg     =        0;
+  parameter integer out1_tol_hz  =        0;
+  parameter integer out2_hz      =        0;
+  parameter integer out2_deg     =        0;
+  parameter integer out2_tol_hz  =        0;
+  parameter integer out3_hz      =        0;
+  parameter integer out3_deg     =        0;
+  parameter integer out3_tol_hz  =        0;
+  parameter integer reset_en     =        0;
+  parameter integer standby_en   =        0;
+  parameter integer dynamic_en   =        0;
+  parameter integer phasesel     =     2'b0;
+  parameter integer phasedir     =     1'b0;
+  parameter integer phasestep    =     1'b0;
+  parameter integer phaseloadreg =     1'b0;
+
+  // ### Needed by "Diamond - Synplify Pro"; must be manually
+  // ### set because default values fails to be computed.
+  // Frequencies in MHz to be passed as "attributes" string
+  // generated from concatenating with an empty string.
+  parameter FREQUENCY_PIN_CLKI   = {"", (in_hz/1000000)};
+  parameter FREQUENCY_PIN_CLKOP  = {"", (out0_hz/1000000)};
+  parameter FREQUENCY_PIN_CLKOS  = {"", (out1_hz/1000000)};
+  parameter FREQUENCY_PIN_CLKOS2 = {"", (out2_hz/1000000)};
+  parameter FREQUENCY_PIN_CLKOS3 = {"", (out3_hz/1000000)};
+
+  input  wire       clk_i;
+  output wire [3:0] clk_o;
+  output wire       locked;
 
   localparam PFD_MIN =   3125000;
   localparam PFD_MAX = 400000000;
@@ -197,17 +209,14 @@ module ecp5pll
   wire [1:0] PHASESEL_HW = phasesel-1;
   wire CLKOP; // internal
 
-  // TODO: frequencies in MHz if passed as "attributes"
-  // will appear in diamond *.mrp file like "Output Clock(P) Frequency (MHz):"
-  // but I don't know how to pass string parameters for this:
-  // (* FREQUENCY_PIN_CLKI="025.000000" *)
-  // (* FREQUENCY_PIN_CLKOP="023.345678" *)
-  // (* FREQUENCY_PIN_CLKOS="034.234567" *)
-  // (* FREQUENCY_PIN_CLKOS2="111.345678" *)
-  // (* FREQUENCY_PIN_CLKOS3="123.456789" *)
+  (* FREQUENCY_PIN_CLKI=FREQUENCY_PIN_CLKI *)
+  (* FREQUENCY_PIN_CLKOP=FREQUENCY_PIN_CLKOP *)
+  (* FREQUENCY_PIN_CLKOS=FREQUENCY_PIN_CLKOS *)
+  (* FREQUENCY_PIN_CLKOS2=FREQUENCY_PIN_CLKOS2 *)
+  (* FREQUENCY_PIN_CLKOS3=FREQUENCY_PIN_CLKOS3 *)
   (* ICP_CURRENT="12" *) (* LPF_RESISTOR="8" *) (* MFG_ENABLE_FILTEROPAMP="1" *) (* MFG_GMCREF_SEL="2" *)
-  EHXPLLL
-  #(
+  EHXPLLL #(
+
     .CLKI_DIV     (params_refclk_div),
     .CLKFB_DIV    (params_feedback_div),
     .FEEDBK_PATH  ("CLKOP"),
@@ -241,9 +250,7 @@ module ecp5pll
     .PLLRST_ENA   (  reset_en ? "ENABLED" : "DISABLED"),
     .DPHASE_SOURCE(dynamic_en ? "ENABLED" : "DISABLED"),
     .PLL_LOCK_MODE(0)
-  )
-  pll_inst
-  (
+  ) pll_inst (
     .RST(1'b0),
     .STDBY(1'b0),
     .CLKI(clk_i),
