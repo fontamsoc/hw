@@ -27,6 +27,7 @@
 
 `include "dev/sram.sv"
 /* makefile defined *///`define SRAM_KBSIZE (256/*KB*/)
+/* makefile defined *///`define SRAM_INITFILE "orangecrab0285.sram.hex"
 
 module orangecrab0285 (
 
@@ -280,7 +281,7 @@ serial_usb #(
 sram #(
 	 .WORDBITSZ (WBPI_WORDBITSZ)
 	,.SIZE      ((`SRAM_KBSIZE)*(1024/(WBPI_WORDBITSZ/8)))
-	,.INITFILE  ("orangecrab0285.sram.hex")
+	,.INITFILE  (`SRAM_INITFILE)
 ) sram (
 
 	 .rst_i (wbpi_rst_w)
