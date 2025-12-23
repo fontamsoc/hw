@@ -70,34 +70,22 @@ assign led_red_n = 1'b1;
 assign led_green_n = 1'b1;
 assign led_blue_n = 1'b1;
 
-localparam CLKFREQ12MHZ = 12000000;
-localparam CLKFREQ24MHZ = 24000000;
 localparam CLKFREQ48MHZ = 48000000;
 localparam CLKFREQ96MHZ = 96000000;
 
 wire [3:0] pll_clk_w;
 wire       pll_locked;
 ecp5pll #(
-	 .in_hz   (CLKFREQ48MHZ)
-	,.out0_hz (CLKFREQ12MHZ)
-	,.out1_hz (CLKFREQ24MHZ)
-	,.out2_hz (CLKFREQ48MHZ)
-	,.out3_hz (CLKFREQ96MHZ)
+	 .in_hz   (CLKFREQ48MHZ), .FREQUENCY_PIN_CLKI  ("48")
+	,.out0_hz (CLKFREQ48MHZ), .FREQUENCY_PIN_CLKOP ("48")
+	,.out1_hz (CLKFREQ96MHZ), .FREQUENCY_PIN_CLKOS ("96")
 ) pll (
-	 .clk_i        (clk48mhz_i)
-	,.clk_o        (pll_clk_w)
-	,.reset        (1'b0)
-	,.standby      (1'b0)
-	,.phasesel     (2'b0)
-	,.phasedir     (1'b0)
-	,.phasestep    (1'b0)
-	,.phaseloadreg (1'b0)
-	,.locked       (pll_locked)
+	 .clk_i  (clk48mhz_i)
+	,.clk_o  (pll_clk_w)
+	,.locked (pll_locked)
 );
-wire clk12mhz = pll_clk_w[0];
-wire clk24mhz = pll_clk_w[1];
-wire clk48mhz = pll_clk_w[2];
-wire clk96mhz = pll_clk_w[3];
+wire clk48mhz = pll_clk_w[0];
+wire clk96mhz = pll_clk_w[1];
 
 reg rst_hold = 1'b1; // Hold in reset until rst-button pressed.
 localparam RST_CNTR_BITSZ = 15;
@@ -266,7 +254,7 @@ serial_usb #(
 ) serial (
 
 	 .rst_i (!pll_locked
-		/* pi1r_rst_w is not used because subsequent
+		/* wbpi_rst_w is not used because subsequent
 		   resets break the usb connection */)
 
 	,.clk_i     (wbpi_clk_w)
