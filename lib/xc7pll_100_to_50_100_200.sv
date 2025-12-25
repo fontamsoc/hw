@@ -1,5 +1,5 @@
 
-module pll_100_to_50_100_200_mhz (
+module xc7pll_100_to_50_100_200 (
   // Clock in ports
   input  wire clk_in1,
   // Clock out ports

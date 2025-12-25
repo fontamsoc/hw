@@ -7,7 +7,7 @@
 // an error when an undefined net is used.
 `default_nettype none
 
-`include "./pll_100_to_50_100_200_mhz.sv"
+`include "lib/xc7pll_100_to_50_100_200.sv"
 
 `define PURV32M
 `define PUIMULDSP
@@ -72,7 +72,7 @@ wire pll_locked;
 wire clk50mhz;
 wire clk100mhz;
 wire clk200mhz;
-pll_100_to_50_100_200_mhz pll (
+xc7pll_100_to_50_100_200 pll (
 	 .reset    (1'b0)
 	,.locked   (pll_locked)
 	,.clk_in1  (clk100mhz_i)
