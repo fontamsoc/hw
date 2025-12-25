@@ -67,12 +67,10 @@ $(OPATH)%$(OEXT) : %.c
 $(OPATH)$(PORT_DIR)/%$(OEXT) : %.s
 	$(AS) $(ASFLAGS) $< $(OBJOUT) $@
 
-PORT_CLEAN = *$(OEXT) ${OPATH}*.su ${OPATH}*.bin ${OPATH}*.objdump ${OPATH}*.readelf ${OPATH}*.he{_,x}
+PORT_CLEAN = *$(OEXT) ${OPATH}*.su ${OPATH}*.bin ${OPATH}*.objdump ${OPATH}*.readelf ${OPATH}*.hex
 
 # Target : port_pre% and port_post%
 # For the purpose of this simple port, no pre or post steps needed.
-
-XWORDBITSZ ?= 32
 
 .PHONY : port_prebuild port_postbuild port_prerun port_postrun port_preload port_postload
 port_pre% port_post% :
@@ -81,17 +79,16 @@ port_postbuild:
 	$(OBJDUMP) -Sdrl ${OPATH}coremark$(EXE) > ${OPATH}coremark$(EXE).objdump
 	$(READELF) -a ${OPATH}coremark$(EXE) > ${OPATH}coremark$(EXE).readelf
 	truncate --size=%4 ${OPATH}coremark.bin
-	hexdump -v -e '/4 "%08x "' ${OPATH}coremark.bin > ${OPATH}coremark.32.he_ # 32bits.
+	hexdump -v -e '/4 "%08x "' ${OPATH}coremark.bin > ${OPATH}coremark.32.hex # 32bits.
 	truncate --size=%8 ${OPATH}coremark.bin
 	hexdump -v -e '/4 "%08x "' ${OPATH}coremark.bin | \
-		{ while IFS=' ' read -n 18 V0 V1; do echo -n "$$V1$$V0 "; done; } > ${OPATH}coremark.64.he_ # 64bits.
+		{ while IFS=' ' read -n 18 V0 V1; do echo -n "$$V1$$V0 "; done; } > ${OPATH}coremark.64.hex # 64bits.
 	truncate --size=%16 ${OPATH}coremark.bin
 	hexdump -v -e '/4 "%08x "' ${OPATH}coremark.bin | \
-		{ while IFS=' ' read -n 36 V0 V1 V2 V3; do echo -n "$$V3$$V2$$V1$$V0 "; done; } > ${OPATH}coremark.128.he_ # 128bits.
+		{ while IFS=' ' read -n 36 V0 V1 V2 V3; do echo -n "$$V3$$V2$$V1$$V0 "; done; } > ${OPATH}coremark.128.hex # 128bits.
 	truncate --size=%32 ${OPATH}coremark.bin
 	hexdump -v -e '/4 "%08x "' ${OPATH}coremark.bin | \
-		{ while IFS=' ' read -n 72 V0 V1 V2 V3 V4 V5 V6 V7; do echo -n "$$V7$$V6$$V5$$V4$$V3$$V2$$V1$$V0 "; done; } > ${OPATH}coremark.256.he_ # 256bits.
-	ln -nf ${OPATH}coremark.${XWORDBITSZ}.he_ ${OPATH}coremark.hex
+		{ while IFS=' ' read -n 72 V0 V1 V2 V3 V4 V5 V6 V7; do echo -n "$$V7$$V6$$V5$$V4$$V3$$V2$$V1$$V0 "; done; } > ${OPATH}coremark.256.hex # 256bits.
 	ls -lh ${OPATH}coremark.{bin,elf}*
 
 # FLAG : OPATH
