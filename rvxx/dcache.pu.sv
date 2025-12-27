@@ -360,7 +360,7 @@ always_comb begin
 		end else if (dCache_m_addr_i_[1:0] == 2) begin
 			dCache_m_sel_i_ = 4'b0100;
 			dCache_m_dat_i_ = {{8{1'b0}}, iD_rs2[7:0], {16{1'b0}}};
-		end else if (dCache_m_addr_i_[1:0] == 3) begin
+		end else /*if (dCache_m_addr_i_[1:0] == 3)*/ begin
 			dCache_m_sel_i_ = 4'b1000;
 			dCache_m_dat_i_ = {iD_rs2[7:0], {24{1'b0}}};
 		end
@@ -407,7 +407,7 @@ always_comb begin
 		end else if (dCache_m_addr_i_[2:0] == 6) begin
 			dCache_m_sel_i_ = 8'b01000000;
 			dCache_m_dat_i_ = {{8{1'b0}}, iD_rs2[7:0], {48{1'b0}}};
-		end else if (dCache_m_addr_i_[2:0] == 7) begin
+		end else /*if (dCache_m_addr_i_[2:0] == 7)*/ begin
 			dCache_m_sel_i_ = 8'b10000000;
 			dCache_m_dat_i_ = {iD_rs2[7:0], {56{1'b0}}};
 		end
@@ -421,7 +421,7 @@ always_comb begin
 		end else if (dCache_m_addr_i_[2:1] == 2) begin
 			dCache_m_sel_i_ = 8'b00110000;
 			dCache_m_dat_i_ = {{16{1'b0}}, iD_rs2[15:0], {32{1'b0}}};
-		end else if (dCache_m_addr_i_[2:1] == 3) begin
+		end else /*if (dCache_m_addr_i_[2:1] == 3)*/ begin
 			dCache_m_sel_i_ = 8'b11000000;
 			dCache_m_dat_i_ = {iD_rs2[15:0], {48{1'b0}}};
 		end
@@ -435,7 +435,7 @@ always_comb begin
 			dCache_m_dat_i_ = {{32{1'b0}}, iD_rs2[31:0]};
 		end
 		dcache_m_addr_misaligned = (|dCache_m_addr_i_[1:0]);
-	end else if (iD_func3[1:0] == 3) begin
+	end else /*if (iD_func3[1:0] == 3)*/ begin
 		dCache_m_sel_i_ = 8'b11111111;
 		dCache_m_dat_i_ = iD_rs2;
 		dcache_m_addr_misaligned = (|dCache_m_addr_i_[2:0]);
