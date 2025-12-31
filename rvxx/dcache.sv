@@ -230,7 +230,7 @@ always_ff @(posedge clk_i) begin
 end
 
 always_ff @(posedge clk_i) begin
-	if (rst_r || (state == TESTHIT && cmiss_r && cache_tag_hit_[gen_cache_idx]) || _cache_we) begin
+	if (rst_r || _cache_we || (state == TESTHIT && cache_tag_hit_[gen_cache_idx] && cmiss_r)) begin
 		cache_sels[cache_wridx] <= cache_sel_i;
 		cache_drts[cache_wridx] <= cache_drt_i;
 	end
@@ -657,7 +657,7 @@ always_ff @(posedge clk_i) begin
 end
 
 always_ff @(posedge clk_i) begin
-	if (rst_r || (m_wb_ack && cmiss_r && cache_tag_hit_[gen_cache_idx]) || _cache_we) begin
+	if (rst_r || _cache_we || (m_wb_ack && cache_tag_hit_[gen_cache_idx] && cmiss_r)) begin
 		cache_sels[cache_wridx] <= cache_sel_i;
 		cache_drts[cache_wridx] <= cache_drt_i;
 	end
