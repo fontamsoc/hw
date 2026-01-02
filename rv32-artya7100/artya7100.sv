@@ -15,7 +15,8 @@
 `define PUPREDICTBRANCH
 `define PUPREDICTRET
 `include "rvxx/cpu.sv"
-`define CPU_COUNT 1
+/* makefile defined *///`define CPU_COUNT 1
+/* makefile defined *///`define XWORDBITSZ 32
 
 `include "lib/wb_arbiter.sv"
 `include "lib/wb_mux.sv"
@@ -26,8 +27,8 @@
 `include "dev/serial_uart.sv"
 
 `include "dev/sram.sv"
-`define SRAM_INITFILE "../../../../rv32-sim/apps/coremark/rv32/coremark.hex"
-`define SRAM_KBSIZE (256/*KB*/)
+/* makefile defined *///`define SRAM_KBSIZE (256/*KB*/)
+/* makefile defined *///`define SRAM_INITFILE "artya7100.sram.hex"
 
 module artya7100 (
 
@@ -105,7 +106,7 @@ localparam WBPI_FIRSTSLAVEADDR    = /* set in such a way that S_WBPI_SRAM starts
                                     ('h1000 - (128/*SERIAL_MAPSZ*/) - (128/*IRQCTRL_MAPSZ*/));
 localparam WBPI_MAXPENDINGACK     = 32;
 localparam WBPI_DNSIZR            = 4'b0011;
-localparam WBPI_WORDBITSZ         = WORDBITSZ;
+localparam WBPI_WORDBITSZ         = `XWORDBITSZ;
 localparam WBPI_CLOG2WORDBITSZBY8 = clog2(WBPI_WORDBITSZ/8);
 localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
 localparam WBPI_ADDRLIMIT         = ('h2000 + (`SRAM_KBSIZE * 1024));

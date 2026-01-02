@@ -4,12 +4,11 @@
 TOP ?= orangecrab0285
 
 CPU_COUNT ?= 1
-SRAM_INITFILE ?= ../../rv32-sim/apps/coremark/rv32/coremark.hex
+XWORDBITSZ ?= 32
 SRAM_KBSIZE ?= 256
+SRAM_INITFILE ?= ../../rv32-sim/apps/coremark/rv32/coremark.${XWORDBITSZ}.hex
 
 RETRY_COUNT ?= 5
-
-XWORDBITSZ ?= 32
 
 .PHONY: all
 all: ${TOP}.dfu
@@ -23,7 +22,7 @@ updsram: ${TOP}.sram.hex ${TOP}.bak.config
 
 %.json: ../%.sv
 	ecpbram --generate ${TOP}.sram.hex --width ${XWORDBITSZ} --depth $$((${SRAM_KBSIZE}*1024/4))
-	yosys -p "verilog_defines -DCPU_COUNT=${CPU_COUNT} -DSRAM_KBSIZE=${SRAM_KBSIZE} -DSRAM_INITFILE=\"${TOP}.sram.hex\"; \
+	yosys -p "verilog_defines -DCPU_COUNT=${CPU_COUNT} -DXWORDBITSZ=${XWORDBITSZ} -DSRAM_KBSIZE=${SRAM_KBSIZE} -DSRAM_INITFILE=\"${TOP}.sram.hex\"; \
 		read_verilog -sv -I../../ $<; synth_ecp5 -top ${TOP} -json $@" &>$*.synth.log
 %.out.config: %.json ../%.lpf
 	cntr=0; until \

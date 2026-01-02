@@ -5,8 +5,9 @@ BUILD_LOG_FILE ?= build.log
 
 CLKFREQ ?= 100000000
 CPU_COUNT ?= 1
-SRAM_INITFILE ?= apps/helloworld/helloworld.hex
+XWORDBITSZ ?= 32
 SRAM_KBSIZE ?= "(256/*KB*/)"
+SRAM_INITFILE ?= apps/helloworld/helloworld.${XWORDBITSZ}.hex
 
 # Used only by target sim_vcd:
 #VCDTRACE_BEGIN
@@ -28,6 +29,7 @@ obj_dir/Vsim: sim.sv ${TB}.cpp
 		--relative-includes -I.. -Wno-lint \
 		-DCLKFREQ=${CLKFREQ} \
 		-DCPU_COUNT=${CPU_COUNT} \
+		-DXWORDBITSZ=${XWORDBITSZ} \
 		-DSRAM_INITFILE='"${SRAM_INITFILE}"' \
 		-DSRAM_KBSIZE=${SRAM_KBSIZE} \
 		sim.sv ${TB}.cpp &>>${BUILD_LOG_FILE}
