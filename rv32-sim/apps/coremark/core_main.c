@@ -307,20 +307,21 @@ MAIN_RETURN_TYPE main(int argc, char *argv[]) {
 	ee_printf("Parallel %s : %d\n",PARALLEL_METHOD,default_num_contexts);
 #endif
 	ee_printf("Memory location  : %s\n",MEM_LOCATION);
-	/* output for verification */
-	ee_printf("seedcrc          : 0x%04x\n",seedcrc);
-	if (results[0].execs & ID_LIST)
-		for (i=0 ; i<default_num_contexts; i++) 
-			ee_printf("[%d]crclist       : 0x%04x\n",i,results[i].crclist);
-	if (results[0].execs & ID_MATRIX) 
-		for (i=0 ; i<default_num_contexts; i++) 
-			ee_printf("[%d]crcmatrix     : 0x%04x\n",i,results[i].crcmatrix);
-	if (results[0].execs & ID_STATE)
-		for (i=0 ; i<default_num_contexts; i++) 
-			ee_printf("[%d]crcstate      : 0x%04x\n",i,results[i].crcstate);
-	for (i=0 ; i<default_num_contexts; i++) 
-		ee_printf("[%d]crcfinal      : 0x%04x\n",i,results[i].crc);
-	if (total_errors==0) {
+	if (total_errors!=0) {
+		/* output for verification */
+		ee_printf("seedcrc          : 0x%04x\n",seedcrc);
+		if (results[0].execs & ID_LIST)
+			for (i=0 ; i<default_num_contexts; i++)
+				ee_printf("[%d]crclist       : 0x%04x\n",i,results[i].crclist);
+		if (results[0].execs & ID_MATRIX)
+			for (i=0 ; i<default_num_contexts; i++)
+				ee_printf("[%d]crcmatrix     : 0x%04x\n",i,results[i].crcmatrix);
+		if (results[0].execs & ID_STATE)
+			for (i=0 ; i<default_num_contexts; i++)
+				ee_printf("[%d]crcstate      : 0x%04x\n",i,results[i].crcstate);
+		for (i=0 ; i<default_num_contexts; i++)
+			ee_printf("[%d]crcfinal      : 0x%04x\n",i,results[i].crc);
+	} else {
 		ee_printf("Correct operation validated. See readme.txt for run and reporting rules.\n");
 #if HAS_FLOAT
 		if (known_id==3) {
