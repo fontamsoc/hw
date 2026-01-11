@@ -183,7 +183,7 @@ extern ee_u32 default_num_contexts;
 #if (MULTITHREAD>1)
 #if USE__OS
 	#include <_os.h>
-	#define PARALLEL_METHOD "threads"
+	#define PARALLEL_METHOD "cores  "
 #else
 	#define PARALLEL_METHOD "Proprietary"
 	#error "Please implement multicore functionality in core_portme.c to use multiple contexts."
