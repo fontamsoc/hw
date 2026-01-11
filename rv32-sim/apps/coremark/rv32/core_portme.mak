@@ -17,7 +17,7 @@ OBJDUMP = riscv32-unknown-elf-objdump
 READELF = riscv32-unknown-elf-readelf
 # Flag : CFLAGS
 #	Use this flag to define compiler options. Note, you can add compiler options from the command line using XCFLAGS="other flags"
-PORT_CFLAGS = -O3 -DMULTITHREAD=4 -DUSE__OS=1
+PORT_CFLAGS = -O3 -DMULTITHREAD=16 -DUSE__OS=1
 EXTRA_CFLAGS = -mbranch-cost=2 -funroll-all-loops -falign-functions=32 -finline-functions \
 	-finline-limit=10000 --param max-inline-insns-auto=200 -fno-tree-dominator-opts \
 	-fno-tree-loop-if-convert -fno-tree-sink -fselective-scheduling -fno-if-conversion2 \
