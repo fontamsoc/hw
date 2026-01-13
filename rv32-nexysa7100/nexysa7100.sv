@@ -167,10 +167,6 @@ localparam DCACHEWAYCNT = 1;
 wire [((WBPI_WORDBITSZ-WBPI_MSBSZIGN)*CPU_COUNT) -1 : 0] cpu_dcache_addr_w;
 wire [CPU_COUNT -1 : 0]                                  cpu_dcache_miss_w;
 
-reg [WORDBITSZ -1 : 0] spval_r;
-always @ (posedge wbpi_clk_w)
-	spval_r <= ('h1000 + s_wbpi_mapsz_w[S_WBPI_SRAM]);
-
 cpu #(
 	 .WORDBITSZ     (WORDBITSZ)
 	,.XWORDBITSZ    (WBPI_WORDBITSZ)
@@ -212,7 +208,7 @@ cpu #(
 	,.rstaddr_i  ('h1000)
 	,.rstaddr2_i ('h1000)
 
-	,.spval_i (spval_r)
+	,.spval_i ('h1000 + s_wbpi_mapsz_w[S_WBPI_SRAM])
 );
 
 irqctrl #(
