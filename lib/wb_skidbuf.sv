@@ -35,18 +35,16 @@ module wb_skidbuf (
 
 `include "lib/clog2.sv"
 
-parameter WORDBITSZ     = 32;
-parameter ADDRLIMIT     = 'h2000;
-parameter MAXPENDINGACK = 16;
-parameter USEFWFTFIFO   = 0;
+parameter WORDBITSZ   = 32;
+parameter ADDRLIMIT   = 'h2000;
+parameter DEPTH       = 16;
+parameter USEFWFTFIFO = 0;
 
 localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
 localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
 // -1 account for the msb oring ignored bits.
 localparam MSBSZIGN = (WORDBITSZ-clog2(ADDRLIMIT)-1);
-
-localparam CLOG2MAXPENDINGACK = clog2(MAXPENDINGACK);
 
 input wire rst_i;
 
@@ -77,7 +75,7 @@ assign m_wb_dat_o = s_wb_dat_i;
 
 skidbuf #(
 	 .WIDTH       (1 + 1 + (ADDRBITSZ-MSBSZIGN) + (WORDBITSZ/8) + WORDBITSZ)
-	,.DEPTH       (MAXPENDINGACK)
+	,.DEPTH       (DEPTH)
 	,.USEFWFTFIFO (USEFWFTFIFO)
 ) skidbuf (
 

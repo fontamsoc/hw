@@ -36,10 +36,10 @@ wire [WORDBITSZ -1 : 0]            skidBuf_dCache_m_dat_i;
 generate if (USE_DCACHE) begin: gen_skidBuf_dCache
 
 wb_skidbuf #(
-	 .WORDBITSZ     (WORDBITSZ)
-	,.ADDRLIMIT     (ADDRLIMIT)
-	,.MAXPENDINGACK (MAXPENDINGACK)
-	,.USEFWFTFIFO   (1)
+	 .WORDBITSZ   (WORDBITSZ)
+	,.ADDRLIMIT   (ADDRLIMIT)
+	,.DEPTH       (MAXPENDINGACK)
+	,.USEFWFTFIFO (1)
 ) skidBuf_dCache (
 
 	 .rst_i (rst_i)
