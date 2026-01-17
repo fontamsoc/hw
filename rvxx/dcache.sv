@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-// TODO: Comments to use:
-// TODO: conly_i; // Make cache behave like an sram; no slave memory operation occur.
-// TODO: cmiss_i; // cache-miss to force slave memory operation; any cachehit entry get flushed and invalidated.
+// TODO: Ports description:
+// conly_i: Make cache behave like an sram; no slave memory operation occur.
+// cmiss_i: Cache-miss to force slave memory operation; any cache-tag-hit get flushed-and-invalidated.
 
 `ifndef DCACHE_V
 `define DCACHE_V
@@ -105,25 +105,24 @@ localparam FLUSH   = 2;
 localparam REFILL  = 3;
 reg [2 -1 : 0] state;
 
-reg [(CLOG2MAXPENDINGACK +1) -1 : 0] ack_pending;
+reg [(CLOG2MAXPENDINGACK +1) -1 : 0] s_wb_ack_pending;
 generate if (MAXPENDINGACK) begin
 always_ff @(posedge clk_i) begin
 	if (rst_i)
-		ack_pending <= 0;
+		s_wb_ack_pending <= 0;
 	else if (s_wb_stb_o && !s_wb_bsy_i && s_wb_ack_i);
 	else if (s_wb_ack_i)
-		ack_pending <= ack_pending - 1'b1;
+		s_wb_ack_pending <= s_wb_ack_pending - 1'b1;
 	else if (s_wb_stb_o && !s_wb_bsy_i) begin
-		ack_pending <= ack_pending + 1'b1;
+		s_wb_ack_pending <= s_wb_ack_pending + 1'b1;
 	end
 end
-end
-endgenerate
+end endgenerate
 
 // When MAXPENDINGACK is non-null, and the sequencing of FLUSH followed by REFILL
-// occurs, the expression (!s_wb_stb_o && ack_pending == 1) identifies the ack of
-// REFILL, because we could still be waiting for the ack of FLUSH.
-wire refill_ack = (s_wb_ack_i && (!MAXPENDINGACK || (!s_wb_stb_o && ack_pending == 1)));
+// occurs, the expression (!s_wb_stb_o && s_wb_ack_pending == 1) identifies the ack
+// of REFILL, because we could still be waiting for the ack of FLUSH.
+wire refill_ack = (s_wb_ack_i && (!MAXPENDINGACK || (!s_wb_stb_o && s_wb_ack_pending == 1)));
 
 wire cache_we = (!cmiss_r && (
 	(state == TESTHIT && m_wb_we_r) ||
@@ -181,9 +180,7 @@ wire [(WORDBITSZ/8) -1 : 0] cache_sel_i = (
 wire [WORDBITSZ -1 : 0] _m_wb_sel_r;
 wire [WORDBITSZ -1 : 0] _m_wb_sel_r_n = ~_m_wb_sel_r;
 wire [WORDBITSZ -1 : 0] cache_dat_i = ((state == TESTHIT) ?
-		(cache_tag_hit ?
-			((m_wb_dat_r & _m_wb_sel_r) | (cache_dat_o_tag_hit & _m_wb_sel_r_n)) :
-			m_wb_dat_r) :
+		(cache_tag_hit ? ((m_wb_dat_r & _m_wb_sel_r) | (cache_dat_o_tag_hit & _m_wb_sel_r_n)) : m_wb_dat_r) :
 		s_wb_dat_i);
 
 wire cache_drt_i = (!(/*rst_r ||*/ conly_r || cmiss_r) && m_wb_we_r);
@@ -300,7 +297,7 @@ always_ff @(posedge clk_i) begin
 
 				m_wb_ack_o <= 1;
 
-				//if (!m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
+				if (!m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
 					m_wb_dat_o <= cache_dat_o_tag_hit;
 
 				conly_r <= 0;
@@ -334,8 +331,8 @@ always_ff @(posedge clk_i) begin
 				s_wb_lock_o <= m_wb_lock_r;
 				s_wb_we_o <= m_wb_we_r;
 				s_wb_addr_o <= m_wb_addr_r;
-				s_wb_sel_o <= cmiss_r ? m_wb_sel_r : {(WORDBITSZ/8){1'b1}};
-				//if (m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
+				s_wb_sel_o <= (cmiss_r ? m_wb_sel_r : {(WORDBITSZ/8){1'b1}});
+				if (m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
 					s_wb_dat_o <= m_wb_dat_r;
 
 				state <= REFILL;
@@ -362,8 +359,8 @@ always_ff @(posedge clk_i) begin
 					s_wb_lock_o <= m_wb_lock_r;
 					s_wb_we_o <= m_wb_we_r;
 					s_wb_addr_o <= m_wb_addr_r;
-					s_wb_sel_o <= cmiss_r ? m_wb_sel_r : {(WORDBITSZ/8){1'b1}};
-					//if (m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
+					s_wb_sel_o <= (cmiss_r ? m_wb_sel_r : {(WORDBITSZ/8){1'b1}});
+					if (m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
 						s_wb_dat_o <= m_wb_dat_r;
 
 					state <= REFILL;
@@ -374,11 +371,11 @@ always_ff @(posedge clk_i) begin
 
 		end else if (state == REFILL) begin
 
-			if ((m_wb_we_r && !s_wb_bsy_i && MAXPENDINGACK) || refill_ack) begin
+			if (refill_ack || (MAXPENDINGACK && m_wb_we_r && !s_wb_bsy_i)) begin
 
 				m_wb_ack_o <= 1;
 
-				//if (!m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
+				if (!m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
 					m_wb_dat_o <= s_wb_dat_i;
 
 				s_wb_stb_o <= 0;
@@ -525,25 +522,24 @@ localparam FLUSH  = 2;
 localparam REFILL = 3;
 reg [2 -1 : 0] state;
 
-reg [(CLOG2MAXPENDINGACK +1) -1 : 0] ack_pending;
+reg [(CLOG2MAXPENDINGACK +1) -1 : 0] s_wb_ack_pending;
 generate if (MAXPENDINGACK) begin
 always_ff @(posedge clk_i) begin
 	if (rst_i)
-		ack_pending <= 0;
+		s_wb_ack_pending <= 0;
 	else if (s_wb_stb_o && !s_wb_bsy_i && s_wb_ack_i);
 	else if (s_wb_ack_i)
-		ack_pending <= ack_pending - 1'b1;
+		s_wb_ack_pending <= s_wb_ack_pending - 1'b1;
 	else if (s_wb_stb_o && !s_wb_bsy_i) begin
-		ack_pending <= ack_pending + 1'b1;
+		s_wb_ack_pending <= s_wb_ack_pending + 1'b1;
 	end
 end
-end
-endgenerate
+end endgenerate
 
 // When MAXPENDINGACK is non-null, and the sequencing of FLUSH followed by REFILL
-// occurs, the expression (!s_wb_stb_o && ack_pending == 1) identifies the ack of
-// REFILL, because we could still be waiting for the ack of FLUSH.
-wire refill_ack = (s_wb_ack_i && (!MAXPENDINGACK || (!s_wb_stb_o && ack_pending == 1)));
+// occurs, the expression (!s_wb_stb_o && s_wb_ack_pending == 1) identifies the ack
+// of REFILL, because we could still be waiting for the ack of FLUSH.
+wire refill_ack = (s_wb_ack_i && (!MAXPENDINGACK || (!s_wb_stb_o && s_wb_ack_pending == 1)));
 
 reg testhit;
 
@@ -663,16 +659,11 @@ assign cache_tag_hit_[gen_cache_idx] = ((|cache_sel_o[gen_cache_idx]) &&
 
 end endgenerate
 
-assign m_wb_dat_o = (testhit ? cache_dat_o_tag_hit : s_wb_dat_i);
-
 wire cache_hit = (conly_r ||
 	// There is a cachehit when there is a cache tag hit and the selected bits are in the cache.
 	(cache_tag_hit && (m_wb_sel_r & cache_sel_o_tag_hit) == m_wb_sel_r));
 
 wire cache_miss = (testhit && !cache_hit);
-
-assign m_wb_ack_o = (testhit ? ((!cmiss_r && cache_hit) || m_wb_we_r) :
-	(state == REFILL && !s_wb_we_o && refill_ack));
 
 wire cache_drt_o_we_wayidx = cache_drt_o[cache_we_wayidx];
 
@@ -680,8 +671,12 @@ wire cache_flush = (cache_drt_o_we_wayidx && (!m_wb_we_r || !cache_tag_hit));
 
 assign m_wb_bsy_o = (rst_r || cmiss_r || state != READY ||
 	(m_wb_we_r && cache_rdidx == cache_wridx) /* wait for cache-write */ ||
-	(cache_miss && ( /* keep m_wb_bsy_o low if not transitioning from READY */
-		cache_flush || !m_wb_we_r)));
+	(cache_miss && (cache_flush || !m_wb_we_r)));
+
+assign m_wb_ack_o = (testhit ? ((!cmiss_r && cache_hit) || m_wb_we_r) :
+	(state == REFILL && !s_wb_we_o && refill_ack));
+
+assign m_wb_dat_o = (testhit ? cache_dat_o_tag_hit : s_wb_dat_i);
 
 always_ff @(posedge clk_i) begin
 
@@ -707,9 +702,9 @@ always_ff @(posedge clk_i) begin
 
 			if (rst_r) begin
 
-				if (m_wb_addr_r == (CACHESETCNT - 1)) begin
+				if (m_wb_addr_r == (CACHESETCNT - 1))
 					rst_r <= 0;
-				end else
+				else
 					m_wb_addr_r <= m_wb_addr_r + 1'b1;
 
 			end else if (cmiss_r ? (cache_tag_hit && cache_drt_o_we_wayidx) :
@@ -735,7 +730,7 @@ always_ff @(posedge clk_i) begin
 				s_wb_we_o <= m_wb_we_r;
 				s_wb_addr_o <= m_wb_addr_r;
 				s_wb_sel_o <= cmiss_r ? m_wb_sel_r : {(WORDBITSZ/8){1'b1}};
-				//if (m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
+				if (m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
 					s_wb_dat_o <= m_wb_dat_r;
 
 				state <= REFILL;
@@ -784,8 +779,8 @@ always_ff @(posedge clk_i) begin
 					s_wb_lock_o <= m_wb_lock_r;
 					s_wb_we_o <= m_wb_we_r;
 					s_wb_addr_o <= m_wb_addr_r;
-					s_wb_sel_o <= cmiss_r ? m_wb_sel_r : {(WORDBITSZ/8){1'b1}};
-					//if (m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
+					s_wb_sel_o <= (cmiss_r ? m_wb_sel_r : {(WORDBITSZ/8){1'b1}});
+					if (m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
 						s_wb_dat_o <= m_wb_dat_r;
 
 					state <= REFILL;
