@@ -75,7 +75,7 @@ input  wire                               m_wb_we_i;
 input  wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] m_wb_addr_i;
 input  wire [(WORDBITSZ/8) -1 : 0]        m_wb_sel_i;
 input  wire [WORDBITSZ -1 : 0]            m_wb_dat_i;
-output reg                                m_wb_bsy_o;
+output wire                               m_wb_bsy_o;
 output reg                                m_wb_ack_o;
 output reg  [WORDBITSZ -1 : 0]            m_wb_dat_o;
 
@@ -245,13 +245,14 @@ wire cache_hit = (conly_r ||
 	// There is a cachehit when there is a cache tag hit and the selected bits are in the cache.
 	(cache_tag_hit && (m_wb_sel_r & cache_sel_o_tag_hit) == m_wb_sel_r));
 
+assign m_wb_bsy_o = (rst_r || state != READY);
+
 always_ff @(posedge clk_i) begin
 
 	if (rst_i) begin
 
 		rst_r <= 1;
 
-		m_wb_bsy_o <= 1;
 		m_wb_ack_o <= 0;
 		m_wb_we_r <= 0;
 
@@ -270,15 +271,13 @@ always_ff @(posedge clk_i) begin
 
 			if (rst_r) begin
 
-				if (m_wb_addr_r == (CACHESETCNT - 1)) begin
-					m_wb_bsy_o <= 0;
+				if (m_wb_addr_r == (CACHESETCNT - 1))
 					rst_r <= 0;
-				end else
+				else
 					m_wb_addr_r <= m_wb_addr_r + 1'b1;
 
 			end else if (m_wb_stb_i) begin
 
-				m_wb_bsy_o <= 1;
 				m_wb_ack_o <= 0;
 
 				m_wb_lock_r <= m_wb_lock_i;
@@ -299,7 +298,6 @@ always_ff @(posedge clk_i) begin
 
 			if ((cache_hit || (cache_tag_hit && m_wb_we_r)) && !cmiss_r) begin
 
-				m_wb_bsy_o <= 0;
 				m_wb_ack_o <= 1;
 
 				//if (!m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
@@ -323,7 +321,6 @@ always_ff @(posedge clk_i) begin
 
 			end else if (m_wb_we_r && !cmiss_r) begin
 
-				m_wb_bsy_o <= 0;
 				m_wb_ack_o <= 1;
 
 				conly_r <= 0;
@@ -350,7 +347,6 @@ always_ff @(posedge clk_i) begin
 
 				if (m_wb_we_r && !cmiss_r) begin
 
-					m_wb_bsy_o <= 0;
 					m_wb_ack_o <= 1;
 
 					s_wb_stb_o <= 0;
@@ -380,7 +376,6 @@ always_ff @(posedge clk_i) begin
 
 			if ((m_wb_we_r && !s_wb_bsy_i && MAXPENDINGACK) || refill_ack) begin
 
-				m_wb_bsy_o <= 0;
 				m_wb_ack_o <= 1;
 
 				//if (!m_wb_we_r) // For power-efficiency, otherwise this test is not needed.
