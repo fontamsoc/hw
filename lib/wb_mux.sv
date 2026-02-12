@@ -86,17 +86,17 @@ always_ff @(posedge clk_i) begin
 		m_wb_addr_r <= m_wb_addr_i;
 end
 
-wire wb_stb = (m_wb_stb_i && !m_wb_bsy_o);
+wire _m_wb_stb_i = (m_wb_stb_i && !m_wb_bsy_o);
 
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] ack_pending;
 
 always_ff @(posedge clk_i) begin
 	if (rst_i)
 		ack_pending <= 0;
-	else if (wb_stb && m_wb_ack_o);
+	else if (_m_wb_stb_i && m_wb_ack_o);
 	else if (m_wb_ack_o)
 		ack_pending <= ack_pending - 1'b1;
-	else if (wb_stb)
+	else if (_m_wb_stb_i)
 		ack_pending <= ack_pending + 1'b1;
 end
 
