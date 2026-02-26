@@ -550,10 +550,10 @@ endgenerate
 // REFILL, because we could still be waiting for the ack of FLUSH.
 wire refill_ack = (s_wb_ack_i && (!MAXPENDINGACK || (!s_wb_stb_o && ack_pending == 1)));
 
-reg m_wb_ack;
+reg testhit;
 
 wire cache_we = (!cmiss_r && (
-	(m_wb_ack && m_wb_we_r) ||
+	(testhit && m_wb_we_r) ||
 	(state == REFILL && !s_wb_we_o && refill_ack)));
 
 localparam CACHETAGBITSIZE = ((ADDRBITSZ-MSBSZIGN) - CLOG2CACHESETCNT);
@@ -602,12 +602,12 @@ wire [WORDBITSZ -1 : 0] cache_dat_o_tag_hit = cache_dat_o[cache_tag_hit_wayidx];
 
 wire [(WORDBITSZ/8) -1 : 0] cache_sel_i = (
 	(conly_r || cmiss_r) ? {(WORDBITSZ/8){1'b0}} :
-	m_wb_ack ? (cache_tag_hit ? (m_wb_sel_r | cache_sel_o_tag_hit) : m_wb_sel_r) :
+	testhit ? (cache_tag_hit ? (m_wb_sel_r | cache_sel_o_tag_hit) : m_wb_sel_r) :
 	(state == REFILL) ? {(WORDBITSZ/8){1'b1}} : {(WORDBITSZ/8){1'b0}});
 
 wire [WORDBITSZ -1 : 0] _m_wb_sel_r;
 wire [WORDBITSZ -1 : 0] _m_wb_sel_r_n = ~_m_wb_sel_r;
-wire [WORDBITSZ -1 : 0] cache_dat_i = (m_wb_ack ?
+wire [WORDBITSZ -1 : 0] cache_dat_i = (testhit ?
 		(cache_tag_hit ?
 			((m_wb_dat_r & _m_wb_sel_r) | (cache_dat_o_tag_hit & _m_wb_sel_r_n)) :
 			m_wb_dat_r) :
@@ -657,7 +657,7 @@ always_ff @(posedge clk_i) begin
 end
 
 always_ff @(posedge clk_i) begin
-	if (rst_r || _cache_we || (m_wb_ack && cache_tag_hit_[gen_cache_idx] && cmiss_r)) begin
+	if (rst_r || _cache_we || (testhit && cache_tag_hit_[gen_cache_idx] && cmiss_r)) begin
 		cache_sels[cache_wridx] <= cache_sel_i;
 		cache_drts[cache_wridx] <= cache_drt_i;
 	end
@@ -668,15 +668,15 @@ assign cache_tag_hit_[gen_cache_idx] = ((|cache_sel_o[gen_cache_idx]) &&
 
 end endgenerate
 
-assign m_wb_dat_o = (m_wb_ack ? cache_dat_o_tag_hit : s_wb_dat_i);
+assign m_wb_dat_o = (testhit ? cache_dat_o_tag_hit : s_wb_dat_i);
 
 wire cache_hit = (conly_r ||
 	// There is a cachehit when there is a cache tag hit and the selected bits are in the cache.
 	(cache_tag_hit && (m_wb_sel_r & cache_sel_o_tag_hit) == m_wb_sel_r));
 
-wire cache_miss = (m_wb_ack && !cache_hit);
+wire cache_miss = (testhit && !cache_hit);
 
-assign m_wb_ack_o = (m_wb_ack ? ((!cmiss_r && cache_hit) || m_wb_we_r) :
+assign m_wb_ack_o = (testhit ? ((!cmiss_r && cache_hit) || m_wb_we_r) :
 	(state == REFILL && !s_wb_we_o && refill_ack));
 
 wire cache_drt_o_we_wayidx = cache_drt_o[cache_we_wayidx];
@@ -694,7 +694,7 @@ always_ff @(posedge clk_i) begin
 
 		rst_r <= 1;
 
-		m_wb_ack <= 0;
+		testhit <= 0;
 		m_wb_we_r <= 0;
 
 		m_wb_addr_r <= 0;
@@ -720,7 +720,7 @@ always_ff @(posedge clk_i) begin
 			end else if (cmiss_r ? (cache_tag_hit && cache_drt_o_we_wayidx) :
 				(cache_miss && cache_flush)) begin
 
-				m_wb_ack <= 0;
+				testhit <= 0;
 
 				s_wb_stb_o <= 1;
 				s_wb_lock_o <= 0;
@@ -733,7 +733,7 @@ always_ff @(posedge clk_i) begin
 
 			end else if ((cache_miss && !m_wb_we_r) || cmiss_r) begin
 
-				m_wb_ack <= 0;
+				testhit <= 0;
 
 				s_wb_stb_o <= 1;
 				s_wb_lock_o <= m_wb_lock_r;
@@ -747,7 +747,7 @@ always_ff @(posedge clk_i) begin
 
 			end else if (_m_wb_stb_i) begin
 
-				m_wb_ack <= 1;
+				testhit <= 1;
 
 				m_wb_lock_r <= m_wb_lock_i;
 				m_wb_we_r <= m_wb_we_i;
@@ -760,7 +760,7 @@ always_ff @(posedge clk_i) begin
 
 			end else begin
 
-				m_wb_ack <= 0;
+				testhit <= 0;
 
 				m_wb_we_r <= 0;
 
