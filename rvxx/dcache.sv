@@ -101,7 +101,7 @@ reg cmiss_r;
 
 localparam READY  = 0;
 localparam TSTHIT = 1;
-localparam FLUSH  = 2;
+localparam WRITEB = 2;
 localparam REFILL = 3;
 reg [2 -1 : 0] state;
 
@@ -119,9 +119,9 @@ always_ff @(posedge clk_i) begin
 end
 end endgenerate
 
-// When MAXPENDINGACK is non-null, and the sequencing of FLUSH followed by REFILL
+// When MAXPENDINGACK is non-null, and the sequencing of WRITEB followed by REFILL
 // occurs, the expression (!s_wb_stb_o && s_wb_ack_pending == 1) identifies the ack
-// of REFILL, because we could still be waiting for the ack of FLUSH.
+// of REFILL, because we could still be waiting for the ack of WRITEB.
 wire refill_ack = (s_wb_ack_i && (!MAXPENDINGACK || (!s_wb_stb_o && s_wb_ack_pending == 1)));
 
 wire cache_we = (!cmiss_r && (
@@ -314,7 +314,7 @@ always_ff @(posedge clk_i) begin
 				s_wb_sel_o <= cache_sel_o[cache_we_wayidx];
 				s_wb_dat_o <= cache_dat_o[cache_we_wayidx];
 
-				state <= FLUSH;
+				state <= WRITEB;
 
 			end else if (m_wb_we_r && !cmiss_r) begin
 
@@ -338,7 +338,7 @@ always_ff @(posedge clk_i) begin
 				state <= REFILL;
 			end
 
-		end else if (state == FLUSH) begin
+		end else if (state == WRITEB) begin
 
 			if (MAXPENDINGACK ? !s_wb_bsy_i : s_wb_ack_i) begin
 
@@ -519,7 +519,7 @@ reg cmiss_r;
 
 localparam READY  = 0;
 localparam TSTHIT = 1;
-localparam FLUSH  = 2;
+localparam WRITEB = 2;
 localparam REFILL = 3;
 reg [2 -1 : 0] state;
 
@@ -537,9 +537,9 @@ always_ff @(posedge clk_i) begin
 end
 end endgenerate
 
-// When MAXPENDINGACK is non-null, and the sequencing of FLUSH followed by REFILL
+// When MAXPENDINGACK is non-null, and the sequencing of WRITEB followed by REFILL
 // occurs, the expression (!s_wb_stb_o && s_wb_ack_pending == 1) identifies the ack
-// of REFILL, because we could still be waiting for the ack of FLUSH.
+// of REFILL, because we could still be waiting for the ack of WRITEB.
 wire refill_ack = (s_wb_ack_i && (!MAXPENDINGACK || (!s_wb_stb_o && s_wb_ack_pending == 1)));
 
 wire cache_we = (!cmiss_r && (
@@ -666,11 +666,11 @@ wire cache_miss = (state == TSTHIT && !cache_hit);
 
 wire cache_drt_o_we_wayidx = cache_drt_o[cache_we_wayidx];
 
-wire cache_flush = (cache_drt_o_we_wayidx && (!m_wb_we_r || !cache_tag_hit));
+wire cache_writeb = (cache_drt_o_we_wayidx && (!m_wb_we_r || !cache_tag_hit));
 
 assign m_wb_bsy_o = (rst_r || cmiss_r || !(state == READY || state == TSTHIT) ||
 	(m_wb_we_r && cache_rdidx == cache_wridx) /* wait for cache-write */ ||
-	(cache_miss && (cache_flush || !m_wb_we_r)));
+	(cache_miss && (cache_writeb || !m_wb_we_r)));
 
 assign m_wb_ack_o = (state == TSTHIT ? ((!cmiss_r && cache_hit) || m_wb_we_r) :
 	(state == REFILL && !s_wb_we_o && refill_ack));
@@ -706,7 +706,7 @@ always_ff @(posedge clk_i) begin
 					m_wb_addr_r <= m_wb_addr_r + 1'b1;
 
 			end else if (cmiss_r ? (cache_tag_hit && cache_drt_o_we_wayidx) :
-				(cache_miss && cache_flush)) begin
+				(cache_miss && cache_writeb)) begin
 
 				s_wb_stb_o <= 1;
 				s_wb_lock_o <= 0;
@@ -715,7 +715,7 @@ always_ff @(posedge clk_i) begin
 				s_wb_sel_o <= cache_sel_o[cache_we_wayidx];
 				s_wb_dat_o <= cache_dat_o[cache_we_wayidx];
 
-				state <= FLUSH;
+				state <= WRITEB;
 
 			end else if ((cache_miss && !m_wb_we_r) || cmiss_r) begin
 
@@ -752,7 +752,7 @@ always_ff @(posedge clk_i) begin
 				state <= READY;
 			end
 
-		end else if (state == FLUSH) begin
+		end else if (state == WRITEB) begin
 
 			if (MAXPENDINGACK ? !s_wb_bsy_i : s_wb_ack_i) begin
 
