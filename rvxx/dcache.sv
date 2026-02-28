@@ -99,10 +99,10 @@ reg rst_r;
 reg conly_r;
 reg cmiss_r;
 
-localparam READY   = 0;
-localparam TESTHIT = 1;
-localparam FLUSH   = 2;
-localparam REFILL  = 3;
+localparam READY  = 0;
+localparam TSTHIT = 1;
+localparam FLUSH  = 2;
+localparam REFILL = 3;
 reg [2 -1 : 0] state;
 
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] s_wb_ack_pending;
@@ -125,7 +125,7 @@ end endgenerate
 wire refill_ack = (s_wb_ack_i && (!MAXPENDINGACK || (!s_wb_stb_o && s_wb_ack_pending == 1)));
 
 wire cache_we = (!cmiss_r && (
-	(state == TESTHIT && m_wb_we_r) ||
+	(state == TSTHIT && m_wb_we_r) ||
 	(state == REFILL && !s_wb_we_o && refill_ack)));
 
 localparam CACHETAGBITSIZE = ((ADDRBITSZ-MSBSZIGN) - CLOG2CACHESETCNT);
@@ -174,12 +174,12 @@ wire [WORDBITSZ -1 : 0] cache_dat_o_tag_hit = cache_dat_o[cache_tag_hit_wayidx];
 
 wire [(WORDBITSZ/8) -1 : 0] cache_sel_i = (
 	(conly_r || cmiss_r) ? {(WORDBITSZ/8){1'b0}} :
-	(state == TESTHIT) ? (cache_tag_hit ? (m_wb_sel_r | cache_sel_o_tag_hit) : m_wb_sel_r) :
+	(state == TSTHIT) ? (cache_tag_hit ? (m_wb_sel_r | cache_sel_o_tag_hit) : m_wb_sel_r) :
 	(state == REFILL) ? {(WORDBITSZ/8){1'b1}} : {(WORDBITSZ/8){1'b0}});
 
 wire [WORDBITSZ -1 : 0] _m_wb_sel_r;
 wire [WORDBITSZ -1 : 0] _m_wb_sel_r_n = ~_m_wb_sel_r;
-wire [WORDBITSZ -1 : 0] cache_dat_i = ((state == TESTHIT) ?
+wire [WORDBITSZ -1 : 0] cache_dat_i = ((state == TSTHIT) ?
 		(cache_tag_hit ? ((m_wb_dat_r & _m_wb_sel_r) | (cache_dat_o_tag_hit & _m_wb_sel_r_n)) : m_wb_dat_r) :
 		s_wb_dat_i);
 
@@ -227,7 +227,7 @@ always_ff @(posedge clk_i) begin
 end
 
 always_ff @(posedge clk_i) begin
-	if (rst_r || _cache_we || (state == TESTHIT && cache_tag_hit_[gen_cache_idx] && cmiss_r)) begin
+	if (rst_r || _cache_we || (state == TSTHIT && cache_tag_hit_[gen_cache_idx] && cmiss_r)) begin
 		cache_sels[cache_wridx] <= cache_sel_i;
 		cache_drts[cache_wridx] <= cache_drt_i;
 	end
@@ -286,12 +286,12 @@ always_ff @(posedge clk_i) begin
 				conly_r <= conly_i;
 				cmiss_r <= cmiss_i;
 
-				state <= TESTHIT;
+				state <= TSTHIT;
 
 			end else
 				m_wb_ack_o <= 0;
 
-		end else if (state == TESTHIT) begin
+		end else if (state == TSTHIT) begin
 
 			if ((cache_hit || (cache_tag_hit && m_wb_we_r)) && !cmiss_r) begin
 
