@@ -194,7 +194,7 @@ always_ff @(posedge clk_read_i) // Synchronize gray_writeidx to clk_read_i.
 
 assign empty_o = (_gray_writeidx == gray_readidx);
 
-assign near_empty_o = (_gray_writeidx == gray_next_readidx);
+assign near_empty_o = (_gray_writeidx == gray_next_readidx || empty_o);
 
 always_ff @(posedge clk_pop_i) begin
 	if (rst_i) begin

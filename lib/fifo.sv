@@ -157,11 +157,11 @@ assign usage_o = (writeidx - readidx);
 
 assign full_o = (usage_o == DEPTH);
 
-assign near_full_o = (usage_o == (DEPTH - 1));
+assign near_full_o = (usage_o == (DEPTH - 1) || full_o);
 
 assign empty_o = (usage_o == 0);
 
-assign near_empty_o = (usage_o == 1);
+assign near_empty_o = (usage_o == 1 || empty_o);
 
 always_ff @(posedge clk_read_i) begin
 	if (rst_i)
