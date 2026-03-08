@@ -16,6 +16,7 @@ module skidbuf (
 	,stb_i
 	,dat_i
 	,bsy_o
+	,near_bsy_o
 
 	,stb_o
 	,dat_o
@@ -35,6 +36,7 @@ input wire clk_i;
 input  wire                stb_i;
 input  wire [WIDTH -1 : 0] dat_i;
 output wire                bsy_o;
+output wire                near_bsy_o;
 
 output reg                 stb_o;  // ### comb-block-reg.
 output reg  [WIDTH -1 : 0] dat_o;  // ### comb-block-reg.
@@ -53,10 +55,11 @@ fifo_fwft #(
 
 	 .rst_i (rst_i)
 
-	,.clk_push_i (clk_i)
-	,.push_i     (stb_i && (bsy_i || !buf_empty_w))
-	,.data_i     (dat_i)
-	,.full_o     (bsy_o)
+	,.clk_push_i  (clk_i)
+	,.push_i      (stb_i && (bsy_i || !buf_empty_w))
+	,.data_i      (dat_i)
+	,.full_o      (bsy_o)
+	,.near_full_o (near_bsy_o)
 
 	,.clk_pop_i (clk_i)
 	,.pop_i     (!bsy_i)
@@ -95,6 +98,7 @@ fifo #(
 	,.write_i     (stb_i && (bsy_i || !buf_empty_w || !buf_empty_r))
 	,.data_i      (dat_i)
 	,.full_o      (bsy_o)
+	,.near_full_o (near_bsy_o)
 
 	,.clk_read_i (clk_i)
 	,.read_i     (buf_empty_r || !bsy_i)
