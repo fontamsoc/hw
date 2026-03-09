@@ -81,10 +81,6 @@ input  wire [(WORDBITSZ * SLAVECOUNT) -1 : 0]            s_wb_dat_i;
 input  wire [((WORDBITSZ-MSBSZIGN) * SLAVECOUNT) -1 : 0] s_wb_mapsz_i;
 
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] m_wb_addr_r;
-always_ff @(posedge clk_i) begin
-	if (m_wb_stb_i)
-		m_wb_addr_r <= m_wb_addr_i;
-end
 
 wire _m_wb_stb_i = (m_wb_stb_i && !m_wb_bsy_o);
 
@@ -174,18 +170,21 @@ always_ff @(posedge clk_i) begin
 
 	end else if (!slvidx_rdy && m_wb_addr_r == m_wb_addr_i) begin
 
-		if (!slvidx_invalid && m_wb_stb_i)
-			slvidx_rdy <= 1;
-		else if (slvidx_not_max) begin
-			addrspace_slvidx_lo <= addrspace[slvidx] + 1'b1;
-			addrspace_slvidx_hi <= addrspace[slvidx_plus_one];
-			slvidx <= slvidx_plus_one;
-		end else begin
-			addrspace_slvidx_lo <= slvidx_dflt_lo;
-			addrspace_slvidx_hi <= slvidx_dflt_hi;
-			slvidx <= DEFAULTSLAVEINDEX;
-			slvidx_rdy <= 1;
-			slvidx_dflt <= 1;
+		if (m_wb_stb_i) begin
+
+			if (!slvidx_invalid)
+				slvidx_rdy <= 1;
+			else if (slvidx_not_max) begin
+				addrspace_slvidx_lo <= addrspace[slvidx] + 1'b1;
+				addrspace_slvidx_hi <= addrspace[slvidx_plus_one];
+				slvidx <= slvidx_plus_one;
+			end else begin
+				addrspace_slvidx_lo <= slvidx_dflt_lo;
+				addrspace_slvidx_hi <= slvidx_dflt_hi;
+				slvidx <= DEFAULTSLAVEINDEX;
+				slvidx_rdy <= 1;
+				slvidx_dflt <= 1;
+			end
 		end
 
 	end else if (m_wb_stb_i && _slvidx_invalid) begin
@@ -194,6 +193,8 @@ always_ff @(posedge clk_i) begin
 		addrspace_slvidx_hi <= addrspace[0];
 		slvidx <= 0;
 		slvidx_rdy <= 0;
+
+		m_wb_addr_r <= m_wb_addr_i;
 
 	end else if (slvidx_dflt)
 		slvidx_dflt <= m_wb_bsy_o;
