@@ -164,12 +164,15 @@ always_ff @(posedge clk_i) begin
 end
 
 reg wb_lock;
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] wb_lock_addr;
 always_ff @(posedge clk_i) begin
 	if (MASTERCOUNT > 1) begin
 		if (rst_i)
 			wb_lock <= 1'b0;
 		else if (_s_wb_stb_o)
-			wb_lock <= s_wb_lock_o;
+			wb_lock <= (s_wb_lock_o || (wb_lock && (s_wb_addr_o != wb_lock_addr)));
+		if (_s_wb_stb_o && !wb_lock)
+			wb_lock_addr <= s_wb_addr_o;
 	end else
 		wb_lock <= 1'b0;
 end
