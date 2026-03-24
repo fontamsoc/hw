@@ -272,6 +272,16 @@ reg [(WORDBITSZ-2) -1 : 0] ras5;
 reg [(WORDBITSZ-2) -1 : 0] ras6;
 reg [(WORDBITSZ-2) -1 : 0] ras7;
 wire [(WORDBITSZ-2) -1 : 0] iF_predictRet = ras0;
+`ifdef SIMULATION
+wire [WORDBITSZ -1 : 0] _ras0 = {ras0, 2'b00};
+wire [WORDBITSZ -1 : 0] _ras1 = {ras1, 2'b00};
+wire [WORDBITSZ -1 : 0] _ras2 = {ras2, 2'b00};
+wire [WORDBITSZ -1 : 0] _ras3 = {ras3, 2'b00};
+wire [WORDBITSZ -1 : 0] _ras4 = {ras4, 2'b00};
+wire [WORDBITSZ -1 : 0] _ras5 = {ras5, 2'b00};
+wire [WORDBITSZ -1 : 0] _ras6 = {ras6, 2'b00};
+wire [WORDBITSZ -1 : 0] _ras7 = {ras7, 2'b00};
+`endif
 `endif
 
 `ifdef PUPREDICTJALR
@@ -962,7 +972,9 @@ always_ff @(posedge clk_i) begin
 			ras4 <= ras5;
 			ras5 <= ras6;
 			ras6 <= ras7;
+`ifdef SIMULATION
 			//ras7 <= {(WORDBITSZ-2){1'b0}};
+`endif
 		end
 	end
 end
