@@ -369,7 +369,7 @@ int main() {
 		_thread_schedoncpu(
 			_thread_create(0, 2048, scan_RGBf_thrd_fn, 0),
 			// Try to use a cpu other than _cpuid() to immediately start computing.
-			((_cpuid() + i + 1) % ncpu), true);
+			((_cpuid() + i + 1) % ncpu), false);
 	}
 	// Wait for all workers to finish their rendering.
 	_sem_get(&main_sem, _DATE_MAX);
