@@ -360,7 +360,7 @@ int main() {
 	uintptr_t nthrd =
 		(ncpu < NTHRD_MIN) ? NTHRD_MIN :
 		((ncpu < (GL_height/2)) ? ncpu : (GL_height/2));
-	busy_cntr = nthrd;
+	_xchg(&busy_cntr, nthrd);
 	// Prevent context switch until all threads have been scheduled.
 	_preempt_disable();
 	// Capture start timestamp.

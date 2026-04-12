@@ -113,6 +113,8 @@ secs_ret time_in_secs(CORE_TICKS ticks) {
 	return retval;
 }
 
+ee_u32 default_num_contexts=1;
+
 #if (MULTITHREAD>1)
 #if USE__OS
 #define _OS_THRD_STACKSZ 2048
@@ -135,8 +137,9 @@ ee_u8 core_start_parallel(core_results *res) {
 	++i;
 	return 0;
 }
+ee_u32 core_stop_parallel_cntr = 0;
 ee_u8 core_stop_parallel(core_results *res) {
-	if (_os_busy_ctnr)
+	if (++core_stop_parallel_cntr == default_num_contexts)
 		_sem_get(&_os_thrd_sem, _DATE_MAX);
 	return 0;
 }
@@ -144,8 +147,6 @@ ee_u8 core_stop_parallel(core_results *res) {
 #error "Please implement multicore functionality in core_portme.c to use multiple contexts."
 #endif /* multithread implementations */
 #endif
-
-ee_u32 default_num_contexts=1;
 
 /* Function : portable_init
 	Target specific initialization code
