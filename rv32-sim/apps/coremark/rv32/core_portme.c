@@ -163,12 +163,12 @@ void portable_init(core_portable *p, int *argc, char *argv[]) {
 	p->portable_id=1;
 #if (MULTITHREAD>1)
 #if USE__OS
-	_os_busy_ctnr=ncpu=_ncpu();
-	if (_os_busy_ctnr>MULTITHREAD) {
+	default_num_contexts=ncpu=_ncpu();
+	if (default_num_contexts>MULTITHREAD) {
 		ee_printf("WARNING! _ncpu()>MULTITHREAD!\n");
-		_os_busy_ctnr=MULTITHREAD;
+		default_num_contexts=MULTITHREAD;
 	}
-	default_num_contexts=_os_busy_ctnr;
+	_xchg(&_os_busy_ctnr, default_num_contexts);
 	_os_thrd_stack = malloc(default_num_contexts*_OS_THRD_STACKSZ);
 	if (!_os_thrd_stack)
 		ee_printf("ERROR! Failed to allocate stack!\n");
