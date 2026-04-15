@@ -18,25 +18,23 @@ updsram: ${TOP}.sram.hex ${TOP}.bak.config
 	ecpbram --input ${TOP}.bak.config --output ${TOP}.out.config --from ${TOP}.sram.hex --to ${SRAM_INITFILE}
 	ecppack --compress --freq 38.8 --input ${TOP}.out.config --bit ${TOP}.dfu
 	dfu-suffix -v 1209 -p 5af0 -a ${TOP}.dfu &>/dev/null
-	rm ${TOP}.out.config
+	@rm ${TOP}.out.config
 
 %.json: ../%.sv
-	ecpbram --generate ${TOP}.sram.hex --width ${XWORDBITSZ} --depth $$((${SRAM_KBSIZE}*1024/4))
+	@ecpbram --generate ${TOP}.sram.hex --width ${XWORDBITSZ} --depth $$((${SRAM_KBSIZE}*1024/4))
 	yosys -p "verilog_defines -DCPU_COUNT=${CPU_COUNT} -DXWORDBITSZ=${XWORDBITSZ} -DSRAM_KBSIZE=${SRAM_KBSIZE} -DSRAM_INITFILE=\"${TOP}.sram.hex\"; \
 		read_verilog -sv -I../../ $<; synth_ecp5 -top ${TOP} -json $@" &>$*.synth.log
 %.out.config: %.json ../%.lpf
-	cntr=0; until \
+	$(info # Running nextpnr-ecp5 ...)
+	@cntr=0; until \
 		nextpnr-ecp5 -r --ignore-rel-clk --json $< --textcfg $@ --85k --package CSFBGA285 --lpf ../${TOP}.lpf &>$*.pnr.log; \
 	do \
-		echo -n '-- '; \
 		fgrep 'ERROR: Max frequency' $*.pnr.log; \
 		((cntr++)); [[ cntr -eq ${RETRY_COUNT} ]] && exit 1; \
-	done; \
-	fgrep 'Max frequency' $*.pnr.log | fgrep PASS; \
-	test -f $@ # using `test` to workaround unexpected fail.
-	rm -rf abc.history # empty file that gets created sometime.
+	done; fgrep 'Max frequency' $*.pnr.log | fgrep PASS; test -f $@ # using `test` to workaround unexpected fail.
+	@rm -rf abc.history # empty file that gets created sometime.
 %.dfu: %.out.config
-	mv $< ${TOP}.bak.config
+	@mv $< ${TOP}.bak.config
 	ecpbram --input ${TOP}.bak.config --output ${TOP}.out.config --from ${TOP}.sram.hex --to ${SRAM_INITFILE}
 	ecppack --compress --freq 38.8 --input $< --bit $@
 	dfu-suffix -v 1209 -p 5af0 -a $@ &>/dev/null
