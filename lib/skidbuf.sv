@@ -23,8 +23,6 @@ module skidbuf (
 	,bsy_i
 );
 
-`include "lib/clog2.sv"
-
 parameter WIDTH       = 1;
 parameter DEPTH       = 2;
 parameter USEFWFTFIFO = 0;
