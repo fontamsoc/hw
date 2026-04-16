@@ -106,67 +106,53 @@ wire [CLOG2SLAVECOUNT -1 : 0] slvidx_plus_one = (slvidx + 1'b1);
 reg slvidx_rdy;
 reg slvidx_dflt;
 
-reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace [SLAVECOUNT];
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace [SLAVECOUNT]; // ### initial-block-reg.
 
-reg addrspace_rdy;
-
-reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_lo; // Also used to initialize addrspace.
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_lo;
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_hi;
 
-wire slvidx_not_max = (slvidx < (SLAVECOUNT-1));
-
 // Determine whether slvidx needs to be recomputed.
-wire slvidx_invalid = (!addrspace_rdy || (!slvidx_dflt &&
+wire slvidx_invalid = (!slvidx_dflt &&
 	!(m_wb_addr_i >= addrspace_slvidx_lo &&
-	  m_wb_addr_i <= addrspace_slvidx_hi)));
+	  m_wb_addr_i <= addrspace_slvidx_hi));
 
 wire _slvidx_invalid = (slvidx_invalid && !ack_pending);
 
-wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_nxt = (addrspace_slvidx_lo + _s_wb_mapsz_i[slvidx]);
-wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] _addrspace_slvidx_nxt = (addrspace_slvidx_nxt - 1'b1);
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] slvidx_dflt_lo; // ### initial-block-reg.
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] slvidx_dflt_hi; // ### initial-block-reg.
 
-reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] slvidx_dflt_lo;
-reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] slvidx_dflt_hi;
+initial begin
+	bit [(ADDRBITSZ-MSBSZIGN) -1 : 0] j, k, l, m;
+	j = FIRSTSLAVEADDR[CLOG2WORDBITSZBY8 +: (ADDRBITSZ-MSBSZIGN)];
+	for (int i = 0; i < SLAVECOUNT; ++i) begin
+		k = _s_wb_mapsz_i[i];
+		l = (j + k);
+		m = (l - 1'b1);
+		addrspace[i] = m;
+		if (i == DEFAULTSLAVEINDEX) begin
+			slvidx_dflt_lo = j;
+			slvidx_dflt_hi = m;
+		end
+		$display ("wb_mux: d%01d: 0x%08x: %01d", i,
+			{j, {CLOG2WORDBITSZBY8{1'b0}}},
+			{k, {CLOG2WORDBITSZBY8{1'b0}}});
+		j = l;
+	end
+end
 
 always_ff @(posedge clk_i) begin
-	// Logic which on reset computes addrspace
-	// using the size of each slave device mapping;
-	// and after reset computes slvidx using addrspace.
+	// Logic which computes slvidx using addrspace[].
 	if (rst_i) begin
 
 		addrspace_slvidx_lo <= FIRSTSLAVEADDR[CLOG2WORDBITSZBY8 +: (ADDRBITSZ-MSBSZIGN)];
+		addrspace_slvidx_hi <= addrspace[0];
 		slvidx <= 0;
 		slvidx_rdy <= 0;
 		slvidx_dflt <= 0;
-		addrspace_rdy <= 0;
-
-	end else if (!addrspace_rdy) begin
-		`ifdef _SIMULATION_WBMUX
-		$write ("wb_mux: %d: 0x%08x: 0x%08x\n",
-			slvidx, addrspace_slvidx_lo, _s_wb_mapsz_i[slvidx]);
-		$fflush();
-		`endif
-
-		if (slvidx_not_max) begin
-			addrspace_slvidx_lo <= addrspace_slvidx_nxt;
-			slvidx <= slvidx_plus_one;
-		end else begin
-			addrspace_slvidx_lo <= FIRSTSLAVEADDR[CLOG2WORDBITSZBY8 +: (ADDRBITSZ-MSBSZIGN)];
-			addrspace_slvidx_hi <= addrspace[0];
-			slvidx <= 0;
-			addrspace_rdy <= 1;
-			// Next state will be for:
-			// slvidx_rdy == 0 with slvidx == 0;
-			// That state will compute slvidx as though it was due to slvidx_invalid;
-			// this state set addrspace_slvidx_lo for the next state.
-		end
-
-		addrspace[slvidx] <= _addrspace_slvidx_nxt;
-
-		if (slvidx == DEFAULTSLAVEINDEX) begin
-			slvidx_dflt_lo <= addrspace_slvidx_lo;
-			slvidx_dflt_hi <= _addrspace_slvidx_nxt;
-		end
+		// Next state will be for:
+		// slvidx_rdy == 0 with slvidx == 0;
+		// That state will compute slvidx as though it was due to slvidx_invalid;
+		// this state set addrspace_slvidx_lo for the next state.
 
 	end else if (!slvidx_rdy && m_wb_addr_r == m_wb_addr_i) begin
 
@@ -174,7 +160,7 @@ always_ff @(posedge clk_i) begin
 
 			if (!slvidx_invalid)
 				slvidx_rdy <= 1;
-			else if (slvidx_not_max) begin
+			else if (slvidx < (SLAVECOUNT-1)) begin
 				addrspace_slvidx_lo <= addrspace[slvidx] + 1'b1;
 				addrspace_slvidx_hi <= addrspace[slvidx_plus_one];
 				slvidx <= slvidx_plus_one;
