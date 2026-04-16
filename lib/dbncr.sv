@@ -4,9 +4,7 @@
 `ifndef LIBDBNCR
 `define LIBDBNCR
 
-// Debouncer implementing a lowpass filter.
-// A lowpass filter does not let through signal
-// that changes too fast beyond a thresh_i.
+// Counter Based Debouncer.
 
 // Parameters.
 //
@@ -18,9 +16,6 @@
 // 	PowerOn initial state of the output "o".
 
 // Ports.
-//
-// input rst_i
-// 	Reset signal which set the output "o" to the input "i".
 //
 // input clk_i
 // 	Clock signal used to sample the input "i".
@@ -47,16 +42,12 @@
 //	otherwise it keeps its value.
 //
 // input[THRESBITSZ] thresh_i
-// 	Number of clockcycles for which the input "i" must be stable;
-// 	it is essentially the lowpass cutoff frequency when multiplied
-// 	by twice the input "clk_i" period and then inverted (ie: 1/x).
+// 	Number of clockcycles for which the input "i" must be stable.
 // 	When null, this module acts as a delay of one clock cycle.
 
 module dbncr (
 
-	 rst_i
-
-	,clk_i
+	 clk_i
 
 	,i
 	,o
@@ -67,25 +58,17 @@ module dbncr (
 parameter THRESBITSZ = 0;
 parameter INIT       = 1'b0;
 
-input wire rst_i;
-
 input wire clk_i;
 
-input  wire i;
-output reg  o = INIT;
+input wire i;
+output reg o = INIT;
 
 input wire [THRESBITSZ -1 : 0] thresh_i;
 
-// Register used to keep track of how many clockcycles the input "i" has been stable.
 reg [THRESBITSZ -1 : 0] cntr = 0;
 
-wire d = (i != o);
-
 always_ff @(posedge clk_i) begin
-	if (rst_i) begin
-		o <= i;
-		cntr <= 0;
-	end else if (d) begin
+	if (i != o) begin
 		if (cntr >= thresh_i) begin
 			o <= i;
 			cntr <= 0;

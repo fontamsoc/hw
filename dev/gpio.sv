@@ -194,8 +194,7 @@ dbncr  #(
 	 .THRESBITSZ (DBNCRBITSZ)
 	,.INIT       (1'b0)
 ) dbncr (
-	 .rst_i    (rst_i)
-	,.clk_i    (clk_i)
+	 .clk_i    (clk_i)
 	,.i        (i[gen_dbncr_idx])
 	,.o        (_i[gen_dbncr_idx])
 	,.thresh_i (dbncrthresh)
