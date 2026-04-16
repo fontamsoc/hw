@@ -9,6 +9,8 @@
 
 `include "lib/xc7pll_100_to_50_100_200.sv"
 
+`include "lib/rstbtnctrl.sv"
+
 `define PURV32M
 `define PUIMULDSP
 `define PUPREDICTJAL
@@ -76,19 +78,15 @@ wire clk_1x_w = clk50mhz;
 wire clk_2x_w = clk100mhz;
 wire clk_4x_w = clk200mhz;
 
-reg rst_hold = 1'b1; // Hold in reset until rst-button pressed.
-localparam RST_CNTR_BITSZ = 16;
-reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
-always @ (posedge clk_2x_w) begin
-	if (rst_n) begin
-		if (!rst_hold && rst_cntr)
-			rst_cntr <= rst_cntr - 1'b1;
-	end else begin
-		rst_hold <= 1'b0;
-		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
-	end
-end
-(* direct_reset = "true" *) wire rst_w = (!pll_locked || (|rst_cntr));
+(* direct_reset = "true" *) wire rst_w;
+rstbtnctrl #(
+	 .RSTDURATION (CLK2XFREQ/1000000) // 1us
+	,.RSTTHRESH   (4*CLK2XFREQ) // 4s
+) rstbtnctrl (
+	 .clk_i (clk_2x_w)
+	,.i     (~rst_n)
+	,.o     (rst_w)
+);
 
 localparam CPU_COUNT = `CPU_COUNT;
 

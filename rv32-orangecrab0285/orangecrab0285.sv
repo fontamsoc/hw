@@ -9,6 +9,8 @@
 
 `include "lib/ecp5pll.sv"
 
+`include "lib/rstbtnctrl.sv"
+
 `define PURV32M
 `define PUIMULDSP
 `define PUPREDICTJAL
@@ -89,19 +91,15 @@ ecp5pll #(
 wire clk48mhz = pll_clk_w[0];
 wire clk96mhz = pll_clk_w[1];
 
-reg rst_hold = 1'b1; // Hold in reset until rst-button pressed.
-localparam RST_CNTR_BITSZ = 15;
-reg [RST_CNTR_BITSZ -1 : 0] rst_cntr = {RST_CNTR_BITSZ{1'b1}};
-always @ (posedge clk48mhz) begin
-	if (usr_btn_n) begin
-		if (!rst_hold && rst_cntr)
-			rst_cntr <= rst_cntr - 1'b1;
-	end else begin
-		rst_hold <= 1'b0;
-		rst_cntr <= {RST_CNTR_BITSZ{1'b1}};
-	end
-end
-wire rst_w = (!pll_locked || (|rst_cntr));
+wire rst_w;
+rstbtnctrl #(
+	 .RSTDURATION (CLKFREQ48MHZ/1000000) // 1us
+	,.RSTTHRESH   (4*CLKFREQ48MHZ) // 4s
+) rstbtnctrl (
+	 .clk_i (clk48mhz)
+	,.i     (~usr_btn_n)
+	,.o     (rst_w)
+);
 
 localparam CPU_COUNT = `CPU_COUNT;
 
