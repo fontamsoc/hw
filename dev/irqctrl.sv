@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// 20250417 (c) William Fonkou Tambe
+// 20260420 (c) William Fonkou Tambe
 
 // Interrupt controller peripheral.
 // It dispatches an interrupt to a destination for which
@@ -146,8 +146,7 @@ localparam CLOG2IRQDSTCOUNT = clog2(IRQDSTCOUNT);
 localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
 localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
-// By convention, devices mapsz must be aligned to 128 bytes (1024 bits).
-localparam MAPSZ = 128;
+localparam MAPSZ = (WORDBITSZ/8);
 
 localparam MSBSZIGN = (WORDBITSZ-clog2(MAPSZ));
 
