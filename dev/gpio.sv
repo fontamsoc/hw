@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// 20250417 (c) William Fonkou Tambe
+// 20260420 (c) William Fonkou Tambe
 
 // GPIO peripheral.
 
 // The device provides IOs that can be configured as either input or output.
-// The first half of the device memory mapping is used to read/write IOs state
-// while, the second half is used to send commands to the device.
+// The first word of the device memory mapping is used to read/write IOs state
+// while the second word is used to send commands to the device.
 //
 // Commands sent to the device expect following format
 // | arg: (WORDBITSZ-1) bits | cmd: 1 bit | where the field "cmd" values
@@ -110,8 +110,7 @@ parameter DBNCRBITSZ = 8;
 localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
 localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
-// By convention, devices mapsz must be aligned to 128 bytes (1024 bits).
-localparam MAPSZ = 128;
+localparam MAPSZ = (2*(WORDBITSZ/8));
 
 localparam MSBSZIGN = (WORDBITSZ-clog2(MAPSZ));
 
@@ -164,9 +163,9 @@ localparam CMDSETDEBOUNCE = 1;
 
 reg [WORDBITSZ -1 : 0] wb_dat_o_;
 
-// Half the memory mapping is used to send/receive data,
-// while the other half is used to issue commands.
-localparam ISCMDBIT = (clog2(MAPSZ/2) - CLOG2WORDBITSZBY8);
+// The first word is used to send/receive data,
+// while the second word is used to issue commands.
+localparam ISCMDBIT = 0;
 
 wire iscmd = (!rst_i && wb_stb_r && wb_we_r && wb_addr_r[ISCMDBIT]);
 
