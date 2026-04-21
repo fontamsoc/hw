@@ -36,10 +36,10 @@ module wb_mux (
 parameter WORDBITSZ     = 32;
 parameter ADDRLIMIT     = 'h2000;
 parameter MAXPENDINGACK = 16; // Must be non-null and a power of 2.
-parameter SLAVECOUNT    = 1;
-parameter int SLAVES [SLAVECOUNT][2] = '{default: '{0, 0}};
+parameter SDEVCOUNT     = 1;
+parameter int SDEVS [SDEVCOUNT][2] = '{default: '{0, 0}};
 
-localparam CLOG2SLAVECOUNT  = clog2(SLAVECOUNT);
+localparam CLOG2SDEVCOUNT = clog2(SDEVCOUNT);
 
 localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
 localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
@@ -63,15 +63,15 @@ output wire                               m_wb_bsy_o;
 output wire                               m_wb_ack_o;
 output wire [WORDBITSZ -1 : 0]            m_wb_dat_o;
 
-output wire [(1 * SLAVECOUNT) -1 : 0]                    s_wb_stb_o;
-output wire [(1 * SLAVECOUNT) -1 : 0]                    s_wb_lock_o;
-output wire [(1 * SLAVECOUNT) -1 : 0]                    s_wb_we_o;
-output wire [((ADDRBITSZ-MSBSZIGN) * SLAVECOUNT) -1 : 0] s_wb_addr_o;
-output wire [((WORDBITSZ/8) * SLAVECOUNT) -1 : 0]        s_wb_sel_o;
-output wire [(WORDBITSZ * SLAVECOUNT) -1 : 0]            s_wb_dat_o;
-input  wire [(1 * SLAVECOUNT) -1 : 0]                    s_wb_bsy_i;
-input  wire [(1 * SLAVECOUNT) -1 : 0]                    s_wb_ack_i;
-input  wire [(WORDBITSZ * SLAVECOUNT) -1 : 0]            s_wb_dat_i;
+output wire [(1 * SDEVCOUNT) -1 : 0]                    s_wb_stb_o;
+output wire [(1 * SDEVCOUNT) -1 : 0]                    s_wb_lock_o;
+output wire [(1 * SDEVCOUNT) -1 : 0]                    s_wb_we_o;
+output wire [((ADDRBITSZ-MSBSZIGN) * SDEVCOUNT) -1 : 0] s_wb_addr_o;
+output wire [((WORDBITSZ/8) * SDEVCOUNT) -1 : 0]        s_wb_sel_o;
+output wire [(WORDBITSZ * SDEVCOUNT) -1 : 0]            s_wb_dat_o;
+input  wire [(1 * SDEVCOUNT) -1 : 0]                    s_wb_bsy_i;
+input  wire [(1 * SDEVCOUNT) -1 : 0]                    s_wb_ack_i;
+input  wire [(WORDBITSZ * SDEVCOUNT) -1 : 0]            s_wb_dat_i;
 
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] m_wb_addr_r;
 
@@ -89,16 +89,16 @@ always_ff @(posedge clk_i) begin
 		ack_pending <= ack_pending + 1'b1;
 end
 
-wire [WORDBITSZ -1 : 0] _s_wb_dat_i [SLAVECOUNT];
+wire [WORDBITSZ -1 : 0] _s_wb_dat_i [SDEVCOUNT];
 
-reg [CLOG2SLAVECOUNT -1 : 0] slvidx;
+reg [CLOG2SDEVCOUNT -1 : 0] slvidx;
 
-wire [CLOG2SLAVECOUNT -1 : 0] slvidx_nxt = (slvidx + 1'b1);
+wire [CLOG2SDEVCOUNT -1 : 0] slvidx_nxt = (slvidx + 1'b1);
 
 reg slvidx_rdy;
 reg slvidx_dflt;
 
-reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace [SLAVECOUNT][2]; // ### initial-block-reg.
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace [SDEVCOUNT][2]; // ### initial-block-reg.
 
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_lo;
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_hi;
@@ -111,10 +111,10 @@ wire slvidx_invalid = (!slvidx_dflt &&
 wire _slvidx_invalid = (slvidx_invalid && !ack_pending);
 
 initial begin
-	for (int i = 0; i < SLAVECOUNT; ++i) begin
+	for (int i = 0; i < SDEVCOUNT; ++i) begin
 		bit [(ADDRBITSZ-MSBSZIGN) -1 : 0] j, k;
-		j = SLAVES[i][0]>>CLOG2WORDBITSZBY8;
-		k = SLAVES[i][1]>>CLOG2WORDBITSZBY8;
+		j = SDEVS[i][0]>>CLOG2WORDBITSZBY8;
+		k = SDEVS[i][1]>>CLOG2WORDBITSZBY8;
 		k += !k; // Set k to 1 if null.
 		addrspace[i][0] = j;
 		addrspace[i][1] = (j+k-1);
@@ -137,11 +137,11 @@ always_ff @(posedge clk_i) begin
 		if (m_wb_stb_i) begin
 			if (!slvidx_invalid)
 				slvidx_rdy <= 1;
-			else if (slvidx < (SLAVECOUNT-1)) begin
+			else if (slvidx < (SDEVCOUNT-1)) begin
 				addrspace_slvidx_lo <= addrspace[slvidx_nxt][0];
 				addrspace_slvidx_hi <= addrspace[slvidx_nxt][1];
 				slvidx <= slvidx_nxt;
-				if (slvidx_nxt == (SLAVECOUNT-1)) begin
+				if (slvidx_nxt == (SDEVCOUNT-1)) begin
 					slvidx_rdy <= 1;
 					slvidx_dflt <= 1;
 				end
@@ -170,7 +170,7 @@ wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] s_wb_addr_o_ = (m_wb_addr_i - addrspace_slvid
 genvar gen_s_wb_idx;
 generate for (
 	gen_s_wb_idx = 0;
-	gen_s_wb_idx < SLAVECOUNT;
+	gen_s_wb_idx < SDEVCOUNT;
 	gen_s_wb_idx = gen_s_wb_idx + 1) begin :gen_s_wb
 
 assign s_wb_stb_o[gen_s_wb_idx] = ((slvidx != gen_s_wb_idx || slvidx_invalid || ack_pending[CLOG2MAXPENDINGACK]) ? 1'b0 : m_wb_stb_i);

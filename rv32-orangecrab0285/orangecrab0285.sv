@@ -110,10 +110,10 @@ localparam S_WBPI_SERIAL  = (S_WBPI_IRQCTRL + 1);
 localparam S_WBPI_SRAM    = (S_WBPI_SERIAL + 1);
 localparam S_WBPI_DEFAULT = (S_WBPI_SRAM + 1);
 
-localparam WBPI_MASTERCOUNT = (M_WBPI_LAST + 1);
-localparam WBPI_SLAVECOUNT  = (S_WBPI_DEFAULT + 1);
+localparam WBPI_MDEVCOUNT = (M_WBPI_LAST + 1);
+localparam WBPI_SDEVCOUNT = (S_WBPI_DEFAULT + 1);
 
-localparam int WBPI_SLAVES [WBPI_SLAVECOUNT][2] = '{
+localparam int WBPI_SDEVS [WBPI_SDEVCOUNT][2] = '{
 	S_WBPI_IRQCTRL: '{'hf00,  (WORDBITSZ/8)},
 	S_WBPI_SERIAL:  '{'hf80,  (2*(WORDBITSZ/8))},
 	S_WBPI_SRAM:    '{'h1000, (`SRAM_KBSIZE*1024)},
@@ -131,25 +131,25 @@ wire wbpi_rst_w = rst_w;
 wire wbpi_clk_w = clk48mhz;
 // The peripheral interconnect is instantiated in a separate file to keep this file clean.
 // Master devices must use the following signals to plug onto the peripheral interconnect:
-// 	input                                          m_wbpi_stb_w  [WBPI_MASTERCOUNT];
-// 	input                                          m_wbpi_lock_w [WBPI_MASTERCOUNT];
-// 	input                                          m_wbpi_we_w   [WBPI_MASTERCOUNT];
-// 	input  [(WBPI_ADDRBITSZ-WBPI_MSBSZIGN) -1 : 0] m_wbpi_addr_w [WBPI_MASTERCOUNT];
-// 	input  [(WBPI_WORDBITSZ/8) -1 : 0]             m_wbpi_sel_w  [WBPI_MASTERCOUNT];
-// 	input  [WBPI_WORDBITSZ -1 : 0]                 m_wbpi_dati_w [WBPI_MASTERCOUNT];
-// 	output                                         m_wbpi_bsy_w  [WBPI_MASTERCOUNT];
-// 	output                                         m_wbpi_ack_w  [WBPI_MASTERCOUNT];
-// 	output [WBPI_WORDBITSZ -1 : 0]                 m_wbpi_dato_w [WBPI_MASTERCOUNT];
+// 	input                                          m_wbpi_stb_w  [WBPI_MDEVCOUNT];
+// 	input                                          m_wbpi_lock_w [WBPI_MDEVCOUNT];
+// 	input                                          m_wbpi_we_w   [WBPI_MDEVCOUNT];
+// 	input  [(WBPI_ADDRBITSZ-WBPI_MSBSZIGN) -1 : 0] m_wbpi_addr_w [WBPI_MDEVCOUNT];
+// 	input  [(WBPI_WORDBITSZ/8) -1 : 0]             m_wbpi_sel_w  [WBPI_MDEVCOUNT];
+// 	input  [WBPI_WORDBITSZ -1 : 0]                 m_wbpi_dati_w [WBPI_MDEVCOUNT];
+// 	output                                         m_wbpi_bsy_w  [WBPI_MDEVCOUNT];
+// 	output                                         m_wbpi_ack_w  [WBPI_MDEVCOUNT];
+// 	output [WBPI_WORDBITSZ -1 : 0]                 m_wbpi_dato_w [WBPI_MDEVCOUNT];
 // Slave devices must use the following signals to plug onto the peripheral interconnect:
-// 	output                                         s_wbpi_stb_w  [WBPI_SLAVECOUNT];
-// 	output                                         s_wbpi_lock_w [WBPI_SLAVECOUNT];
-// 	output                                         s_wbpi_we_w   [WBPI_SLAVECOUNT];
-// 	output [(WBPI_ADDRBITSZ-WBPI_MSBSZIGN) -1 : 0] s_wbpi_addr_w [WBPI_SLAVECOUNT];
-// 	output [(WBPI_WORDBITSZ/8) -1 : 0]             s_wbpi_sel_w  [WBPI_SLAVECOUNT];
-// 	output [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dato_w [WBPI_SLAVECOUNT];
-// 	input                                          s_wbpi_bsy_w  [WBPI_SLAVECOUNT];
-// 	input                                          s_wbpi_ack_w  [WBPI_SLAVECOUNT];
-// 	input  [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dati_w [WBPI_SLAVECOUNT];
+// 	output                                         s_wbpi_stb_w  [WBPI_SDEVCOUNT];
+// 	output                                         s_wbpi_lock_w [WBPI_SDEVCOUNT];
+// 	output                                         s_wbpi_we_w   [WBPI_SDEVCOUNT];
+// 	output [(WBPI_ADDRBITSZ-WBPI_MSBSZIGN) -1 : 0] s_wbpi_addr_w [WBPI_SDEVCOUNT];
+// 	output [(WBPI_WORDBITSZ/8) -1 : 0]             s_wbpi_sel_w  [WBPI_SDEVCOUNT];
+// 	output [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dato_w [WBPI_SDEVCOUNT];
+// 	input                                          s_wbpi_bsy_w  [WBPI_SDEVCOUNT];
+// 	input                                          s_wbpi_ack_w  [WBPI_SDEVCOUNT];
+// 	input  [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dati_w [WBPI_SDEVCOUNT];
 `include "lib/wbpi_inst.sv"
 
 localparam IRQ_SERIAL = 0;

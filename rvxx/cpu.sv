@@ -212,7 +212,7 @@ generate if (PUCNT > 1) begin: gen_wb_arbiter
 wb_arbiter #(
 	 .WORDBITSZ     (XWORDBITSZ)
 	,.ADDRLIMIT     (ADDRLIMIT)
-	,.MASTERCOUNT   (PUCNT)
+	,.MDEVCOUNT     (PUCNT)
 	,.MAXPENDINGACK (MAXPENDINGACK)
 ) wb_arbiter (
 

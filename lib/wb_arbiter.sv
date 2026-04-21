@@ -37,10 +37,10 @@ module wb_arbiter (
 
 parameter WORDBITSZ     = 32;
 parameter ADDRLIMIT     = 'h2000;
-parameter MASTERCOUNT   = 1;
+parameter MDEVCOUNT     = 1;
 parameter MAXPENDINGACK = 16; // Must be non-null and a power of 2.
 
-localparam CLOG2MASTERCOUNT = clog2(MASTERCOUNT);
+localparam CLOG2MDEVCOUNT = clog2(MDEVCOUNT);
 
 localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
 localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
@@ -52,15 +52,15 @@ input wire rst_i;
 
 input wire clk_i;
 
-input  wire [(1 * MASTERCOUNT) -1 : 0]                    m_wb_stb_i;
-input  wire [(1 * MASTERCOUNT) -1 : 0]                    m_wb_lock_i;
-input  wire [(1 * MASTERCOUNT) -1 : 0]                    m_wb_we_i;
-input  wire [((ADDRBITSZ-MSBSZIGN) * MASTERCOUNT) -1 : 0] m_wb_addr_i;
-input  wire [((WORDBITSZ/8) * MASTERCOUNT) -1 : 0]        m_wb_sel_i;
-input  wire [(WORDBITSZ * MASTERCOUNT) -1 : 0]            m_wb_dat_i;
-output wire [(1 * MASTERCOUNT) -1 : 0]                    m_wb_bsy_o;
-output wire [(1 * MASTERCOUNT) -1 : 0]                    m_wb_ack_o;
-output wire [(WORDBITSZ * MASTERCOUNT) -1 : 0]            m_wb_dat_o;
+input  wire [(1 * MDEVCOUNT) -1 : 0]                    m_wb_stb_i;
+input  wire [(1 * MDEVCOUNT) -1 : 0]                    m_wb_lock_i;
+input  wire [(1 * MDEVCOUNT) -1 : 0]                    m_wb_we_i;
+input  wire [((ADDRBITSZ-MSBSZIGN) * MDEVCOUNT) -1 : 0] m_wb_addr_i;
+input  wire [((WORDBITSZ/8) * MDEVCOUNT) -1 : 0]        m_wb_sel_i;
+input  wire [(WORDBITSZ * MDEVCOUNT) -1 : 0]            m_wb_dat_i;
+output wire [(1 * MDEVCOUNT) -1 : 0]                    m_wb_bsy_o;
+output wire [(1 * MDEVCOUNT) -1 : 0]                    m_wb_ack_o;
+output wire [(WORDBITSZ * MDEVCOUNT) -1 : 0]            m_wb_dat_o;
 
 output wire                               s_wb_stb_o;
 output wire                               s_wb_lock_o;
@@ -72,17 +72,17 @@ input  wire                               s_wb_bsy_i;
 input  wire                               s_wb_ack_i;
 input  wire [WORDBITSZ -1 : 0]            s_wb_dat_i;
 
-reg [CLOG2MASTERCOUNT -1 : 0] mstridx;
+reg [CLOG2MDEVCOUNT -1 : 0] mstridx;
 
-wire [CLOG2MASTERCOUNT -1 : 0] slvidx;
+wire [CLOG2MDEVCOUNT -1 : 0] slvidx;
 
 wire _s_wb_stb_o = (s_wb_stb_o && !s_wb_bsy_i);
 
 wire pendingAcksFull;
 
-generate if (MASTERCOUNT > 1) begin
+generate if (MDEVCOUNT > 1) begin
 fifo_fwft #(
-	 .WIDTH (CLOG2MASTERCOUNT)
+	 .WIDTH (CLOG2MDEVCOUNT)
 	,.DEPTH (MAXPENDINGACK)
 ) pendingAcks (
 	 .rst_i (rst_i)
@@ -99,14 +99,14 @@ assign pendingAcksFull = 1'b0;
 assign slvidx = 0;
 end endgenerate
 
-wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] _m_wb_addr_i [MASTERCOUNT];
-wire [(WORDBITSZ/8) -1 : 0]        _m_wb_sel_i  [MASTERCOUNT];
-wire [WORDBITSZ -1 : 0]            _m_wb_dat_i  [MASTERCOUNT];
+wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] _m_wb_addr_i [MDEVCOUNT];
+wire [(WORDBITSZ/8) -1 : 0]        _m_wb_sel_i  [MDEVCOUNT];
+wire [WORDBITSZ -1 : 0]            _m_wb_dat_i  [MDEVCOUNT];
 
 genvar gen_m_wb_idx;
 generate for (
 	gen_m_wb_idx = 0;
-	gen_m_wb_idx < MASTERCOUNT;
+	gen_m_wb_idx < MDEVCOUNT;
 	gen_m_wb_idx = gen_m_wb_idx + 1) begin :gen_m_wb
 
 assign _m_wb_addr_i[gen_m_wb_idx] =
@@ -135,12 +135,12 @@ assign s_wb_addr_o = _m_wb_addr_i[mstridx];
 assign s_wb_sel_o = _m_wb_sel_i[mstridx];
 assign s_wb_dat_o = _m_wb_dat_i[mstridx];
 
-reg [CLOG2MASTERCOUNT -1 : 0] mstrlonxt;
-reg [CLOG2MASTERCOUNT -1 : 0] mstrloidx;
+reg [CLOG2MDEVCOUNT -1 : 0] mstrlonxt;
+reg [CLOG2MDEVCOUNT -1 : 0] mstrloidx;
 // Compute in mstrlonxt the active master with the lowest index.
 always_ff @(posedge clk_i) begin
-	if (MASTERCOUNT > 1) begin
-		if (rst_i || (mstrloidx == (MASTERCOUNT - 1)) || m_wb_stb_i[mstrloidx]) begin
+	if (MDEVCOUNT > 1) begin
+		if (rst_i || (mstrloidx == (MDEVCOUNT - 1)) || m_wb_stb_i[mstrloidx]) begin
 			if (m_wb_stb_i[mstrloidx])
 				mstrlonxt <= mstrloidx;
 			mstrloidx <= 0;
@@ -149,15 +149,15 @@ always_ff @(posedge clk_i) begin
 	end
 end
 
-reg [CLOG2MASTERCOUNT -1 : 0] mstrhinxt;
-reg [CLOG2MASTERCOUNT -1 : 0] mstrhiidx;
+reg [CLOG2MDEVCOUNT -1 : 0] mstrhinxt;
+reg [CLOG2MDEVCOUNT -1 : 0] mstrhiidx;
 // Compute in mstrhinxt the active master with the highest index.
 always_ff @(posedge clk_i) begin
-	if (MASTERCOUNT > 1) begin
+	if (MDEVCOUNT > 1) begin
 		if (rst_i || (mstrhiidx == 0) || m_wb_stb_i[mstrhiidx]) begin
 			if (m_wb_stb_i[mstrhiidx])
 				mstrhinxt <= mstrhiidx;
-			mstrhiidx <= (MASTERCOUNT - 1);
+			mstrhiidx <= (MDEVCOUNT - 1);
 		end else
 			mstrhiidx <= mstrhiidx - 1'b1;
 	end
@@ -166,7 +166,7 @@ end
 reg wb_lock;
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] wb_lock_addr;
 always_ff @(posedge clk_i) begin
-	if (MASTERCOUNT > 1) begin
+	if (MDEVCOUNT > 1) begin
 		if (rst_i)
 			wb_lock <= 1'b0;
 		else if (_s_wb_stb_o)
@@ -177,12 +177,12 @@ always_ff @(posedge clk_i) begin
 		wb_lock <= 1'b0;
 end
 
-reg [CLOG2MASTERCOUNT -1 : 0] mstrhi;
+reg [CLOG2MDEVCOUNT -1 : 0] mstrhi;
 // Logic that increments mstridx.
 always_ff @(posedge clk_i) begin
-	if (MASTERCOUNT > 1) begin
+	if (MDEVCOUNT > 1) begin
 		if (rst_i)
-			mstrhi <= (MASTERCOUNT - 1);
+			mstrhi <= (MDEVCOUNT - 1);
 		else if (!(wb_lock || _m_wb_stb_i)) begin
 			if (mstridx < mstrhi)
 				mstridx <= mstridx + 1'b1;
