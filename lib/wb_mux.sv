@@ -4,10 +4,6 @@
 `ifndef WB_MUX_V
 `define WB_MUX_V
 
-// Devices mapsz must be at a minimum aligned to WORDBITSZ, for s_wb_sel_o
-// to be valid since its values are wired as-is from m_wb_sel_i.
-// By convention, devices mapsz must be aligned to 128 bytes (1024 bits).
-
 module wb_mux (
 
 	 rst_i
@@ -33,17 +29,15 @@ module wb_mux (
 	,s_wb_bsy_i
 	,s_wb_ack_i
 	,s_wb_dat_i
-	,s_wb_mapsz_i
 );
 
 `include "lib/clog2.sv"
 
-parameter WORDBITSZ         = 32;
-parameter SLAVECOUNT        = 1;
-parameter DEFAULTSLAVEINDEX = 0;
-parameter FIRSTSLAVEADDR    = 0;
-parameter ADDRLIMIT         = 'h2000;
-parameter MAXPENDINGACK     = 16; // Must be non-null and a power of 2.
+parameter WORDBITSZ     = 32;
+parameter ADDRLIMIT     = 'h2000;
+parameter MAXPENDINGACK = 16; // Must be non-null and a power of 2.
+parameter SLAVECOUNT    = 1;
+parameter int SLAVES [SLAVECOUNT][2] = '{default: '{0, 0}};
 
 localparam CLOG2SLAVECOUNT  = clog2(SLAVECOUNT);
 
@@ -78,7 +72,6 @@ output wire [(WORDBITSZ * SLAVECOUNT) -1 : 0]            s_wb_dat_o;
 input  wire [(1 * SLAVECOUNT) -1 : 0]                    s_wb_bsy_i;
 input  wire [(1 * SLAVECOUNT) -1 : 0]                    s_wb_ack_i;
 input  wire [(WORDBITSZ * SLAVECOUNT) -1 : 0]            s_wb_dat_i;
-input  wire [((WORDBITSZ-MSBSZIGN) * SLAVECOUNT) -1 : 0] s_wb_mapsz_i;
 
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] m_wb_addr_r;
 
@@ -96,17 +89,16 @@ always_ff @(posedge clk_i) begin
 		ack_pending <= ack_pending + 1'b1;
 end
 
-wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] _s_wb_mapsz_i [SLAVECOUNT];
-wire [WORDBITSZ -1 : 0]            _s_wb_dat_i   [SLAVECOUNT];
+wire [WORDBITSZ -1 : 0] _s_wb_dat_i [SLAVECOUNT];
 
 reg [CLOG2SLAVECOUNT -1 : 0] slvidx;
 
-wire [CLOG2SLAVECOUNT -1 : 0] slvidx_plus_one = (slvidx + 1'b1);
+wire [CLOG2SLAVECOUNT -1 : 0] slvidx_nxt = (slvidx + 1'b1);
 
 reg slvidx_rdy;
 reg slvidx_dflt;
 
-reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace [SLAVECOUNT]; // ### initial-block-reg.
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace [SLAVECOUNT][2]; // ### initial-block-reg.
 
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_lo;
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_hi;
@@ -118,25 +110,14 @@ wire slvidx_invalid = (!slvidx_dflt &&
 
 wire _slvidx_invalid = (slvidx_invalid && !ack_pending);
 
-reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] slvidx_dflt_lo; // ### initial-block-reg.
-reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] slvidx_dflt_hi; // ### initial-block-reg.
-
 initial begin
-	bit [(ADDRBITSZ-MSBSZIGN) -1 : 0] j, k, l, m;
-	j = FIRSTSLAVEADDR[CLOG2WORDBITSZBY8 +: (ADDRBITSZ-MSBSZIGN)];
 	for (int i = 0; i < SLAVECOUNT; ++i) begin
-		k = _s_wb_mapsz_i[i];
-		l = (j + k);
-		m = (l - 1'b1);
-		addrspace[i] = m;
-		if (i == DEFAULTSLAVEINDEX) begin
-			slvidx_dflt_lo = j;
-			slvidx_dflt_hi = m;
-		end
-		$display ("wb_mux: d%01d: 0x%08x: %01d", i,
-			{j, {CLOG2WORDBITSZBY8{1'b0}}},
-			{k, {CLOG2WORDBITSZBY8{1'b0}}});
-		j = l;
+		bit [(ADDRBITSZ-MSBSZIGN) -1 : 0] j, k;
+		j = SLAVES[i][0]>>CLOG2WORDBITSZBY8;
+		k = SLAVES[i][1]>>CLOG2WORDBITSZBY8;
+		k += !k; // Set k to 1 if null.
+		addrspace[i][0] = j;
+		addrspace[i][1] = (j+k-1);
 	end
 end
 
@@ -144,39 +125,33 @@ always_ff @(posedge clk_i) begin
 	// Logic which computes slvidx using addrspace[].
 	if (rst_i) begin
 
-		addrspace_slvidx_lo <= FIRSTSLAVEADDR[CLOG2WORDBITSZBY8 +: (ADDRBITSZ-MSBSZIGN)];
-		addrspace_slvidx_hi <= addrspace[0];
+		addrspace_slvidx_lo <= addrspace[0][0];
+		addrspace_slvidx_hi <= addrspace[0][1];
 		slvidx <= 0;
 		slvidx_rdy <= 0;
 		slvidx_dflt <= 0;
-		// Next state will be for:
-		// slvidx_rdy == 0 with slvidx == 0;
-		// That state will compute slvidx as though it was due to slvidx_invalid;
-		// this state set addrspace_slvidx_lo for the next state.
+		// That state will compute slvidx as though it was due to slvidx_invalid.
 
 	end else if (!slvidx_rdy && m_wb_addr_r == m_wb_addr_i) begin
 
 		if (m_wb_stb_i) begin
-
 			if (!slvidx_invalid)
 				slvidx_rdy <= 1;
 			else if (slvidx < (SLAVECOUNT-1)) begin
-				addrspace_slvidx_lo <= addrspace[slvidx] + 1'b1;
-				addrspace_slvidx_hi <= addrspace[slvidx_plus_one];
-				slvidx <= slvidx_plus_one;
-			end else begin
-				addrspace_slvidx_lo <= slvidx_dflt_lo;
-				addrspace_slvidx_hi <= slvidx_dflt_hi;
-				slvidx <= DEFAULTSLAVEINDEX;
-				slvidx_rdy <= 1;
-				slvidx_dflt <= 1;
+				addrspace_slvidx_lo <= addrspace[slvidx_nxt][0];
+				addrspace_slvidx_hi <= addrspace[slvidx_nxt][1];
+				slvidx <= slvidx_nxt;
+				if (slvidx_nxt == (SLAVECOUNT-1)) begin
+					slvidx_rdy <= 1;
+					slvidx_dflt <= 1;
+				end
 			end
 		end
 
 	end else if (m_wb_stb_i && _slvidx_invalid) begin
 
-		addrspace_slvidx_lo <= FIRSTSLAVEADDR[CLOG2WORDBITSZBY8 +: (ADDRBITSZ-MSBSZIGN)];
-		addrspace_slvidx_hi <= addrspace[0];
+		addrspace_slvidx_lo <= addrspace[0][0];
+		addrspace_slvidx_hi <= addrspace[0][1];
 		slvidx <= 0;
 		slvidx_rdy <= 0;
 
@@ -205,7 +180,6 @@ assign s_wb_addr_o[(gen_s_wb_idx * (ADDRBITSZ-MSBSZIGN)) +: (ADDRBITSZ-MSBSZIGN)
 assign s_wb_sel_o[(gen_s_wb_idx * (WORDBITSZ/8)) +: (WORDBITSZ/8)] = m_wb_sel_i;
 assign s_wb_dat_o[(gen_s_wb_idx * WORDBITSZ) +: WORDBITSZ] = m_wb_dat_i;
 assign _s_wb_dat_i[gen_s_wb_idx] = s_wb_dat_i[(gen_s_wb_idx * WORDBITSZ) +: WORDBITSZ];
-assign _s_wb_mapsz_i[gen_s_wb_idx] = s_wb_mapsz_i[((gen_s_wb_idx * (WORDBITSZ-MSBSZIGN)) + CLOG2WORDBITSZBY8) +: (ADDRBITSZ-MSBSZIGN)];
 
 end endgenerate
 

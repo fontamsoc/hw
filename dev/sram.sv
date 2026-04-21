@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// (c) William Fonkou Tambe
+// 20260420 (c) William Fonkou Tambe
 
 // Static memory peripheral.
 
@@ -36,9 +36,6 @@
 // wb_ack_o
 // wb_dat_o
 // 	Slave memory interface.
-//
-// wb_mapsz_o
-// 	Memory map size in bytes.
 
 module sram (
 
@@ -54,7 +51,6 @@ module sram (
 	,wb_bsy_o
 	,wb_ack_o
 	,wb_dat_o
-	,wb_mapsz_o
 );
 
 `include "lib/clog2.sv"
@@ -84,7 +80,6 @@ input  wire [WORDBITSZ -1 : 0]            wb_dat_i;
 output wire                               wb_bsy_o;
 output reg                                wb_ack_o;
 output wire [WORDBITSZ -1 : 0]            wb_dat_o;
-output wire [(WORDBITSZ-MSBSZIGN) : 0]    wb_mapsz_o;
 
 localparam CLOG2DELAY = clog2(DELAY);
 
@@ -94,9 +89,6 @@ localparam CLOG2DELAY = clog2(DELAY);
 reg [(CLOG2DELAY +1) -1 : 0] cntr = 0;
 
 assign wb_bsy_o = |cntr;
-
-// By convention, devices mapsz must be aligned to 128 bytes (1024 bits).
-assign wb_mapsz_o = ((MAPSZ < 128) ? 128 : MAPSZ);
 
 reg [WORDBITSZ -1 : 0] ram [SIZE -1 : 0];
 

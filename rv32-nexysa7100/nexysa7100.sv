@@ -98,24 +98,29 @@ rstbtnctrl #(
 
 localparam CPU_COUNT = `CPU_COUNT;
 
-localparam M_WBPI_CPU        = 0;
-localparam M_WBPI_LAST       = M_WBPI_CPU;
-localparam S_WBPI_IRQCTRL    = 0;
-localparam S_WBPI_SERIAL     = (S_WBPI_IRQCTRL + 1);
-localparam S_WBPI_SRAM       = (S_WBPI_SERIAL + 1);
-localparam S_WBPI_INVALIDDEV = (S_WBPI_SRAM + 1);
+localparam M_WBPI_CPU     = 0;
+localparam M_WBPI_LAST    = M_WBPI_CPU;
+localparam S_WBPI_IRQCTRL = 0;
+localparam S_WBPI_SERIAL  = (S_WBPI_IRQCTRL + 1);
+localparam S_WBPI_SRAM    = (S_WBPI_SERIAL + 1);
+localparam S_WBPI_DEFAULT = (S_WBPI_SRAM + 1);
 
-localparam WBPI_MASTERCOUNT       = (M_WBPI_LAST + 1);
-localparam WBPI_SLAVECOUNT        = (S_WBPI_INVALIDDEV + 1);
-localparam WBPI_DEFAULTSLAVEINDEX = S_WBPI_INVALIDDEV;
-localparam WBPI_FIRSTSLAVEADDR    = /* set in such a way that S_WBPI_SRAM starts at 0x1000 */
-                                    ('h1000 - (128/*SERIAL_MAPSZ*/) - (128/*IRQCTRL_MAPSZ*/));
+localparam WBPI_MASTERCOUNT = (M_WBPI_LAST + 1);
+localparam WBPI_SLAVECOUNT  = (S_WBPI_DEFAULT + 1);
+
+localparam int WBPI_SLAVES [WBPI_SLAVECOUNT][2] = '{
+	S_WBPI_IRQCTRL: '{'hf00,  (WORDBITSZ/8)},
+	S_WBPI_SERIAL:  '{'hf80,  (2*(WORDBITSZ/8))},
+	S_WBPI_SRAM:    '{'h1000, (`SRAM_KBSIZE*1024)},
+	S_WBPI_DEFAULT: '{0, 0}
+};
+
 localparam WBPI_MAXPENDINGACK     = 32;
 localparam WBPI_DNSIZR            = 4'b0011;
 localparam WBPI_WORDBITSZ         = `XWORDBITSZ;
 localparam WBPI_CLOG2WORDBITSZBY8 = clog2(WBPI_WORDBITSZ/8);
 localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
-localparam WBPI_ADDRLIMIT         = ('h2000 + (`SRAM_KBSIZE * 1024));
+localparam WBPI_ADDRLIMIT         = ('h1000+(`SRAM_KBSIZE*1024));
 localparam WBPI_CLKFREQ           = CLK2XFREQ;
 wire wbpi_rst_w = rst_w;
 wire wbpi_clk_w = clk_2x_w;
@@ -131,16 +136,15 @@ wire wbpi_clk_w = clk_2x_w;
 // 	output                                         m_wbpi_ack_w  [WBPI_MASTERCOUNT];
 // 	output [WBPI_WORDBITSZ -1 : 0]                 m_wbpi_dato_w [WBPI_MASTERCOUNT];
 // Slave devices must use the following signals to plug onto the peripheral interconnect:
-// 	output                                         s_wbpi_stb_w   [WBPI_SLAVECOUNT];
-// 	output                                         s_wbpi_lock_w  [WBPI_SLAVECOUNT];
-// 	output                                         s_wbpi_we_w    [WBPI_SLAVECOUNT];
-// 	output [(WBPI_ADDRBITSZ-WBPI_MSBSZIGN) -1 : 0] s_wbpi_addr_w  [WBPI_SLAVECOUNT];
-// 	output [(WBPI_WORDBITSZ/8) -1 : 0]             s_wbpi_sel_w   [WBPI_SLAVECOUNT];
-// 	output [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dato_w  [WBPI_SLAVECOUNT];
-// 	input                                          s_wbpi_bsy_w   [WBPI_SLAVECOUNT];
-// 	input                                          s_wbpi_ack_w   [WBPI_SLAVECOUNT];
-// 	input  [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dati_w  [WBPI_SLAVECOUNT];
-// 	input  [(WBPI_WORDBITSZ-WBPI_MSBSZIGN) -1 : 0] s_wbpi_mapsz_w [WBPI_SLAVECOUNT];
+// 	output                                         s_wbpi_stb_w  [WBPI_SLAVECOUNT];
+// 	output                                         s_wbpi_lock_w [WBPI_SLAVECOUNT];
+// 	output                                         s_wbpi_we_w   [WBPI_SLAVECOUNT];
+// 	output [(WBPI_ADDRBITSZ-WBPI_MSBSZIGN) -1 : 0] s_wbpi_addr_w [WBPI_SLAVECOUNT];
+// 	output [(WBPI_WORDBITSZ/8) -1 : 0]             s_wbpi_sel_w  [WBPI_SLAVECOUNT];
+// 	output [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dato_w [WBPI_SLAVECOUNT];
+// 	input                                          s_wbpi_bsy_w  [WBPI_SLAVECOUNT];
+// 	input                                          s_wbpi_ack_w  [WBPI_SLAVECOUNT];
+// 	input  [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dati_w [WBPI_SLAVECOUNT];
 `include "lib/wbpi_inst.sv"
 
 localparam IRQ_SERIAL = 0;
@@ -206,7 +210,7 @@ cpu #(
 	,.rstaddr_i  ('h1000)
 	,.rstaddr2_i ('h1000)
 
-	,.spval_i ('h1000 + s_wbpi_mapsz_w[S_WBPI_SRAM])
+	,.spval_i ('h1000+(`SRAM_KBSIZE*1024))
 );
 
 irqctrl #(
@@ -227,7 +231,6 @@ irqctrl #(
 	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_IRQCTRL])
 	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_IRQCTRL])
 	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_IRQCTRL])
-	,.wb_mapsz_o (s_wbpi_mapsz_w[S_WBPI_IRQCTRL])
 
 	,.irq_dst_stb_o (irq_dst_stb_w0)
 	,.irq_dst_stb_i (irq_dst_stb_w1)
@@ -258,7 +261,6 @@ serial_uart #(
 	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_SERIAL])
 	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SERIAL])
 	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SERIAL])
-	,.wb_mapsz_o (s_wbpi_mapsz_w[S_WBPI_SERIAL])
 
 	,.irq_stb_o (irq_src_stb_w[IRQ_SERIAL])
 	,.irq_rdy_i (irq_src_rdy_w[IRQ_SERIAL])
@@ -285,13 +287,11 @@ sram #(
 	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_SRAM])
 	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SRAM])
 	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SRAM])
-	,.wb_mapsz_o (s_wbpi_mapsz_w[S_WBPI_SRAM])
 );
 
-// WBPI_DEFAULTSLAVEINDEX to catch invalid physical address space access.
-assign s_wbpi_bsy_w[S_WBPI_INVALIDDEV] = 0;
-assign s_wbpi_ack_w[S_WBPI_INVALIDDEV] = 0;
-assign s_wbpi_mapsz_w[S_WBPI_INVALIDDEV] = ('h1000/* 4KB */);
+// Catch invalid physical address space access.
+assign s_wbpi_bsy_w[S_WBPI_DEFAULT] = 0;
+assign s_wbpi_ack_w[S_WBPI_DEFAULT] = 0;
 
 genvar gen_cpu_dcache_miss_w_idx;
 generate for (
@@ -300,7 +300,7 @@ generate for (
 	gen_cpu_dcache_miss_w_idx = gen_cpu_dcache_miss_w_idx + 1) begin :gen_cpu_dcache_miss_w
 	wire [(WBPI_WORDBITSZ-WBPI_MSBSZIGN) -1 : 0] addr_w = cpu_dcache_addr_w[(gen_cpu_dcache_miss_w_idx*(WBPI_WORDBITSZ-WBPI_MSBSZIGN))+:(WBPI_WORDBITSZ-WBPI_MSBSZIGN)];
 assign cpu_dcache_miss_w[gen_cpu_dcache_miss_w_idx] = (
-	(addr_w < 'h1000) || (addr_w >= ('h1000 + s_wbpi_mapsz_w[S_WBPI_SRAM])));
+	(addr_w < 'h1000) || (addr_w >= ('h1000+(`SRAM_KBSIZE*1024))));
 end endgenerate
 
 endmodule

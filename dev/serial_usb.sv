@@ -42,9 +42,6 @@
 // wb_dat_o
 // 	Slave memory interface.
 //
-// wb_mapsz_o
-// 	Memory map size in bytes.
-//
 // irq_stb_o
 // 	This signal is set high to request an interrupt;
 // 	an interrupt is raised if enabled and the receive
@@ -76,7 +73,6 @@ module serial_usb (
 	,wb_bsy_o
 	,wb_ack_o
 	,wb_dat_o
-	,wb_mapsz_o
 
 	,irq_stb_o
 	,irq_rdy_i
@@ -121,15 +117,12 @@ input  wire [WORDBITSZ -1 : 0]            wb_dat_i;
 output wire                               wb_bsy_o;
 output reg                                wb_ack_o;
 output wire [WORDBITSZ -1 : 0]            wb_dat_o;
-output wire [(WORDBITSZ-MSBSZIGN) : 0]    wb_mapsz_o;
 
 output wire irq_stb_o;
 input  wire irq_rdy_i;
 
 inout wire usb_dp_io;
 inout wire usb_dn_io;
-
-assign wb_mapsz_o = MAPSZ;
 
 reg                               wb_stb_r;
 reg                               wb_we_r;
