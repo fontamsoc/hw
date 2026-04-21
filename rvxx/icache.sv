@@ -36,8 +36,6 @@ parameter SETCNT = 2;
 parameter TAGBITSZ = 1;
 parameter DATBITSZ = 1;
 
-parameter NO_RW_CHECK = 0;
-
 localparam CLOG2WAYCNT = clog2(WAYCNT);
 localparam CLOG2SETCNT = clog2(SETCNT);
 
@@ -138,7 +136,7 @@ wire __we_i = (_we_i && waywidx == gen_ways_idx);
 bram #(
 	 .SZ (SETCNT)
 	,.DW (TAGBITSZ)
-	,.NO_RW_CHECK (NO_RW_CHECK)
+	,.NO_RW_CHECK (1)
 ) tags (
 	 .clk0_i  (clk_i)
 	,.en0_i   (re_i)
@@ -154,7 +152,7 @@ bram #(
 bram #(
 	 .SZ (SETCNT)
 	,.DW (DATBITSZ)
-	,.NO_RW_CHECK (NO_RW_CHECK)
+	,.NO_RW_CHECK (1)
 ) dats (
 	 .clk0_i  (clk_i)
 	,.en0_i   (re_i)
@@ -170,7 +168,7 @@ bram #(
 bram #(
 	 .SZ (SETCNT)
 	,.DW (1)
-	,.NO_RW_CHECK (NO_RW_CHECK)
+	,.NO_RW_CHECK (1)
 ) vlds (
 	 .clk0_i  (clk_i)
 	,.en0_i   (re_i)
