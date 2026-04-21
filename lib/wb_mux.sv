@@ -37,7 +37,7 @@ parameter WORDBITSZ     = 32;
 parameter ADDRLIMIT     = 'h2000;
 parameter MAXPENDINGACK = 16; // Must be non-null and a power of 2.
 parameter SDEVCOUNT     = 1;
-parameter int SDEVS [SDEVCOUNT][2] = '{default: '{0, 0}};
+parameter [0:(SDEVCOUNT*2*32)-1] SDEVS = 0;
 
 localparam CLOG2SDEVCOUNT = clog2(SDEVCOUNT);
 
@@ -113,8 +113,8 @@ wire _slvidx_invalid = (slvidx_invalid && !ack_pending);
 initial begin
 	for (int i = 0; i < SDEVCOUNT; ++i) begin
 		bit [(ADDRBITSZ-MSBSZIGN) -1 : 0] j, k;
-		j = SDEVS[i][0]>>CLOG2WORDBITSZBY8;
-		k = SDEVS[i][1]>>CLOG2WORDBITSZBY8;
+		j = 32'(SDEVS[(i*2*32)+:32])>>CLOG2WORDBITSZBY8;
+		k = 32'(SDEVS[(((i*2)+1)*32)+:32])>>CLOG2WORDBITSZBY8;
 		k += !k; // Set k to 1 if null.
 		addrspace[i][0] = j;
 		addrspace[i][1] = (j+k-1);

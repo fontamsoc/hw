@@ -108,12 +108,11 @@ localparam S_WBPI_DEFAULT = (S_WBPI_SRAM + 1);
 localparam WBPI_MDEVCOUNT = (M_WBPI_LAST + 1);
 localparam WBPI_SDEVCOUNT = (S_WBPI_DEFAULT + 1);
 
-localparam int WBPI_SDEVS [WBPI_SDEVCOUNT][2] = '{
-	S_WBPI_IRQCTRL: '{'hf00,  (WORDBITSZ/8)},
-	S_WBPI_SERIAL:  '{'hf80,  (2*(WORDBITSZ/8))},
-	S_WBPI_SRAM:    '{'h1000, (`SRAM_KBSIZE*1024)},
-	S_WBPI_DEFAULT: '{0, 0}
-};
+localparam [0:(WBPI_SDEVCOUNT*2*32)-1] WBPI_SDEVS = {
+	/* S_WBPI_IRQCTRL */ 32'hf00,  32'(WORDBITSZ/8),
+	/* S_WBPI_SERIAL  */ 32'hf80,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_SRAM    */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
+	/* S_WBPI_DEFAULT */ 32'h0,    32'h0};
 
 localparam WBPI_MAXPENDINGACK     = 32;
 localparam WBPI_DNSIZR            = 4'b0011;
