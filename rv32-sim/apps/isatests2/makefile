@@ -117,6 +117,7 @@ ${APPNAME}.256.hex: ${APPNAME}.bin
 ${APPNAME}.bin: ${APPNAME}.S ${TESTS_OBJS}
 	${CC} ${CFLAGS} -I ./ -o ${APPNAME}.elf -Wl,-T${APPNAME}.lds $^
 	${OBJCOPY} -O binary --set-section-flags .bss=alloc,load,contents ${APPNAME}.elf $@
+	chmod -x ${APPNAME}.elf $@
 	$(OBJDUMP) -Sdrl ${APPNAME}.elf > ${APPNAME}.elf.objdump
 	${READELF} -a ${APPNAME}.elf > ${APPNAME}.elf.readelf
 

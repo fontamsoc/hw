@@ -43,6 +43,7 @@ ${APPNAME}.256.hex: ${APPNAME}.bin
 ${APPNAME}.bin: ${APPNAME}.c
 	${CC} ${CFLAGS} -I ./ -o ${APPNAME}.elf $<
 	${OBJCOPY} -O binary ${APPNAME}.elf $@
+	chmod -x ${APPNAME}.elf $@
 	$(OBJDUMP) -Sdrl ${APPNAME}.elf > ${APPNAME}.elf.objdump
 	${READELF} -a ${APPNAME}.elf > ${APPNAME}.elf.readelf
 

@@ -76,6 +76,7 @@ PORT_CLEAN = *$(OEXT) ${OPATH}*.su ${OPATH}*.bin ${OPATH}*.objdump ${OPATH}*.rea
 port_pre% port_post% :
 port_postbuild:
 	$(OBJCOPY) -O binary ${OPATH}coremark$(EXE) ${OPATH}coremark.bin
+	chmod -x ${OPATH}coremark$(EXE) ${OPATH}coremark.bin
 	$(OBJDUMP) -Sdrl ${OPATH}coremark$(EXE) > ${OPATH}coremark$(EXE).objdump
 	$(READELF) -a ${OPATH}coremark$(EXE) > ${OPATH}coremark$(EXE).readelf
 	truncate --size=%4 ${OPATH}coremark.bin
