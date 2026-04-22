@@ -167,7 +167,7 @@ cpu #(
 	,.spval_i ('h1000+(`SRAM_KBSIZE*1024))
 );
 
-// Logic used by sim_use_vcd verilator testbench.
+// Logic used by verilator.
 wire [WORDBITSZ -1 : 0] pc_w [CPU_COUNT -1 : 0] /* verilator public */;
 genvar gen_pc_w_idx;
 generate for (gen_pc_w_idx = 0; gen_pc_w_idx < CPU_COUNT; gen_pc_w_idx = gen_pc_w_idx + 1) begin :gen_pc_w

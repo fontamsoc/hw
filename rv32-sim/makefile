@@ -9,17 +9,17 @@ XWORDBITSZ ?= 32
 SRAM_KBSIZE ?= "(256/*KB*/)"
 SRAM_INITFILE ?= apps/helloworld/helloworld.${XWORDBITSZ}.hex
 
-# Used only by target sim_vcd:
-#VCDTRACE_BEGIN
+# Used only by target sim_trace:
+#TRACE_BEGIN
 
 .PHONY: sim
 sim:
 	make TB=sim obj_dir/Vsim
 
-.PHONY: sim_vcd
-sim_vcd:
-	@make TB=sim_vcd \
-		TBFLAGS="--trace --trace-underscore $${VCDTRACE_BEGIN:+-CFLAGS -DVCDTRACE_BEGIN=$${VCDTRACE_BEGIN}}" \
+.PHONY: sim_trace
+sim_trace:
+	@make TB=sim_trace \
+		TBFLAGS="--trace --trace-underscore $${TRACE_BEGIN:+-CFLAGS -DTRACE_BEGIN=$${TRACE_BEGIN}}" \
 		obj_dir/Vsim
 
 obj_dir/Vsim: sim.sv ${TB}.cpp

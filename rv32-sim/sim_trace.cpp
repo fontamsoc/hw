@@ -6,16 +6,16 @@
 #include "Vsim.h"
 #include "Vsim_sim.h"
 
-#define USE_VCDTRACE
-#if defined(USE_VCDTRACE)
+#define USE_TRACE
+#if defined(USE_TRACE)
 #include "verilated_vcd_c.h"
-#if !defined(VCDTRACE_BEGIN)
-/* makefile defined *///#define VCDTRACE_BEGIN (4000000*0)
+#if !defined(TRACE_BEGIN)
+/* makefile defined *///#define TRACE_BEGIN (4000000*0)
 #endif
-#if !defined(VCDTRACE_LEN)
-#define VCDTRACE_LEN 4000000
+#if !defined(TRACE_LEN)
+#define TRACE_LEN 4000000
 #endif
-//#define VCDDUMPTHRESH0 (/*0x763fa*/0xffffffff) /* tb->sim->pc_w[0] value which sets vcdDumpBegin non-null */
+//#define TRACE_DUMP_THRESH0 (/*0x763fa*/0xffffffff) /* tb->sim->pc_w[0] value which sets traceDumpBegin non-null */
 #endif
 
 int main (int argc, char **argv) {
@@ -25,16 +25,16 @@ int main (int argc, char **argv) {
 	// Create an instance of our module under test
 	Vsim *tb = new Vsim;
 
-	#if defined(USE_VCDTRACE)
+	#if defined(USE_TRACE)
 	Verilated::traceEverOn(true);
-	VerilatedVcdC* vcdtrace = new VerilatedVcdC;
-	tb->trace(vcdtrace, 99); // Trace 99 levels of hierarchy
-	vcdtrace->open("sim.vcd");
+	VerilatedVcdC* traceObj = new VerilatedVcdC;
+	tb->trace(traceObj, 99); // Trace 99 levels of hierarchy
+	traceObj->open("sim.vcd");
 
 	uintptr_t tickCnt = 0;
-	uintptr_t vcdDumpBegin = 0;
+	uintptr_t traceDumpBegin = 0;
 
-	#if defined(VCDDUMPTHRESH0)
+	#if defined(TRACE_DUMP_THRESH0)
 	uintptr_t sim_pc_w_0_saved;
 	uintptr_t sim_pc_w_0_prev = 0;
 	uintptr_t thresh0FoundCnt = 0;
@@ -42,44 +42,44 @@ int main (int argc, char **argv) {
 	#endif
 
 	auto exitsim = [&]() -> void {
-		#if defined(USE_VCDTRACE)
-		vcdtrace->close();
+		#if defined(USE_TRACE)
+		traceObj->close();
 		#endif
 		exit(0);
 	};
 
 	auto tickclk = [&]() -> void {
-		#if defined(VCDDUMPTHRESH0) && defined(USE_VCDTRACE)
+		#if defined(TRACE_DUMP_THRESH0) && defined(USE_TRACE)
 		sim_pc_w_0_saved = tb->sim->pc_w[0];
 		#endif
 		tb->clk_i = 0;
 		tb->eval();
-		#if defined(USE_VCDTRACE)
-		if (vcdDumpBegin)
-			vcdtrace->dump(tickCnt);
+		#if defined(USE_TRACE)
+		if (traceDumpBegin)
+			traceObj->dump(tickCnt);
 		++tickCnt;
 		#endif
 		tb->clk_i = 1;
 		tb->eval();
-		#if defined(USE_VCDTRACE)
-		if (vcdDumpBegin)
-			vcdtrace->dump(tickCnt);
+		#if defined(USE_TRACE)
+		if (traceDumpBegin)
+			traceObj->dump(tickCnt);
 		++tickCnt;
 		#endif
-		#if defined(USE_VCDTRACE)
-		#if defined(VCDTRACE_BEGIN)
-		if (!vcdDumpBegin && tickCnt >= (VCDTRACE_BEGIN)) {
-			fprintf (stderr, "vcdDumpBegin(%lu)\n", tickCnt); fflush(stderr);
-			vcdDumpBegin = tickCnt;
+		#if defined(USE_TRACE)
+		#if defined(TRACE_BEGIN)
+		if (!traceDumpBegin && tickCnt >= (TRACE_BEGIN)) {
+			fprintf (stderr, "traceDumpBegin(%lu)\n", tickCnt); fflush(stderr);
+			traceDumpBegin = tickCnt;
 		}
 		#endif
-		if (!vcdDumpBegin) {
-			#if defined(VCDDUMPTHRESH0)
+		if (!traceDumpBegin) {
+			#if defined(TRACE_DUMP_THRESH0)
 			bool pc0Changed = (sim_pc_w_0_saved != sim_pc_w_0_prev);
-			if (pc0Changed && sim_pc_w_0_saved == VCDDUMPTHRESH0 && thresh0FoundCnt++ == 0) {
+			if (pc0Changed && sim_pc_w_0_saved == TRACE_DUMP_THRESH0 && thresh0FoundCnt++ == 0) {
 				fprintf (stderr, "sim_pc_w_0_saved(0x%lx); tickCnt(%lu)\n",
 					sim_pc_w_0_saved, tickCnt); fflush(stderr);
-				vcdDumpBegin = tickCnt;
+				traceDumpBegin = tickCnt;
 			}
 			//if (pc0Changed && sim_pc_w_0_saved >= 0x50000000) {
 			//	fprintf (stderr, "0x%lx\n",  (sim_pc_w_0_saved)); fflush(stderr);
@@ -109,14 +109,14 @@ int main (int argc, char **argv) {
 
 	// Tick the clock until we are done
 	while (!Verilated::gotFinish()
-		#if defined(USE_VCDTRACE)
-		&& (!vcdDumpBegin ||
-			/* remaining tickCnt to run after vcdDumpBegin is set non-null */
-			(tickCnt < (vcdDumpBegin + VCDTRACE_LEN)))
+		#if defined(USE_TRACE)
+		&& (!traceDumpBegin ||
+			/* remaining tickCnt to run after traceDumpBegin is set non-null */
+			(tickCnt < (traceDumpBegin + TRACE_LEN)))
 		#endif
 		) tickclk();
 
-	#if defined(USE_VCDTRACE)
+	#if defined(USE_TRACE)
 	fprintf (stderr, "tickCnt(%lu)\n", tickCnt); fflush(stderr);
 	#endif
 
