@@ -1,4 +1,4 @@
-# Risc-V Processing Unit
+# RISC-V Processing Unit
 
 Single-issue in-order 4 stages pipeline with branch-JAL-RET-prediction (BHT: 4096 entries, RAS: 8 entries).
 The stages are IF (Fetch) ID (Decode) EX (Execute) WB (WriteBack).
