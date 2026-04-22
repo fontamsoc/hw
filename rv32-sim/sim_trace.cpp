@@ -8,7 +8,7 @@
 
 #define USE_TRACE
 #if defined(USE_TRACE)
-#include "verilated_vcd_c.h"
+#include "verilated_fst_c.h"
 #if !defined(TRACE_BEGIN)
 /* makefile defined *///#define TRACE_BEGIN (4000000*0)
 #endif
@@ -27,9 +27,9 @@ int main (int argc, char **argv) {
 
 	#if defined(USE_TRACE)
 	Verilated::traceEverOn(true);
-	VerilatedVcdC* traceObj = new VerilatedVcdC;
+	VerilatedFstC* traceObj = new VerilatedFstC;
 	tb->trace(traceObj, 99); // Trace 99 levels of hierarchy
-	traceObj->open("sim.vcd");
+	traceObj->open("sim.fst");
 
 	uintptr_t tickCnt = 0;
 	uintptr_t traceDumpBegin = 0;

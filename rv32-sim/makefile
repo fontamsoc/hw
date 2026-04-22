@@ -19,8 +19,8 @@ sim:
 .PHONY: sim_trace
 sim_trace:
 	@make TB=sim_trace \
-		TBFLAGS="--trace --trace-underscore $${TRACE_BEGIN:+-CFLAGS -DTRACE_BEGIN=$${TRACE_BEGIN}}" \
-		obj_dir/Vsim
+		TBFLAGS="--trace-fst --trace-threads 2 --trace-underscore $${TRACE_BEGIN:+-CFLAGS -DTRACE_BEGIN=$${TRACE_BEGIN}}" \
+		obj_dir/Vsim # Maximum of 2 threads recommended for FST.
 
 obj_dir/Vsim: sim.sv ${TB}.cpp
 	@verilator --version &>${BUILD_LOG_FILE}
@@ -41,4 +41,4 @@ run:
 
 .PHONY: clean
 clean:
-	rm -rf obj_dir *.vcd *.log
+	rm -rf obj_dir *.fst *.log

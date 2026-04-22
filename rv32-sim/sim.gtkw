@@ -2,7 +2,7 @@
 [*] GTKWave Analyzer v3.3.116 (w)1999-2023 BSI
 [*] Fri Apr 10 15:08:52 2026
 [*]
-[dumpfile] "/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/sim.vcd"
+[dumpfile] "/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/sim.fst"
 [dumpfile_mtime] "Wed Apr  8 16:31:58 2026"
 [dumpfile_size] 10123194992
 [savefile] "/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/sim.gtkw"
