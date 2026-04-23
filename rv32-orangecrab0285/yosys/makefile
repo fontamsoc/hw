@@ -8,14 +8,14 @@ XWORDBITSZ ?= 32
 SRAM_KBSIZE ?= 256
 SRAM_INITFILE ?= ../../rv32-sim/apps/coremark/rv32/coremark.${XWORDBITSZ}.hex
 
-RETRY_COUNT ?= 5
+RETRY_COUNT ?= 10
 
 .PHONY: all
 all: ${TOP}.dfu
 
 .PHONY: updsram
 updsram: ${TOP}.sram.hex ${TOP}.bak.config
-	ecpbram --input ${TOP}.bak.config --output ${TOP}.out.config --from ${TOP}.sram.hex --to ${SRAM_INITFILE}
+	ecpbram --from ${TOP}.sram.hex --to ${SRAM_INITFILE} --input ${TOP}.bak.config --output ${TOP}.out.config
 	ecppack --compress --freq 38.8 --input ${TOP}.out.config --bit ${TOP}.dfu
 	dfu-suffix -v 1209 -p 5af0 -a ${TOP}.dfu &>/dev/null
 	@rm ${TOP}.out.config
@@ -35,7 +35,7 @@ updsram: ${TOP}.sram.hex ${TOP}.bak.config
 	@rm -rf abc.history # empty file that gets created sometime.
 %.dfu: %.out.config
 	@mv $< ${TOP}.bak.config
-	ecpbram --input ${TOP}.bak.config --output ${TOP}.out.config --from ${TOP}.sram.hex --to ${SRAM_INITFILE}
+	ecpbram --from ${TOP}.sram.hex --to ${SRAM_INITFILE} --input ${TOP}.bak.config --output ${TOP}.out.config
 	ecppack --compress --freq 38.8 --input $< --bit $@
 	dfu-suffix -v 1209 -p 5af0 -a $@ &>/dev/null
 
