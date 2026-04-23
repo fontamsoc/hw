@@ -35,7 +35,7 @@ output reg [DW-1:0]        o1;
 
 generate if (NO_RW_CHECK) begin: gen_no_rw_check
 
-(* no_rw_check, ramstyle = "no_rw_check", ram_style = "no_rw_check" *)
+(* no_rw_check, ramstyle = "no_rw_check" *)
 reg [DW-1:0] u [SZ];
 
 `ifdef SIMULATION
