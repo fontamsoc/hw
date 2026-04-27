@@ -5,9 +5,13 @@
 // https://docs.zephyrproject.org/latest/samples/arch/smp/pi/README.html
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <_os.h>
+
+// Size in bytes of threads' stack.
+#define THREADS_STACKSZ 2048
 
 // Amount of execution threads to create and run.
 #define THREADS_NUM 16
@@ -76,6 +80,8 @@ void main (void) {
 
 	uintptr_t ncpu = _ncpu();
 
+	void *threads_stack = malloc(THREADS_NUM*THREADS_STACKSZ);
+
 	// Prevent context switch until all threads have been scheduled.
 	_preempt_disable();
 
@@ -84,7 +90,8 @@ void main (void) {
 
 	for (uintptr_t i = 0; i < THREADS_NUM; ++i) {
 		_thread_schedoncpu(
-			_thread_create(0, 2048, thrd_fn, (void *)i),
+			_thread_create(threads_stack+(i*THREADS_STACKSZ), THREADS_STACKSZ,
+				thrd_fn, (void *)i),
 			// Try to use a cpu other than _cpuid() to immediately start computing.
 			((_cpuid() + i + 1) % ncpu), false);
 	}
