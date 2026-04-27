@@ -323,7 +323,12 @@ void render(int x, int y, float* r, float* g, float* b) {
 
 #ifdef __underLineOS__
 
+#include <stdlib.h>
+
 #include <_os.h>
+
+// Size in bytes of threads' stack.
+#define THREADS_STACKSZ 2048
 
 #define NTHRD_MIN 1
 
@@ -361,13 +366,15 @@ int main() {
 		(ncpu < NTHRD_MIN) ? NTHRD_MIN :
 		((ncpu < (GL_height/2)) ? ncpu : (GL_height/2));
 	_xchg(&busy_cntr, nthrd);
+	void *threads_stack = malloc(nthrd*THREADS_STACKSZ);
 	// Prevent context switch until all threads have been scheduled.
 	_preempt_disable();
 	// Capture start timestamp.
 	_date_t start_time = _clkcycles();
 	for (uintptr_t i = 0; i < nthrd; ++i) {
 		_thread_schedoncpu(
-			_thread_create(0, 2048, scan_RGBf_thrd_fn, 0),
+			_thread_create(threads_stack+(i*THREADS_STACKSZ), THREADS_STACKSZ,
+				scan_RGBf_thrd_fn, 0),
 			// Try to use a cpu other than _cpuid() to immediately start computing.
 			((_cpuid() + i + 1) % ncpu), false);
 	}
