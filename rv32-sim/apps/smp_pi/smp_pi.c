@@ -93,7 +93,7 @@ void main (void) {
 			_thread_create(threads_stack+(i*THREADS_STACKSZ), THREADS_STACKSZ,
 				thrd_fn, (void *)i),
 			// Try to use a cpu other than _cpuid() to immediately start computing.
-			((_cpuid() + i + 1) % ncpu), false);
+			((_cpuid() + i + 1) % ncpu), true);
 	}
 
 	// Wait for all workers to finish their calculations.
