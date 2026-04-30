@@ -16,30 +16,7 @@ CFLAGS += -D__underLineOS__=1
 APPNAME := tinyraytracer
 
 .PHONY: all
-all: ${APPNAME}.32.hex ${APPNAME}.64.hex ${APPNAME}.128.hex ${APPNAME}.256.hex
-
-#${APPNAME}.16.hex: ${APPNAME}.bin
-#	truncate --size=%2 $<
-#	hexdump -v -e '/2 "%04x "' $< > $@ # 16bits.
-
-${APPNAME}.32.hex: ${APPNAME}.bin
-	truncate --size=%4 $<
-	hexdump -v -e '/4 "%08x "' $< > $@ # 32bits.
-
-${APPNAME}.64.hex: ${APPNAME}.bin
-	truncate --size=%8 $<
-	hexdump -v -e '/4 "%08x "' $< | \
-		{ while IFS=' ' read -n 18 V0 V1; do echo -n "$$V1$$V0 "; done; } > $@ # 64bits.
-
-${APPNAME}.128.hex: ${APPNAME}.bin
-	truncate --size=%16 $<
-	hexdump -v -e '/4 "%08x "' $< | \
-		{ while IFS=' ' read -n 36 V0 V1 V2 V3; do echo -n "$$V3$$V2$$V1$$V0 "; done; } > $@ # 128bits.
-
-${APPNAME}.256.hex: ${APPNAME}.bin
-	truncate --size=%32 $<
-	hexdump -v -e '/4 "%08x "' $< | \
-		{ while IFS=' ' read -n 72 V0 V1 V2 V3 V4 V5 V6 V7; do echo -n "$$V7$$V6$$V5$$V4$$V3$$V2$$V1$$V0 "; done; } > $@ # 256bits.
+all: ${APPNAME}.bin
 
 ${APPNAME}.bin: ${APPNAME}.c
 	${CC} ${CFLAGS} -I ./ -o ${APPNAME}.elf $< -lm
@@ -47,6 +24,19 @@ ${APPNAME}.bin: ${APPNAME}.c
 	chmod -x ${APPNAME}.elf $@
 	$(OBJDUMP) -Sdrl ${APPNAME}.elf > ${APPNAME}.elf.objdump
 	${READELF} -a ${APPNAME}.elf > ${APPNAME}.elf.readelf
+	#truncate --size=%2 ${APPNAME}.bin
+	#hexdump -v -e '/2 "%04x "' ${APPNAME}.bin > ${APPNAME}.16.hex # 16bits.
+	truncate --size=%4 ${APPNAME}.bin
+	hexdump -v -e '/4 "%08x "' ${APPNAME}.bin > ${APPNAME}.32.hex # 32bits.
+	truncate --size=%8 ${APPNAME}.bin
+	hexdump -v -e '/4 "%08x "' ${APPNAME}.bin | \
+		{ while IFS=' ' read -n 18 V0 V1; do echo -n "$$V1$$V0 "; done; } > ${APPNAME}.64.hex # 64bits.
+	truncate --size=%16 ${APPNAME}.bin
+	hexdump -v -e '/4 "%08x "' ${APPNAME}.bin | \
+		{ while IFS=' ' read -n 36 V0 V1 V2 V3; do echo -n "$$V3$$V2$$V1$$V0 "; done; } > ${APPNAME}.128.hex # 128bits.
+	truncate --size=%32 ${APPNAME}.bin
+	hexdump -v -e '/4 "%08x "' ${APPNAME}.bin | \
+		{ while IFS=' ' read -n 72 V0 V1 V2 V3 V4 V5 V6 V7; do echo -n "$$V7$$V6$$V5$$V4$$V3$$V2$$V1$$V0 "; done; } > ${APPNAME}.256.hex # 256bits.
 
 .PHONY: clean
 clean:
