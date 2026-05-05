@@ -25,7 +25,7 @@
 static char thrd_buffer[THREADS_NUM][DIGITS_NUM + 1];
 static int thrd_array[THREADS_NUM][LENGTH + 1];
 
-static uintptr_t busy_cntr = THREADS_NUM;
+static uintptr_t busy_cntr;
 
 static _SEM_DEF(main_sem, 1, 0);
 
@@ -81,6 +81,8 @@ void main (void) {
 	uintptr_t ncpu = _ncpu();
 
 	void *threads_stack = malloc(THREADS_NUM*THREADS_STACKSZ);
+
+	_xchg(&busy_cntr, THREADS_NUM);
 
 	// Prevent context switch until all threads have been scheduled.
 	_preempt_disable();
