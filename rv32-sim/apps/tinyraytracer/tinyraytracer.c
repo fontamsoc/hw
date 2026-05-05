@@ -340,7 +340,7 @@ static uintptr_t y_nxt;
 
 static void scan_RGBf_thrd_fn (void *) {
 	for (uintptr_t j; (j = _atomic_add(&y_nxt, 2)) < GL_height;) {
-		for (uintptr_t i = 0; i < GL_width; ++i) {
+		void setPixel (uintptr_t i) {
 			float fr1, fg1, fb1;
 			render(i,j,&fr1,&fg1,&fb1);
 			uint8_t r1 = GL_ftoi(fr1);
@@ -352,6 +352,14 @@ static void scan_RGBf_thrd_fn (void *) {
 			uint8_t g2 = GL_ftoi(fg2);
 			uint8_t b2 = GL_ftoi(fb2);
 			GL_set2pixelsRGB(i+1,j/2+1,r1,g1,b1,r2,g2,b2);
+		}
+		if (j%4) {
+			uintptr_t i = (GL_width-1); do {
+				setPixel(i);
+			} while (i--);
+		} else {
+			for (uintptr_t i = 0; i < GL_width; ++i)
+				setPixel(i);
 		}
 	}
 	if (_atomic_dec(&busy_cntr) == 1)
