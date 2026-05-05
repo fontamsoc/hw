@@ -336,7 +336,7 @@ static uintptr_t busy_cntr;
 
 static _SEM_DEF(main_sem, 1, 0);
 
-static uintptr_t y_nxt = 0;
+static uintptr_t y_nxt;
 
 static void scan_RGBf_thrd_fn (void *) {
 	for (uintptr_t j; (j = _atomic_add(&y_nxt, 2)) < GL_height;) {
@@ -366,6 +366,7 @@ int main() {
 		(ncpu < NTHRD_MIN) ? NTHRD_MIN :
 		((ncpu < (GL_height/2)) ? ncpu : (GL_height/2));
 	_xchg(&busy_cntr, nthrd);
+	_xchg(&y_nxt, 0);
 	void *threads_stack = malloc(nthrd*THREADS_STACKSZ);
 	// Prevent context switch until all threads have been scheduled.
 	_preempt_disable();
