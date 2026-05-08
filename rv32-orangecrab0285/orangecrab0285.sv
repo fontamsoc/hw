@@ -37,6 +37,8 @@
 `include "lib/wb_mux.sv"
 `include "lib/wb_dnsizr.sv"
 
+`include "dev/ledbtn.sv"
+
 `include "dev/irqctrl.sv"
 
 `include "dev/serial_usb.sv"
@@ -83,9 +85,6 @@ assign usb_pullup = 1'b1;
 output wire led_red_n;
 output wire led_green_n;
 output wire led_blue_n;
-assign led_red_n = 1'b1;
-assign led_green_n = 1'b1;
-assign led_blue_n = 1'b1;
 
 localparam CLKFREQ24MHZ = 24000000;
 localparam CLKFREQ48MHZ = 48000000;
@@ -99,7 +98,7 @@ ecppll_48_to_24_48_96 pll (
 	,.clk96mhz_o (clk96mhz_w)
 );
 
-wire rst_w;
+wire rst_w, btn_w;
 rstctrl #(
 	 .RSTDURATION (CLKFREQ48MHZ/1000000) // 1us
 	,.RSTTHRESH   (4*CLKFREQ48MHZ) // 4s
@@ -107,13 +106,16 @@ rstctrl #(
 	 .clk_i (clk48mhz_w)
 	,.i     (~usr_btn_n)
 	,.o     (rst_w)
+	,.pt_o  (btn_w)
 );
 
 localparam CPU_COUNT = `CPU_COUNT;
 
 localparam M_WBPI_CPU     = 0;
 localparam M_WBPI_LAST    = M_WBPI_CPU;
-localparam S_WBPI_IRQCTRL = 0;
+localparam S_WBPI_LEDBTN  = 0;
+localparam LEDBTN_COUNT   = 3; // Count of ledbtn.
+localparam S_WBPI_IRQCTRL = (S_WBPI_LEDBTN + LEDBTN_COUNT);
 localparam S_WBPI_SERIAL  = (S_WBPI_IRQCTRL + 1);
 localparam S_WBPI_SRAM    = (S_WBPI_SERIAL + 1);
 localparam S_WBPI_DEFAULT = (S_WBPI_SRAM + 1);
@@ -122,13 +124,16 @@ localparam WBPI_MDEVCOUNT = (M_WBPI_LAST + 1);
 localparam WBPI_SDEVCOUNT = (S_WBPI_DEFAULT + 1);
 
 localparam [0:(WBPI_SDEVCOUNT*2*32)-1] WBPI_SDEVS = {
-	/* S_WBPI_IRQCTRL */ 32'hf00,  32'(WORDBITSZ/8),
-	/* S_WBPI_SERIAL  */ 32'hf80,  32'(2*(WORDBITSZ/8)),
-	/* S_WBPI_SRAM    */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
-	/* S_WBPI_DEFAULT */ 32'h0,    32'h0};
+	/* S_WBPI_LEDBTN+0 */ 32'hd80,  32'(WORDBITSZ/8),
+	/* S_WBPI_LEDBTN+1 */ 32'hda0,  32'(WORDBITSZ/8),
+	/* S_WBPI_LEDBTN+2 */ 32'hdc0,  32'(WORDBITSZ/8),
+	/* S_WBPI_IRQCTRL  */ 32'hf00,  32'(WORDBITSZ/8),
+	/* S_WBPI_SERIAL   */ 32'hf80,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_SRAM     */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
+	/* S_WBPI_DEFAULT  */ 32'h0,    32'h0};
 
 localparam WBPI_MAXPENDINGACK     = 32;
-localparam WBPI_DNSIZR            = 4'b0011;
+localparam WBPI_DNSIZR            = 7'b0011111;
 localparam WBPI_WORDBITSZ         = `XWORDBITSZ;
 localparam WBPI_CLOG2WORDBITSZBY8 = clog2(WBPI_WORDBITSZ/8);
 localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
@@ -224,6 +229,35 @@ ccx #(
 
 	,.spval_i ('h1000+(`SRAM_KBSIZE*1024))
 );
+
+wire [LEDBTN_COUNT -1 : 0] led_w;
+assign {led_red_n, led_green_n, led_blue_n} = ~led_w;
+
+genvar gen_ledbtn_idx;
+generate for (
+	gen_ledbtn_idx = 0;
+	gen_ledbtn_idx < LEDBTN_COUNT;
+	gen_ledbtn_idx = gen_ledbtn_idx + 1) begin :gen_ledbtn
+
+ledbtn ledbtn (
+
+	 .rst_i (wbpi_rst_w)
+
+	,.clk_i (wbpi_clk_w)
+
+	,.btn_i (btn_w)
+	,.led_o (led_w[gen_ledbtn_idx])
+
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_LEDBTN + gen_ledbtn_idx])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_LEDBTN + gen_ledbtn_idx])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_LEDBTN + gen_ledbtn_idx])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_LEDBTN + gen_ledbtn_idx])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_LEDBTN + gen_ledbtn_idx])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_LEDBTN + gen_ledbtn_idx])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_LEDBTN + gen_ledbtn_idx])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_LEDBTN + gen_ledbtn_idx])
+);
+end endgenerate
 
 irqctrl #(
 	 .WORDBITSZ   (WORDBITSZ)

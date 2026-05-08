@@ -6,7 +6,7 @@ TOP ?= orangecrab0285
 CPU_COUNT ?= 1
 XWORDBITSZ ?= 32
 SRAM_KBSIZE ?= 256
-SRAM_INITFILE ?= ../../rv32-sim/apps/coremark/rv32/coremark.${XWORDBITSZ}.hex
+SRAM_INITFILE ?= ../apps/ledbtn/ledbtn.${XWORDBITSZ}.hex
 
 RETRY_COUNT ?= 10
 
