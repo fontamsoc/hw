@@ -6,7 +6,7 @@
 
 `include "lib/ram/bram.sv"
 
-module icache (
+module iCache (
 
 	 rst_i
 

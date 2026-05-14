@@ -16,7 +16,7 @@ wire [XWORDBITSZ -1 : 0]        iCache_dato_w;
 wire                            iCache_hit_w;
 wire                            iCache_rdy_w;
 
-icache #(
+iCache #(
 	 .WAYCNT   (ICACHEWAYCNT)
 	,.SETCNT   (ICACHESETCNT)
 	,.TAGBITSZ (ICACHETAGBITSZ)

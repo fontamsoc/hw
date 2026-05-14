@@ -835,7 +835,7 @@ end endgenerate
 
 endmodule
 
-module dcache (
+module dCache (
 
 	 rst_i
 
