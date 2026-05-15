@@ -143,8 +143,7 @@ end endgenerate
 generate if (USE_DCACHE) begin: gen_dCache
 
 dCache #(
-	 .TYPE          (1)
-	,.REGMSTOUTPUT  (1)
+	 .REGMSTOUTPUT  (1)
 	,.REGSLVINPUT   (1)
 	,.WORDBITSZ     (XWORDBITSZ)
 	,.ADDRLIMIT     (ADDRLIMIT)
