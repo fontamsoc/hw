@@ -90,7 +90,7 @@ reg [(CLOG2DELAY +1) -1 : 0] cntr = 0;
 
 assign wb_bsy_o = |cntr;
 
-reg [WORDBITSZ -1 : 0] ram [SIZE -1 : 0];
+reg [WORDBITSZ -1 : 0] ram [SIZE];
 
 initial begin
 	if (INITFILE != "") begin
