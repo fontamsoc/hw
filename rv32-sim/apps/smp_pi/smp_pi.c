@@ -22,8 +22,8 @@
 
 #define LENGTH ((DIGITS_NUM / 4) * 14)
 
-static char thrd_buffer[THREADS_NUM][DIGITS_NUM + 1];
-static int thrd_array[THREADS_NUM][LENGTH + 1];
+__attribute__((noinit)) static char thrd_buffer[THREADS_NUM][DIGITS_NUM + 1];
+__attribute__((noinit)) static int thrd_array[THREADS_NUM][LENGTH + 1];
 
 static uintptr_t busy_cntr;
 
