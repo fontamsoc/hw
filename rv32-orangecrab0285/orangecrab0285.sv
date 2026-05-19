@@ -7,8 +7,6 @@
 // an error when an undefined net is used.
 `default_nettype none
 
-`include "lib/ecp5pll.sv"
-
 `include "lib/rstbtnctrl.sv"
 
 `define PURV32M
@@ -75,28 +73,14 @@ assign led_green_n = 1'b1;
 assign led_blue_n = 1'b1;
 
 localparam CLKFREQ48MHZ = 48000000;
-localparam CLKFREQ96MHZ = 96000000;
-
-wire [3:0] pll_clk_w;
-wire       pll_locked;
-ecp5pll #(
-	 .in_hz   (CLKFREQ48MHZ), .FREQUENCY_PIN_CLKI  ("48")
-	,.out0_hz (CLKFREQ48MHZ), .FREQUENCY_PIN_CLKOP ("48")
-	,.out1_hz (CLKFREQ96MHZ), .FREQUENCY_PIN_CLKOS ("96")
-) pll (
-	 .clk_i  (clk48mhz_i)
-	,.clk_o  (pll_clk_w)
-	,.locked (pll_locked)
-);
-wire clk48mhz = pll_clk_w[0];
-wire clk96mhz = pll_clk_w[1];
+wire clk48mhz_w = clk48mhz_i;
 
 wire rst_w;
 rstbtnctrl #(
 	 .RSTDURATION (CLKFREQ48MHZ/1000000) // 1us
 	,.RSTTHRESH   (4*CLKFREQ48MHZ) // 4s
 ) rstbtnctrl (
-	 .clk_i (clk48mhz)
+	 .clk_i (clk48mhz_w)
 	,.i     (~usr_btn_n)
 	,.o     (rst_w)
 );
@@ -127,7 +111,7 @@ localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
 localparam WBPI_ADDRLIMIT         = ('h1000+(`SRAM_KBSIZE*1024));
 localparam WBPI_CLKFREQ           = CLKFREQ48MHZ;
 wire wbpi_rst_w = rst_w;
-wire wbpi_clk_w = clk48mhz;
+wire wbpi_clk_w = clk48mhz_w;
 // The peripheral interconnect is instantiated in a separate file to keep this file clean.
 // Master devices must use the following signals to plug onto the peripheral interconnect:
 // 	input                                          m_wbpi_stb_w  [WBPI_MDEVCOUNT];
@@ -245,18 +229,24 @@ irqctrl #(
 	,.irq_src_rdy_o (irq_src_rdy_w)
 );
 
+reg [7:0] serial_rst_r = -1;
+always_ff @(posedge clk48mhz_w) begin
+	if (serial_rst_r)
+		serial_rst_r <= serial_rst_r - 1'b1;
+end
+
 serial_usb #(
 	 .WORDBITSZ  (WORDBITSZ)
 	,.PHYCLKFREQ (CLKFREQ48MHZ) // Must be 48MHz or 60MHz.
 	,.BUFSZ      (4096)
 ) serial (
 
-	 .rst_i (!pll_locked
+	 .rst_i ((|serial_rst_r)
 		/* wbpi_rst_w is not used because subsequent
 		   resets break the usb connection */)
 
 	,.clk_i     (wbpi_clk_w)
-	,.clk_phy_i (clk48mhz)
+	,.clk_phy_i (clk48mhz_w)
 
 	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_SERIAL])
 	,.wb_we_i    (s_wbpi_we_w[S_WBPI_SERIAL])
