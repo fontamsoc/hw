@@ -30,11 +30,11 @@ Section Headers:
   [ 6] .debug_info       PROGBITS        00000000 00c480 000817 00      0   0  1
   [ 7] .debug_abbrev     PROGBITS        00000000 00cc97 000460 00      0   0  1
   [ 8] .debug_line       PROGBITS        00000000 00d0f7 002b50 00      0   0  1
-  [ 9] .debug_str        PROGBITS        00000000 00fc47 00032b 01  MS  0   0  1
-  [10] .debug_line_str   PROGBITS        00000000 00ff72 0001bd 01  MS  0   0  1
+  [ 9] .debug_str        PROGBITS        00000000 00fc47 000329 01  MS  0   0  1
+  [10] .debug_line_str   PROGBITS        00000000 00ff70 0001bd 01  MS  0   0  1
   [11] .symtab           SYMTAB          00000000 010130 0069e0 10     12 1577  4
-  [12] .strtab           STRTAB          00000000 016b10 0006f6 00      0   0  1
-  [13] .shstrtab         STRTAB          00000000 017206 00008e 00      0   0  1
+  [12] .strtab           STRTAB          00000000 016b10 0006f3 00      0   0  1
+  [13] .shstrtab         STRTAB          00000000 017203 00008e 00      0   0  1
 Key to Flags:
   W (write), A (alloc), X (execute), M (merge), S (strings), I (info),
   L (link order), O (extra OS processing required), G (group), T (TLS),
@@ -74,7 +74,7 @@ Symbol table '.symtab' contains 1694 entries:
      8: 00000000     0 SECTION LOCAL  DEFAULT    8 .debug_line
      9: 00000000     0 SECTION LOCAL  DEFAULT    9 .debug_str
     10: 00000000     0 SECTION LOCAL  DEFAULT   10 .debug_line_str
-    11: 00000000     0 FILE    LOCAL  DEFAULT  ABS ccrG6EIE.o
+    11: 00000000     0 FILE    LOCAL  DEFAULT  ABS cc2Sdrmd.o
     12: 00001000     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     13: 00000000     0 FILE    LOCAL  DEFAULT  ABS simple.o
     14: 000010e4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
@@ -82,14 +82,14 @@ Symbol table '.symtab' contains 1694 entries:
     16: 000010f8     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
     17: 00001114     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
     18: 0000110c     0 NOTYPE  LOCAL  DEFAULT    1 $d
-    19: 00001114     0 NOTYPE  LOCAL  DEFAULT    1 $x
+    19: 00001114     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     20: 00000000     0 FILE    LOCAL  DEFAULT  ABS addi.o
     21: 00001144     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     22: 0000116c     0 NOTYPE  LOCAL  DEFAULT    1 .test_name
     23: 00001158     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
     24: 00001174     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
     25: 0000116c     0 NOTYPE  LOCAL  DEFAULT    1 $d
-    26: 00001174     0 NOTYPE  LOCAL  DEFAULT    1 $x
+    26: 00001174     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     27: 00001180     0 NOTYPE  LOCAL  DEFAULT    1 test_2
     28: 00001408     0 NOTYPE  LOCAL  DEFAULT    1 fail
     29: 00001194     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -122,7 +122,7 @@ Symbol table '.symtab' contains 1694 entries:
     56: 00001474     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
     57: 0000148c     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
     58: 00001488     0 NOTYPE  LOCAL  DEFAULT    1 $d
-    59: 0000148c     0 NOTYPE  LOCAL  DEFAULT    1 $x
+    59: 0000148c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     60: 00001498     0 NOTYPE  LOCAL  DEFAULT    1 test_2
     61: 00001978     0 NOTYPE  LOCAL  DEFAULT    1 fail
     62: 000014b0     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -168,7 +168,7 @@ Symbol table '.symtab' contains 1694 entries:
    102: 000019e4     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    103: 00001a00     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    104: 000019f8     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   105: 00001a00     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   105: 00001a00     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    106: 00001a0c     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    107: 00001bcc     0 NOTYPE  LOCAL  DEFAULT    1 fail
    108: 00001a28     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -190,7 +190,7 @@ Symbol table '.symtab' contains 1694 entries:
    124: 00001c38     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    125: 00001c50     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    126: 00001c4c     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   127: 00001c50     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   127: 00001c50     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    128: 00001c5c     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    129: 00002114     0 NOTYPE  LOCAL  DEFAULT    1 fail
    130: 00001c80     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -225,7 +225,7 @@ Symbol table '.symtab' contains 1694 entries:
    159: 00002184     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    160: 000021a0     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    161: 00002198     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   162: 000021a0     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   162: 000021a0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    163: 000021ac     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    164: 000021f4     0 NOTYPE  LOCAL  DEFAULT    1 fail
    165: 000021d0     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -236,7 +236,7 @@ Symbol table '.symtab' contains 1694 entries:
    170: 00002260     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    171: 00002278     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    172: 00002274     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   173: 00002278     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   173: 00002278     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    174: 00002284     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    175: 00002544     0 NOTYPE  LOCAL  DEFAULT    1 fail
    176: 000022a4     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -265,7 +265,7 @@ Symbol table '.symtab' contains 1694 entries:
    199: 000025b0     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    200: 000025c8     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    201: 000025c4     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   202: 000025c8     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   202: 000025c8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    203: 000025d4     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    204: 000028f4     0 NOTYPE  LOCAL  DEFAULT    1 fail
    205: 000025f4     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -297,7 +297,7 @@ Symbol table '.symtab' contains 1694 entries:
    231: 00002960     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    232: 0000297c     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    233: 00002974     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   234: 0000297c     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   234: 0000297c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    235: 00002988     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    236: 00002cdc     0 NOTYPE  LOCAL  DEFAULT    1 fail
    237: 000029a8     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -329,7 +329,7 @@ Symbol table '.symtab' contains 1694 entries:
    263: 00002d48     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    264: 00002d60     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    265: 00002d5c     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   266: 00002d60     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   266: 00002d60     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    267: 00002d6c     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    268: 0000302c     0 NOTYPE  LOCAL  DEFAULT    1 fail
    269: 00002d8c     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -358,7 +358,7 @@ Symbol table '.symtab' contains 1694 entries:
    292: 00003098     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    293: 000030b4     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    294: 000030ac     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   295: 000030b4     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   295: 000030b4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    296: 000030c0     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    297: 000033b4     0 NOTYPE  LOCAL  DEFAULT    1 fail
    298: 000030e0     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -387,7 +387,7 @@ Symbol table '.symtab' contains 1694 entries:
    321: 00003420     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    322: 00003438     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    323: 00003434     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   324: 00003438     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   324: 00003438     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    325: 00003444     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    326: 00003708     0 NOTYPE  LOCAL  DEFAULT    1 fail
    327: 00003464     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -416,7 +416,7 @@ Symbol table '.symtab' contains 1694 entries:
    350: 00003774     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    351: 0000378c     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    352: 00003788     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   353: 0000378c     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   353: 0000378c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    354: 00003798     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    355: 00003874     0 NOTYPE  LOCAL  DEFAULT    1 fail
    356: 000037b0     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -434,7 +434,7 @@ Symbol table '.symtab' contains 1694 entries:
    368: 000038e0     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    369: 000038fc     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    370: 000038f4     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   371: 000038fc     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   371: 000038fc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    372: 00003908     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    373: 000039e8     0 NOTYPE  LOCAL  DEFAULT    1 fail
    374: 00003920     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -452,7 +452,7 @@ Symbol table '.symtab' contains 1694 entries:
    386: 00003a54     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    387: 00003a70     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    388: 00003a68     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   389: 00003a70     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   389: 00003a70     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    390: 00003a7c     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    391: 00003a9c     0 NOTYPE  LOCAL  DEFAULT    1 target_2
    392: 00003a8c     0 NOTYPE  LOCAL  DEFAULT    1 linkaddr_2
@@ -471,7 +471,7 @@ Symbol table '.symtab' contains 1694 entries:
    405: 00003be8     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    406: 00003c00     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    407: 00003bfc     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   408: 00003c00     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   408: 00003c00     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    409: 00003c0c     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    410: 00003c14     0 NOTYPE  LOCAL  DEFAULT    1 linkaddr_2
    411: 00003c24     0 NOTYPE  LOCAL  DEFAULT    1 target_2
@@ -484,7 +484,7 @@ Symbol table '.symtab' contains 1694 entries:
    418: 00003cd0     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    419: 00003ce8     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    420: 00003ce4     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   421: 00003ce8     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   421: 00003ce8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    422: 00003d00     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    423: 00003d30     0 NOTYPE  LOCAL  DEFAULT    1 fail
    424: 00003d00     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -495,7 +495,7 @@ Symbol table '.symtab' contains 1694 entries:
    429: 00003d9c     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    430: 00003db4     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    431: 00003db0     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   432: 00003db4     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   432: 00003db4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    433: 00003dc0     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    434: 0000c8a0     0 NOTYPE  LOCAL  DEFAULT    2 tdat
    435: 0000400c     0 NOTYPE  LOCAL  DEFAULT    1 fail
@@ -527,7 +527,7 @@ Symbol table '.symtab' contains 1694 entries:
    461: 00004078     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    462: 00004090     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    463: 0000408c     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   464: 00004090     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   464: 00004090     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    465: 0000409c     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    466: 0000c8a4     0 NOTYPE  LOCAL  DEFAULT    2 tdat
    467: 000042e8     0 NOTYPE  LOCAL  DEFAULT    1 fail
@@ -559,7 +559,7 @@ Symbol table '.symtab' contains 1694 entries:
    493: 00004354     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    494: 0000436c     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    495: 00004368     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   496: 0000436c     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   496: 0000436c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    497: 00004378     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    498: 0000c8a8     0 NOTYPE  LOCAL  DEFAULT    2 tdat
    499: 000045e4     0 NOTYPE  LOCAL  DEFAULT    1 fail
@@ -591,7 +591,7 @@ Symbol table '.symtab' contains 1694 entries:
    525: 00004650     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    526: 00004668     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    527: 00004664     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   528: 00004668     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   528: 00004668     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    529: 00004674     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    530: 0000c8b0     0 NOTYPE  LOCAL  DEFAULT    2 tdat
    531: 000048f4     0 NOTYPE  LOCAL  DEFAULT    1 fail
@@ -623,7 +623,7 @@ Symbol table '.symtab' contains 1694 entries:
    557: 00004960     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    558: 00004978     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    559: 00004974     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   560: 00004978     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   560: 00004978     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    561: 00004984     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    562: 000049e4     0 NOTYPE  LOCAL  DEFAULT    1 fail
    563: 00004994     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -637,7 +637,7 @@ Symbol table '.symtab' contains 1694 entries:
    571: 00004a50     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    572: 00004a68     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    573: 00004a64     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   574: 00004a68     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   574: 00004a68     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    575: 00004a74     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    576: 0000c8b8     0 NOTYPE  LOCAL  DEFAULT    2 tdat
    577: 00004d00     0 NOTYPE  LOCAL  DEFAULT    1 fail
@@ -669,7 +669,7 @@ Symbol table '.symtab' contains 1694 entries:
    603: 00004d6c     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    604: 00004d88     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    605: 00004d80     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   606: 00004d88     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   606: 00004d88     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    607: 00004d94     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    608: 0000525c     0 NOTYPE  LOCAL  DEFAULT    1 fail
    609: 00004dac     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -712,7 +712,7 @@ Symbol table '.symtab' contains 1694 entries:
    646: 000052c8     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    647: 000052e4     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    648: 000052dc     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   649: 000052e4     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   649: 000052e4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    650: 000052f0     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    651: 000057b8     0 NOTYPE  LOCAL  DEFAULT    1 fail
    652: 00005308     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -755,7 +755,7 @@ Symbol table '.symtab' contains 1694 entries:
    689: 00005824     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    690: 00005840     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    691: 00005838     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   692: 00005840     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   692: 00005840     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    693: 0000584c     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    694: 00005d14     0 NOTYPE  LOCAL  DEFAULT    1 fail
    695: 00005864     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -798,7 +798,7 @@ Symbol table '.symtab' contains 1694 entries:
    732: 00005d80     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    733: 00005d98     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    734: 00005d94     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   735: 00005d98     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   735: 00005d98     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    736: 00005da4     0 NOTYPE  LOCAL  DEFAULT    1 test_32
    737: 0000626c     0 NOTYPE  LOCAL  DEFAULT    1 fail
    738: 00005dc8     0 NOTYPE  LOCAL  DEFAULT    1 test_33
@@ -843,7 +843,7 @@ Symbol table '.symtab' contains 1694 entries:
    777: 000062d8     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    778: 000062f0     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    779: 000062ec     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   780: 000062f0     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   780: 000062f0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    781: 000062fc     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    782: 000064d8     0 NOTYPE  LOCAL  DEFAULT    1 fail
    783: 00006314     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -865,7 +865,7 @@ Symbol table '.symtab' contains 1694 entries:
    799: 00006544     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    800: 0000655c     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    801: 00006558     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   802: 0000655c     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   802: 0000655c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    803: 00006568     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    804: 00006a2c     0 NOTYPE  LOCAL  DEFAULT    1 fail
    805: 0000658c     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -900,7 +900,7 @@ Symbol table '.symtab' contains 1694 entries:
    834: 00006a98     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    835: 00006ab0     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    836: 00006aac     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   837: 00006ab0     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   837: 00006ab0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    838: 00006abc     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    839: 00006b98     0 NOTYPE  LOCAL  DEFAULT    1 fail
    840: 00006ad4     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -918,7 +918,7 @@ Symbol table '.symtab' contains 1694 entries:
    852: 00006c04     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    853: 00006c20     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    854: 00006c18     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   855: 00006c20     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   855: 00006c20     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    856: 00006c2c     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    857: 00006d08     0 NOTYPE  LOCAL  DEFAULT    1 fail
    858: 00006c44     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -936,7 +936,7 @@ Symbol table '.symtab' contains 1694 entries:
    870: 00006d74     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    871: 00006d8c     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    872: 00006d88     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   873: 00006d8c     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   873: 00006d8c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    874: 00006d98     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    875: 0000c8c8     0 NOTYPE  LOCAL  DEFAULT    2 tdat
    876: 0000718c     0 NOTYPE  LOCAL  DEFAULT    1 fail
@@ -978,7 +978,7 @@ Symbol table '.symtab' contains 1694 entries:
    912: 000071f8     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    913: 00007210     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    914: 0000720c     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   915: 00007210     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   915: 00007210     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    916: 0000721c     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    917: 0000c8d4     0 NOTYPE  LOCAL  DEFAULT    2 tdat
    918: 00007694     0 NOTYPE  LOCAL  DEFAULT    1 fail
@@ -1020,7 +1020,7 @@ Symbol table '.symtab' contains 1694 entries:
    954: 00007700     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    955: 0000771c     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    956: 00007714     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   957: 0000771c     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   957: 0000771c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    958: 00007728     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    959: 000079ac     0 NOTYPE  LOCAL  DEFAULT    1 fail
    960: 0000773c     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -1053,7 +1053,7 @@ Symbol table '.symtab' contains 1694 entries:
    987: 00007a18     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
    988: 00007a30     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
    989: 00007a2c     0 NOTYPE  LOCAL  DEFAULT    1 $d
-   990: 00007a30     0 NOTYPE  LOCAL  DEFAULT    1 $x
+   990: 00007a30     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    991: 00007a3c     0 NOTYPE  LOCAL  DEFAULT    1 test_2
    992: 00007fa8     0 NOTYPE  LOCAL  DEFAULT    1 fail
    993: 00007a54     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -1104,7 +1104,7 @@ Symbol table '.symtab' contains 1694 entries:
   1038: 00008014     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
   1039: 00008030     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
   1040: 00008028     0 NOTYPE  LOCAL  DEFAULT    1 $d
-  1041: 00008030     0 NOTYPE  LOCAL  DEFAULT    1 $x
+  1041: 00008030     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
   1042: 0000803c     0 NOTYPE  LOCAL  DEFAULT    1 test_2
   1043: 000082b0     0 NOTYPE  LOCAL  DEFAULT    1 fail
   1044: 00008050     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -1137,7 +1137,7 @@ Symbol table '.symtab' contains 1694 entries:
   1071: 0000831c     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
   1072: 00008334     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
   1073: 00008330     0 NOTYPE  LOCAL  DEFAULT    1 $d
-  1074: 00008334     0 NOTYPE  LOCAL  DEFAULT    1 $x
+  1074: 00008334     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
   1075: 00008340     0 NOTYPE  LOCAL  DEFAULT    1 test_2
   1076: 00008808     0 NOTYPE  LOCAL  DEFAULT    1 fail
   1077: 00008358     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -1183,7 +1183,7 @@ Symbol table '.symtab' contains 1694 entries:
   1117: 00008874     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
   1118: 00008890     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
   1119: 00008888     0 NOTYPE  LOCAL  DEFAULT    1 $d
-  1120: 00008890     0 NOTYPE  LOCAL  DEFAULT    1 $x
+  1120: 00008890     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
   1121: 0000889c     0 NOTYPE  LOCAL  DEFAULT    1 test_2
   1122: 00008b54     0 NOTYPE  LOCAL  DEFAULT    1 fail
   1123: 000088b0     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -1216,7 +1216,7 @@ Symbol table '.symtab' contains 1694 entries:
   1150: 00008bc0     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
   1151: 00008bd8     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
   1152: 00008bd4     0 NOTYPE  LOCAL  DEFAULT    1 $d
-  1153: 00008bd8     0 NOTYPE  LOCAL  DEFAULT    1 $x
+  1153: 00008bd8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
   1154: 00008be4     0 NOTYPE  LOCAL  DEFAULT    1 test_2
   1155: 00009180     0 NOTYPE  LOCAL  DEFAULT    1 fail
   1156: 00008bfc     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -1267,7 +1267,7 @@ Symbol table '.symtab' contains 1694 entries:
   1201: 000091ec     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
   1202: 00009208     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
   1203: 00009200     0 NOTYPE  LOCAL  DEFAULT    1 $d
-  1204: 00009208     0 NOTYPE  LOCAL  DEFAULT    1 $x
+  1204: 00009208     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
   1205: 00009214     0 NOTYPE  LOCAL  DEFAULT    1 test_2
   1206: 000094c8     0 NOTYPE  LOCAL  DEFAULT    1 fail
   1207: 00009228     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -1300,7 +1300,7 @@ Symbol table '.symtab' contains 1694 entries:
   1234: 00009534     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
   1235: 0000954c     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
   1236: 00009548     0 NOTYPE  LOCAL  DEFAULT    1 $d
-  1237: 0000954c     0 NOTYPE  LOCAL  DEFAULT    1 $x
+  1237: 0000954c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
   1238: 00009558     0 NOTYPE  LOCAL  DEFAULT    1 test_2
   1239: 00009b14     0 NOTYPE  LOCAL  DEFAULT    1 fail
   1240: 00009570     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -1351,7 +1351,7 @@ Symbol table '.symtab' contains 1694 entries:
   1285: 00009b80     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
   1286: 00009b98     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
   1287: 00009b94     0 NOTYPE  LOCAL  DEFAULT    1 $d
-  1288: 00009b98     0 NOTYPE  LOCAL  DEFAULT    1 $x
+  1288: 00009b98     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
   1289: 00009ba4     0 NOTYPE  LOCAL  DEFAULT    1 test_2
   1290: 0000a064     0 NOTYPE  LOCAL  DEFAULT    1 fail
   1291: 00009bbc     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -1396,7 +1396,7 @@ Symbol table '.symtab' contains 1694 entries:
   1330: 0000a0d0     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
   1331: 0000a0e8     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
   1332: 0000a0e4     0 NOTYPE  LOCAL  DEFAULT    1 $d
-  1333: 0000a0e8     0 NOTYPE  LOCAL  DEFAULT    1 $x
+  1333: 0000a0e8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
   1334: 0000a0f4     0 NOTYPE  LOCAL  DEFAULT    1 test_2
   1335: 0000c8e8     0 NOTYPE  LOCAL  DEFAULT    2 tdat
   1336: 0000a578     0 NOTYPE  LOCAL  DEFAULT    1 fail
@@ -1438,7 +1438,7 @@ Symbol table '.symtab' contains 1694 entries:
   1372: 0000a5e4     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
   1373: 0000a600     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
   1374: 0000a5f8     0 NOTYPE  LOCAL  DEFAULT    1 $d
-  1375: 0000a600     0 NOTYPE  LOCAL  DEFAULT    1 $x
+  1375: 0000a600     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
   1376: 0000a60c     0 NOTYPE  LOCAL  DEFAULT    1 test_2
   1377: 0000a7f0     0 NOTYPE  LOCAL  DEFAULT    1 fail
   1378: 0000a628     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -1460,7 +1460,7 @@ Symbol table '.symtab' contains 1694 entries:
   1394: 0000a85c     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
   1395: 0000a874     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
   1396: 0000a870     0 NOTYPE  LOCAL  DEFAULT    1 $d
-  1397: 0000a874     0 NOTYPE  LOCAL  DEFAULT    1 $x
+  1397: 0000a874     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
   1398: 0000a880     0 NOTYPE  LOCAL  DEFAULT    1 test_2
   1399: 0000ad40     0 NOTYPE  LOCAL  DEFAULT    1 fail
   1400: 0000a8a4     0 NOTYPE  LOCAL  DEFAULT    1 test_3
@@ -1495,7 +1495,7 @@ Symbol table '.symtab' contains 1694 entries:
   1429: 0000adac     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
   1430: 0000adcc     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
   1431: 0000adc0     0 NOTYPE  LOCAL  DEFAULT    1 $d
-  1432: 0000adcc     0 NOTYPE  LOCAL  DEFAULT    1 $x
+  1432: 0000adcc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
   1433: 0000add8     0 NOTYPE  LOCAL  DEFAULT    1 test_2
   1434: 0000cd20     0 NOTYPE  LOCAL  DEFAULT    3 amo_operand
   1435: 0000ae34     0 NOTYPE  LOCAL  DEFAULT    1 fail
@@ -1509,7 +1509,7 @@ Symbol table '.symtab' contains 1694 entries:
   1443: 0000aea0     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
   1444: 0000aec0     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
   1445: 0000aeb4     0 NOTYPE  LOCAL  DEFAULT    1 $d
-  1446: 0000aec0     0 NOTYPE  LOCAL  DEFAULT    1 $x
+  1446: 0000aec0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
   1447: 0000aecc     0 NOTYPE  LOCAL  DEFAULT    1 test_2
   1448: 0000cd28     0 NOTYPE  LOCAL  DEFAULT    3 amo_operand
   1449: 0000af30     0 NOTYPE  LOCAL  DEFAULT    1 fail
@@ -1523,7 +1523,7 @@ Symbol table '.symtab' contains 1694 entries:
   1457: 0000af9c     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
   1458: 0000afbc     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
   1459: 0000afb0     0 NOTYPE  LOCAL  DEFAULT    1 $d
-  1460: 0000afbc     0 NOTYPE  LOCAL  DEFAULT    1 $x
+  1460: 0000afbc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
   1461: 0000afc8     0 NOTYPE  LOCAL  DEFAULT    1 test_2
   1462: 0000cd30     0 NOTYPE  LOCAL  DEFAULT    3 amo_operand
   1463: 0000b024     0 NOTYPE  LOCAL  DEFAULT    1 fail
@@ -1537,7 +1537,7 @@ Symbol table '.symtab' contains 1694 entries:
   1471: 0000b090     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
   1472: 0000b0ac     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
   1473: 0000b0a4     0 NOTYPE  LOCAL  DEFAULT    1 $d
-  1474: 0000b0ac     0 NOTYPE  LOCAL  DEFAULT    1 $x
+  1474: 0000b0ac     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
   1475: 0000b0b8     0 NOTYPE  LOCAL  DEFAULT    1 test_2
   1476: 0000cd38     0 NOTYPE  LOCAL  DEFAULT    3 amo_operand
   1477: 0000b114     0 NOTYPE  LOCAL  DEFAULT    1 fail
@@ -1551,7 +1551,7 @@ Symbol table '.symtab' contains 1694 entries:
   1485: 0000b180     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
   1486: 0000b1a0     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
   1487: 0000b194     0 NOTYPE  LOCAL  DEFAULT    1 $d
-  1488: 0000b1a0     0 NOTYPE  LOCAL  DEFAULT    1 $x
+  1488: 0000b1a0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
   1489: 0000b1ac     0 NOTYPE  LOCAL  DEFAULT    1 test_2
   1490: 0000cd40     0 NOTYPE  LOCAL  DEFAULT    3 amo_operand
   1491: 0000b218     0 NOTYPE  LOCAL  DEFAULT    1 fail
@@ -1565,7 +1565,7 @@ Symbol table '.symtab' contains 1694 entries:
   1499: 0000b284     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
   1500: 0000b2a4     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
   1501: 0000b298     0 NOTYPE  LOCAL  DEFAULT    1 $d
-  1502: 0000b2a4     0 NOTYPE  LOCAL  DEFAULT    1 $x
+  1502: 0000b2a4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
   1503: 0000b2b0     0 NOTYPE  LOCAL  DEFAULT    1 test_2
   1504: 0000cd48     0 NOTYPE  LOCAL  DEFAULT    3 amo_operand
   1505: 0000b344     0 NOTYPE  LOCAL  DEFAULT    1 fail
@@ -1581,7 +1581,7 @@ Symbol table '.symtab' contains 1694 entries:
   1515: 0000b3b0     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
   1516: 0000b3d0     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
   1517: 0000b3c4     0 NOTYPE  LOCAL  DEFAULT    1 $d
-  1518: 0000b3d0     0 NOTYPE  LOCAL  DEFAULT    1 $x
+  1518: 0000b3d0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
   1519: 0000b3dc     0 NOTYPE  LOCAL  DEFAULT    1 test_2
   1520: 0000cd50     0 NOTYPE  LOCAL  DEFAULT    3 amo_operand
   1521: 0000b470     0 NOTYPE  LOCAL  DEFAULT    1 fail
@@ -1597,7 +1597,7 @@ Symbol table '.symtab' contains 1694 entries:
   1531: 0000b4dc     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
   1532: 0000b4fc     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
   1533: 0000b4f0     0 NOTYPE  LOCAL  DEFAULT    1 $d
-  1534: 0000b4fc     0 NOTYPE  LOCAL  DEFAULT    1 $x
+  1534: 0000b4fc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
   1535: 0000b508     0 NOTYPE  LOCAL  DEFAULT    1 test_2
   1536: 0000cd58     0 NOTYPE  LOCAL  DEFAULT    3 amo_operand
   1537: 0000b59c     0 NOTYPE  LOCAL  DEFAULT    1 fail
@@ -1613,7 +1613,7 @@ Symbol table '.symtab' contains 1694 entries:
   1547: 0000b608     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
   1548: 0000b628     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
   1549: 0000b61c     0 NOTYPE  LOCAL  DEFAULT    1 $d
-  1550: 0000b628     0 NOTYPE  LOCAL  DEFAULT    1 $x
+  1550: 0000b628     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
   1551: 0000b634     0 NOTYPE  LOCAL  DEFAULT    1 test_2
   1552: 0000cd60     0 NOTYPE  LOCAL  DEFAULT    3 amo_operand
   1553: 0000b6c8     0 NOTYPE  LOCAL  DEFAULT    1 fail
@@ -1629,7 +1629,7 @@ Symbol table '.symtab' contains 1694 entries:
   1563: 0000b734     0 NOTYPE  LOCAL  DEFAULT    1 .prname_next
   1564: 0000b750     0 NOTYPE  LOCAL  DEFAULT    1 .prname_done
   1565: 0000b748     0 NOTYPE  LOCAL  DEFAULT    1 $d
-  1566: 0000b750     0 NOTYPE  LOCAL  DEFAULT    1 $x
+  1566: 0000b750     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
   1567: 0000c910     0 NOTYPE  LOCAL  DEFAULT    2 coreid
   1568: 0000b77c     0 NOTYPE  LOCAL  DEFAULT    1 test_2
   1569: 0000c918     0 NOTYPE  LOCAL  DEFAULT    2 foo
@@ -1759,6 +1759,8 @@ Symbol table '.symtab' contains 1694 entries:
   1693: 0000b16c     0 NOTYPE  GLOBAL DEFAULT    1 amoxor_w
 
 No version information found in this file.
+
+There is no GOT section in this file.
 Attribute Section: riscv
 File Attributes
   Tag_RISCV_arch: "rv32i2p1_m2p0_a2p1_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0"
