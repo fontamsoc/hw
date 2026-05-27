@@ -36,17 +36,13 @@
 //                          Generated File
 //-----------------------------------------------------------------
 
-module usbf_crc16
-(
+module usbf_crc16 (
     // Inputs
-     input  [ 15:0]  crc_in_i
-    ,input  [  7:0]  din_i
-
+     input  wire [15:0] crc_in_i
+    ,input  wire [7:0]  din_i
     // Outputs
-    ,output [ 15:0]  crc_out_o
+    ,output wire [15:0] crc_out_o
 );
-
-
 
 //-----------------------------------------------------------------
 // Logic

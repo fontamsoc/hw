@@ -36,37 +36,32 @@
 //                          Generated File
 //-----------------------------------------------------------------
 
-module usb_cdc_core
-(
+module usb_cdc_core (
     // Inputs
-     input           clk_i
-    ,input           rst_i
-    ,input           enable_i
-    ,input  [  7:0]  utmi_data_in_i
-    ,input           utmi_txready_i
-    ,input           utmi_rxvalid_i
-    ,input           utmi_rxactive_i
-    ,input           utmi_rxerror_i
-    ,input  [  1:0]  utmi_linestate_i
-    ,input           inport_valid_i
-    ,input  [  7:0]  inport_data_i
-    ,input           outport_accept_i
-
+     input  wire       clk_i
+    ,input  wire       rst_i
+    ,input  wire       enable_i
+    ,input  wire [7:0] utmi_data_in_i
+    ,input  wire       utmi_txready_i
+    ,input  wire       utmi_rxvalid_i
+    ,input  wire       utmi_rxactive_i
+    ,input  wire       utmi_rxerror_i
+    ,input  wire [1:0] utmi_linestate_i
+    ,input  wire       inport_valid_i
+    ,input  wire [7:0] inport_data_i
+    ,input  wire       outport_accept_i
     // Outputs
-    ,output [  7:0]  utmi_data_out_o
-    ,output          utmi_txvalid_o
-    ,output [  1:0]  utmi_op_mode_o
-    ,output [  1:0]  utmi_xcvrselect_o
-    ,output          utmi_termselect_o
-    ,output          utmi_dppulldown_o
-    ,output          utmi_dmpulldown_o
-    ,output          inport_accept_o
-    ,output          outport_valid_o
-    ,output [  7:0]  outport_data_o
+    ,output wire [7:0] utmi_data_out_o
+    ,output wire       utmi_txvalid_o
+    ,output wire [1:0] utmi_op_mode_o
+    ,output wire [1:0] utmi_xcvrselect_o
+    ,output wire       utmi_termselect_o
+    ,output wire       utmi_dppulldown_o
+    ,output wire       utmi_dmpulldown_o
+    ,output wire       inport_accept_o
+    ,output wire       outport_valid_o
+    ,output wire [7:0] outport_data_o
 );
-
-
-
 
 parameter USB_SPEED_HS = "False"; // True or False
 

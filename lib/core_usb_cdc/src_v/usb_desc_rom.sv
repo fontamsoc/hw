@@ -35,11 +35,10 @@
 //-----------------------------------------------------------------
 //                          Generated File
 //-----------------------------------------------------------------
-module usb_desc_rom
-(
-    input        hs_i,
-    input  [7:0] addr_i,
-    output [7:0] data_o
+module usb_desc_rom (
+    input  wire       hs_i,
+    input  wire [7:0] addr_i,
+    output wire [7:0] data_o
 );
 
 reg [7:0] desc_rom_r;

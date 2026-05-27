@@ -36,39 +36,34 @@
 //                          Generated File
 //-----------------------------------------------------------------
 
-module usb_fs_phy
-(
+module usb_fs_phy (
     // Inputs
-     input           clk_i
-    ,input           rst_i
-    ,input  [  7:0]  utmi_data_out_i
-    ,input           utmi_txvalid_i
-    ,input  [  1:0]  utmi_op_mode_i
-    ,input  [  1:0]  utmi_xcvrselect_i
-    ,input           utmi_termselect_i
-    ,input           utmi_dppulldown_i
-    ,input           utmi_dmpulldown_i
-    ,input           usb_rx_rcv_i
-    ,input           usb_rx_dp_i
-    ,input           usb_rx_dn_i
-    ,input           usb_reset_assert_i
-
+     input  wire       clk_i
+    ,input  wire       rst_i
+    ,input  wire [7:0] utmi_data_out_i
+    ,input  wire       utmi_txvalid_i
+    ,input  wire [1:0] utmi_op_mode_i
+    ,input  wire [1:0] utmi_xcvrselect_i
+    ,input  wire       utmi_termselect_i
+    ,input  wire       utmi_dppulldown_i
+    ,input  wire       utmi_dmpulldown_i
+    ,input  wire       usb_rx_rcv_i
+    ,input  wire       usb_rx_dp_i
+    ,input  wire       usb_rx_dn_i
+    ,input  wire       usb_reset_assert_i
     // Outputs
-    ,output [  7:0]  utmi_data_in_o
-    ,output          utmi_txready_o
-    ,output          utmi_rxvalid_o
-    ,output          utmi_rxactive_o
-    ,output          utmi_rxerror_o
-    ,output [  1:0]  utmi_linestate_o
-    ,output          usb_tx_dp_o
-    ,output          usb_tx_dn_o
-    ,output          usb_tx_oen_o
-    ,output          usb_reset_detect_o
-    ,output          usb_en_o
+    ,output wire [7:0] utmi_data_in_o
+    ,output wire       utmi_txready_o
+    ,output wire       utmi_rxvalid_o
+    ,output wire       utmi_rxactive_o
+    ,output wire       utmi_rxerror_o
+    ,output wire [1:0] utmi_linestate_o
+    ,output wire       usb_tx_dp_o
+    ,output wire       usb_tx_dn_o
+    ,output wire       usb_tx_oen_o
+    ,output wire       usb_reset_detect_o
+    ,output wire       usb_en_o
 );
-
-
-
 
 //-----------------------------------------------------------------
 // Wires / Registers

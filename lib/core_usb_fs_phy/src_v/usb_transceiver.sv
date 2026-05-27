@@ -36,23 +36,20 @@
 //                          Generated File
 //-----------------------------------------------------------------
 
-module usb_transceiver
-(
+module usb_transceiver (
     // Inputs
-     input           usb_phy_tx_dp_i
-    ,input           usb_phy_tx_dn_i
-    ,input           usb_phy_tx_oen_i
-    ,input           mode_i
+     input  wire usb_phy_tx_dp_i
+    ,input  wire usb_phy_tx_dn_i
+    ,input  wire usb_phy_tx_oen_i
+    ,input  wire mode_i
 
     // Outputs
-    ,inout          usb_dp_io
-    ,inout          usb_dn_io
-    ,output          usb_phy_rx_rcv_o
-    ,output          usb_phy_rx_dp_o
-    ,output          usb_phy_rx_dn_o
+    ,inout  wire usb_dp_io
+    ,inout  wire usb_dn_io
+    ,output wire usb_phy_rx_rcv_o
+    ,output wire usb_phy_rx_dp_o
+    ,output wire usb_phy_rx_dn_o
 );
-
-
 
 //-----------------------------------------------------------------
 // Module: usb_transceiver

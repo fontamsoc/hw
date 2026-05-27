@@ -36,87 +36,83 @@
 //                          Generated File
 //-----------------------------------------------------------------
 
-module usbf_device_core
-(
+module usbf_device_core (
     // Inputs
-     input           clk_i
-    ,input           rst_i
-    ,input  [  7:0]  utmi_data_i
-    ,input           utmi_txready_i
-    ,input           utmi_rxvalid_i
-    ,input           utmi_rxactive_i
-    ,input           utmi_rxerror_i
-    ,input  [  1:0]  utmi_linestate_i
-    ,input           ep0_stall_i
-    ,input           ep0_iso_i
-    ,input           ep0_cfg_int_rx_i
-    ,input           ep0_cfg_int_tx_i
-    ,input           ep0_rx_space_i
-    ,input           ep0_tx_ready_i
-    ,input           ep0_tx_data_valid_i
-    ,input           ep0_tx_data_strb_i
-    ,input  [  7:0]  ep0_tx_data_i
-    ,input           ep0_tx_data_last_i
-    ,input           ep1_stall_i
-    ,input           ep1_iso_i
-    ,input           ep1_cfg_int_rx_i
-    ,input           ep1_cfg_int_tx_i
-    ,input           ep1_rx_space_i
-    ,input           ep1_tx_ready_i
-    ,input           ep1_tx_data_valid_i
-    ,input           ep1_tx_data_strb_i
-    ,input  [  7:0]  ep1_tx_data_i
-    ,input           ep1_tx_data_last_i
-    ,input           ep2_stall_i
-    ,input           ep2_iso_i
-    ,input           ep2_cfg_int_rx_i
-    ,input           ep2_cfg_int_tx_i
-    ,input           ep2_rx_space_i
-    ,input           ep2_tx_ready_i
-    ,input           ep2_tx_data_valid_i
-    ,input           ep2_tx_data_strb_i
-    ,input  [  7:0]  ep2_tx_data_i
-    ,input           ep2_tx_data_last_i
-    ,input           ep3_stall_i
-    ,input           ep3_iso_i
-    ,input           ep3_cfg_int_rx_i
-    ,input           ep3_cfg_int_tx_i
-    ,input           ep3_rx_space_i
-    ,input           ep3_tx_ready_i
-    ,input           ep3_tx_data_valid_i
-    ,input           ep3_tx_data_strb_i
-    ,input  [  7:0]  ep3_tx_data_i
-    ,input           ep3_tx_data_last_i
-    ,input           reg_chirp_en_i
-    ,input           reg_int_en_sof_i
-    ,input           reg_sts_rst_clr_i
-    ,input  [  6:0]  reg_dev_addr_i
-
+     input  wire        clk_i
+    ,input  wire        rst_i
+    ,input  wire [7:0]  utmi_data_i
+    ,input  wire        utmi_txready_i
+    ,input  wire        utmi_rxvalid_i
+    ,input  wire        utmi_rxactive_i
+    ,input  wire        utmi_rxerror_i
+    ,input  wire [1:0]  utmi_linestate_i
+    ,input  wire        ep0_stall_i
+    ,input  wire        ep0_iso_i
+    ,input  wire        ep0_cfg_int_rx_i
+    ,input  wire        ep0_cfg_int_tx_i
+    ,input  wire        ep0_rx_space_i
+    ,input  wire        ep0_tx_ready_i
+    ,input  wire        ep0_tx_data_valid_i
+    ,input  wire        ep0_tx_data_strb_i
+    ,input  wire [7:0]  ep0_tx_data_i
+    ,input  wire        ep0_tx_data_last_i
+    ,input  wire        ep1_stall_i
+    ,input  wire        ep1_iso_i
+    ,input  wire        ep1_cfg_int_rx_i
+    ,input  wire        ep1_cfg_int_tx_i
+    ,input  wire        ep1_rx_space_i
+    ,input  wire        ep1_tx_ready_i
+    ,input  wire        ep1_tx_data_valid_i
+    ,input  wire        ep1_tx_data_strb_i
+    ,input  wire [7:0]  ep1_tx_data_i
+    ,input  wire        ep1_tx_data_last_i
+    ,input  wire        ep2_stall_i
+    ,input  wire        ep2_iso_i
+    ,input  wire        ep2_cfg_int_rx_i
+    ,input  wire        ep2_cfg_int_tx_i
+    ,input  wire        ep2_rx_space_i
+    ,input  wire        ep2_tx_ready_i
+    ,input  wire        ep2_tx_data_valid_i
+    ,input  wire        ep2_tx_data_strb_i
+    ,input  wire [7:0]  ep2_tx_data_i
+    ,input  wire        ep2_tx_data_last_i
+    ,input  wire        ep3_stall_i
+    ,input  wire        ep3_iso_i
+    ,input  wire        ep3_cfg_int_rx_i
+    ,input  wire        ep3_cfg_int_tx_i
+    ,input  wire        ep3_rx_space_i
+    ,input  wire        ep3_tx_ready_i
+    ,input  wire        ep3_tx_data_valid_i
+    ,input  wire        ep3_tx_data_strb_i
+    ,input  wire [7:0]  ep3_tx_data_i
+    ,input  wire        ep3_tx_data_last_i
+    ,input  wire        reg_chirp_en_i
+    ,input  wire        reg_int_en_sof_i
+    ,input  wire        reg_sts_rst_clr_i
+    ,input  wire [6:0]  reg_dev_addr_i
     // Outputs
-    ,output          intr_o
-    ,output [  7:0]  utmi_data_o
-    ,output          utmi_txvalid_o
-    ,output          rx_strb_o
-    ,output [  7:0]  rx_data_o
-    ,output          rx_last_o
-    ,output          rx_crc_err_o
-    ,output          ep0_rx_setup_o
-    ,output          ep0_rx_valid_o
-    ,output          ep0_tx_data_accept_o
-    ,output          ep1_rx_setup_o
-    ,output          ep1_rx_valid_o
-    ,output          ep1_tx_data_accept_o
-    ,output          ep2_rx_setup_o
-    ,output          ep2_rx_valid_o
-    ,output          ep2_tx_data_accept_o
-    ,output          ep3_rx_setup_o
-    ,output          ep3_rx_valid_o
-    ,output          ep3_tx_data_accept_o
-    ,output          reg_sts_rst_o
-    ,output [ 10:0]  reg_sts_frame_num_o
+    ,output wire        intr_o
+    ,output wire [7:0]  utmi_data_o
+    ,output wire        utmi_txvalid_o
+    ,output wire        rx_strb_o
+    ,output wire [7:0]  rx_data_o
+    ,output wire        rx_last_o
+    ,output wire        rx_crc_err_o
+    ,output wire        ep0_rx_setup_o
+    ,output wire        ep0_rx_valid_o
+    ,output wire        ep0_tx_data_accept_o
+    ,output wire        ep1_rx_setup_o
+    ,output wire        ep1_rx_valid_o
+    ,output wire        ep1_tx_data_accept_o
+    ,output wire        ep2_rx_setup_o
+    ,output wire        ep2_rx_valid_o
+    ,output wire        ep2_tx_data_accept_o
+    ,output wire        ep3_rx_setup_o
+    ,output wire        ep3_rx_valid_o
+    ,output wire        ep3_tx_data_accept_o
+    ,output wire        reg_sts_rst_o
+    ,output wire [10:0] reg_sts_frame_num_o
 );
-
-
 
 //-----------------------------------------------------------------
 // Defines:

@@ -36,35 +36,31 @@
 //                          Generated File
 //-----------------------------------------------------------------
 
-module usbf_sie_rx
-(
+module usbf_sie_rx (
     // Inputs
-     input           clk_i
-    ,input           rst_i
-    ,input           enable_i
-    ,input  [  7:0]  utmi_data_i
-    ,input           utmi_rxvalid_i
-    ,input           utmi_rxactive_i
-    ,input  [  6:0]  current_addr_i
-
+     input  wire        clk_i
+    ,input  wire        rst_i
+    ,input  wire        enable_i
+    ,input  wire [7:0]  utmi_data_i
+    ,input  wire        utmi_rxvalid_i
+    ,input  wire        utmi_rxactive_i
+    ,input  wire [6:0]  current_addr_i
     // Outputs
-    ,output [  7:0]  pid_o
-    ,output          frame_valid_o
-    ,output [ 10:0]  frame_number_o
-    ,output          token_valid_o
-    ,output [  6:0]  token_addr_o
-    ,output [  3:0]  token_ep_o
-    ,output          token_crc_err_o
-    ,output          handshake_valid_o
-    ,output          data_valid_o
-    ,output          data_strb_o
-    ,output [  7:0]  data_o
-    ,output          data_last_o
-    ,output          data_crc_err_o
-    ,output          data_complete_o
+    ,output wire [7:0]  pid_o
+    ,output wire        frame_valid_o
+    ,output wire [10:0] frame_number_o
+    ,output wire        token_valid_o
+    ,output wire [6:0]  token_addr_o
+    ,output wire [3:0]  token_ep_o
+    ,output wire        token_crc_err_o
+    ,output wire        handshake_valid_o
+    ,output wire        data_valid_o
+    ,output wire        data_strb_o
+    ,output wire [7:0]  data_o
+    ,output wire        data_last_o
+    ,output wire        data_crc_err_o
+    ,output wire        data_complete_o
 );
-
-
 
 //-----------------------------------------------------------------
 // Defines:

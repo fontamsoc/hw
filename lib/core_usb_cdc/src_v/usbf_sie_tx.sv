@@ -36,29 +36,25 @@
 //                          Generated File
 //-----------------------------------------------------------------
 
-module usbf_sie_tx
-(
+module usbf_sie_tx (
     // Inputs
-     input           clk_i
-    ,input           rst_i
-    ,input           enable_i
-    ,input           chirp_i
-    ,input           utmi_txready_i
-    ,input           tx_valid_i
-    ,input  [  7:0]  tx_pid_i
-    ,input           data_valid_i
-    ,input           data_strb_i
-    ,input  [  7:0]  data_i
-    ,input           data_last_i
-
+     input  wire       clk_i
+    ,input  wire       rst_i
+    ,input  wire       enable_i
+    ,input  wire       chirp_i
+    ,input  wire       utmi_txready_i
+    ,input  wire       tx_valid_i
+    ,input  wire [7:0] tx_pid_i
+    ,input  wire       data_valid_i
+    ,input  wire       data_strb_i
+    ,input  wire [7:0] data_i
+    ,input  wire       data_last_i
     // Outputs
-    ,output [  7:0]  utmi_data_o
-    ,output          utmi_txvalid_o
-    ,output          tx_accept_o
-    ,output          data_accept_o
+    ,output wire [7:0] utmi_data_o
+    ,output wire       utmi_txvalid_o
+    ,output wire       tx_accept_o
+    ,output wire       data_accept_o
 );
-
-
 
 //-----------------------------------------------------------------
 // Defines:
