@@ -79,16 +79,18 @@ input  wire [(WORDBITSZ/8) -1 : 0]        wb_sel_i;
 input  wire [WORDBITSZ -1 : 0]            wb_dat_i;
 output wire                               wb_bsy_o;
 output reg                                wb_ack_o;
-output wire [WORDBITSZ -1 : 0]            wb_dat_o;
+output reg  [WORDBITSZ -1 : 0]            wb_dat_o;
 
 localparam CLOG2DELAY = clog2(DELAY);
+
+reg hold;
 
 // Register which when non-null set the output "wb_bsy_o"
 // high, implementing a delay when accessing memory, which
 // is useful for testing devices issuing memory accesses.
 reg [(CLOG2DELAY +1) -1 : 0] cntr = 0;
 
-assign wb_bsy_o = |cntr;
+assign wb_bsy_o = (hold || (|cntr));
 
 reg [WORDBITSZ -1 : 0] ram [SIZE];
 
@@ -112,8 +114,12 @@ always_ff @(posedge clk_i) begin
 	wb_stb_r <= wb_stb_r_ ;
 end
 
+always_ff @(posedge clk_i)
+	hold <= (wb_stb_r_ && wb_addr_i == wb_addr_r && wb_we_r);
+
 always_ff @(posedge clk_i) begin
-	if (wb_stb_r_) begin
+	if (hold);
+	else if (wb_stb_r_) begin
 		wb_we_r <= wb_we_i;
 		wb_addr_r <= wb_addr_i;
 		wb_sel_r <= wb_sel_i;
@@ -124,28 +130,12 @@ end
 
 wire [WORDBITSZ -1 : 0] _wb_sel_r;
 
-wire [WORDBITSZ -1 : 0] ram_i = ((wb_dat_r & _wb_sel_r) | (wb_dat_o & ~_wb_sel_r));
-reg  [WORDBITSZ -1 : 0] ram_o;
 always_ff @(posedge clk_i) begin
-	if (wb_stb_r_)
-		ram_o <= ram[wb_addr_i];
+	if (wb_stb_r_ || hold)
+		wb_dat_o <= ram[hold ? wb_addr_r : wb_addr_i];
+	if (wb_stb_r && wb_we_r && !hold)
+		ram[wb_addr_r] <= ((wb_dat_r & _wb_sel_r) | (wb_dat_o & ~_wb_sel_r));
 end
-always_ff @(posedge clk_i) begin
-	if (wb_stb_r && wb_we_r) begin
-		ram[wb_addr_r] <= ram_i;
-	end
-end
-
-reg use_ram_r;
-reg [WORDBITSZ -1 : 0] ram_r;
-always_ff @(posedge clk_i) begin
-	if (wb_stb_r_) begin
-		use_ram_r <= (wb_addr_i == wb_addr_r && wb_we_r);
-		ram_r <= ram_i;
-	end
-end
-
-assign wb_dat_o = (use_ram_r ? ram_r : ram_o);
 
 always_ff @(posedge clk_i) begin
 	if (rst_i)
