@@ -38,6 +38,7 @@ parameter ADDRLIMIT     = 'h2000;
 parameter MAXPENDINGACK = 16; // Must be non-null and a power of 2.
 parameter SDEVCOUNT     = 1;
 parameter [0:(SDEVCOUNT*2*32)-1] SDEVS = 0;
+parameter ADDRSPACE_SEQINIT = 0; // When non-null, at least 2 clock cycles needed for reset.
 
 localparam CLOG2SDEVCOUNT = clog2(SDEVCOUNT);
 
@@ -98,7 +99,31 @@ wire [CLOG2SDEVCOUNT -1 : 0] slvidx_nxt = (slvidx + 1'b1);
 reg slvidx_rdy;
 reg slvidx_dflt;
 
-reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace [SDEVCOUNT][2]; // ### initial-block-reg.
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace [SDEVCOUNT][2];
+generate if (ADDRSPACE_SEQINIT) begin: gen_addrspace_seqinit
+always_ff @(posedge clk_i) begin
+	if (rst_i)
+		for (int i = 0; i < SDEVCOUNT; ++i) begin
+			bit [(ADDRBITSZ-MSBSZIGN) -1 : 0] j, k;
+			j = 32'(SDEVS[(i*2*32)+:32])>>CLOG2WORDBITSZBY8;
+			k = 32'(SDEVS[(((i*2)+1)*32)+:32])>>CLOG2WORDBITSZBY8;
+			k += !k; // Increment k by 1 if null.
+			addrspace[i][0] <= j;
+			addrspace[i][1] <= (j+k-1);
+		end
+end
+end else begin: gen_addrspace_init
+initial begin
+	for (int i = 0; i < SDEVCOUNT; ++i) begin
+		bit [(ADDRBITSZ-MSBSZIGN) -1 : 0] j, k;
+		j = 32'(SDEVS[(i*2*32)+:32])>>CLOG2WORDBITSZBY8;
+		k = 32'(SDEVS[(((i*2)+1)*32)+:32])>>CLOG2WORDBITSZBY8;
+		k += !k; // Increment k by 1 if null.
+		addrspace[i][0] = j;
+		addrspace[i][1] = (j+k-1);
+	end
+end
+end endgenerate
 
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_lo;
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_hi;
@@ -109,17 +134,6 @@ wire slvidx_invalid = (!slvidx_dflt &&
 	  m_wb_addr_i <= addrspace_slvidx_hi));
 
 wire _slvidx_invalid = (slvidx_invalid && !ack_pending);
-
-initial begin
-	for (int i = 0; i < SDEVCOUNT; ++i) begin
-		bit [(ADDRBITSZ-MSBSZIGN) -1 : 0] j, k;
-		j = 32'(SDEVS[(i*2*32)+:32])>>CLOG2WORDBITSZBY8;
-		k = 32'(SDEVS[(((i*2)+1)*32)+:32])>>CLOG2WORDBITSZBY8;
-		k += !k; // Set k to 1 if null.
-		addrspace[i][0] = j;
-		addrspace[i][1] = (j+k-1);
-	end
-end
 
 always_ff @(posedge clk_i) begin
 	// Logic which computes slvidx using addrspace[].
