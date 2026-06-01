@@ -121,7 +121,7 @@ input  wire [(WORDBITSZ/8) -1 : 0]        wb_sel_i;
 input  wire [WORDBITSZ -1 : 0]            wb_dat_i;
 output wire                               wb_bsy_o;
 output reg                                wb_ack_o;
-output wire [WORDBITSZ -1 : 0]            wb_dat_o;
+output reg  [WORDBITSZ -1 : 0]            wb_dat_o;
 
 output wire irq_stb_o;
 input  wire irq_rdy_i;
@@ -153,8 +153,6 @@ end
 // Commands.
 localparam CMDCONFIGUREIO = 0;
 localparam CMDSETDEBOUNCE = 1;
-
-reg [WORDBITSZ -1 : 0] wb_dat_o_;
 
 // The first word is used to send/receive data,
 // while the second word is used to issue commands.
@@ -211,12 +209,6 @@ assign irq_stb_o = (|i_change);
 reg irq_rdy_i_r;
 wire irq_rdy_i_negedge = (!irq_rdy_i && irq_rdy_i_r);
 
-reg devrd_r;
-always_ff @(posedge clk_i) begin
-	devrd_r <= devrd;
-end
-assign wb_dat_o = (devrd_r ? _i : wb_dat_o_);
-
 always_ff @(posedge clk_i) begin
 	// Logic that set output "t".
 	if (rst_i)
@@ -249,10 +241,12 @@ always_ff @(posedge clk_i) begin
 end
 
 always_ff @(posedge clk_i) begin
-	if (cmdconfigureio)
-		wb_dat_o_ <= {IOCOUNT[WORDBITSZ-2:0], wb_dat_r[0]};
+	unique if (devrd)
+		wb_dat_o <= _i;
+	else if (cmdconfigureio)
+		wb_dat_o <= {IOCOUNT[WORDBITSZ-2:0], wb_dat_r[0]};
 	else if (cmdsetdebounce)
-		wb_dat_o_ <= {CLKFREQ[WORDBITSZ-2:0], wb_dat_r[0]};
+		wb_dat_o <= {CLKFREQ[WORDBITSZ-2:0], wb_dat_r[0]};
 end
 
 always_ff @(posedge clk_i) begin
