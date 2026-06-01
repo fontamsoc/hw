@@ -171,8 +171,7 @@ wire devwr = (!rst_i && wb_stb_r &&  wb_we_r && !wb_addr_r[ISCMDBIT]);
 // Nets set to the debounced value of the input "i".
 wire [IOCOUNT -1 : 0] _i;
 
-// Register set to the number of clock cycles used
-// to debounce the input "i" when configured as input.
+// Register set to the number of clock cycles used to debounce the input "i".
 reg [DBNCRBITSZ -1 : 0] dbncrthresh;
 
 genvar gen_dbncr_idx;
@@ -205,8 +204,7 @@ wire [IOCOUNT -1 : 0] i_changed = (_i ^ _i_r);
 // Register for which each bit is 1 if its corresponding input "i" signal changed.
 reg [IOCOUNT -1 : 0] i_change;
 
-// An interrupt request is made if a state change
-// occurs on an input "i" signal configured as input.
+// An interrupt request is made if a state change occurs on an input "i" signal.
 assign irq_stb_o = (|i_change);
 
 // Register used to detect a falling edge on "irq_rdy_i".
