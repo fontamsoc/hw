@@ -4,15 +4,15 @@
 `ifndef RSTBTNCTRL
 `define RSTBTNCTRL
 
-// Reset button controller.
+// Reset controller.
 
 `include "lib/dbncr.sv"
 
-module rstbtnctrl (
+module rstctrl (
 
 	 clk_i
 
-	,i ,o ,b
+	,i ,o ,pt_o
 );
 
 `include "lib/clog2.sv"
@@ -28,9 +28,9 @@ input wire clk_i;
 
 input wire i;
 output reg o = 1'b1;
-output wire b;
+output wire pt_o; // Passthrough.
 
-reg rsthold = 1'b1; // After power-on, hold in reset until button pressed.
+reg rsthold = 1'b1; // After power-on, hold in reset until `i' asserted.
 
 reg [CLOG2RSTDURATION -1 : 0] rstduration = RSTDURATION;
 always @ (posedge clk_i)
@@ -64,11 +64,11 @@ dbncr #(
 ) dbncr (
 	 .clk_i    (clk_i)
 	,.i        (i)
-	,.o        (b)
+	,.o        (pt_o)
 	,.thresh_i (DBNCRTHRESH)
 );
 end else begin
-assign b = i;
+assign pt_o = i;
 end endgenerate
 
 endmodule

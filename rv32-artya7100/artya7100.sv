@@ -9,7 +9,7 @@
 
 `include "lib/xc7pll_100_to_50_100_200.sv"
 
-`include "lib/rstbtnctrl.sv"
+`include "lib/rstctrl.sv"
 
 `define PURV32M
 `define PUIMULDSP
@@ -79,10 +79,10 @@ wire clk_2x_w = clk100mhz;
 wire clk_4x_w = clk200mhz;
 
 (* direct_reset = "true" *) wire rst_w;
-rstbtnctrl #(
+rstctrl #(
 	 .RSTDURATION (CLK2XFREQ/1000000) // 1us
 	,.RSTTHRESH   (4*CLK2XFREQ) // 4s
-) rstbtnctrl (
+) rstctrl (
 	 .clk_i (clk_2x_w)
 	,.i     (~rst_n)
 	,.o     (rst_w)

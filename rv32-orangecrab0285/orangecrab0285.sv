@@ -7,7 +7,7 @@
 // an error when an undefined net is used.
 `default_nettype none
 
-`include "lib/rstbtnctrl.sv"
+`include "lib/rstctrl.sv"
 
 `define PURV32M
 `define PUIMULDSP
@@ -76,10 +76,10 @@ localparam CLKFREQ48MHZ = 48000000;
 wire clk48mhz_w = clk48mhz_i;
 
 wire rst_w;
-rstbtnctrl #(
+rstctrl #(
 	 .RSTDURATION (CLKFREQ48MHZ/1000000) // 1us
 	,.RSTTHRESH   (4*CLKFREQ48MHZ) // 4s
-) rstbtnctrl (
+) rstctrl (
 	 .clk_i (clk48mhz_w)
 	,.i     (~usr_btn_n)
 	,.o     (rst_w)
