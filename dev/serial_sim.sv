@@ -82,7 +82,7 @@ reg [WORDBITSZ -1 : 0] wb_dat_o_;
 // while the second word is used to issue commands.
 localparam ISCMDBIT = 0;
 
-wire iscmd = (!rst_i && wb_stb_r && wb_we_r && wb_addr_r[ISCMDBIT]);
+wire iscmd = (wb_stb_r && wb_we_r && wb_addr_r[ISCMDBIT]);
 
 wire prevcmdisdevrdy = (wb_dat_o_[1:0] == CMDDEVRDY);
 
@@ -93,8 +93,8 @@ wire cmdgetbuf = (prevcmddone && wb_dat_r[1:0] == CMDGETBUFFERUSAGE);
 wire cmdsetint = (prevcmddone && wb_dat_r[1:0] == CMDSETINTERRUPT);
 wire cmdsetspd = (prevcmddone && wb_dat_r[1:0] == CMDSETSPEED);
 
-wire devrd = (!rst_i && wb_stb_r && !wb_we_r && !wb_addr_r[ISCMDBIT] && prevcmdisdevrdy);
-wire devwr = (!rst_i && wb_stb_r &&  wb_we_r && !wb_addr_r[ISCMDBIT] && prevcmdisdevrdy);
+wire devrd = (wb_stb_r && !wb_we_r && !wb_addr_r[ISCMDBIT] && prevcmdisdevrdy);
+wire devwr = (wb_stb_r &&  wb_we_r && !wb_addr_r[ISCMDBIT] && prevcmdisdevrdy);
 
 wire            rx_read_w = devrd;
 wire [8 -1 : 0] rx_data_w0;

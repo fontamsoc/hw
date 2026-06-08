@@ -193,9 +193,9 @@ localparam CMDENAIRQ = 2'b11;
 
 wire prevcmdisdevrdy = (wb_dat_o[1:0] == CMDDEVRDY);
 
-wire prevcmddone = (!rst_i && wb_stb_r && wb_we_r && prevcmdisdevrdy);
+wire prevcmddone = (wb_stb_r && wb_we_r && prevcmdisdevrdy);
 
-wire cmddevrdy = (!rst_i && wb_stb_r && wb_we_r && wb_dat_r[1:0] == CMDDEVRDY);
+wire cmddevrdy = (wb_stb_r && wb_we_r && wb_dat_r[1:0] == CMDDEVRDY);
 wire cmdackirq = (prevcmddone && wb_dat_r[1:0] == CMDACKIRQ);
 wire cmdintdst = (prevcmddone && wb_dat_r[1:0] == CMDINTDST);
 wire cmdenairq = (prevcmddone && wb_dat_r[1:0] == CMDENAIRQ);

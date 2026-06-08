@@ -158,13 +158,13 @@ localparam CMDSETDEBOUNCE = 1;
 // while the second word is used to issue commands.
 localparam ISCMDBIT = 0;
 
-wire iscmd = (!rst_i && wb_stb_r && wb_we_r && wb_addr_r[ISCMDBIT]);
+wire iscmd = (wb_stb_r && wb_we_r && wb_addr_r[ISCMDBIT]);
 
 wire cmdconfigureio = (iscmd && wb_dat_r[0] == CMDCONFIGUREIO);
 wire cmdsetdebounce = (iscmd && wb_dat_r[0] == CMDSETDEBOUNCE);
 
-wire devrd = (!rst_i && wb_stb_r && !wb_we_r && !wb_addr_r[ISCMDBIT]);
-wire devwr = (!rst_i && wb_stb_r &&  wb_we_r && !wb_addr_r[ISCMDBIT]);
+wire devrd = (wb_stb_r && !wb_we_r && !wb_addr_r[ISCMDBIT]);
+wire devwr = (wb_stb_r &&  wb_we_r && !wb_addr_r[ISCMDBIT]);
 
 // Nets set to the debounced value of the input "i".
 wire [IOCOUNT -1 : 0] _i;

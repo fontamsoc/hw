@@ -139,8 +139,11 @@ reg [CLOG2MDEVCOUNT -1 : 0] mstrlonxt;
 reg [CLOG2MDEVCOUNT -1 : 0] mstrloidx;
 // Compute in mstrlonxt the active master with the lowest index.
 always_ff @(posedge clk_i) begin
-	if (MDEVCOUNT > 1) begin
-		if (rst_i || (mstrloidx == (MDEVCOUNT - 1)) || m_wb_stb_i[mstrloidx]) begin
+	if (rst_i) begin
+		mstrlonxt <= 0;
+		mstrloidx <= 0;
+	end else if (MDEVCOUNT > 1) begin
+		if (mstrloidx == (MDEVCOUNT - 1) || m_wb_stb_i[mstrloidx]) begin
 			if (m_wb_stb_i[mstrloidx])
 				mstrlonxt <= mstrloidx;
 			mstrloidx <= 0;
@@ -153,8 +156,11 @@ reg [CLOG2MDEVCOUNT -1 : 0] mstrhinxt;
 reg [CLOG2MDEVCOUNT -1 : 0] mstrhiidx;
 // Compute in mstrhinxt the active master with the highest index.
 always_ff @(posedge clk_i) begin
-	if (MDEVCOUNT > 1) begin
-		if (rst_i || (mstrhiidx == 0) || m_wb_stb_i[mstrhiidx]) begin
+	if (rst_i) begin
+		mstrhinxt <= (MDEVCOUNT - 1);
+		mstrhiidx <= (MDEVCOUNT - 1);
+	end else if (MDEVCOUNT > 1) begin
+		if (mstrhiidx == 0 || m_wb_stb_i[mstrhiidx]) begin
 			if (m_wb_stb_i[mstrhiidx])
 				mstrhinxt <= mstrhiidx;
 			mstrhiidx <= (MDEVCOUNT - 1);
@@ -166,24 +172,24 @@ end
 reg wb_lock;
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] wb_lock_addr;
 always_ff @(posedge clk_i) begin
-	if (MDEVCOUNT > 1) begin
-		if (rst_i)
-			wb_lock <= 1'b0;
-		else if (_s_wb_stb_o)
+	if (rst_i)
+		wb_lock <= 1'b0;
+	else if (MDEVCOUNT > 1) begin
+		if (_s_wb_stb_o)
 			wb_lock <= (s_wb_lock_o || (wb_lock && (s_wb_addr_o != wb_lock_addr)));
 		if (_s_wb_stb_o && !wb_lock)
 			wb_lock_addr <= s_wb_addr_o;
-	end else
-		wb_lock <= 1'b0;
+	end
 end
 
 reg [CLOG2MDEVCOUNT -1 : 0] mstrhi;
 // Logic that increments mstridx.
 always_ff @(posedge clk_i) begin
-	if (MDEVCOUNT > 1) begin
-		if (rst_i)
-			mstrhi <= (MDEVCOUNT - 1);
-		else if (!(wb_lock || _m_wb_stb_i)) begin
+	if (rst_i) begin
+		mstridx <= 0;
+		mstrhi <= (MDEVCOUNT - 1);
+	end else if (MDEVCOUNT > 1) begin
+		if (!(wb_lock || _m_wb_stb_i)) begin
 			if (mstridx < mstrhi)
 				mstridx <= mstridx + 1'b1;
 			else begin
@@ -191,8 +197,7 @@ always_ff @(posedge clk_i) begin
 				mstrhi <= mstrhinxt;
 			end
 		end
-	end else
-		mstridx <= 0;
+	end
 end
 
 endmodule
