@@ -137,7 +137,7 @@ reg [STATE_W-1:0] state_q;
 //-----------------------------------------------------------------
 reg [`USB_RESET_CNT_W-1:0] se0_cnt_q;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     se0_cnt_q <= `USB_RESET_CNT_W'b0;
 else if (utmi_linestate_i == 2'b0)
@@ -335,7 +335,7 @@ begin
     endcase
 end
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     rx_space_q <= 1'b0;
 else if (state_q == STATE_RX_IDLE)
@@ -553,7 +553,7 @@ begin
 end
 
 // Update state
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     state_q   <= STATE_RX_IDLE;
 else
@@ -689,13 +689,13 @@ begin
     endcase
 end
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     tx_valid_q <= 1'b0;
 else if (!tx_valid_q || tx_accept_w)
     tx_valid_q <= tx_valid_r;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     tx_pid_q <= 8'b0;
 else if (!tx_valid_q || tx_accept_w)
@@ -704,7 +704,7 @@ else if (!tx_valid_q || tx_accept_w)
 //-----------------------------------------------------------------
 // Receive enable
 //-----------------------------------------------------------------
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     rx_enable_q <= 1'b0;
 else if (usb_rst_w ||reg_chirp_en_i)
@@ -715,7 +715,7 @@ else
 //-----------------------------------------------------------------
 // Receive SETUP: Pulse on SETUP packet receive
 //-----------------------------------------------------------------
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     rx_setup_q <= 1'b0;
 else if (usb_rst_w ||reg_chirp_en_i)
@@ -735,7 +735,7 @@ wire ep0_tx_zlp_w = ep0_tx_data_valid_i && (ep0_tx_data_strb_i == 1'b0) &&
 
 reg sent_status_zlp_q;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     sent_status_zlp_q   <= 1'b0;
 else if (usb_rst_w)
@@ -745,7 +745,7 @@ else if (ep0_tx_zlp_w)
 else if (rx_handshake_w)
     sent_status_zlp_q   <= 1'b0;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     addr_update_pending_q   <= 1'b0;
 else if ((sent_status_zlp_q && addr_update_pending_q && rx_handshake_w && token_pid_w == `PID_ACK) || usb_rst_w)
@@ -754,7 +754,7 @@ else if ((sent_status_zlp_q && addr_update_pending_q && rx_handshake_w && token_
 else if (reg_dev_addr_i != current_addr_q)
     addr_update_pending_q   <= 1'b1;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     current_addr_q  <= `USB_DEV_W'b0;
 else if (usb_rst_w)
@@ -829,7 +829,7 @@ begin
     endcase
 end
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
 begin
     ep0_out_data_bit_q <= 1'b0;
@@ -845,7 +845,7 @@ begin
     ep0_out_data_bit_q <= new_out_bit_r;
     ep0_in_data_bit_q  <= new_in_bit_r;
 end
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
 begin
     ep1_out_data_bit_q <= 1'b0;
@@ -861,7 +861,7 @@ begin
     ep1_out_data_bit_q <= new_out_bit_r;
     ep1_in_data_bit_q  <= new_in_bit_r;
 end
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
 begin
     ep2_out_data_bit_q <= 1'b0;
@@ -877,7 +877,7 @@ begin
     ep2_out_data_bit_q <= new_out_bit_r;
     ep2_in_data_bit_q  <= new_in_bit_r;
 end
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
 begin
     ep3_out_data_bit_q <= 1'b0;
@@ -899,7 +899,7 @@ end
 //-----------------------------------------------------------------
 reg rst_event_q;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     rst_event_q <= 1'b0;
 else if (usb_rst_w)
@@ -948,7 +948,7 @@ begin
     endcase
 end
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     intr_q <= 1'b0;
 // SOF

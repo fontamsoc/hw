@@ -103,13 +103,13 @@ reg [3:0]  rx_active_q;
 
 wire shift_en_w = (utmi_rxvalid_i & utmi_rxactive_i) || !utmi_rxactive_i;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     data_buffer_q <= 32'b0;
 else if (shift_en_w)
     data_buffer_q <= {utmi_data_i, data_buffer_q[31:8]};
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     data_valid_q <= 4'b0;
 else if (shift_en_w)
@@ -118,13 +118,13 @@ else
     data_valid_q <= {data_valid_q[3:1], 1'b0};
 
 reg [1:0] data_crc_q;
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     data_crc_q <= 2'b0;
 else if (shift_en_w)
     data_crc_q <= {!utmi_rxactive_i, data_crc_q[1]};
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     rx_active_q <= 4'b0;
 else
@@ -264,7 +264,7 @@ begin
 end
 
 // Update state
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     state_q   <= STATE_RX_IDLE;
 else if (!enable_i)
@@ -277,7 +277,7 @@ else
 //-----------------------------------------------------------------
 reg handshake_valid_q;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     handshake_valid_q <= 1'b0;
 else if (state_q == STATE_RX_IDLE && data_ready_w)
@@ -297,7 +297,7 @@ assign handshake_valid_o = handshake_valid_q;
 //-----------------------------------------------------------------
 // SOF: Frame number
 //-----------------------------------------------------------------
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     frame_num_q         <= `USB_FRAME_W'b0;
 else if (state_q == STATE_RX_SOF2 && data_ready_w)
@@ -311,7 +311,7 @@ assign frame_number_o = frame_num_q;
 
 reg frame_valid_q;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     frame_valid_q <= 1'b0;
 else
@@ -322,7 +322,7 @@ assign frame_valid_o = frame_valid_q;
 //-----------------------------------------------------------------
 // Token: PID
 //-----------------------------------------------------------------
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     token_pid_q <= `USB_PID_W'b0;
 else if (state_q == STATE_RX_IDLE && data_ready_w)
@@ -334,7 +334,7 @@ assign pid_o = token_pid_q;
 
 reg token_valid_q;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     token_valid_q <= 1'b0;
 else
@@ -345,7 +345,7 @@ assign token_valid_o = token_valid_q;
 //-----------------------------------------------------------------
 // Token: Device Address
 //-----------------------------------------------------------------
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     token_dev_q <= `USB_DEV_W'b0;
 else if (state_q == STATE_RX_TOKEN2 && data_ready_w)
@@ -358,7 +358,7 @@ assign token_addr_o = token_dev_q;
 //-----------------------------------------------------------------
 // Token: Endpoint
 //-----------------------------------------------------------------
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     token_ep_q      <= `USB_EP_W'b0;
 else if (state_q == STATE_RX_TOKEN2 && data_ready_w)
@@ -389,7 +389,7 @@ u_crc16
     .crc_out_o(crc_out_w)
 );
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     crc_sum_q   <= 16'hFFFF;
 else if (state_q == STATE_RX_IDLE)
@@ -397,7 +397,7 @@ else if (state_q == STATE_RX_IDLE)
 else if (data_ready_w)
     crc_sum_q   <= crc_out_w;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     crc_err_q   <= 1'b0;
 else if (state_q == STATE_RX_IDLE)
@@ -409,7 +409,7 @@ assign data_crc_err_o = crc_err_q;
 
 reg data_complete_q;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     data_complete_q   <= 1'b0;
 else if (state_q == STATE_RX_DATA_COMPLETE && next_state_r == STATE_RX_IDLE)
@@ -421,7 +421,7 @@ assign data_complete_o = data_complete_q;
 
 reg data_zlp_q;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     data_zlp_q   <= 1'b0;
 else if (state_q == STATE_RX_IDLE && next_state_r == STATE_RX_DATA)
@@ -437,7 +437,7 @@ reg        last_q;
 reg [7:0]  data_q;
 reg        mask_q;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
 begin
     valid_q  <= 1'b0;

@@ -79,7 +79,7 @@ reg [STATE_W-1:0] next_state_r;
 reg data_pid_q;
 reg data_zlp_q;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
 begin
     data_pid_q <= 1'b0;
@@ -219,7 +219,7 @@ begin
 end
 
 // Update state
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     state_q   <= STATE_TX_IDLE;
 else
@@ -266,7 +266,7 @@ u_crc16
     .crc_out_o(crc_out_w)
 );
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     crc_sum_q   <= 16'hFFFF;
 else if (state_q == STATE_TX_IDLE)
@@ -280,7 +280,7 @@ else if (state_q == STATE_TX_DATA && utmi_txvalid_o && utmi_txready_i)
 reg       valid_q;
 reg [7:0] data_q;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
 begin
     valid_q <= 1'b0;

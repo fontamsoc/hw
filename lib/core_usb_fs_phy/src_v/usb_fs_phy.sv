@@ -115,7 +115,7 @@ reg         rx_dn_ms;
 reg         rxd_ms;
 
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
 begin
     rx_dp_ms <= 1'b0;
@@ -142,7 +142,7 @@ reg         rxd0_q;
 reg         rxd1_q;
 reg         rxd_q;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
 begin
     rx_dp0_q    <= 1'b0;
@@ -384,7 +384,7 @@ else
 //-----------------------------------------------------------------
 // SYNC detect
 //-----------------------------------------------------------------
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     sync_j_detected_q  <= 1'b0;
 // Reset sync detect state in IDLE
@@ -399,7 +399,7 @@ else if (state_q == STATE_RX_SYNC_J)
 //-----------------------------------------------------------------
 reg rx_error_q;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     rx_error_q  <= 1'b0;
 // Rx bit stuffing error
@@ -421,7 +421,7 @@ assign utmi_rxerror_o = rx_error_q;
 //-----------------------------------------------------------------
 reg rxd_last_q;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     rxd_last_q  <= 1'b0;
 else
@@ -435,7 +435,7 @@ assign bit_edge_w = rxd_last_q ^ in_j_w;
 reg [1:0] sample_cnt_q;
 reg       adjust_delayed_q;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
 begin
     sample_cnt_q        <= 2'd0;
@@ -468,7 +468,7 @@ reg rxd_last_j_q;
 // 1 = same state
 // After 6 consequitive 1's, a 0 is inserted to maintain the transitions
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     rxd_last_j_q  <= 1'b0;
 else if ((state_q == STATE_IDLE) || sample_w)
@@ -479,7 +479,7 @@ assign bit_transition_w = sample_w ? rxd_last_j_q ^ in_j_w : 1'b0;
 //-----------------------------------------------------------------
 // Bit Counters
 //-----------------------------------------------------------------
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     ones_count_q <= 3'd1;
 // The packet starts with a double K (no transition)
@@ -506,7 +506,7 @@ end
 assign bit_stuff_bit_w     = (ones_count_q == 3'd6);
 assign next_is_bit_stuff_w = (ones_count_q == 3'd5) && !bit_transition_w;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     bit_count_q <= 3'b0;
 else if ((state_q == STATE_IDLE) || (state_q == STATE_RX_SYNC_K))
@@ -519,7 +519,7 @@ else if (((state_q == STATE_TX_SYNC) || (state_q == STATE_RX_SYNC_J)) && sample_
 //-----------------------------------------------------------------
 // Shift register
 //-----------------------------------------------------------------
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     data_q  <= 8'b0;
 // Pre-load shift register with SYNC word
@@ -552,7 +552,7 @@ assign utmi_data_in_o  = data_q;
 //-----------------------------------------------------------------
 reg rx_ready_q;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     rx_ready_q <= 1'b0;
 else if ((state_q == STATE_RX_ACTIVE) && sample_w && (bit_count_q == 3'd7) && !bit_stuff_bit_w)
@@ -567,7 +567,7 @@ assign utmi_rxvalid_o  = rx_ready_q;
 //-----------------------------------------------------------------
 reg tx_ready_q;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     tx_ready_q <= 1'b0;
 else if ((state_q == STATE_TX_SYNC) && sample_w && (bit_count_q == 3'd7))
@@ -595,7 +595,7 @@ else if (state_q == STATE_TX_EOP0)
 //-----------------------------------------------------------------
 wire out_bit_w = sample_w ? data_q[0] : 1'bz;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
 begin
     out_dp_q <= 1'b0;
@@ -654,7 +654,7 @@ end
 //-----------------------------------------------------------------
 reg [6:0] se0_cnt_q;
 
-always_ff @(posedge clk_i or posedge rst_i)
+always_ff @(posedge clk_i)
 if (rst_i)
     se0_cnt_q <= 7'b0;
 else if (in_se0_w)
