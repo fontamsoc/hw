@@ -52,7 +52,7 @@ void thrd_fn (void *arg) {
 	while(1) {
 		printf("thrd%u(): %d: 0x%08x\n", id, cntr, (uint32_t)_clkcycles());
 		if (!cntr) {
-			printf("thrd%u() exiting ...\n", id);
+			printf("thrd%u(): 0x%08x: exiting ...\n", id, (uint32_t)_clkcycles());
 			return; //_thread_exit();
 		}
 		if (--cntr >= cntr_thresh) {
@@ -82,7 +82,7 @@ void main (void) {
 	_thread_sleep(_MSECS(20));
 
 	while(1) {
-		printf("%s(): 0x%08x\n", __FUNCTION__, (uint32_t)_clkcycles());
+		printf("main(): 0x%08x\n", (uint32_t)_clkcycles());
 		_thread_sleep(_MSECS(60));
 		if (thrd0 && _is_thread_terminated(thrd0)) {
 			_thread_dispose(thrd0);
@@ -93,7 +93,7 @@ void main (void) {
 			thrd1 = 0;
 		}
 		if (!thrd0 && !thrd1) {
-			printf("%s() exiting ...\n", __FUNCTION__);
+			printf("main() exiting ...\n", (uint32_t)_clkcycles());
 			_thread_sleep(_MSECS(40));
 			return;
 		}
