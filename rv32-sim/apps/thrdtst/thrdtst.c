@@ -30,6 +30,8 @@ void timer1_cb (_timer_t *t) {
 	_timer_arm(t, _clkcycles() + _MSECS(20));
 }
 
+_sem_t tsttSem __attribute__((noinit));
+
 typedef struct {
 	uintptr_t id;
 	uintptr_t cntr_start;
@@ -53,9 +55,12 @@ void thrd_fn (void *arg) {
 			printf("thrd%u() exiting ...\n", id);
 			return; //_thread_exit();
 		}
-		if (--cntr >= cntr_thresh)
-			_thread_sleep(_MSECS(60));
-		else
+		if (--cntr >= cntr_thresh) {
+			if (id == 0)
+				_thread_sleep(_MSECS(60));
+			else // Test semaphore timeout.
+				_sem_get(&tsttSem, _MSECS(60));
+		} else
 			for (uintptr_t i = 0; i < _MSECS(1); ++i);
 	}
 }
@@ -63,6 +68,8 @@ void thrd_fn (void *arg) {
 void main (void) {
 
 	printf("Starting ...\n");
+
+	_sem_init(&tsttSem, 1, 0);
 
 	_thread_t *thrd0 = _thread_create (0, 2048, thrd_fn, &(thrd_arg){0, 16, 8});
 	_thread_sched(thrd0);
