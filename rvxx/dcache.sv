@@ -316,9 +316,6 @@ initial begin
 		`ifdef SIMULATION
 		$display ("%s loaded", INITFILE);
 		`endif
-		// Initial state initialized here, otherwise
-		// block ram fails to be inferred by yosys.
-		cache_dat_o[gen_cache_idx] = 0;
 	end
 end
 

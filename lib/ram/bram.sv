@@ -51,10 +51,6 @@ initial begin
 		`ifdef SIMULATION
 		$display ("%s loaded", INITFILE);
 		`endif
-		// Initial state initialized here, otherwise
-		// block ram fails to be inferred by yosys.
-		o0 = 0;
-		o1 = 0;
 	end
 end
 
@@ -88,10 +84,6 @@ initial begin
 		`ifdef SIMULATION
 		$display ("%s loaded", INITFILE);
 		`endif
-		// Initial state initialized here, otherwise
-		// block ram fails to be inferred by yosys.
-		o0 = 0;
-		o1 = 0;
 	end
 end
 
