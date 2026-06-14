@@ -14,20 +14,22 @@ SRAM_INITFILE ?= apps/helloworld/helloworld.${XWORDBITSZ}.hex
 
 .PHONY: sim
 sim:
-	make TB=sim obj_dir/Vsim
+	@make TB=sim \
+	VFLAGS="--x-assign 1 --x-initial-edge" \
+	obj_dir/Vsim
 
 .PHONY: sim_trace
 sim_trace:
 	@make TB=sim_trace \
-	TBFLAGS="--trace-fst --trace-threads 2 --trace-underscore \
+	VFLAGS="--x-assign 1 --x-initial-edge \
+	--trace-fst --trace-threads 2 --trace-underscore \
 	$${TRACE_BEGIN:+-CFLAGS -DTRACE_BEGIN=$${TRACE_BEGIN}} \
 	$${TRACE_LEN:+-CFLAGS -DTRACE_LEN=$${TRACE_LEN}}" \
 	obj_dir/Vsim # Maximum of 2 threads recommended for FST.
 
 obj_dir/Vsim: sim.sv ${TB}.cpp
 	@verilator --version &>${BUILD_LOG_FILE}
-	verilator -cc --exe ${TBFLAGS} \
-		--x-assign 1 --x-initial-edge \
+	verilator -cc --exe ${VFLAGS} \
 		--relative-includes -I.. -Wno-lint \
 		-DCLKFREQ=${CLKFREQ} \
 		-DCPU_COUNT=${CPU_COUNT} \
