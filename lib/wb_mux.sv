@@ -38,7 +38,7 @@ parameter ADDRLIMIT     = 'h2000;
 parameter MAXPENDINGACK = 16; // Must be non-null and a power of 2.
 parameter SDEVCOUNT     = 1;
 parameter [0:(SDEVCOUNT*2*32)-1] SDEVS = 0;
-parameter ADDRSPACE_SEQINIT = 0; // When non-null, at least 2 clock cycles needed for reset.
+parameter ADDRSPACE_SEQINIT = 1; // When non-null, at least 2 clock cycles needed for reset.
 
 localparam CLOG2SDEVCOUNT = clog2(SDEVCOUNT);
 
