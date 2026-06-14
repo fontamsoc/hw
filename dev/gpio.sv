@@ -179,7 +179,6 @@ generate for (
 	gen_dbncr_idx = gen_dbncr_idx + 1) begin: gen_dbncr
 if (DBNCR_EN[gen_dbncr_idx]) begin :gen_dbncr_en
 dbncr  #(
-	// Bitsize of the command argument.
 	 .THRESBITSZ (DBNCRBITSZ)
 	,.INIT       (1'b0)
 ) dbncr (
