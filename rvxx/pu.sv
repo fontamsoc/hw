@@ -412,6 +412,10 @@ wire iF_opImul_stb = (iF_isRV32M && !iF_func3[2] && iF_rdId);
 wire iF_opIdiv_stb = (iF_isRV32M &&  iF_func3[2] && iF_rdId);
 `endif
 
+`ifdef PURV32ZBA
+wire iF_isZba = (iF_isALUreg && iF_func7 == 7'b0010000); // sh1add/sh2add/sh3add; shift amount is iF_func3[2:1].
+`endif
+
 wire iF_isLr = (iF_isAMO && iF_func5 == 5'b00010);
 wire iF_isSc = (iF_isAMO && iF_func5 == 5'b00011);
 
@@ -556,6 +560,9 @@ reg iD_isLUI;
 reg iD_isStore;
 reg iD_isSystem;
 reg iD_isAMO;
+`ifdef PURV32ZBA
+reg iD_isZba;
+`endif
 
 reg iD_isFence;
 reg iD_isFencei;
@@ -815,6 +822,9 @@ always_ff @(posedge clk_i) begin
 		iD_isStore  <= iF_isStore;
 		iD_isSystem <= iF_isSystem;
 		iD_isAMO    <= iF_isAMO;
+		`ifdef PURV32ZBA
+		iD_isZba    <= iF_isZba;
+		`endif
 
 		iD_isFence         <= iF_isFence;
 		iD_isFencei        <= iF_isFencei;
@@ -897,6 +907,11 @@ wire [WORDBITSZ -1 : 0] eX_aluShift_i_ = ((iD_func3 == 3'b001) ? reverseBits(eX_
 wire [WORDBITSZ -1 : 0] eX_aluShift_i = // Single shifter for left and right shifts.
 	($signed({iD_func7[5] & eX_aluArg1_i[WORDBITSZ-1], eX_aluShift_i_}) >>> eX_aluArg2_i[4:0]);
 
+`ifdef PURV32ZBA
+// Zba sh1add/sh2add/sh3add: (rs1 << iD_func3[2:1]) + rs2.
+wire [WORDBITSZ -1 : 0] eX_aluShadd_i = ((eX_aluArg1_i << iD_func3[2:1]) + eX_aluArg2_i);
+`endif
+
 reg [WORDBITSZ -1 : 0] eX_aluOut_i; // ### comb-block-reg.
 always_comb begin
 	unique case (iD_func3)
@@ -922,6 +937,9 @@ always_comb begin
 	else   if (iD_isAUIPC)     eX_rslt_i = iD_pc_plus_iD_Uimm;
 	else   if (iD_isCSR)       eX_rslt_i = eX_csrOut_i;
 	else   if (iD_isSc)        eX_rslt_i = eX_StoreCondOut_i;
+	`ifdef PURV32ZBA
+	else   if (iD_isZba)       eX_rslt_i = eX_aluShadd_i;
+	`endif
 	else                       eX_rslt_i = eX_aluOut_i;
 end
 

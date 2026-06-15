@@ -10,6 +10,7 @@
 `define SIMULATION
 
 `define PURV32M
+`define PURV32ZBA
 `define PUIMULDSP
 `define PUPREDICTJAL
 `define PUPREDICTBRANCH

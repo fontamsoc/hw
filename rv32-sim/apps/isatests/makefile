@@ -46,6 +46,9 @@ TESTS += sub
 TESTS += sw
 TESTS += xori
 TESTS += xor
+TESTS += sh1add
+TESTS += sh2add
+TESTS += sh3add
 TESTS += amoswap_w
 TESTS += amoadd_w
 TESTS += amoand_w
@@ -68,6 +71,7 @@ READELF := ${PREFIX}-readelf
 
 CFLAGS += -Werror -fdata-sections -ffunction-sections -Wl,--gc-sections -O3 -g
 CFLAGS += -nostdlib
+CFLAGS += -march=rv32ima_zba_zicsr_zifencei
 
 APPNAME := isatests
 

@@ -10,6 +10,7 @@
 `include "lib/rstctrl.sv"
 
 `define PURV32M
+`define PURV32ZBA
 `define PUIMULDSP
 `define PUPREDICTJAL
 `define PUPREDICTBRANCH
