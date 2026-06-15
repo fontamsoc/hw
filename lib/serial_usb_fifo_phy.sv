@@ -132,7 +132,7 @@ fifo #(
 );
 
 // This register is set to 1, when data was read from fifo.
-reg tx_read_done = 0;
+reg tx_read_done;
 
 wire tx_read_stb = (tx_usage_o && !tx_read_done);
 

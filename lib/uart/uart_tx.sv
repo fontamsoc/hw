@@ -97,7 +97,7 @@ output wire [(CLOG2BUFSZ +1) -1 : 0] usage_o;
 output wire tx_o;
 
 // This register is set to 1, when data was read from fifo.
-reg tx_read_done = 0;
+reg tx_read_done;
 
 wire tx_read_stb = (usage_o && !tx_read_done);
 

@@ -87,7 +87,7 @@ input wire [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] clockcyclesperbit_i;
 input  wire            stb_i;
 input  wire [8 -1 : 0] data_i;
 output wire            rdy_o;
-output reg             tx_o = 1'b1;
+output reg             tx_o;
 
 // Transmitter is either sending stop bits,
 // or waiting for the input "stb_i" to become high
@@ -97,19 +97,19 @@ localparam TXIDLE = 0;
 // Transmitter is transmitting data.
 localparam TXSEND = 1;
 
-reg txstate = TXIDLE; // Register which hold the state of the transmitter.
+reg txstate; // Register which hold the state of the transmitter.
 
 // Register holding bits to transmit captured from "data_i".
-reg [8 -1 : 0] data = 0;
+reg [8 -1 : 0] data;
 
 // Register which is used to keep track of the number of bit left to send.
-reg [3 -1 : 0] bitcnt = 0;
+reg [3 -1 : 0] bitcnt;
 
 // Register which is used to prevent garbaged transmission
 // if changing the speed while a byte is transmitting.
-reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] clockcyclesperbit = 0;
+reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] clockcyclesperbit;
 
-reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] cntr = 0;
+reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] cntr;
 
 wire txen = (cntr >= clockcyclesperbit);
 

@@ -24,8 +24,6 @@ module cpu (
 
 	 rst_i
 
-	,rst_o
-
 	,clk_i
 	,clk_mem_i
 	,clk_imul_i
@@ -81,8 +79,6 @@ localparam XADDRBITSZ = (XWORDBITSZ-CLOG2XWORDBITSZBY8);
 localparam XMSBSZIGN = (XWORDBITSZ-clog2(ADDRLIMIT)-1);
 
 input wire rst_i;
-
-output wire rst_o;
 
 input wire clk_i;
 input wire clk_mem_i;
@@ -141,9 +137,6 @@ wire [(1 * PUCNT) -1 : 0]                      arbiter_wb_bsy_o_;
 wire [(1 * PUCNT) -1 : 0]                      arbiter_wb_ack_o_;
 wire [(XWORDBITSZ * PUCNT) -1 : 0]             arbiter_wb_dat_o_;
 
-wire [PUCNT -1 : 0] rst_ow;
-assign rst_o = |rst_ow;
-
 genvar genpu_idx;
 generate for (
 	genpu_idx = 0;
@@ -167,8 +160,6 @@ pu #(
 ) pu (
 
 	 .rst_i (rst_i)
-
-	,.rst_o (rst_ow[genpu_idx])
 
 	,.clk_i      (clk_i)
 	,.clk_imul_i (clk_imul_i)

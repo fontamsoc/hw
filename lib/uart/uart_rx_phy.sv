@@ -84,8 +84,8 @@ input wire clk_i;
 input wire [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] clockcyclesperbit_i;
 
 input  wire           rx_i;
-output reg            rcvd_o = 0;
-output reg [8 -1 : 0] data_o = 0;
+output reg            rcvd_o;
+output reg [8 -1 : 0] data_o;
 
 // Receiver is waiting on a transmission.
 localparam RXIDLE = 0;
@@ -96,14 +96,14 @@ localparam RXRCVD = 1;
 // Receiver is checking for the end of a transmission.
 localparam RXSTOP = 2;
 
-reg [2 -1 : 0] rxstate = RXIDLE; // Register which hold the state of the receiver.
+reg [2 -1 : 0] rxstate; // Register which hold the state of the receiver.
 
-reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] cntr = 0;
+reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] cntr;
 
 wire rxen = (cntr >= clockcyclesperbit_i);
 
 // Register which is used to keep track of the number of bits left to receive.
-reg [3 -1 : 0] bitcnt = 0;
+reg [3 -1 : 0] bitcnt;
 
 always_ff @(posedge clk_i) begin
 	// Logic updating the register cntr.
@@ -129,9 +129,10 @@ end
 
 always_ff @(posedge clk_i) begin
 	// Logic updating the registers rxstate and rcvd_o.
-	if (rst_i)
+	if (rst_i) begin
 		rxstate <= RXIDLE;
-	else if (rxstate == RXIDLE) begin
+		rcvd_o <= 0;
+	end else if (rxstate == RXIDLE) begin
 		// I get here if the receiver is in an idle state.
 		// I check for the start of a transmission.
 		// A change of the incoming serial line state to low

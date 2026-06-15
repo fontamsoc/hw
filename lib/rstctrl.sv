@@ -59,13 +59,12 @@ end
 
 generate if (DBNCRTHRESH) begin: gen_dbncr
 dbncr #(
-	 .THRESBITSZ (clog2(DBNCRTHRESH+1))
-	,.INIT       (1'b0)
+	.THRESBITSZ (clog2(DBNCRTHRESH+1))
 ) dbncr (
 	 .clk_i    (clk_i)
 	,.i        (i)
 	,.o        (pt_o)
-	,.thresh_i (DBNCRTHRESH)
+	,.thresh_i (rsthold ? 0 : DBNCRTHRESH)
 );
 end else begin
 assign pt_o = i;

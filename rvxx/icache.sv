@@ -84,10 +84,10 @@ always_ff @(posedge clk_i) begin
 end
 
 // Register used to hold the way index to write next.
-reg [CLOG2WAYCNT -1 : 0] waywidx = 0;
+reg [CLOG2WAYCNT -1 : 0] waywidx;
 generate if (WAYCNT > 1) begin
 // Register used to hold clock cycle count of _we_i high.
-reg [CLOG2SETCNT -1 : 0] wecnt = 0;
+reg [CLOG2SETCNT -1 : 0] wecnt;
 // Since there will be multiple clock cycles between
 // posedge of nxtway_i and we_i, we can register nxtway_i
 // for better timing if it is combinational.

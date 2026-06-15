@@ -137,8 +137,8 @@ wire we = (push_i && !full_o);
 
 // Read and write index within dram.
 // Only the CLOG2DEPTH lsb are used for indexing.
-reg [(CLOG2DEPTH +1) -1 : 0] readidx = 0;
-reg [(CLOG2DEPTH +1) -1 : 0] writeidx = 0;
+reg [(CLOG2DEPTH +1) -1 : 0] readidx;
+reg [(CLOG2DEPTH +1) -1 : 0] writeidx;
 
 dram #(
 	 .SZ (DEPTH)

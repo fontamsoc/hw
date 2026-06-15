@@ -11,9 +11,6 @@
 // THRESBITSZ:
 // 	Number of bits used by the input "thresh_i".
 // 	It must be non-null.
-//
-// INIT:
-// 	PowerOn initial state of the output "o".
 
 // Ports.
 //
@@ -56,16 +53,15 @@ module dbncr (
 );
 
 parameter THRESBITSZ = 0;
-parameter INIT       = 1'b0;
 
 input wire clk_i;
 
 input wire i;
-output reg o = INIT;
+output reg o;
 
 input wire [THRESBITSZ -1 : 0] thresh_i;
 
-reg [THRESBITSZ -1 : 0] cntr = 0;
+reg [THRESBITSZ -1 : 0] cntr;
 
 always_ff @(posedge clk_i) begin
 	if (i != o) begin

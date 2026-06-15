@@ -24,9 +24,9 @@ int main (int argc, char **argv) {
 	};
 
 	// Reset module sim.
-	// Hold reset for at least 2 cycles: with wb_mux ADDRSPACE_SEQINIT,
-	// addrspace[] is loaded on the first reset cycle and its consumers
-	// (addrspace_slvidx_lo/hi) only read valid values on the next cycle.
+	// Hold reset for at least 2 cycles: in wb_mux, addrspace[] is loaded
+	// on the first reset cycle and its consumers (addrspace_slvidx_lo/hi)
+	// only read valid values on the next cycle.
 	auto rstcycle = [&]() -> void {
 		tb->rst_i = 1;
 		tickclk();

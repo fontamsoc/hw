@@ -179,13 +179,12 @@ generate for (
 	gen_dbncr_idx = gen_dbncr_idx + 1) begin: gen_dbncr
 if (DBNCR_EN[gen_dbncr_idx]) begin :gen_dbncr_en
 dbncr  #(
-	 .THRESBITSZ (DBNCRBITSZ)
-	,.INIT       (1'b0)
+	.THRESBITSZ (DBNCRBITSZ)
 ) dbncr (
 	 .clk_i    (clk_i)
 	,.i        (i[gen_dbncr_idx])
 	,.o        (_i[gen_dbncr_idx])
-	,.thresh_i (dbncrthresh)
+	,.thresh_i (rst_i ? 0 : dbncrthresh)
 );
 end else begin
 assign _i[gen_dbncr_idx] = i[gen_dbncr_idx];

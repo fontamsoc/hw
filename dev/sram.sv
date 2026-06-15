@@ -88,7 +88,7 @@ reg hold;
 // Register which when non-null set the output "wb_bsy_o"
 // high, implementing a delay when accessing memory, which
 // is useful for testing devices issuing memory accesses.
-reg [(CLOG2DELAY +1) -1 : 0] cntr = 0;
+reg [(CLOG2DELAY +1) -1 : 0] cntr;
 
 assign wb_bsy_o = (hold || (|cntr));
 

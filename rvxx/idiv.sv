@@ -57,7 +57,7 @@ output wire [CLOG2GPRCNT -1 : 0] gprid_o;
 output reg rdy_o;
 
 // Register in which the division will be computed.
-reg  [(WORDBITSZ*2) -1 : 0] cumulator = 0;
+reg  [(WORDBITSZ*2) -1 : 0] cumulator;
 
 // Reg set to the right operand value of the division, which is the divider.
 reg [WORDBITSZ -1 : 0] rval;
@@ -231,8 +231,8 @@ output wire [CLOG2GPRCNT -1 : 0] gprid_o;
 
 output wire ordy_o;
 
-reg [(CLOG2INSTCNT +1) -1 : 0] wridx = 0;
-reg [(CLOG2INSTCNT +1) -1 : 0] rdidx = 0;
+reg [(CLOG2INSTCNT +1) -1 : 0] wridx;
+reg [(CLOG2INSTCNT +1) -1 : 0] rdidx;
 
 wire [(CLOG2INSTCNT +1) -1 : 0] _wridx = ((INSTCNT-1) ? wridx : 0);
 wire [(CLOG2INSTCNT +1) -1 : 0] _rdidx = ((INSTCNT-1) ? rdidx : 0);
@@ -253,9 +253,9 @@ assign rdy_o = ((usage < INSTCNT) && rdy_w[_wridx]);
 assign ordy_o = ((usage != 0) && rdy_w[_rdidx]);
 
 `ifdef PUIDIVCLK
-reg                                                       _stb_i  = 0;
-reg  [(((WORDBITSZ*2)+CLOG2GPRCNT)+IDIVTYPEBITSZ) -1 : 0] _args_i = 0;
-reg  [(CLOG2INSTCNT +1) -1 : 0]                           __wridx = 0;
+reg                                                       _stb_i;
+reg  [(((WORDBITSZ*2)+CLOG2GPRCNT)+IDIVTYPEBITSZ) -1 : 0] _args_i;
+reg  [(CLOG2INSTCNT +1) -1 : 0]                           __wridx;
 `else
 wire                                                      _stb_i  = stb_i;
 wire [(((WORDBITSZ*2)+CLOG2GPRCNT)+IDIVTYPEBITSZ) -1 : 0] _args_i = args_i;
@@ -283,9 +283,13 @@ always_ff @(posedge clk_i) begin
 	// sigmal rdy_o posegde must happen at least (freq(clk_idiv_i)/freq(clk_i))
 	// clk_idiv_i cycles after its negedge; which is guarateed by the fact that
 	// idiv computation takes at least that many clk_idiv_i cycles.
-	_stb_i  <= stb_i;
-	_args_i <= args_i;
-	__wridx <= _wridx;
+	if (rst_i)
+		_stb_i <= 0;
+	else begin
+		_stb_i  <= stb_i;
+		_args_i <= args_i;
+		__wridx <= _wridx;
+	end
 end
 `endif
 

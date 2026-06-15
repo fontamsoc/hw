@@ -132,8 +132,6 @@ module pu (
 
 	 rst_i
 
-	,rst_o
-
 	,clk_i
 	,clk_imul_i
 	,clk_idiv_i
@@ -228,8 +226,6 @@ localparam MSBSZIGN  = (WORDBITSZ-clog2(ADDRLIMIT)-1);
 localparam XMSBSZIGN = (XWORDBITSZ-clog2(ADDRLIMIT)-1);
 
 input wire rst_i;
-
-output reg rst_o = 0;
 
 input wire clk_i;
 input wire clk_imul_i;

@@ -150,7 +150,7 @@ output wire [CLOG2GPRCNT -1 : 0] gprid_o;
 output reg rdy_o;
 
 // Register in which the multiplication will be computed.
-reg  [(WORDBITSZ*2) -1 : 0] cumulator        = 0;
+reg  [(WORDBITSZ*2) -1 : 0] cumulator;
 wire [(WORDBITSZ*2) -1 : 0] cumulatornegated = -cumulator;
 
 // Net used by the multiplication; compute the multiplier
@@ -333,8 +333,8 @@ output wire [CLOG2GPRCNT -1 : 0] gprid_o;
 
 output wire ordy_o;
 
-reg [(CLOG2INSTCNT +1) -1 : 0] wridx = 0;
-reg [(CLOG2INSTCNT +1) -1 : 0] rdidx = 0;
+reg [(CLOG2INSTCNT +1) -1 : 0] wridx;
+reg [(CLOG2INSTCNT +1) -1 : 0] rdidx;
 
 wire [(CLOG2INSTCNT +1) -1 : 0] _wridx = ((INSTCNT-1) ? wridx : 0);
 wire [(CLOG2INSTCNT +1) -1 : 0] _rdidx = ((INSTCNT-1) ? rdidx : 0);
@@ -355,9 +355,9 @@ assign rdy_o = ((usage < INSTCNT) && rdy_w[_wridx]);
 assign ordy_o = ((usage != 0) && rdy_w[_rdidx]);
 
 `ifdef PUIMULCLK
-reg                                                       _stb_i  = 0;
-reg  [(((WORDBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] _args_i = 0;
-reg  [(CLOG2INSTCNT +1) -1 : 0]                           __wridx = 0;
+reg                                                       _stb_i;
+reg  [(((WORDBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] _args_i;
+reg  [(CLOG2INSTCNT +1) -1 : 0]                           __wridx;
 `else
 wire                                                      _stb_i  = stb_i;
 wire [(((WORDBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] _args_i = args_i;
@@ -385,9 +385,13 @@ always_ff @(posedge clk_i) begin
 	// sigmal rdy_o posegde must happen at least (freq(clk_imul_i)/freq(clk_i))
 	// clk_imul_i cycles after its negedge; which is guarateed by the fact that
 	// imul computation takes at least that many clk_imul_i cycles.
-	_stb_i  <= stb_i;
-	_args_i <= args_i;
-	__wridx <= _wridx;
+	if (rst_i)
+		_stb_i <= 0;
+	else begin
+		_stb_i  <= stb_i;
+		_args_i <= args_i;
+		__wridx <= _wridx;
+	end
 end
 `endif
 
