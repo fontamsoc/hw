@@ -880,7 +880,12 @@ wire eX_lt_i = (
 	(eX_aluArg1_i[WORDBITSZ-1] ^ eX_aluArg2_i[WORDBITSZ-1]) ?
 		eX_aluArg1_i[WORDBITSZ-1] : eX_aluMinus_i[WORDBITSZ]);
 wire eX_ltu_i = eX_aluMinus_i[WORDBITSZ];
-wire eX_eq_i = (eX_aluMinus_i[WORDBITSZ-1:0] == {WORDBITSZ{1'b0}});
+// Dedicated branch comparator: resolves BEQ/BNE/BLT/BGE/BLTU/BGEU without
+// waiting on the shared subtract eX_aluMinus_i (nor its fanout), shortening the
+// branch-resolution path that gates the fetch redirect and the gpr scoreboard.
+wire eX_eq_i    = (eX_aluArg1_i == eX_aluArg2_i);
+wire eX_brLt_i  = ($signed(eX_aluArg1_i) < $signed(eX_aluArg2_i));
+wire eX_brLtu_i = (eX_aluArg1_i < eX_aluArg2_i);
 
 function automatic bit [WORDBITSZ -1 : 0] reverseBits;
 	input bit [WORDBITSZ -1 : 0] bits;
@@ -925,10 +930,10 @@ always_comb begin
 	unique case (iD_func3)
 	3'b000:  eX_takeBranch_i = eX_eq_i;
 	3'b001:  eX_takeBranch_i = !eX_eq_i;
-	3'b100:  eX_takeBranch_i = eX_lt_i;
-	3'b101:  eX_takeBranch_i = !eX_lt_i;
-	3'b110:  eX_takeBranch_i = eX_ltu_i;
-	3'b111:  eX_takeBranch_i = !eX_ltu_i;
+	3'b100:  eX_takeBranch_i = eX_brLt_i;
+	3'b101:  eX_takeBranch_i = !eX_brLt_i;
+	3'b110:  eX_takeBranch_i = eX_brLtu_i;
+	3'b111:  eX_takeBranch_i = !eX_brLtu_i;
 	default: eX_takeBranch_i = 1'b0;
 	endcase
 end
