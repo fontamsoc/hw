@@ -429,6 +429,7 @@ wire iF_isZbb =
 	(iF_isALUimm && iF_func7 == 7'b0110000 &&  iF_func3 == 3'b101)                                              || // rori
 	(iF_isALUimm && iF_func3 == 3'b101 && iF_Iimm[11:0] == 12'h698)                                             || // rev8
 	(iF_isALUimm && iF_func3 == 3'b101 && iF_Iimm[11:0] == 12'h287);                                               // orc.b
+wire iF_isZbbRol = (iF_isALUreg && iF_func3 == 3'b001); // OP-form func7=0110000 rol.
 `endif
 
 wire iF_isLr = (iF_isAMO && iF_func5 == 5'b00010);
@@ -580,6 +581,7 @@ reg iD_isZba;
 `endif
 `ifdef PURV32ZBB
 reg iD_isZbb;
+reg iD_isZbbRol;
 `endif
 
 reg iD_isFence;
@@ -845,6 +847,7 @@ always_ff @(posedge clk_i) begin
 		`endif
 		`ifdef PURV32ZBB
 		iD_isZbb    <= iF_isZbb;
+		iD_isZbbRol <= iF_isZbbRol;
 		`endif
 
 		iD_isFence         <= iF_isFence;
@@ -934,19 +937,6 @@ wire [WORDBITSZ -1 : 0] eX_aluShadd_i = ((eX_aluArg1_i << iD_func3[2:1]) + eX_al
 `endif
 
 `ifdef PURV32ZBB
-function automatic bit [WORDBITSZ -1 : 0] zbb_clz; // Count leading zeros.
-	input bit [WORDBITSZ -1 : 0] v;
-	bit found;
-	begin
-		zbb_clz = 0;
-		found = 0;
-		for (int i = WORDBITSZ -1; i >= 0; --i)
-			if (!found) begin
-				if (v[i]) found = 1'b1;
-				else      zbb_clz = zbb_clz + 1'b1;
-			end
-	end
-endfunction
 function automatic bit [WORDBITSZ -1 : 0] zbb_ctz; // Count trailing zeros.
 	input bit [WORDBITSZ -1 : 0] v;
 	bit found;
@@ -979,14 +969,13 @@ function automatic bit [WORDBITSZ -1 : 0] zbb_orcb; // OR-combine within each by
 		zbb_orcb[i*8 +: 8] = {8{|v[i*8 +: 8]}};
 endfunction
 
-// Rotate: rol(rs1) = ({rs1,rs1} << amt) high word; ror(rs1) = ({rs1,rs1} >> amt) low word.
+// Rotate via a single right-shifter: ror(x,a) = ({x,x} >> a) low word, and
+// rol(x,a) = ror(x, 32-a), so left-rotate just negates the 5-bit amount.
 // Amount comes from rs2[4:0] for the OP form (rol/ror), iD_Iimm[4:0] for the OP-IMM form (rori).
 wire [5            -1 : 0] eX_zbbRotAmt_i = (iD_isALUreg ? eX_aluArg2_i[4:0] : iD_Iimm[4:0]);
+wire [5            -1 : 0] eX_zbbRorAmt_i = (iD_isZbbRol ? (5'd0 - eX_zbbRotAmt_i) : eX_zbbRotAmt_i);
 wire [(2*WORDBITSZ)-1 : 0] eX_zbbDbl_i    = {eX_aluArg1_i, eX_aluArg1_i};
-wire [(2*WORDBITSZ)-1 : 0] eX_zbbRorDbl_i = (eX_zbbDbl_i >> eX_zbbRotAmt_i);
-wire [(2*WORDBITSZ)-1 : 0] eX_zbbRolDbl_i = (eX_zbbDbl_i << eX_zbbRotAmt_i);
-wire [WORDBITSZ    -1 : 0] eX_zbbRor_i    = eX_zbbRorDbl_i[WORDBITSZ -1 : 0];
-wire [WORDBITSZ    -1 : 0] eX_zbbRol_i    = eX_zbbRolDbl_i[(2*WORDBITSZ) -1 : WORDBITSZ];
+wire [WORDBITSZ    -1 : 0] eX_zbbRot_i    = (eX_zbbDbl_i >> eX_zbbRorAmt_i); // low word.
 
 reg [WORDBITSZ -1 : 0] eX_zbbOut_i; // ### comb-block-reg.
 always_comb begin
@@ -1006,14 +995,14 @@ always_comb begin
 			default: eX_zbbOut_i = (eX_ltu_i ? eX_aluArg2_i : eX_aluArg1_i); // maxu (3'b111)
 			endcase
 		7'b0110000: // Rotate.
-			eX_zbbOut_i = ((iD_func3 == 3'b001) ? eX_zbbRol_i : eX_zbbRor_i); // rol/ror
+			eX_zbbOut_i = eX_zbbRot_i; // rol/ror (eX_zbbRorAmt_i already negated for rol)
 		default: // 7'b0000100: zext.h.
 			eX_zbbOut_i = {{(WORDBITSZ-16){1'b0}}, eX_aluArg1_i[15:0]};
 		endcase
 	end else begin // OP-IMM-form Zbb.
 		if (iD_func3 == 3'b001) // clz/ctz/cpop/sext.b/sext.h, selected by imm[4:0].
 			case (iD_Iimm[4:0])
-			5'd0:    eX_zbbOut_i = zbb_clz(eX_aluArg1_i);
+			5'd0:    eX_zbbOut_i = zbb_ctz(reverseBits(eX_aluArg1_i)); // clz = ctz of bit-reversed.
 			5'd1:    eX_zbbOut_i = zbb_ctz(eX_aluArg1_i);
 			5'd2:    eX_zbbOut_i = zbb_cpop(eX_aluArg1_i);
 			5'd4:    eX_zbbOut_i = {{(WORDBITSZ-8){eX_aluArg1_i[7]}},   eX_aluArg1_i[7:0]};  // sext.b
@@ -1022,7 +1011,7 @@ always_comb begin
 		else // iD_func3 == 3'b101: rev8/orc.b/rori.
 			if      (iD_Iimm[11:0] == 12'h698) eX_zbbOut_i = zbb_rev8(eX_aluArg1_i);
 			else if (iD_Iimm[11:0] == 12'h287) eX_zbbOut_i = zbb_orcb(eX_aluArg1_i);
-			else                               eX_zbbOut_i = eX_zbbRor_i; // rori
+			else                               eX_zbbOut_i = eX_zbbRot_i; // rori
 	end
 end
 `endif
