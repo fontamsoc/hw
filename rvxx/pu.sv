@@ -407,13 +407,28 @@ wire iF_isWfi    = (iF_isSystemAndFunc3Null && iF_Iimm[11:0] == 12'b000100000101
 wire iF_isCSR = (iF_isSystem && iF_func3[1:0]);
 
 `ifdef PURV32M
-wire iF_isRV32M    = (iF_isALUreg && iF_func7[0]);
+// Match the full M funct7 (not just func7[0]) so other func7[0]==1 OP encodings
+// (e.g. Zbb min/max with funct7 0000101) are not misdecoded as mul/div.
+wire iF_isRV32M    = (iF_isALUreg && iF_func7 == 7'b0000001);
 wire iF_opImul_stb = (iF_isRV32M && !iF_func3[2] && iF_rdId);
 wire iF_opIdiv_stb = (iF_isRV32M &&  iF_func3[2] && iF_rdId);
 `endif
 
 `ifdef PURV32ZBA
 wire iF_isZba = (iF_isALUreg && iF_func7 == 7'b0010000); // sh1add/sh2add/sh3add; shift amount is iF_func3[2:1].
+`endif
+
+`ifdef PURV32ZBB
+// Zbb decode. iF_func7 == iF_insn[31:25] == imm[11:5] for OP-IMM; iF_Iimm[11:0] is the I-immediate.
+wire iF_isZbb =
+	(iF_isALUreg && iF_func7 == 7'b0100000 && (iF_func3 == 3'b100 || iF_func3 == 3'b110 || iF_func3 == 3'b111)) || // xnor/orn/andn
+	(iF_isALUreg && iF_func7 == 7'b0000101 && iF_func3[2])                                                      || // min/minu/max/maxu
+	(iF_isALUreg && iF_func7 == 7'b0110000 && (iF_func3 == 3'b001 || iF_func3 == 3'b101))                       || // rol/ror
+	(iF_isALUreg && iF_func7 == 7'b0000100 &&  iF_func3 == 3'b100 && iF_rs2Id == 5'd0)                          || // zext.h
+	(iF_isALUimm && iF_func7 == 7'b0110000 &&  iF_func3 == 3'b001)                                              || // clz/ctz/cpop/sext.b/sext.h
+	(iF_isALUimm && iF_func7 == 7'b0110000 &&  iF_func3 == 3'b101)                                              || // rori
+	(iF_isALUimm && iF_func3 == 3'b101 && iF_Iimm[11:0] == 12'h698)                                             || // rev8
+	(iF_isALUimm && iF_func3 == 3'b101 && iF_Iimm[11:0] == 12'h287);                                               // orc.b
 `endif
 
 wire iF_isLr = (iF_isAMO && iF_func5 == 5'b00010);
@@ -562,6 +577,9 @@ reg iD_isSystem;
 reg iD_isAMO;
 `ifdef PURV32ZBA
 reg iD_isZba;
+`endif
+`ifdef PURV32ZBB
+reg iD_isZbb;
 `endif
 
 reg iD_isFence;
@@ -825,6 +843,9 @@ always_ff @(posedge clk_i) begin
 		`ifdef PURV32ZBA
 		iD_isZba    <= iF_isZba;
 		`endif
+		`ifdef PURV32ZBB
+		iD_isZbb    <= iF_isZbb;
+		`endif
 
 		iD_isFence         <= iF_isFence;
 		iD_isFencei        <= iF_isFencei;
@@ -912,6 +933,100 @@ wire [WORDBITSZ -1 : 0] eX_aluShift_i = // Single shifter for left and right shi
 wire [WORDBITSZ -1 : 0] eX_aluShadd_i = ((eX_aluArg1_i << iD_func3[2:1]) + eX_aluArg2_i);
 `endif
 
+`ifdef PURV32ZBB
+function automatic bit [WORDBITSZ -1 : 0] zbb_clz; // Count leading zeros.
+	input bit [WORDBITSZ -1 : 0] v;
+	bit found;
+	begin
+		zbb_clz = 0;
+		found = 0;
+		for (int i = WORDBITSZ -1; i >= 0; --i)
+			if (!found) begin
+				if (v[i]) found = 1'b1;
+				else      zbb_clz = zbb_clz + 1'b1;
+			end
+	end
+endfunction
+function automatic bit [WORDBITSZ -1 : 0] zbb_ctz; // Count trailing zeros.
+	input bit [WORDBITSZ -1 : 0] v;
+	bit found;
+	begin
+		zbb_ctz = 0;
+		found = 0;
+		for (int i = 0; i < WORDBITSZ; ++i)
+			if (!found) begin
+				if (v[i]) found = 1'b1;
+				else      zbb_ctz = zbb_ctz + 1'b1;
+			end
+	end
+endfunction
+function automatic bit [WORDBITSZ -1 : 0] zbb_cpop; // Population count.
+	input bit [WORDBITSZ -1 : 0] v;
+	begin
+		zbb_cpop = 0;
+		for (int i = 0; i < WORDBITSZ; ++i)
+			zbb_cpop = zbb_cpop + v[i];
+	end
+endfunction
+function automatic bit [WORDBITSZ -1 : 0] zbb_rev8; // Reverse byte order.
+	input bit [WORDBITSZ -1 : 0] v;
+	for (int i = 0; i < WORDBITSZ/8; ++i)
+		zbb_rev8[i*8 +: 8] = v[(WORDBITSZ-8) - i*8 +: 8];
+endfunction
+function automatic bit [WORDBITSZ -1 : 0] zbb_orcb; // OR-combine within each byte.
+	input bit [WORDBITSZ -1 : 0] v;
+	for (int i = 0; i < WORDBITSZ/8; ++i)
+		zbb_orcb[i*8 +: 8] = {8{|v[i*8 +: 8]}};
+endfunction
+
+// Rotate: rol(rs1) = ({rs1,rs1} << amt) high word; ror(rs1) = ({rs1,rs1} >> amt) low word.
+// Amount comes from rs2[4:0] for the OP form (rol/ror), iD_Iimm[4:0] for the OP-IMM form (rori).
+wire [5            -1 : 0] eX_zbbRotAmt_i = (iD_isALUreg ? eX_aluArg2_i[4:0] : iD_Iimm[4:0]);
+wire [(2*WORDBITSZ)-1 : 0] eX_zbbDbl_i    = {eX_aluArg1_i, eX_aluArg1_i};
+wire [(2*WORDBITSZ)-1 : 0] eX_zbbRorDbl_i = (eX_zbbDbl_i >> eX_zbbRotAmt_i);
+wire [(2*WORDBITSZ)-1 : 0] eX_zbbRolDbl_i = (eX_zbbDbl_i << eX_zbbRotAmt_i);
+wire [WORDBITSZ    -1 : 0] eX_zbbRor_i    = eX_zbbRorDbl_i[WORDBITSZ -1 : 0];
+wire [WORDBITSZ    -1 : 0] eX_zbbRol_i    = eX_zbbRolDbl_i[(2*WORDBITSZ) -1 : WORDBITSZ];
+
+reg [WORDBITSZ -1 : 0] eX_zbbOut_i; // ### comb-block-reg.
+always_comb begin
+	if (iD_isALUreg) begin // OP-form Zbb.
+		case (iD_func7)
+		7'b0100000: // Logic with negate.
+			case (iD_func3)
+			3'b100:  eX_zbbOut_i = ~(eX_aluArg1_i ^ eX_aluArg2_i); // xnor
+			3'b110:  eX_zbbOut_i =  (eX_aluArg1_i | ~eX_aluArg2_i); // orn
+			default: eX_zbbOut_i =  (eX_aluArg1_i & ~eX_aluArg2_i); // andn (3'b111)
+			endcase
+		7'b0000101: // Integer min/max.
+			case (iD_func3)
+			3'b100:  eX_zbbOut_i = (eX_lt_i  ? eX_aluArg1_i : eX_aluArg2_i); // min
+			3'b101:  eX_zbbOut_i = (eX_ltu_i ? eX_aluArg1_i : eX_aluArg2_i); // minu
+			3'b110:  eX_zbbOut_i = (eX_lt_i  ? eX_aluArg2_i : eX_aluArg1_i); // max
+			default: eX_zbbOut_i = (eX_ltu_i ? eX_aluArg2_i : eX_aluArg1_i); // maxu (3'b111)
+			endcase
+		7'b0110000: // Rotate.
+			eX_zbbOut_i = ((iD_func3 == 3'b001) ? eX_zbbRol_i : eX_zbbRor_i); // rol/ror
+		default: // 7'b0000100: zext.h.
+			eX_zbbOut_i = {{(WORDBITSZ-16){1'b0}}, eX_aluArg1_i[15:0]};
+		endcase
+	end else begin // OP-IMM-form Zbb.
+		if (iD_func3 == 3'b001) // clz/ctz/cpop/sext.b/sext.h, selected by imm[4:0].
+			case (iD_Iimm[4:0])
+			5'd0:    eX_zbbOut_i = zbb_clz(eX_aluArg1_i);
+			5'd1:    eX_zbbOut_i = zbb_ctz(eX_aluArg1_i);
+			5'd2:    eX_zbbOut_i = zbb_cpop(eX_aluArg1_i);
+			5'd4:    eX_zbbOut_i = {{(WORDBITSZ-8){eX_aluArg1_i[7]}},   eX_aluArg1_i[7:0]};  // sext.b
+			default: eX_zbbOut_i = {{(WORDBITSZ-16){eX_aluArg1_i[15]}}, eX_aluArg1_i[15:0]}; // sext.h (5'd5)
+			endcase
+		else // iD_func3 == 3'b101: rev8/orc.b/rori.
+			if      (iD_Iimm[11:0] == 12'h698) eX_zbbOut_i = zbb_rev8(eX_aluArg1_i);
+			else if (iD_Iimm[11:0] == 12'h287) eX_zbbOut_i = zbb_orcb(eX_aluArg1_i);
+			else                               eX_zbbOut_i = eX_zbbRor_i; // rori
+	end
+end
+`endif
+
 reg [WORDBITSZ -1 : 0] eX_aluOut_i; // ### comb-block-reg.
 always_comb begin
 	unique case (iD_func3)
@@ -939,6 +1054,9 @@ always_comb begin
 	else   if (iD_isSc)        eX_rslt_i = eX_StoreCondOut_i;
 	`ifdef PURV32ZBA
 	else   if (iD_isZba)       eX_rslt_i = eX_aluShadd_i;
+	`endif
+	`ifdef PURV32ZBB
+	else   if (iD_isZbb)       eX_rslt_i = eX_zbbOut_i;
 	`endif
 	else                       eX_rslt_i = eX_aluOut_i;
 end

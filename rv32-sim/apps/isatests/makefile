@@ -49,6 +49,24 @@ TESTS += xor
 TESTS += sh1add
 TESTS += sh2add
 TESTS += sh3add
+TESTS += andn
+TESTS += orn
+TESTS += xnor
+TESTS += min
+TESTS += minu
+TESTS += max
+TESTS += maxu
+TESTS += rol
+TESTS += ror
+TESTS += rori
+TESTS += clz
+TESTS += ctz
+TESTS += cpop
+TESTS += sext_b
+TESTS += sext_h
+TESTS += zext_h
+TESTS += rev8
+TESTS += orc_b
 TESTS += amoswap_w
 TESTS += amoadd_w
 TESTS += amoand_w
@@ -71,7 +89,7 @@ READELF := ${PREFIX}-readelf
 
 CFLAGS += -Werror -fdata-sections -ffunction-sections -Wl,--gc-sections -O3 -g
 CFLAGS += -nostdlib
-CFLAGS += -march=rv32ima_zba_zicsr_zifencei
+CFLAGS += -march=rv32ima_zba_zbb_zicsr_zifencei
 
 APPNAME := isatests
 

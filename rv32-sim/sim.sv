@@ -11,6 +11,7 @@
 
 `define PURV32M
 `define PURV32ZBA
+`define PURV32ZBB
 `define PUIMULDSP
 `define PUPREDICTJAL
 `define PUPREDICTBRANCH
