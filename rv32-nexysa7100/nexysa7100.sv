@@ -13,7 +13,9 @@
 
 `define PURV32M
 `define PURV32ZBA
-`define PURV32ZBB
+// PURV32ZBB disabled on FPGA tops: it pushes rv32-orangecrab0285 below 48 MHz
+// timing closure (scoreboard-region routing congestion). Still enabled in rv32-sim.
+//`define PURV32ZBB
 `define PUIMULDSP
 `define PUPREDICTJAL
 `define PUPREDICTBRANCH
