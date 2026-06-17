@@ -1033,7 +1033,13 @@ wire eX_JumpOrBranch_i = (excTriggered || ((
 	`else
 	iD_isJALR ||
 	`endif
-	(iD_isBranch && _eX_takeBranch_i)) && iD_insn_valid));
+	(iD_isBranch && _eX_takeBranch_i))
+	// iD_insn_valid_ (not iD_insn_valid) is used here: the outer `excTriggered ||`
+	// makes the inner `&& !excTriggered` carried by iD_insn_valid redundant
+	// (a || (b && !a) == a || b), so excTriggered stays off this inner AND cone
+	// and only reaches the final OR. The redirect address already prioritizes
+	// excTvec on excTriggered, so behaviour is unchanged.
+	&& iD_insn_valid_));
 
 assign iF_eX_JumpOrBranch_i = eX_JumpOrBranch_i;
 
