@@ -1,27 +1,42 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
+// wb_rqst_cnt and wb_rsp_cnt are kept as absolute sequence tags: they demux
+// instruction-fetch responses from dCache responses on the shared bus (iF_mem_seq,
+// iF_mem_ack, dCache_s_ack_i below), which needs the absolute counts, not just their
+// difference. Occupancy is instead tracked by a dedicated up/down register so
+// wb_max_pending reads a registered bit rather than the subtract (wb_rqst_cnt - wb_rsp_cnt).
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] wb_rqst_cnt;
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] wb_rsp_cnt;
 
-wire [(CLOG2MAXPENDINGACK +1) -1 : 0] wb_pending_acks = (wb_rqst_cnt - wb_rsp_cnt);
+reg [(CLOG2MAXPENDINGACK +1) -1 : 0] wb_pending_acks; // Occupancy: accepted requests not yet responded.
 
 wire wb_max_pending = wb_pending_acks[CLOG2MAXPENDINGACK];
 
 assign _wb_bsy_i = (wb_bsy_i || wb_max_pending);
 
+wire wb_rqst_accepted = (wb_stb_o && !_wb_bsy_i); // a request is accepted onto the bus
+wire wb_resp_received = wb_ack_i;                 // a response returns
+
 always_ff @(posedge clk_i) begin
 	if (rst_i)
 		wb_rqst_cnt <= 0;
-	else if (wb_stb_o && !_wb_bsy_i)
+	else if (wb_rqst_accepted)
 		wb_rqst_cnt <= wb_rqst_cnt + 1'b1;
 end
 
 always_ff @(posedge clk_i) begin
 	if (rst_i)
 		wb_rsp_cnt <= 0;
-	else if (wb_ack_i)
+	else if (wb_resp_received)
 		wb_rsp_cnt <= wb_rsp_cnt + 1'b1;
+end
+
+always_ff @(posedge clk_i) begin
+	if (rst_i)
+		wb_pending_acks <= 0;
+	else if (wb_rqst_accepted != wb_resp_received) // net change only when exactly one occurs
+		wb_pending_acks <= (wb_rqst_accepted ? (wb_pending_acks + 1'b1) : (wb_pending_acks - 1'b1));
 end
 
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] iF_mem_seq;
