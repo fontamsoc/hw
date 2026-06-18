@@ -76,10 +76,10 @@ input  wire [WORDBITSZ -1 : 0]            s_wb_dat_i;
 
 localparam CLOG2DEPTH = clog2(DEPTH);
 
-reg [(CLOG2DEPTH +1) -1 : 0] rqst_cnt;
-reg [(CLOG2DEPTH +1) -1 : 0] resp_cnt;
-
-wire [(CLOG2DEPTH +1) -1 : 0] pending_acks = (rqst_cnt - resp_cnt);
+// Single up/down occupancy counter (accepted requests not yet responded), instead
+// of separate rqst_cnt/resp_cnt and a subtract: max_pending comes from a registered
+// bit rather than a subtract result.
+reg [(CLOG2DEPTH +1) -1 : 0] pending_acks;
 
 wire max_pending = pending_acks[CLOG2DEPTH];
 
@@ -87,18 +87,14 @@ wire rqst_bsy_o_w;
 
 assign m_wb_bsy_o = (rqst_bsy_o_w || max_pending);
 
-always_ff @(posedge clk_i) begin
-	if (rst_i)
-		rqst_cnt <= 0;
-	else if (m_wb_stb_i && !m_wb_bsy_o)
-		rqst_cnt <= (rqst_cnt + 1'b1);
-end
+wire rqst_accepted = (m_wb_stb_i && !m_wb_bsy_o); // a request enters
+wire resp_received = s_wb_ack_i;                  // a response leaves
 
 always_ff @(posedge clk_i) begin
 	if (rst_i)
-		resp_cnt <= 0;
-	else if (s_wb_ack_i)
-		resp_cnt <= (resp_cnt + 1'b1);
+		pending_acks <= 0;
+	else if (rqst_accepted != resp_received) // net change only when exactly one occurs
+		pending_acks <= (rqst_accepted ? (pending_acks + 1'b1) : (pending_acks - 1'b1));
 end
 
 skidbuf #(
