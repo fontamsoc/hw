@@ -240,7 +240,7 @@ reg [WORDBITSZ -1 : 0]     dCache_m_dat_i_; // ### comb-block-reg.
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_rqst_cnt;
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_rsp_cnt;
 
-wire [(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_pending_acks = (dCache_m_rqst_cnt - dCache_m_rsp_cnt);
+reg [(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_pending_acks; // Occupancy: accepted requests not yet responded.
 
 wire dCache_m_max_pending = dCache_m_pending_acks[CLOG2MAXPENDINGACK];
 
@@ -249,18 +249,28 @@ reg dCache_m_bsy_r;
 // Signal set to 1 when the logic setting dCache_m_stb_i cannot accept a new operation.
 wire __dCache_m_bsy = (dCache_m_bsy_r || dCache_m_max_pending || dCache_m_isAMOonly);
 
+wire dCache_m_rqst_accepted = (dCache_m_stb_i && !dCache_m_bsy_r); // a request is accepted
+wire dCache_m_resp_received = dCache_m_ack_o;                       // a response returns
+
 always_ff @(posedge clk_i) begin
 	if (rst_i)
 		dCache_m_rqst_cnt <= 0;
-	else if (dCache_m_stb_i && !dCache_m_bsy_r)
+	else if (dCache_m_rqst_accepted)
 		dCache_m_rqst_cnt <= dCache_m_rqst_cnt + 1'b1;
 end
 
 always_ff @(posedge clk_i) begin
 	if (rst_i)
 		dCache_m_rsp_cnt <= 0;
-	else if (dCache_m_ack_o)
+	else if (dCache_m_resp_received)
 		dCache_m_rsp_cnt <= dCache_m_rsp_cnt + 1'b1;
+end
+
+always_ff @(posedge clk_i) begin
+	if (rst_i)
+		dCache_m_pending_acks <= 0;
+	else if (dCache_m_rqst_accepted != dCache_m_resp_received) // net change only when exactly one occurs
+		dCache_m_pending_acks <= (dCache_m_rqst_accepted ? (dCache_m_pending_acks + 1'b1) : (dCache_m_pending_acks - 1'b1));
 end
 
 assign dCache_m_pending = ((|dCache_m_pending_acks) || dCache_m_bsy_r);
