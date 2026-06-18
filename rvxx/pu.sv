@@ -1263,10 +1263,13 @@ reg rW_opIdiv_done; // ### comb-block-reg.
 wire rW_pipeWrites   = (eX_rdId_isTrue && !halted_o); // pipeline takes the slot this cycle.
 wire rW_isMulticycle = (rW_we_i && !rW_pipeWrites);   // a multicycle result retires this cycle.
 
-// A multicycle result is outstanding/held: conservatively gates async traps so a held
-// result is not lost into the trap handler's context (it must retire before the trap).
+// A completed multicycle result is held: precisely gates async traps so a held result is
+// not lost into the trap handler's context (it must retire before the trap). Uses the
+// exact "held load result" (ldUnit_respHeld) rather than the whole load lifetime, so a
+// trap is blocked only while a result is actually waiting to retire, not while a load is
+// merely in flight. MUL/DIV done already mean "result held".
 wire rW_multicyclePending = (
-	!ldUnit_rqsts_empty
+	ldUnit_respHeld
 	`ifdef PURV32M
 	|| opImul_done || opIdiv_done
 	`endif

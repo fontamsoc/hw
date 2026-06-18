@@ -22,6 +22,7 @@ module wb_skidbuf (
 	,m_wb_ack_o
 	,m_wb_dat_o
 	,m_wb_bsy_i // Response back-pressure knob.
+	,m_wb_ack_avail_o // Un-gated 'response available': true even while held by m_wb_bsy_i.
 
 	,s_wb_stb_o
 	,s_wb_lock_o
@@ -61,6 +62,7 @@ output wire                               m_wb_bsy_o;
 output wire                               m_wb_ack_o;
 output wire [WORDBITSZ -1 : 0]            m_wb_dat_o;
 input  wire                               m_wb_bsy_i;
+output wire                               m_wb_ack_avail_o;
 
 output wire                               s_wb_stb_o;
 output wire                               s_wb_lock_o;
@@ -121,6 +123,9 @@ skidbuf #(
 wire resp_stb_o_w;
 
 assign m_wb_ack_o = (resp_stb_o_w && !m_wb_bsy_i);
+// Un-gated response-available: stays high while a completed response is held by
+// m_wb_bsy_i, so a consumer can detect a held response precisely.
+assign m_wb_ack_avail_o = resp_stb_o_w;
 
 skidbuf #(
 	 .WIDTH       (WORDBITSZ)

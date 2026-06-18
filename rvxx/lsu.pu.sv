@@ -73,6 +73,13 @@ fifo_fwft #(
 // (and loads behind a not-yet-arrived one) are not blocked.
 assign dCache_m_bsy_i = (rW_pipeWrites && !ldUnit_rqsts_empty && (ldUnit_rqsts_seq == dCache_m_rsp_cnt));
 
+// Precise "a completed load result is held": same head-of-stream match as ldUnit_memAck
+// but using the un-gated response-available (dCache_m_ack_avail_o), so it stays true the
+// whole time the response is held by dCache_m_bsy_i (ldUnit_memAck goes low while held).
+// Used to gate async traps exactly while a held result exists, instead of for the whole
+// load lifetime (!ldUnit_rqsts_empty).
+wire ldUnit_respHeld = (dCache_m_ack_avail_o && !ldUnit_rqsts_empty && (ldUnit_rqsts_seq == dCache_m_rsp_cnt));
+
 // Store Unit.
 
 assign iD_stUnit_bsy = __dCache_m_bsy;
