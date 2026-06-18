@@ -1257,18 +1257,25 @@ reg rW_opIdiv_done; // ### comb-block-reg.
 `include "./lsu.pu.sv"
 `include "./sys.pu.sv"
 
-wire rW_stalled = (
-	ldUnit_memAck
+// The pipeline has WriteBack priority; load/MUL/DIV hold their result and retire
+// in cycles the pipeline yields the WriteBack slot, so the pipeline never stalls
+// for WriteBack (back-pressure now lives at issue: iD_op*_bsy and load max_pending).
+wire rW_pipeWrites   = (eX_rdId_isTrue && !halted_o); // pipeline takes the slot this cycle.
+wire rW_isMulticycle = (rW_we_i && !rW_pipeWrites);   // a multicycle result retires this cycle.
+
+// A multicycle result is outstanding/held: conservatively gates async traps so a held
+// result is not lost into the trap handler's context (it must retire before the trap).
+wire rW_multicyclePending = (
+	!ldUnit_rqsts_empty
 	`ifdef PURV32M
 	|| opImul_done || opIdiv_done
 	`endif
 	);
 
-assign eX_rW_stalled = rW_stalled;
+assign eX_rW_stalled = rW_isMulticycle; // csrInstret counts a retiring multicycle result.
+assign eX_rW_carryon = 1'b1;            // eX never stalls for WriteBack.
 
-wire rW_carryon = (!rW_stalled);
-
-assign eX_rW_carryon = rW_carryon;
+wire rW_carryon = (!rW_isMulticycle);
 
 always_comb begin
 
@@ -1281,7 +1288,14 @@ always_comb begin
 	rW_opIdiv_done = 0;
 	`endif
 
-	if (ldUnit_memAck) begin
+	// Pipeline has priority; load/MUL/DIV retire only when the pipeline yields the
+	// slot (rW_pipeWrites false). MUL/DIV hold via their ostb/ordy handshake; a
+	// completed load is held in the dCache response skidbuf via dCache_m_bsy_i.
+	if (rW_pipeWrites) begin
+		rW_we_i  = 1;
+		rW_idx_i = eX_rdId;
+		rW_dat_i = eX_rslt;
+	end else if (ldUnit_memAck) begin
 		rW_we_i  = 1;
 		rW_idx_i = ldUnit_rqsts_rIdx;
 		rW_dat_i = ldUnit_rqsts_dato;
@@ -1297,11 +1311,6 @@ always_comb begin
 		rW_dat_i = opIdiv_rslt;
 		rW_opIdiv_done = 1;
 	`endif
-	end else if (halted_o) begin
-	end else if (eX_rdId_isTrue) begin
-		rW_we_i  = 1;
-		rW_idx_i = eX_rdId;
-		rW_dat_i = eX_rslt;
 	end
 end
 
@@ -1317,22 +1326,10 @@ wire eX_isExc0_i = (excTriggered && excCause == {1'b0, 16'd0} && eX_JumpOrBranch
 // the exception causing instruction when excTriggered was high.
 
 always_ff @(posedge clk_i) begin
-	if (ldUnit_memAck) begin
-		iD_rW_rdId_isTrue <= 1'b1;
-		iD_rW_rdId <= ldUnit_rqsts_rIdx;
-		iD_rW_rslt <= ldUnit_rqsts_dato;
-	`ifdef PURV32M
-	end else if (opImul_done) begin
-		iD_rW_rdId_isTrue <= 1'b1;
-		iD_rW_rdId <= opImul_rIdx;
-		iD_rW_rslt <= opImul_rslt;
-	end else if (opIdiv_done) begin
-		iD_rW_rdId_isTrue <= 1'b1;
-		iD_rW_rdId <= opIdiv_rIdx;
-		iD_rW_rslt <= opIdiv_rslt;
-	`endif
-	end else if (halted_o) begin
-	end else if (eX_rdId_isTrue && !eX_isExc && !eX_isExc0_i) begin
+	// Mirror the WriteBack arbiter (pipeline priority): capture the pipeline result
+	// when it retires, else the load/MUL/DIV result on the cycle it actually retires
+	// (rW_isMulticycle), so iD_rW_* always matches what was written to gprDat.
+	if (rW_pipeWrites && !eX_isExc && !eX_isExc0_i) begin
 		/* Considering the instruction sequence below, the check below
 		prevents the result of `add a3,a3,a1` to be forwarded to `jr a3`,
 		when the result of `lw a3,0(a3)` should be used but has been deferred
@@ -1348,6 +1345,11 @@ always_ff @(posedge clk_i) begin
 			iD_rW_rdId <= eX_rdId;
 		end
 		iD_rW_rslt <= eX_rslt;
+	end else if (rW_isMulticycle) begin
+		iD_rW_rdId_isTrue <= 1'b1;
+		iD_rW_rdId <= rW_idx_i;
+		iD_rW_rslt <= rW_dat_i;
+	end else if (halted_o) begin
 	end else if (eX_isExc) begin
 		// iD_rW_rdId_isTrue and iD_rW_rdId values are needed
 		// to properly unlock the gpr of the interrupted instruction.
@@ -1363,7 +1365,7 @@ always_ff @(posedge clk_i) begin
 end
 
 always_ff @(posedge clk_i) begin
-	if (rst_i || (rW_we_i && (rW_stalled || (!eX_isExc && !eX_isExc0_i))))
+	if (rst_i || (rW_we_i && (rW_isMulticycle || (!eX_isExc && !eX_isExc0_i))))
 		gprDat[rst_i ? 2 : rW_idx_i] <= (rst_i ? spval_i : rW_dat_i);
 end
 

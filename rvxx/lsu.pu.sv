@@ -66,6 +66,13 @@ fifo_fwft #(
 	,.empty_o    (ldUnit_rqsts_empty)
 );
 
+// Hold a completed load's response (buffered in the dCache response skidbuf) while
+// the pipeline is taking the WriteBack slot, so the pipeline keeps priority; the
+// load retires (ldUnit_memAck fires) the cycle the pipeline yields. Only the load
+// at the head of the response stream (seq == rsp_cnt) is held, so store responses
+// (and loads behind a not-yet-arrived one) are not blocked.
+assign dCache_m_bsy_i = (rW_pipeWrites && !ldUnit_rqsts_empty && (ldUnit_rqsts_seq == dCache_m_rsp_cnt));
+
 // Store Unit.
 
 assign iD_stUnit_bsy = __dCache_m_bsy;

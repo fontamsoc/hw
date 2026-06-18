@@ -12,6 +12,7 @@ reg  [WORDBITSZ -1 : 0]            dCache_m_dat_i;  // ### comb-block-reg.
 wire                               dCache_m_bsy_o;
 wire                               dCache_m_ack_o;
 wire [WORDBITSZ -1 : 0]            dCache_m_dat_o;
+wire                               dCache_m_bsy_i; // Response back-pressure: hold a completed load until it can retire.
 
 wire                                 dCache_s_stb_o;
 wire                                 dCache_s_lock_o;
@@ -55,6 +56,7 @@ wb_skidbuf #(
 	,.m_wb_bsy_o  (dCache_m_bsy_o)
 	,.m_wb_ack_o  (dCache_m_ack_o)
 	,.m_wb_dat_o  (dCache_m_dat_o)
+	,.m_wb_bsy_i  (dCache_m_bsy_i)
 
 	,.s_wb_stb_o  (skidBuf_dCache_m_stb_o)
 	,.s_wb_lock_o (skidBuf_dCache_m_lock_o)

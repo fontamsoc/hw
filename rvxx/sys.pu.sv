@@ -152,7 +152,11 @@ always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrInstret <= 0;
 	end else if (eX_rW_stalled || (!eX_isExc && !eX_flushed && !eX_lateResultInsn && !halted_o)) begin
-		csrInstret <= (csrInstret + 1'b1);
+		// A non-writing pipeline instruction (store/branch) and a deferred multicycle
+		// result can now retire the same cycle, so count both: eX_rW_stalled is the
+		// retiring multicycle result, the second term is the pipeline instruction.
+		csrInstret <= (csrInstret + eX_rW_stalled
+			+ (!eX_isExc && !eX_flushed && !eX_lateResultInsn && !halted_o));
 		`ifdef _SIMULATION
 		if (!csrInstret[20:0]) begin
 			$write("."); $fflush();
@@ -307,24 +311,25 @@ always_comb begin
 	excTval2 = {WORDBITSZ{1'b0}};
 	excNxtPriv = 2'b00;
 	if (halted_o) begin
-	// Asynchronous traps are gated by rW_stalled to prevent loosing
-	// pending data set in iD_eX_rdId_isTrue, iD_eX_rdId and iD_eX_rslt.
-	end else if (excIrq[11/*MEI*/] && !rW_stalled) begin
+	// Asynchronous traps are gated by rW_multicyclePending: a held load/MUL/DIV
+	// result (now deferred behind the pipeline) must retire before the trap is
+	// taken, otherwise it would be lost or write into the trap handler's context.
+	end else if (excIrq[11/*MEI*/] && !rW_multicyclePending) begin
 		excCause = {1'b1, 16'd11};
 		excNxtPriv = 2'b11;
-	end else if (excIrq[9/*SEI*/] && !rW_stalled) begin
+	end else if (excIrq[9/*SEI*/] && !rW_multicyclePending) begin
 		excCause = {1'b1, 16'd9};
 		excNxtPriv = 2'b01;
-	end else if (excIrq[3/*MSI*/] && !rW_stalled) begin
+	end else if (excIrq[3/*MSI*/] && !rW_multicyclePending) begin
 		excCause = {1'b1, 16'd3};
 		excNxtPriv = 2'b11;
-	end else if (excIrq[1/*SSI*/] && !rW_stalled) begin
+	end else if (excIrq[1/*SSI*/] && !rW_multicyclePending) begin
 		excCause = {1'b1, 16'd1};
 		excNxtPriv = 2'b01;
-	end else if (excIrq[7/*MTI*/] && !rW_stalled) begin
+	end else if (excIrq[7/*MTI*/] && !rW_multicyclePending) begin
 		excCause = {1'b1, 16'd7};
 		excNxtPriv = 2'b11;
-	end else if (excIrq[5/*STI*/] && !rW_stalled) begin
+	end else if (excIrq[5/*STI*/] && !rW_multicyclePending) begin
 		excCause = {1'b1, 16'd5};
 		excNxtPriv = 2'b01;
 	// Synchronous traps are handled from here.
