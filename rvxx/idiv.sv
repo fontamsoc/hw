@@ -61,10 +61,30 @@ reg  [(WORDBITSZ*2) -1 : 0] cumulator;
 
 // Reg set to the right operand value of the division, which is the divider.
 reg [WORDBITSZ -1 : 0] rval;
+// 3*|divider|, precomputed once at stb for radix-4 quotient-digit selection.
+reg [(WORDBITSZ+2) -1 : 0] rval3;
+// |divider| from args_i (signed divisions use the absolute value).
+wire [WORDBITSZ -1 : 0] divabsdvsr =
+	((args_i[IDIVSIGNED] && args_i[(WORDBITSZ-1)]) ? -args_i[WORDBITSZ-1:0] : args_i[WORDBITSZ-1:0]);
 
-// Net used by the division; compute the difference
-// between the quotient and the left shifted divider.
-wire [(WORDBITSZ*2) -1 : 0] divdiff = (cumulator - ({rval, {(WORDBITSZ-1){1'b0}}}));
+// Radix-4 restoring step (2 quotient bits/cycle). R' is the top (WORDBITSZ+2) bits of
+// cumulator (partial remainder with 2 new dividend bits shifted in); a leading 0 supplies
+// a sign bit for the three trial subtractions of 1x/2x/3x the divider (computed in
+// parallel, so the carry depth stays one ~(WORDBITSZ+2)-bit subtract plus a 4:1 select).
+wire [(WORDBITSZ+3) -1 : 0] divRp = {1'b0, cumulator[(WORDBITSZ*2)-1 : (WORDBITSZ-2)]};
+wire [(WORDBITSZ+3) -1 : 0] divd1 = (divRp - {3'b0, rval});       // R' - 1*divider
+wire [(WORDBITSZ+3) -1 : 0] divd2 = (divRp - {2'b0, rval, 1'b0}); // R' - 2*divider
+wire [(WORDBITSZ+3) -1 : 0] divd3 = (divRp - {1'b0, rval3});      // R' - 3*divider
+// Quotient digit = largest q in {0,1,2,3} whose trial difference is non-negative;
+// divrem is the corresponding reduced remainder (< divider).
+reg [2 -1 : 0]         divq;   // ### comb-block-reg.
+reg [WORDBITSZ -1 : 0] divrem; // ### comb-block-reg.
+always_comb begin
+	if      (!divd3[(WORDBITSZ+2)]) begin divq = 2'd3; divrem = divd3[WORDBITSZ-1:0]; end
+	else if (!divd2[(WORDBITSZ+2)]) begin divq = 2'd2; divrem = divd2[WORDBITSZ-1:0]; end
+	else if (!divd1[(WORDBITSZ+2)]) begin divq = 2'd1; divrem = divd1[WORDBITSZ-1:0]; end
+	else                            begin divq = 2'd0; divrem = cumulator[(WORDBITSZ*2)-3 : (WORDBITSZ-2)]; end
+end
 
 // Register used to count the number of bits already used from the divider.
 reg [CLOG2WORDBITSZ -1 : 0] cntr;
@@ -125,13 +145,10 @@ always_ff @(posedge clk_i) begin
 
 			operands <= args_i;
 
-			// If args_i[IDIVSIGNED] == 0, it is an unsigned computation.
-			// If args_i[IDIVSIGNED] == 1, it is a signed computation.
-			// For a signed computation, I turn the right operand positive if it was negative.
-			if (args_i[IDIVSIGNED] && args_i[(WORDBITSZ-1)])
-				rval <= -args_i[WORDBITSZ-1:0];
-			else
-				rval <= args_i[WORDBITSZ-1:0];
+			// rval = |divider|, rval3 = 3*|divider|; both feed the radix-4 step.
+			// (For a signed computation the divider is made positive; see divabsdvsr.)
+			rval  <= divabsdvsr;
+			rval3 <= ({2'b0, divabsdvsr} + {1'b0, divabsdvsr, 1'b0});
 
 			// The dividend is in args_i[(WORDBITSZ*2)-1:WORDBITSZ].
 			// The divider is in args_i[WORDBITSZ-1:0].
@@ -150,17 +167,14 @@ always_ff @(posedge clk_i) begin
 		end
 
 	end else begin
-		// divdiff[(WORDBITSZ*2)-1] is 1 when
-		// the difference is negative, otherwise it is 0.
-		if (divdiff[(WORDBITSZ*2)-1])
-			cumulator <= {cumulator[(WORDBITSZ*2)-2:0], 1'b0};
-		else
-			cumulator <= {divdiff[(WORDBITSZ*2)-2:0], 1'b1};
+		// Radix-4 step: append the 2-bit quotient digit divq at the LSB, install
+		// the reduced remainder divrem at the MSB, and shift the rest up by 2.
+		cumulator <= {divrem, cumulator[(WORDBITSZ-3):0], divq};
 
-		if (cntr == (WORDBITSZ-1)) begin
-			// The division is complete after cntr has been
-			// incremented WORDBITSZ times; the result will be
-			// ready in cumulator after the next clockedge.
+		if (cntr == ((WORDBITSZ/2)-1)) begin
+			// The division is complete after WORDBITSZ/2 radix-4 steps
+			// (2 quotient bits each); the result will be ready in
+			// cumulator after the next clockedge.
 			rdy_o <= 1;
 		end
 
