@@ -478,22 +478,27 @@ end
 
 wire iF_flushed_or_not_iF_iD_carryon = (iF_flushed || !iF_iD_carryon);
 
-assign iF_pc_i = ((
-	`ifdef PUPREDICTRET
-	(iF_isRet && !iF_flushed_or_not_iF_iD_carryon) ? {WORDBITSZ{1'b0}} :
-	`endif
-	iF_pc) + (
-	iF_flushed_or_not_iF_iD_carryon ? {WORDBITSZ{1'b0}} :
-	`ifdef PUPREDICTBRANCH
-	(iF_isBranch && iF_predictBranch[1]) ? iF_Bimm :
-	`endif
-	`ifdef PUPREDICTJAL
-	iF_isJAL ? iF_Jimm :
-	`endif
+// Precompute-then-select: the next-PC candidates (iF_pc + each immediate) are summed
+// in parallel from the early-stable iF_pc and muxed by the late predecode, instead of
+// muxing the offset and then adding -- this keeps the 32-bit adder off the fetch-loop
+// tail (it now overlaps the predecode rather than following the offset mux). The
+// iF_pc_plus_* sums already exist (reused from the redirect path), so no adder is added.
+// Equivalent: the predecode selects (isRet/isBranch/isJAL) are mutually exclusive
+// opcodes, so this reordered priority matches the original base/offset add exactly --
+// flushed -> iF_pc (offset 0); isRet -> the RAS target (base was zeroed); branch-taken
+// -> iF_pc+Bimm; JAL -> iF_pc+Jimm; else -> iF_pc+4.
+assign iF_pc_i = (
+	iF_flushed_or_not_iF_iD_carryon ? iF_pc :
 	`ifdef PUPREDICTRET
 	iF_isRet ? {iF_predictRet, 2'b0} :
 	`endif
-	(INSNBITSZ/8)));
+	`ifdef PUPREDICTBRANCH
+	(iF_isBranch && iF_predictBranch[1]) ? iF_pc_plus_iF_Bimm :
+	`endif
+	`ifdef PUPREDICTJAL
+	iF_isJAL ? iF_pc_plus_iF_Jimm :
+	`endif
+	iF_pc_plus_INSNBITSzBy8);
 
 ////////////////////////////////////// ID (Instruction Decode) stage ///////////////////////////////////////
 
