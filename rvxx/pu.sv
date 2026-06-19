@@ -651,6 +651,16 @@ wire iD_eX_carryon;
 
 wire dCache_m_pending;
 
+// Per-operand operand-ready stall, flattened from a 4-way priority mux on
+// the iD_is*Oprnd* selects. Each select contributes its operand set; the
+// sets are OR-ed together per operand. iD_is3OprndD12 forces all three needs
+// high, so the lone select overlap (an AMO op sets both iD_is3OprndD12 and
+// iD_is2OprndD1) still yields the full 3-operand stall that the priority
+// mux's is3OprndD12 leg produced -- exactly equivalent, shallower path.
+wire iD_needsRd  = (iD_is3OprndD12 || iD_is2OprndD1 || iD_is1OprndD);
+wire iD_needsRs1 = (iD_is3OprndD12 || iD_is2OprndD1 || iD_is2Oprnd12);
+wire iD_needsRs2 = (iD_is3OprndD12 || iD_is2Oprnd12);
+
 wire iD_stalled = (!iD_eX_carryon ||
 	(iD_isFenceOrFencei && dCache_m_pending) ||
 	`ifdef PURV32M
@@ -658,12 +668,11 @@ wire iD_stalled = (!iD_eX_carryon ||
 	(iD_opIdiv_stb ? iD_opIdiv_bsy : 1'b0) ||
 	`endif
 	(iD_ldUnit_stb ? iD_ldUnit_bsy : 1'b0) ||
-	(iD_stUnit_stb ? iD_stUnit_bsy : 1'b0) || (
-	// Stall if any of the operand is locked.
-	iD_is3OprndD12 ? !(iD_rdRdy && iD_rs1Rdy && iD_rs2Rdy) :
-	iD_is2OprndD1  ? !(iD_rdRdy && iD_rs1Rdy) :
-	iD_is2Oprnd12  ? !(iD_rs1Rdy && iD_rs2Rdy) :
-	iD_is1OprndD   ? !iD_rdRdy : 0));
+	(iD_stUnit_stb ? iD_stUnit_bsy : 1'b0) ||
+	// Stall if any needed operand is locked.
+	(iD_needsRd  && !iD_rdRdy)  ||
+	(iD_needsRs1 && !iD_rs1Rdy) ||
+	(iD_needsRs2 && !iD_rs2Rdy));
 
 assign iF_iD_stalled = iD_stalled;
 
