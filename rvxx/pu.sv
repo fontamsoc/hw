@@ -1375,20 +1375,22 @@ end
 wire gprLock = (_iF_use_rdId && !_iF_flushed);
 
 wire gprUnlock = (
-	rW_we_i && /* Do not unlock a gpr if it is about to be locked
-	or if it has just been locked; note that we are at the eXecuted stage,
-	hence the reason why only *_rdId from previous stages are checked. */
-	!(gprLock && _iF_rdId == rW_idx_i) &&
+	rW_we_i && /* Do not unlock a gpr if it has just been locked; note that we
+	are at the eXecuted stage, hence the reason why only *_rdId from previous
+	stages are checked. The "about to be locked" case (gprLock && _iF_rdId ==
+	rW_idx_i) is NOT excluded here; it is resolved by ordering the lock last in
+	the gprRdy update below (a gpr locked this cycle wins a same-index unlock).
+	This keeps the i-cache-hit-gated gprLock off the gprUnlock timing cone. */
 	!(!iD_flushed && iD_rdId == rW_idx_i && !excTriggered));
 
 always_ff @(posedge clk_i) begin
 	if (rst_i)
 		gprRdy <= {GPRCNT{1'b1}};
 	else begin
-		if (gprLock)
-			gprRdy[_iF_rdId] <= 1'b0;
 		if (gprUnlock)
 			gprRdy[rW_idx_i] <= 1'b1;
+		if (gprLock) // Applied last: a gpr locked this cycle wins a same-index unlock.
+			gprRdy[_iF_rdId] <= 1'b0;
 	end
 end
 
