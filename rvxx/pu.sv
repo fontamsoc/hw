@@ -664,11 +664,11 @@ wire iD_needsRs2 = (iD_is3OprndD12 || iD_is2Oprnd12);
 wire iD_stalled = (!iD_eX_carryon ||
 	(iD_isFenceOrFencei && dCache_m_pending) ||
 	`ifdef PURV32M
-	(iD_opImul_stb ? iD_opImul_bsy : 1'b0) ||
-	(iD_opIdiv_stb ? iD_opIdiv_bsy : 1'b0) ||
+	(iD_opImul_stb && iD_opImul_bsy) ||
+	(iD_opIdiv_stb && iD_opIdiv_bsy) ||
 	`endif
-	(iD_ldUnit_stb ? iD_ldUnit_bsy : 1'b0) ||
-	(iD_stUnit_stb ? iD_stUnit_bsy : 1'b0) ||
+	(iD_ldUnit_stb && iD_ldUnit_bsy) ||
+	(iD_stUnit_stb && iD_stUnit_bsy) ||
 	// Stall if any needed operand is locked.
 	(iD_needsRd  && !iD_rdRdy)  ||
 	(iD_needsRs1 && !iD_rs1Rdy) ||
@@ -746,18 +746,10 @@ assign iD_rs2 = (
 reg iD_rdRdy_,  iD_rdRdy__;
 reg iD_rs1Rdy_, iD_rs1Rdy__;
 reg iD_rs2Rdy_, iD_rs2Rdy__;
-assign iD_rdRdy = ((
-	iD_rdId_eq_iD_eX_rdId ? 1'b1 :
-	iD_rdId_eq_iD_rW_rdId ? 1'b1 :
-	iD_rdRdy_) || iD_rdRdy__);
-assign iD_rs1Rdy = ((
-	iD_rs1Id_eq_iD_eX_rdId ? 1'b1 :
-	iD_rs1Id_eq_iD_rW_rdId ? 1'b1 :
-	iD_rs1Rdy_) || iD_rs1Rdy__);
-assign iD_rs2Rdy = ((
-	iD_rs2Id_eq_iD_eX_rdId ? 1'b1 :
-	iD_rs2Id_eq_iD_rW_rdId ? 1'b1 :
-	iD_rs2Rdy_) || iD_rs2Rdy__);
+// rdy = (forwarded from EX or RWB) or (ready at entry) or (became ready while stalled).
+assign iD_rdRdy  = (iD_rdId_eq_iD_eX_rdId  || iD_rdId_eq_iD_rW_rdId  || iD_rdRdy_  || iD_rdRdy__);
+assign iD_rs1Rdy = (iD_rs1Id_eq_iD_eX_rdId || iD_rs1Id_eq_iD_rW_rdId || iD_rs1Rdy_ || iD_rs1Rdy__);
+assign iD_rs2Rdy = (iD_rs2Id_eq_iD_eX_rdId || iD_rs2Id_eq_iD_rW_rdId || iD_rs2Rdy_ || iD_rs2Rdy__);
 
 wire iD_insn_valid;
 
@@ -1092,7 +1084,7 @@ wire eX_rW_carryon;
 
 // The Execute state does not need to stall if there is no
 // RegisterWriteBack to do (ie: when eX_rdId_isTrue false).
-wire eX_stalled = (!eX_rW_carryon ? eX_rdId_isTrue : 1'b0);
+wire eX_stalled = (!eX_rW_carryon && eX_rdId_isTrue);
 
 // Jumps or Branchs are triggered only at the iDecoded stage.
 // Interrupts and exceptions set eX_flushed_i to prevent eXecution.
