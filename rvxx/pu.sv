@@ -469,11 +469,40 @@ wire iF_use_rdId = (iF_rdId && // iF_rdId is null when iF_isMiscMem true.
 localparam BPTSETCNT = 4096;
 localparam CLOG2BPTSETCNT = clog2(BPTSETCNT);
 reg [2 -1 : 0] bpt [BPTSETCNT]; // Branch Prediction Table.
+`ifdef PUPREDICTGSHARE
+// Gshare: index the BHT by (PC ^ global-history) to capture inter-branch correlation.
+// ghr is a NON-speculative global history register, updated only at branch resolution
+// (the iDecoded stage, below) with the actual outcome -- so it is always the correct
+// architectural history and needs no recovery on misprediction (wrong-path branches are
+// flushed before they resolve). GHRSZ history bits are XORed into the low index bits
+// (a narrower ghr zero-extends, folding history into only the low index bits); tunable
+// via -DPUGSHAREGHRSZ=N, defaulting to the full index width.
+`ifdef PUGSHAREGHRSZ
+localparam GHRSZ = `PUGSHAREGHRSZ;
+`else
+localparam GHRSZ = CLOG2BPTSETCNT;
+`endif
+reg [GHRSZ -1 : 0] ghr;
+`endif
+wire [CLOG2BPTSETCNT -1 : 0] iF_bptIdx = (iF_pc_i[CLOG2INSNBITSZBY8+:CLOG2BPTSETCNT]
+`ifdef PUPREDICTGSHARE
+	^ ghr
+`endif
+	);
 reg [2 -1 : 0] iF_predictBranch;
 always_ff @(posedge clk_i) begin
 	if (iF_en)
-		iF_predictBranch <= bpt[iF_pc_i[CLOG2INSNBITSZBY8+:CLOG2BPTSETCNT]];
+		iF_predictBranch <= bpt[iF_bptIdx];
 end
+`ifdef PUPREDICTGSHARE
+// Carry the (PC^history) index used for this prediction down the pipeline, so the update
+// writes the same entry that was read (ghr will have advanced by resolution time).
+reg [CLOG2BPTSETCNT -1 : 0] iF_bptWrIdx;
+always_ff @(posedge clk_i) begin
+	if (iF_en)
+		iF_bptWrIdx <= iF_bptIdx;
+end
+`endif
 `endif
 
 wire iF_flushed_or_not_iF_iD_carryon = (iF_flushed || !iF_iD_carryon);
@@ -697,6 +726,13 @@ always_ff @(posedge clk_i) begin
 	if (iD_en)
 		iD_predictBranch <= iF_predictBranch;
 end
+`ifdef PUPREDICTGSHARE
+reg [CLOG2BPTSETCNT -1 : 0] iD_bptWrIdx;
+always_ff @(posedge clk_i) begin
+	if (iD_en)
+		iD_bptWrIdx <= iF_bptWrIdx;
+end
+`endif
 `endif
 
 `ifdef PUPREDICTRET
@@ -1121,8 +1157,21 @@ always_comb begin
 end
 always_ff @(posedge clk_i) begin
 	if (iD_isBranch && iD_insn_valid)
+`ifdef PUPREDICTGSHARE
+		bpt[iD_bptWrIdx] <= bpt_i;
+`else
 		bpt[iD_pc[CLOG2INSNBITSZBY8+:CLOG2BPTSETCNT]] <= bpt_i;
+`endif
 end
+`ifdef PUPREDICTGSHARE
+// Non-speculative global history: shift in each branch's resolved outcome.
+always_ff @(posedge clk_i) begin
+	if (rst_i)
+		ghr <= 0;
+	else if (iD_isBranch && iD_insn_valid)
+		ghr <= {ghr[GHRSZ-2:0], eX_takeBranch_i};
+end
+`endif
 `endif
 
 `ifdef PUPREDICTRET
