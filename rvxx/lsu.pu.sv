@@ -104,9 +104,13 @@ reg [WORDBITSZ -1 : 0] amoUnit_LrAddr;
 
 always_ff @(posedge clk_i) begin
 	if (iD_isLr_and_insn_valid)
-		amoUnit_LrAddr <= dCache_m_addr_i_;
+		amoUnit_LrAddr <= iD_rs1;
 end
 
-assign _amoUnit_lrValid = (amoUnit_lrValid && (amoUnit_LrAddr == dCache_m_addr_i_));
+// LR/SC (and all AMO) carry no immediate (iD_addrImm == 0), so dCache_m_addr_i_ == iD_rs1
+// for these. Comparing iD_rs1 directly is therefore identical to comparing dCache_m_addr_i_,
+// but it keeps the 32-bit address adder (iD_rs1 + iD_addrImm) off the reservation -> SC-lock
+// path -- the worst, routing-bound scoreboard/AMO/dCache cone.
+assign _amoUnit_lrValid = (amoUnit_lrValid && (amoUnit_LrAddr == iD_rs1));
 
 assign eX_StoreCondOut_i = {{(WORDBITSZ-1){1'b0}}, !amoUnit_lrValid};
