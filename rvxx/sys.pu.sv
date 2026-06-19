@@ -196,23 +196,15 @@ end
 // Indefinitely halt when an exception occurs and the trap vector address is null.
 wire fatalExc = (excTriggered && !excTvec);
 
-// Global interrupt-enable gate by target privilege at the current privilege level: an
-// interrupt targeting M- (resp. S-) mode is permitted when running below that privilege
-// (a higher-privilege interrupt always preempts) or, at that privilege, only when the
-// matching xstatus enable bit (MIE / SIE) is set. Factored out of the per-source
-// MEI/MTI/MSI and SEI/STI/SSI enable terms below (halted_o, irq_*_o, excIrq).
-wire mIrqEn = (csrCurPrivIsM ? csrMstatus[3/*MIE*/] : 1'b1);
-wire sIrqEn = (csrCurPrivIsS ? csrMstatus[1/*SIE*/] : csrCurPrivIsU);
-
 always_ff @(posedge clk_i) begin
 	if (rst_i)
 		halted_o <= (PUID != 0);
 	else if ((iD_isWfi && iD_insn_valid) || fatalExc || halted_o)
 		halted_o <= !(
-			(csrMip_[11/*MEIP*/] && csrMie[11/*MEIE*/] && mIrqEn) ||
-			(csrMip_[9/*SEIP*/] && csrMie[9/*SEIE*/] && sIrqEn) ||
-			(csrMip_[7/*MTIP*/] && csrMie[7/*MTIE*/] && mIrqEn) ||
-			(csrMip_[5/*STIP*/] && csrMie[5/*STIE*/] && sIrqEn));
+			(csrMip_[11/*MEIP*/] && csrMie[11/*MEIE*/] && (csrCurPrivIsM ? csrMstatus[3/*MIE*/] : 1'b1)) ||
+			(csrMip_[9/*SEIP*/] && csrMie[9/*SEIE*/] && (csrCurPrivIsS ? csrMstatus[1/*SIE*/] : csrCurPrivIsU)) ||
+			(csrMip_[7/*MTIP*/] && csrMie[7/*MTIE*/] && (csrCurPrivIsM ? csrMstatus[3/*MIE*/] : 1'b1)) ||
+			(csrMip_[5/*STIP*/] && csrMie[5/*STIE*/] && (csrCurPrivIsS ? csrMstatus[1/*SIE*/] : csrCurPrivIsU)));
 end
 
 `ifdef SIMULATION
@@ -274,14 +266,14 @@ end
 
 always_ff @(posedge clk_i) begin
 	irq_rdy_o <= (
-		(!csrMideleg[11/*MEI*/] && csrMie[11/*MEIE*/] && mIrqEn) ||
-		(csrMideleg[11/*MEI*/] && csrMie[9/*SEIE*/] && sIrqEn));
+		(!csrMideleg[11/*MEI*/] && csrMie[11/*MEIE*/] && (csrCurPrivIsM ? csrMstatus[3/*MIE*/] : 1'b1)) ||
+		(csrMideleg[11/*MEI*/] && csrMie[9/*SEIE*/] && (csrCurPrivIsS ? csrMstatus[1/*SIE*/] : csrCurPrivIsU)));
 end
 
 always_ff @(posedge clk_i) begin
 	irq_stb_o <= (
-		(csrMip_[11/*MEIP*/] && csrMie[11/*MEIE*/] && mIrqEn) ||
-		(csrMip_[9/*SEIP*/] && csrMie[9/*SEIE*/] && sIrqEn));
+		(csrMip_[11/*MEIP*/] && csrMie[11/*MEIE*/] && (csrCurPrivIsM ? csrMstatus[3/*MIE*/] : 1'b1)) ||
+		(csrMip_[9/*SEIP*/] && csrMie[9/*SEIE*/] && (csrCurPrivIsS ? csrMstatus[1/*SIE*/] : csrCurPrivIsU)));
 end
 
 reg [16 -1 : 0] excIrq;
@@ -291,17 +283,17 @@ always_ff @(posedge clk_i) begin
 	// exception has just triggered with csrMstatus not yet updated.
 	excIrq <= (excTriggered || excIrq) ? 16'd0 : {
 		4'd0,
-		csrMip_[11/*MEIP*/] && csrMie[11/*MEIE*/] && mIrqEn,
+		csrMip_[11/*MEIP*/] && csrMie[11/*MEIE*/] && (csrCurPrivIsM ? csrMstatus[3/*MIE*/] : 1'b1),
 		1'b0,
-		csrMip_[9/*SEIP*/] && csrMie[9/*SEIE*/] && sIrqEn,
+		csrMip_[9/*SEIP*/] && csrMie[9/*SEIE*/] && (csrCurPrivIsS ? csrMstatus[1/*SIE*/] : csrCurPrivIsU),
 		1'b0,
-		csrMip_[7/*MTIP*/] && csrMie[7/*MTIE*/] && mIrqEn,
+		csrMip_[7/*MTIP*/] && csrMie[7/*MTIE*/] && (csrCurPrivIsM ? csrMstatus[3/*MIE*/] : 1'b1),
 		1'b0,
-		csrMip_[5/*STIP*/] && csrMie[5/*STIE*/] && sIrqEn,
+		csrMip_[5/*STIP*/] && csrMie[5/*STIE*/] && (csrCurPrivIsS ? csrMstatus[1/*SIE*/] : csrCurPrivIsU),
 		1'b0,
-		csrMip_[3/*MSIP*/] && csrMie[3/*MSIE*/] && mIrqEn,
+		csrMip_[3/*MSIP*/] && csrMie[3/*MSIE*/] && (csrCurPrivIsM ? csrMstatus[3/*MIE*/] : 1'b1),
 		1'b0,
-		csrMip_[1/*SSIP*/] && csrMie[1/*SSIE*/] && sIrqEn,
+		csrMip_[1/*SSIP*/] && csrMie[1/*SSIE*/] && (csrCurPrivIsS ? csrMstatus[1/*SIE*/] : csrCurPrivIsU),
 		1'b0};
 end
 
