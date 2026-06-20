@@ -251,12 +251,15 @@ wire signed [11:0] bEU = normalB ? ($signed({4'b0, expB}) - 12'sd127)
                                  : (-12'sd127 - $signed({6'b0, bLz}));
 
 // ===== fmul =====
+// Pipelined: the 24x24 product is registered (pp_mulP) so the multiply is its own stage,
+// off the unpack→normalize→pack combinational chain. Downstream reads pp_mulP.
 wire        mulSign = signA ^ signB;
-wire [47:0] mulP    = aSig * bSig;                 // 24x24 product, MSB at bit47 or bit46
-wire        mulTop  = mulP[47];
-wire [23:0] mulMant = mulTop ? mulP[47:24] : mulP[46:23];
-wire        mulG    = mulTop ? mulP[23]    : mulP[22];
-wire        mulS    = mulTop ? (|mulP[22:0]) : (|mulP[21:0]);
+wire [47:0] mulP    = aSig * bSig;                 // 24x24 product (registered into pp_mulP)
+reg  [47:0] pp_mulP; // ### pipeline reg (clocked below).
+wire        mulTop  = pp_mulP[47];
+wire [23:0] mulMant = mulTop ? pp_mulP[47:24] : pp_mulP[46:23];
+wire        mulG    = mulTop ? pp_mulP[23]    : pp_mulP[22];
+wire        mulS    = mulTop ? (|pp_mulP[22:0]) : (|pp_mulP[21:0]);
 wire signed [11:0] mulEbU = aEU + bEU + (mulTop ? 12'sd1 : 12'sd0) + 12'sd127; // biased
 wire        mulIZ = (isInfA && isZeroB) || (isZeroA && isInfB);
 wire        mulSpecial = isNaNA || isNaNB || isInfA || isInfB || isZeroA || isZeroB;
@@ -379,43 +382,54 @@ always_comb begin
 	if (optype == OP_DIV)  begin pkSign = divSign; pkEb = divEb;  pkM = divMant;  pkG = divG;  pkS = divS;  end
 	if (optype == OP_SQRT) begin pkSign = 1'b0;    pkEb = sqrtEb; pkM = sqrtMant; pkG = sqrtG; pkS = sqrtS; end
 end
-wire pkInx = pkG | pkS;
+// PIPELINE STAGE BOUNDARY: register the packer inputs + the fmul product, so the round +
+// 48-bit subnormal denormalize-shift + overflow logic is its own timing stage (pp_pk*),
+// separate from the op-specific front-end compute. rm comes from the held `operands`, stable.
+reg        pp_pkSign; // ### pipeline reg.
+reg signed [11:0] pp_pkEb;
+reg [23:0] pp_pkM;
+reg        pp_pkG, pp_pkS;
+always_ff @(posedge clk_i) begin
+	pp_mulP   <= mulP;
+	pp_pkSign <= pkSign; pp_pkEb <= pkEb; pp_pkM <= pkM; pp_pkG <= pkG; pp_pkS <= pkS;
+end
+
+wire pkInx = pp_pkG | pp_pkS;
 // overflow target: inf vs max-normal per rm/sign.
-wire pkToInf = (rm == 3'b000) || (rm == 3'b100) || (rm == 3'b011 && !pkSign) || (rm == 3'b010 && pkSign);
-wire [31:0] pkOvfRes = pkToInf ? {pkSign, 8'hff, 23'd0} : {pkSign, 8'hfe, 23'h7fffff};
+wire pkToInf = (rm == 3'b000) || (rm == 3'b100) || (rm == 3'b011 && !pp_pkSign) || (rm == 3'b010 && pp_pkSign);
+wire [31:0] pkOvfRes = pkToInf ? {pp_pkSign, 8'hff, 23'd0} : {pp_pkSign, 8'hfe, 23'h7fffff};
 // subnormal denormalize by (1 - pkEb).
-wire signed [11:0] pkShS = 12'sd1 - pkEb;
+wire signed [11:0] pkShS = 12'sd1 - pp_pkEb;
 wire [7:0]  pkShC = (pkShS > 12'sd48) ? 8'd48 : pkShS[7:0];
-wire [47:0] pkExt = {pkM, 24'd0};
+wire [47:0] pkExt = {pp_pkM, 24'd0};
 wire [47:0] pkExtSh = pkExt >> pkShC;
 wire [23:0] pkSubM = pkExtSh[47:24];
 wire        pkSubG = pkExtSh[23];
-wire        pkSubS = pkG | pkS | (|pkExtSh[22:0]) | (|(pkExt & (((48'd1) << pkShC) - 48'd1)));
-wire        pkSubRup = roundUp(pkSubM[0], pkSubG, pkSubS, pkSign, rm);
+wire        pkSubS = pp_pkG | pp_pkS | (|pkExtSh[22:0]) | (|(pkExt & (((48'd1) << pkShC) - 48'd1)));
+wire        pkSubRup = roundUp(pkSubM[0], pkSubG, pkSubS, pp_pkSign, rm);
 wire [24:0] pkSubMr  = {1'b0, pkSubM} + {24'd0, pkSubRup};
 wire        pkSubInx = pkSubG | pkSubS;
-// Tininess (after rounding): the result is tiny unless rounding the NORMALIZED mantissa
-// would carry it up into the normal range (i.e. exactly reach 2^emin). Needed so that a
-// subnormal that rounds up to the smallest normal still flags underflow when it was tiny.
-wire [24:0] pkNormMr   = {1'b0, pkM} + {24'd0, roundUp(pkM[0], pkG, pkS, pkSign, rm)};
-wire        pkIsTiny   = (pkEb < 12'sd0) || ((pkEb == 12'sd0) && !pkNormMr[24]);
+// Tininess (after rounding): tiny unless rounding the NORMALIZED mantissa would carry up into
+// the normal range. Needed so a subnormal that rounds up to the smallest normal still flags UF.
+wire [24:0] pkNormMr   = {1'b0, pp_pkM} + {24'd0, roundUp(pp_pkM[0], pp_pkG, pp_pkS, pp_pkSign, rm)};
+wire        pkIsTiny   = (pp_pkEb < 12'sd0) || ((pp_pkEb == 12'sd0) && !pkNormMr[24]);
 reg  [31:0] pkRes; reg [4:0] pkFlg; // ### comb-block-reg.
 always_comb begin
-	if (pkEb >= 12'sd255) begin                         // overflow before rounding
+	if (pp_pkEb >= 12'sd255) begin                      // overflow before rounding
 		pkRes = pkOvfRes; pkFlg = 5'b00101;             // OF | NX
-	end else if (pkEb <= 12'sd0) begin                  // subnormal / underflow
-		pkRes = {pkSign, 7'd0, pkSubMr[23:0]};          // exp = pkSubMr[23] (1 if rounded up to smallest normal)
+	end else if (pp_pkEb <= 12'sd0) begin               // subnormal / underflow
+		pkRes = {pp_pkSign, 7'd0, pkSubMr[23:0]};       // exp = pkSubMr[23] (1 if rounded up to smallest normal)
 		pkFlg = {1'b0,1'b0,1'b0, (pkSubInx && pkIsTiny), pkSubInx}; // UF, NX
 	end else begin                                      // normal range
 		logic rup; logic [24:0] mr;
-		rup = roundUp(pkM[0], pkG, pkS, pkSign, rm);
-		mr = {1'b0, pkM} + {24'd0, rup};
-		if (mr[24] && (pkEb == 12'sd254)) begin         // rounding overflowed into inf range
+		rup = roundUp(pp_pkM[0], pp_pkG, pp_pkS, pp_pkSign, rm);
+		mr = {1'b0, pp_pkM} + {24'd0, rup};
+		if (mr[24] && (pp_pkEb == 12'sd254)) begin      // rounding overflowed into inf range
 			pkRes = pkOvfRes; pkFlg = 5'b00101;
 		end else if (mr[24]) begin                      // mantissa carry -> 1.0, exp+1
-			pkRes = {pkSign, (pkEb[7:0] + 8'd1), 23'd0}; pkFlg = {4'd0, pkInx};
+			pkRes = {pp_pkSign, (pp_pkEb[7:0] + 8'd1), 23'd0}; pkFlg = {4'd0, pkInx};
 		end else begin
-			pkRes = {pkSign, pkEb[7:0], mr[22:0]}; pkFlg = {4'd0, pkInx};
+			pkRes = {pp_pkSign, pp_pkEb[7:0], mr[22:0]}; pkFlg = {4'd0, pkInx};
 		end
 	end
 end
@@ -449,8 +463,14 @@ always_comb begin
 	endcase
 end
 
-// Only non-special fdiv/fsqrt iterate; every other op (incl special div/sqrt) is 1-cycle.
+// Only non-special fdiv/fsqrt iterate; every other op (incl special div/sqrt) is short.
 wire optIter = ((optype == OP_DIV && !divSpecial) || (optype == OP_SQRT && !sqrtSpecial));
+// Total latency to rdy_o (cycles after stb). The pp_* pipeline registers clock every cycle;
+// only the value at rdy_o is sampled. shallow/cvt/add/sub: 2; fmul: 3 (mulP + packer regs);
+// div/sqrt: ITERLAST iterations + 3 (the registered pack tail).
+wire [6:0] opLat = optIter           ? ({1'b0, ITERLAST} + 7'd3)
+                 : (optype == OP_MUL) ? 7'd3
+                 :                      7'd2;
 
 always_ff @(posedge clk_i) begin
 	if (rst_i) begin
@@ -461,25 +481,18 @@ always_ff @(posedge clk_i) begin
 			rdy_o    <= 0;
 			cntr     <= 0;
 		end
-	end else if (!optIter) begin
-		// 1-cycle ops: the combinational result/flags above are valid this cycle.
-		rdy_o <= 1;
-	end else if (cntr == 6'd0) begin
-		// initialize the recurrence from the now-valid unpacked operands.
-		if (optype == OP_DIV) begin
-			fRem <= divInitRem; fQuo <= 26'd0;
-		end else begin // OP_SQRT
-			fRad <= {sqrtMint, 27'd0}; fRem <= 30'd0; fQuo <= 26'd0;
-		end
-		cntr <= 6'd1;
 	end else begin
-		// one quotient/root bit per cycle.
-		if (optype == OP_DIV) begin
-			fRem <= divRemNext; fQuo <= {fQuo[24:0], divCmp};
-		end else begin
-			fRem <= sqRemNext;  fQuo <= {fQuo[24:0], sqCmp}; fRad <= {fRad[49:0], 2'b0};
+		// div/sqrt recurrence: cntr 0 = init, 1..ITERLAST = one quotient/root bit each.
+		if (optIter) begin
+			if (cntr == 6'd0) begin
+				if (optype == OP_DIV) begin fRem <= divInitRem; fQuo <= 26'd0; end
+				else                  begin fRad <= {sqrtMint, 27'd0}; fRem <= 30'd0; fQuo <= 26'd0; end
+			end else if (cntr <= ITERLAST) begin
+				if (optype == OP_DIV) begin fRem <= divRemNext; fQuo <= {fQuo[24:0], divCmp}; end
+				else                  begin fRem <= sqRemNext;  fQuo <= {fQuo[24:0], sqCmp}; fRad <= {fRad[49:0], 2'b0}; end
+			end
 		end
-		if (cntr == ITERLAST) rdy_o <= 1;
+		if ({1'b0, cntr} == (opLat - 7'd2)) rdy_o <= 1;
 		cntr <= cntr + 6'd1;
 	end
 end
