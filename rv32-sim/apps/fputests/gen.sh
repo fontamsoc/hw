@@ -56,9 +56,20 @@ emit1nan() {
 		}' >> "$out"
 }
 
+# emitcmp <op_id> <tf_function>   (two-operand compare: a b z flags; z is a 0/1 boolean)
+# Compares are rounding-mode-independent (emitted once, rm=0) and take no x86/RISC-V rewrite:
+# the result is a boolean and the NV semantics are identical -- f32_eq raises NV only on a
+# signaling NaN (quiet, == feq.s) while f32_lt/f32_le raise NV on any NaN (== flt.s/fle.s).
+emitcmp() {
+	"$TF" "$2" 2>/dev/null | \
+		gawk -v op="$1" -v st="$ARITH_STRIDE" '((NR-1) % st)==0 {
+			printf "{%s,0,0x%su,0x%su,0x%su,0x%su},\n", op, $1, $2, $3, $4;
+		}' >> "$out"
+}
+
 # Restrict to a subset of op ids via $WANT (space-separated); default = all. Used to run
 # one op group at a time at full level-1 coverage (set ARITH_STRIDE=1) without overflowing SRAM.
-w(){ case " ${WANT:-0 1 2 3 4 5 6 7 8} " in *" $1 "*) return 0;; esac; return 1; }
+w(){ case " ${WANT:-0 1 2 3 4 5 6 7 8 9 10 11} " in *" $1 "*) return 0;; esac; return 1; }
 
 for spec in "0 -rnear_even" "1 -rminMag" "2 -rmin" "3 -rmax" "4 -rnear_maxMag"; do
 	set -- $spec; rmid="$1"; rmf="$2"
@@ -72,6 +83,11 @@ for spec in "0 -rnear_even" "1 -rminMag" "2 -rmin" "3 -rmax" "4 -rnear_maxMag"; 
 	w 7 && emit2 7 "$rmid" f32_div "$rmf"             # FDIV
 	w 8 && emit1nan 8 "$rmid" f32_sqrt "$rmf"         # FSQRT (one operand)
 done
+
+# Compares are rm-independent: emit once (outside the rounding-mode loop), not 5x.
+w 9  && emitcmp 9  f32_eq   # FEQ  (quiet:     NV on sNaN only)
+w 10 && emitcmp 10 f32_lt   # FLT  (signaling: NV on any NaN)
+w 11 && emitcmp 11 f32_le   # FLE  (signaling: NV on any NaN)
 
 echo "};" >> "$out"
 echo "vectors.h: $(grep -c '^{' "$out") vectors"
