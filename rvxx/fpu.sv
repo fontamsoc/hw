@@ -60,7 +60,8 @@ localparam OP_CVTSWU = 5'd12; // uint32 -> f
 localparam OP_ADD = 5'd13;
 localparam OP_SUB = 5'd14;
 localparam OP_MUL = 5'd15;
-// reserved (later stages): 16 DIV, 17 SQRT.
+localparam OP_DIV  = 5'd16;
+localparam OP_SQRT = 5'd17;
 
 input wire rst_i;
 
@@ -312,6 +313,57 @@ always_comb begin
 	else /* addZero (cancellation) */   begin addSpecRes = {zSign, 31'd0}; addSpecFlg = 5'b0; end
 end
 
+// ===== fdiv / fsqrt (iterative; the recurrence runs in the FSM below) =====
+reg  [29:0] fRem;  // remainder
+reg  [25:0] fQuo;  // quotient (div) / root (sqrt): {hidden, 23 frac, guard, round}
+reg  [51:0] fRad;  // sqrt radicand shift register
+reg  [5:0]  cntr;  // iteration counter
+localparam ITERLAST = 6'd26; // 26 quotient/root bits (24 mantissa + guard + round)
+
+// div: dividend = sigA prescaled so dividend/sigB is in [1,2).
+wire        divSign = signA ^ signB;
+wire        divLt   = (aSig < bSig);
+wire signed [11:0] divEb = (aEU - bEU - (divLt ? 12'sd1 : 12'sd0)) + 12'sd127;
+wire [23:0] divMant = fQuo[25:2];
+wire        divG    = fQuo[1];
+wire        divS    = fQuo[0] | (fRem != 30'd0);
+wire        divSpecial = isNaNA || isNaNB || isInfA || isInfB || isZeroA || isZeroB;
+reg  [31:0] divSpecRes; reg [4:0] divSpecFlg; // ### comb-block-reg.
+always_comb begin
+	if (isNaNA || isNaNB)        begin divSpecRes = CANON_QNAN;             divSpecFlg = {eitherSNaN,4'd0}; end
+	else if (isInfA && isInfB)   begin divSpecRes = CANON_QNAN;             divSpecFlg = 5'b10000; end // inf/inf
+	else if (isZeroA && isZeroB) begin divSpecRes = CANON_QNAN;             divSpecFlg = 5'b10000; end // 0/0
+	else if (isInfA)             begin divSpecRes = {divSign, 8'hff, 23'd0};divSpecFlg = 5'b0; end // inf/finite
+	else if (isInfB)             begin divSpecRes = {divSign, 31'd0};       divSpecFlg = 5'b0; end // finite/inf
+	else if (isZeroB)            begin divSpecRes = {divSign, 8'hff, 23'd0};divSpecFlg = 5'b01000; end // x/0 -> inf, DZ
+	else /* isZeroA */           begin divSpecRes = {divSign, 31'd0};       divSpecFlg = 5'b0; end // 0/finite
+end
+
+// sqrt
+wire signed [11:0] sqrtEb = (aEU >>> 1) + 12'sd127; // floor(aEU/2)
+wire [23:0] sqrtMant = fQuo[25:2];
+wire        sqrtG    = fQuo[1];
+wire        sqrtS    = fQuo[0] | (fRem != 30'd0);
+wire        sqrtSpecial = isNaNA || isZeroA || signA || isInfA;
+reg  [31:0] sqrtSpecRes; reg [4:0] sqrtSpecFlg; // ### comb-block-reg.
+always_comb begin
+	if (isNaNA)       begin sqrtSpecRes = CANON_QNAN;           sqrtSpecFlg = {isSNaNA,4'd0}; end
+	else if (isZeroA) begin sqrtSpecRes = {signA, 31'd0};       sqrtSpecFlg = 5'b0; end // sqrt(+/-0) = +/-0
+	else if (signA)   begin sqrtSpecRes = CANON_QNAN;           sqrtSpecFlg = 5'b10000; end // sqrt(neg)
+	else /* isInfA */ begin sqrtSpecRes = {1'b0, 8'hff, 23'd0}; sqrtSpecFlg = 5'b0; end // +inf
+end
+
+// recurrence-step combinational helpers (one quotient/root bit per cycle).
+wire        divCmp     = (fRem >= {6'd0, bSig});
+wire [29:0] divRemNext = ((divCmp ? (fRem - {6'd0, bSig}) : fRem) << 1);
+wire [29:0] sqRem2     = {fRem[27:0], fRad[51:50]};         // (fRem << 2) | next 2 radicand bits
+wire [29:0] sqTrial    = {2'd0, fQuo, 2'b01};               // (root << 2) | 1
+wire        sqCmp      = (sqTrial <= sqRem2);
+wire [29:0] sqRemNext  = (sqCmp ? (sqRem2 - sqTrial) : sqRem2);
+// init values (from the now-valid unpacked operands, on the first post-stb cycle).
+wire [29:0] divInitRem = divLt ? {5'd0, aSig, 1'b0} : {6'd0, aSig}; // dividend = sigA<<1 or sigA
+wire [24:0] sqrtMint   = aEU[0] ? {aSig, 1'b0} : {1'b0, aSig};            // 1.frac or 2*1.frac
+
 // ===== shared round + pack to binary32 (normal / overflow / subnormal) =====
 // Inputs selected by optype: a normalized 1.frac significand pkM (bit23=1), its SIGNED
 // biased exponent pkEb, guard pkG, sticky pkS, sign pkSign.
@@ -324,6 +376,8 @@ always_comb begin
 	if (optype == OP_ADD || optype == OP_SUB) begin
 		pkSign = addSign; pkEb = addEbU; pkM = addMant; pkG = addG; pkS = addS;
 	end
+	if (optype == OP_DIV)  begin pkSign = divSign; pkEb = divEb;  pkM = divMant;  pkG = divG;  pkS = divS;  end
+	if (optype == OP_SQRT) begin pkSign = 1'b0;    pkEb = sqrtEb; pkM = sqrtMant; pkG = sqrtG; pkS = sqrtS; end
 end
 wire pkInx = pkG | pkS;
 // overflow target: inf vs max-normal per rm/sign.
@@ -384,9 +438,14 @@ always_comb begin
 	OP_CVTSW, OP_CVTSWU: begin rslt_o = resCvtIF; flags_o = flgCvtIF; end
 	OP_MUL:          begin rslt_o = mulSpecial ? mulSpecRes : pkRes; flags_o = mulSpecial ? mulSpecFlg : pkFlg; end
 	OP_ADD, OP_SUB:  begin rslt_o = addSpecial ? addSpecRes : pkRes; flags_o = addSpecial ? addSpecFlg : pkFlg; end
+	OP_DIV:          begin rslt_o = divSpecial ? divSpecRes : pkRes; flags_o = divSpecial ? divSpecFlg : pkFlg; end
+	OP_SQRT:         begin rslt_o = sqrtSpecial ? sqrtSpecRes : pkRes; flags_o = sqrtSpecial ? sqrtSpecFlg : pkFlg; end
 	default: begin rslt_o = {WORDBITSZ{1'b0}}; flags_o = 5'b0; end
 	endcase
 end
+
+// Only non-special fdiv/fsqrt iterate; every other op (incl special div/sqrt) is 1-cycle.
+wire optIter = ((optype == OP_DIV && !divSpecial) || (optype == OP_SQRT && !sqrtSpecial));
 
 always_ff @(posedge clk_i) begin
 	if (rst_i) begin
@@ -395,12 +454,28 @@ always_ff @(posedge clk_i) begin
 		if (stb_i) begin
 			operands <= args_i;
 			rdy_o    <= 0;
+			cntr     <= 0;
 		end
-	end else begin
-		// All currently-implemented ops are 1-cycle: the combinational result/flags
-		// above are valid one clockedge after the operands were captured. Later
-		// stages replace this with a per-op iteration counter (like idiv).
+	end else if (!optIter) begin
+		// 1-cycle ops: the combinational result/flags above are valid this cycle.
 		rdy_o <= 1;
+	end else if (cntr == 6'd0) begin
+		// initialize the recurrence from the now-valid unpacked operands.
+		if (optype == OP_DIV) begin
+			fRem <= divInitRem; fQuo <= 26'd0;
+		end else begin // OP_SQRT
+			fRad <= {sqrtMint, 27'd0}; fRem <= 30'd0; fQuo <= 26'd0;
+		end
+		cntr <= 6'd1;
+	end else begin
+		// one quotient/root bit per cycle.
+		if (optype == OP_DIV) begin
+			fRem <= divRemNext; fQuo <= {fQuo[24:0], divCmp};
+		end else begin
+			fRem <= sqRemNext;  fQuo <= {fQuo[24:0], sqCmp}; fRad <= {fRad[49:0], 2'b0};
+		end
+		if (cntr == ITERLAST) rdy_o <= 1;
+		cntr <= cntr + 6'd1;
 	end
 end
 
