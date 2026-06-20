@@ -290,8 +290,12 @@ wire [7:0]  addD     = (addExpDiff > 12'sd27) ? 8'd27 : addExpDiff[7:0];
 wire [26:0] smlSh    = smlBase >> addD;
 wire        smlLost  = |(smlBase & (((27'd1) << addD) - 27'd1)); // bits shifted off bit0
 wire [26:0] smlAligned = {smlSh[26:1], (smlSh[0] | smlLost)};    // collapse lost bits into sticky
-wire [27:0] addR28   = addSame ? ({1'b0, bigA} + {1'b0, smlAligned})
+// PIPELINE: register the align+add result so the unpack+align+add is its own stage,
+// separate from the leading-cancellation clz-normalize + packer-input select.
+wire [27:0] addR28_c = addSame ? ({1'b0, bigA} + {1'b0, smlAligned})
                                : ({1'b0, bigA} - {1'b0, smlAligned});
+reg  [27:0] pp_addR28; // ### pipeline reg (clocked below).
+wire [27:0] addR28   = pp_addR28;
 wire        addZero  = (addR28 == 28'd0);
 wire [6:0]  addLz    = clz64({36'd0, addR28}) - 7'd36;
 wire [27:0] addNorm  = addR28 << addLz;            // MSB -> bit27
@@ -391,6 +395,7 @@ reg [23:0] pp_pkM;
 reg        pp_pkG, pp_pkS;
 always_ff @(posedge clk_i) begin
 	pp_mulP   <= mulP;
+	pp_addR28 <= addR28_c;
 	pp_pkSign <= pkSign; pp_pkEb <= pkEb; pp_pkM <= pkM; pp_pkG <= pkG; pp_pkS <= pkS;
 end
 
@@ -466,10 +471,10 @@ end
 // Only non-special fdiv/fsqrt iterate; every other op (incl special div/sqrt) is short.
 wire optIter = ((optype == OP_DIV && !divSpecial) || (optype == OP_SQRT && !sqrtSpecial));
 // Total latency to rdy_o (cycles after stb). The pp_* pipeline registers clock every cycle;
-// only the value at rdy_o is sampled. shallow/cvt/add/sub: 2; fmul: 3 (mulP + packer regs);
-// div/sqrt: ITERLAST iterations + 3 (the registered pack tail).
+// only the value at rdy_o is sampled. shallow/cvt: 2; fadd/fsub/fmul: 3 (front-end reg +
+// packer reg); div/sqrt: ITERLAST iterations + 3 (the registered pack tail).
 wire [6:0] opLat = optIter           ? ({1'b0, ITERLAST} + 7'd3)
-                 : (optype == OP_MUL) ? 7'd3
+                 : (optype == OP_MUL || optype == OP_ADD || optype == OP_SUB) ? 7'd3
                  :                      7'd2;
 
 always_ff @(posedge clk_i) begin
