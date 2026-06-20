@@ -1487,8 +1487,23 @@ always_ff @(posedge clk_i) begin
 		end
 		iD_rW_rslt <= eX_rslt;
 	end else if (rW_isMulticycle) begin
-		iD_rW_rdId_isTrue <= 1'b1;
-		iD_rW_rdId <= rW_idx_i;
+		/* Same guard as the pipeline-result path above, but for a retiring
+		load/MUL/DIV: if the instruction now in iD is itself a lateResult
+		producer of the same gpr, this retiring result is already superseded
+		and must NOT be captured into iD_rW (else it would be forwarded to a
+		later consumer that should use the younger producer's value). Two
+		stacked late producers of one gpr (e.g. `lw a5,..` then `mul a5,a5,..`)
+		can coexist in the forwarding window under PUFWDALL, which issues the
+		younger one the same cycle the older retires; the !iD_stalled term keeps
+		this inert in the default (non-PUFWDALL) timing where the younger is
+		still stalled at the older's retire cycle. */
+		if (!iD_flushed && !iD_stalled && iD_lateResultInsn && rW_idx_i == iD_rdId) begin
+			iD_rW_rdId_isTrue <= 1'b0;
+			iD_rW_rdId <= {CLOG2GPRCNT{1'b0}};
+		end else begin
+			iD_rW_rdId_isTrue <= 1'b1;
+			iD_rW_rdId <= rW_idx_i;
+		end
 		iD_rW_rslt <= rW_dat_i;
 	end else if (halted_o) begin
 	end else if (eX_isExc) begin
