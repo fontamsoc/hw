@@ -394,13 +394,18 @@ wire        pkSubS = pkG | pkS | (|pkExtSh[22:0]) | (|(pkExt & (((48'd1) << pkSh
 wire        pkSubRup = roundUp(pkSubM[0], pkSubG, pkSubS, pkSign, rm);
 wire [24:0] pkSubMr  = {1'b0, pkSubM} + {24'd0, pkSubRup};
 wire        pkSubInx = pkSubG | pkSubS;
+// Tininess (after rounding): the result is tiny unless rounding the NORMALIZED mantissa
+// would carry it up into the normal range (i.e. exactly reach 2^emin). Needed so that a
+// subnormal that rounds up to the smallest normal still flags underflow when it was tiny.
+wire [24:0] pkNormMr   = {1'b0, pkM} + {24'd0, roundUp(pkM[0], pkG, pkS, pkSign, rm)};
+wire        pkIsTiny   = (pkEb < 12'sd0) || ((pkEb == 12'sd0) && !pkNormMr[24]);
 reg  [31:0] pkRes; reg [4:0] pkFlg; // ### comb-block-reg.
 always_comb begin
 	if (pkEb >= 12'sd255) begin                         // overflow before rounding
 		pkRes = pkOvfRes; pkFlg = 5'b00101;             // OF | NX
 	end else if (pkEb <= 12'sd0) begin                  // subnormal / underflow
 		pkRes = {pkSign, 7'd0, pkSubMr[23:0]};          // exp = pkSubMr[23] (1 if rounded up to smallest normal)
-		pkFlg = {1'b0,1'b0,1'b0, (pkSubInx && !pkSubMr[23]), pkSubInx}; // UF (still tiny) , NX
+		pkFlg = {1'b0,1'b0,1'b0, (pkSubInx && pkIsTiny), pkSubInx}; // UF, NX
 	end else begin                                      // normal range
 		logic rup; logic [24:0] mr;
 		rup = roundUp(pkM[0], pkG, pkS, pkSign, rm);

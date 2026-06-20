@@ -81,5 +81,23 @@ void main (void) {
 	chk("clsQN", fclass(QNAN), 1u<<9);  // qNaN
 	chk("clsSN", fclass(SNAN), 1u<<8);  // sNaN
 
+	// static rounding-mode encodings (func3=0..4) must match the dynamic-rm (frm) path.
+	{
+		uint32_t A = 0x3f800000u, B = 0x40400000u; // 1.0 / 3.0 (inexact; rounds differently per mode)
+		uint32_t st[5], dy; const char *nm[5] = {"srne","srtz","srdn","srup","srmm"};
+		asm volatile ("fdiv.s %0,%1,%2,rne":"=r"(st[0]):"r"(A),"r"(B));
+		asm volatile ("fdiv.s %0,%1,%2,rtz":"=r"(st[1]):"r"(A),"r"(B));
+		asm volatile ("fdiv.s %0,%1,%2,rdn":"=r"(st[2]):"r"(A),"r"(B));
+		asm volatile ("fdiv.s %0,%1,%2,rup":"=r"(st[3]):"r"(A),"r"(B));
+		asm volatile ("fdiv.s %0,%1,%2,rmm":"=r"(st[4]):"r"(A),"r"(B));
+		for (int m = 0; m < 5; m++) {
+			asm volatile ("csrw frm, %0"::"r"(m));
+			asm volatile ("fdiv.s %0,%1,%2":"=r"(dy):"r"(A),"r"(B));
+			chk(nm[m], st[m], dy);
+		}
+		if (st[1] == st[3]) { failed++; printf("FAIL static-rm: rtz==rup (rm not applied)\n"); }
+		else passed++;
+	}
+
 	printf("FPU STAGE1: %d passed, %d failed\n", passed, failed);
 }

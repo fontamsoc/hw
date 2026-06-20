@@ -39,7 +39,7 @@ emit() {
 ARITH_STRIDE=${ARITH_STRIDE:-8}
 emit2() {
 	"$TF" "$4" "$3" 2>/dev/null | \
-		gawk -v op="$1" -v rm="$2" -v st="$ARITH_STRIDE" '(NR % st)==1 {
+		gawk -v op="$1" -v rm="$2" -v st="$ARITH_STRIDE" '((NR-1) % st)==0 {
 			a=$1; b=$2; z=$3; f=$4; zv=strtonum("0x"z);
 			if ((and(zv,0x7f800000)==0x7f800000) && (and(zv,0x007fffff)!=0)) z="7fc00000";
 			printf "{%s,%s,0x%su,0x%su,0x%su,0x%su},\n", op, rm, a, b, z, f;
@@ -49,24 +49,28 @@ emit2() {
 # one-operand arith (fsqrt): decimated, NaN result canonicalized.
 emit1nan() {
 	"$TF" "$4" "$3" 2>/dev/null | \
-		gawk -v op="$1" -v rm="$2" -v st="$ARITH_STRIDE" '(NR % st)==1 {
+		gawk -v op="$1" -v rm="$2" -v st="$ARITH_STRIDE" '((NR-1) % st)==0 {
 			a=$1; z=$2; f=$3; zv=strtonum("0x"z);
 			if ((and(zv,0x7f800000)==0x7f800000) && (and(zv,0x007fffff)!=0)) z="7fc00000";
 			printf "{%s,%s,0x%su,0x0u,0x%su,0x%su},\n", op, rm, a, z, f;
 		}' >> "$out"
 }
 
+# Restrict to a subset of op ids via $WANT (space-separated); default = all. Used to run
+# one op group at a time at full level-1 coverage (set ARITH_STRIDE=1) without overflowing SRAM.
+w(){ case " ${WANT:-0 1 2 3 4 5 6 7 8} " in *" $1 "*) return 0;; esac; return 1; }
+
 for spec in "0 -rnear_even" "1 -rminMag" "2 -rmin" "3 -rmax" "4 -rnear_maxMag"; do
 	set -- $spec; rmid="$1"; rmf="$2"
-	emit 0 "$rmid" f32_to_i32  "$rmf" -exact   # F2IS  fcvt.w.s
-	emit 1 "$rmid" f32_to_ui32 "$rmf" -exact   # F2IU  fcvt.wu.s
-	emit 2 "$rmid" i32_to_f32  "$rmf"          # I2FS  fcvt.s.w
-	emit 3 "$rmid" ui32_to_f32 "$rmf"          # I2FU  fcvt.s.wu
-	emit2 4 "$rmid" f32_add "$rmf"             # FADD
-	emit2 5 "$rmid" f32_sub "$rmf"             # FSUB
-	emit2 6 "$rmid" f32_mul "$rmf"             # FMUL
-	emit2 7 "$rmid" f32_div "$rmf"             # FDIV
-	emit1nan 8 "$rmid" f32_sqrt "$rmf"         # FSQRT (one operand)
+	w 0 && emit 0 "$rmid" f32_to_i32  "$rmf" -exact   # F2IS  fcvt.w.s
+	w 1 && emit 1 "$rmid" f32_to_ui32 "$rmf" -exact   # F2IU  fcvt.wu.s
+	w 2 && emit 2 "$rmid" i32_to_f32  "$rmf"          # I2FS  fcvt.s.w
+	w 3 && emit 3 "$rmid" ui32_to_f32 "$rmf"          # I2FU  fcvt.s.wu
+	w 4 && emit2 4 "$rmid" f32_add "$rmf"             # FADD
+	w 5 && emit2 5 "$rmid" f32_sub "$rmf"             # FSUB
+	w 6 && emit2 6 "$rmid" f32_mul "$rmf"             # FMUL
+	w 7 && emit2 7 "$rmid" f32_div "$rmf"             # FDIV
+	w 8 && emit1nan 8 "$rmid" f32_sqrt "$rmf"         # FSQRT (one operand)
 done
 
 echo "};" >> "$out"
