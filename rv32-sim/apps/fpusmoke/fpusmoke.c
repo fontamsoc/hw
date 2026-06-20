@@ -45,22 +45,56 @@ static void chkflags(const char *nm, uint32_t ef) {
 #define QNAN 0x7fc00000u
 #define SNAN 0x7f800001u
 #define SUBN 0x00000001u  // smallest +subnormal
+#define NSUBN 0x80000001u // smallest -subnormal
+#define MTWO 0xc0000000u  // -2.0
+#define NQNAN 0xffc00000u // -qNaN  (canonical qNaN payload, sign set)
+#define NSNAN 0xff800001u // -sNaN  (sNaN payload, sign set)
 
 void main (void) {
 	cl_fflags();
-	// sign injection (no flags)
-	chk("fsgnj",  fsgnj(ONE, MONE), MONE);
-	chk("fsgnjn", fsgnjn(ONE, MONE), ONE);
-	chk("fsgnjx", fsgnjx(ONE, MONE), MONE);
-	chk("fsgnjx2",fsgnjx(MONE, MONE), ONE);
-	// min/max incl -0/+0 and NaN propagation
-	chkf("fp_min",   fp_min(ONE, TWO), ONE, 0);
-	chkf("fp_max",   fp_max(ONE, TWO), TWO, 0);
-	chkf("fmin0",  fp_min(PZ, NZ),   NZ,  0);
-	chkf("fmax0",  fp_max(PZ, NZ),   PZ,  0);
-	chkf("fminN",  fp_min(QNAN, TWO),TWO, 0);   // quiet NaN -> other operand, no NV
-	chkf("fminSN", fp_min(SNAN, TWO),TWO, 0x10);// sNaN -> NV
-	chkf("fmin2N", fp_min(QNAN, QNAN),QNAN,0);  // both NaN -> canonical qNaN
+	// ---- sign injection: result = {selected sign, a[30:0]}; NEVER raises a flag and NEVER
+	// canonicalizes -- a's magnitude/payload is preserved bit-for-bit, even for a NaN. ----
+	chk("fsgnj",   fsgnj(ONE, MONE),  MONE);  // sign from b
+	chk("fsgnj+",  fsgnj(MONE, ONE),  ONE);
+	chk("fsgnjz",  fsgnj(PZ, MONE),   NZ);    // +0 -> -0
+	chk("fsgnjI",  fsgnj(PINF, MONE), NINF);  // sign of inf
+	chk("fsgnjn",  fsgnjn(ONE, MONE), ONE);   // ~sign of b
+	chk("fsgnjn-", fsgnjn(ONE, ONE),  MONE);  // fneg(1.0)
+	chk("fsgnjnI", fsgnjn(NINF,NINF), PINF);
+	chk("fsgnjx",  fsgnjx(ONE, MONE), MONE);  // sign = a^b
+	chk("fsgnjx2", fsgnjx(MONE,MONE), ONE);   // fabs(-1.0)
+	chk("fsgnjx3", fsgnjx(MONE, ONE), MONE);
+	chkf("fsgnjNq",fsgnj(QNAN, MONE),  NQNAN, 0);  // NaN payload kept, sign set, no NV
+	chkf("fsgnjNs",fsgnjx(SNAN, NZ),   NSNAN, 0);  // 0^1=1; sNaN payload kept; NO NV
+	chkf("fsgnjNa",fsgnjx(SNAN, SNAN), SNAN,  0);  // fabs(sNaN): sign 0, NO NV
+	// ---- fmin/fmax: numeric min/max; one NaN -> the OTHER (number) verbatim; both NaN ->
+	// canonical qNaN; any sNaN input -> NV; -0 < +0; order-independent. ----
+	chkf("fp_min", fp_min(ONE, TWO),   ONE,  0);
+	chkf("fp_max", fp_max(ONE, TWO),   TWO,  0);
+	chkf("fminR",  fp_min(TWO, ONE),   ONE,  0);    // order-independent
+	chkf("fmaxR",  fp_max(TWO, ONE),   TWO,  0);
+	chkf("fminNg", fp_min(MONE, MTWO), MTWO, 0);    // -2 < -1
+	chkf("fmaxNg", fp_max(MONE, MTWO), MONE, 0);
+	chkf("fminMx", fp_min(MONE, ONE),  MONE, 0);
+	chkf("fminSb", fp_min(SUBN, ONE),  SUBN, 0);
+	chkf("fmin0",  fp_min(PZ, NZ),     NZ,   0);    // -0 < +0
+	chkf("fmax0",  fp_max(PZ, NZ),     PZ,   0);
+	chkf("fmin0R", fp_min(NZ, PZ),     NZ,   0);
+	chkf("fmax0R", fp_max(NZ, PZ),     PZ,   0);
+	chkf("fminIf", fp_min(NINF, PINF), NINF, 0);
+	chkf("fmaxIf", fp_max(NINF, PINF), PINF, 0);
+	chkf("fminI1", fp_min(PINF, ONE),  ONE,  0);
+	chkf("fmaxI1", fp_max(NINF, ONE),  ONE,  0);
+	chkf("fminQa", fp_min(QNAN, TWO),  TWO,  0);    // qNaN -> other operand, no NV
+	chkf("fminQb", fp_min(TWO, QNAN),  TWO,  0);
+	chkf("fmaxQa", fp_max(QNAN, TWO),  TWO,  0);
+	chkf("fmaxQb", fp_max(TWO, QNAN),  TWO,  0);
+	chkf("fminSa", fp_min(SNAN, TWO),  TWO,  0x10); // sNaN -> NV, other returned
+	chkf("fminSc", fp_min(TWO, SNAN),  TWO,  0x10);
+	chkf("fmaxSa", fp_max(SNAN, TWO),  TWO,  0x10);
+	chkf("fmin2Q", fp_min(QNAN, QNAN), QNAN, 0);    // both NaN -> canonical qNaN
+	chkf("fmax2Q", fp_max(QNAN, QNAN), QNAN, 0);
+	chkf("fminQS", fp_min(QNAN, SNAN), QNAN, 0x10); // both NaN, one sNaN -> qNaN + NV
 	// compares
 	chkf("feq",    feq(ONE, ONE),  1, 0);
 	chkf("feqz",   feq(PZ, NZ),    1, 0);     // +0 == -0
@@ -70,16 +104,18 @@ void main (void) {
 	chkf("feqSN",  feq(SNAN, ONE), 0, 0x10);  // sNaN -> NV
 	chkf("fltQN",  flt(QNAN, ONE), 0, 0x10);  // signaling compare, any NaN -> NV
 	chkf("fleQN",  fle(ONE, QNAN), 0, 0x10);
-	// classify (no flags)
-	chk("clsMN", fclass(MONE), 1u<<1);  // -normal
-	chk("clsPN", fclass(ONE),  1u<<6);  // +normal
-	chk("clsNZ", fclass(NZ),   1u<<3);  // -0
-	chk("clsPZ", fclass(PZ),   1u<<4);  // +0
-	chk("clsPI", fclass(PINF), 1u<<7);  // +inf
-	chk("clsNI", fclass(NINF), 1u<<0);  // -inf
-	chk("clsSub",fclass(SUBN), 1u<<5);  // +subnormal
-	chk("clsQN", fclass(QNAN), 1u<<9);  // qNaN
-	chk("clsSN", fclass(SNAN), 1u<<8);  // sNaN
+	// ---- fclass: 10-bit one-hot class; covers ALL 10 classes; NEVER raises a flag. ----
+	chk("clsNI",   fclass(NINF),  1u<<0);  // -inf
+	chk("clsMN",   fclass(MONE),  1u<<1);  // -normal
+	chk("clsNsub", fclass(NSUBN), 1u<<2);  // -subnormal
+	chk("clsNZ",   fclass(NZ),    1u<<3);  // -0
+	chk("clsPZ",   fclass(PZ),    1u<<4);  // +0
+	chk("clsSub",  fclass(SUBN),  1u<<5);  // +subnormal
+	chk("clsPN",   fclass(ONE),   1u<<6);  // +normal
+	chk("clsPI",   fclass(PINF),  1u<<7);  // +inf
+	chk("clsSN",   fclass(SNAN),  1u<<8);  // sNaN
+	chk("clsQN",   fclass(QNAN),  1u<<9);  // qNaN
+	chkf("clsNoF", fclass(SNAN),  1u<<8, 0); // fclass on sNaN raises NO flag
 
 	// static rounding-mode encodings (func3=0..4) must match the dynamic-rm (frm) path.
 	{
