@@ -444,6 +444,17 @@ wire iF_isZbc       = (iF_isALUreg && iF_func7 == 7'b0000101 && !iF_func3[2]);
 wire iF_opClmul_stb = (iF_isZbc && iF_rdId); // rd!=x0 (mirrors iF_opImul_stb).
 `endif
 
+`ifdef PURV32ZBS
+// Zbs single-bit: bset(func7=0010100)/bclr(0100100)/binv(0110100) with func3=001, and
+// bext(0100100) with func3=101; both OP and OP-IMM forms (the immediate forms carry func7
+// in imm[11:5] and the bit index in imm[4:0]). These func7 values are distinct from
+// Zba/Zbb/M/Zbc, so no double-decode.
+wire iF_isZbs =
+	((iF_isALUreg || iF_isALUimm) && iF_func3 == 3'b001 &&
+		(iF_func7 == 7'b0010100 || iF_func7 == 7'b0100100 || iF_func7 == 7'b0110100)) || // bset/bclr/binv
+	((iF_isALUreg || iF_isALUimm) && iF_func3 == 3'b101 && iF_func7 == 7'b0100100);        // bext
+`endif
+
 wire iF_isLr = (iF_isAMO && iF_func5 == 5'b00010);
 wire iF_isSc = (iF_isAMO && iF_func5 == 5'b00011);
 
@@ -631,6 +642,9 @@ reg iD_isZba;
 `ifdef PURV32ZBB
 reg iD_isZbb;
 reg iD_isZbbRol;
+`endif
+`ifdef PURV32ZBS
+reg iD_isZbs;
 `endif
 
 reg iD_isFence;
@@ -915,6 +929,9 @@ always_ff @(posedge clk_i) begin
 		iD_isZbb    <= iF_isZbb;
 		iD_isZbbRol <= iF_isZbbRol;
 		`endif
+		`ifdef PURV32ZBS
+		iD_isZbs <= iF_isZbs;
+		`endif
 
 		iD_isFence         <= iF_isFence;
 		iD_isFencei        <= iF_isFencei;
@@ -1085,6 +1102,23 @@ always_comb begin
 end
 `endif
 
+`ifdef PURV32ZBS
+// Zbs single-bit ops. Bit index from rs2[4:0] (OP) or iD_Iimm[4:0] (OP-IMM) -- the [4:0]
+// slice is the spec's (bit & (XLEN-1)); mirrors the Zbb rotate-amount selection above.
+wire [5         -1 : 0] eX_zbsBit_i  = (iD_isALUreg ? eX_aluArg2_i[4:0] : iD_Iimm[4:0]);
+wire [WORDBITSZ -1 : 0] eX_zbsMask_i = ({{(WORDBITSZ-1){1'b0}}, 1'b1} << eX_zbsBit_i);
+reg [WORDBITSZ -1 : 0] eX_zbsOut_i; // ### comb-block-reg.
+always_comb begin
+	if (iD_func3 == 3'b101) // bext/bexti: (rs1 >> bit) & 1.
+		eX_zbsOut_i = {{(WORDBITSZ-1){1'b0}}, eX_aluArg1_i[eX_zbsBit_i]};
+	else case (iD_func7)
+	7'b0010100: eX_zbsOut_i = (eX_aluArg1_i |  eX_zbsMask_i); // bset/bseti
+	7'b0110100: eX_zbsOut_i = (eX_aluArg1_i ^  eX_zbsMask_i); // binv/binvi
+	default:    eX_zbsOut_i = (eX_aluArg1_i & ~eX_zbsMask_i); // bclr/bclri (7'b0100100)
+	endcase
+end
+`endif
+
 reg [WORDBITSZ -1 : 0] eX_aluOut_i; // ### comb-block-reg.
 always_comb begin
 	unique case (iD_func3)
@@ -1115,6 +1149,9 @@ always_comb begin
 	`endif
 	`ifdef PURV32ZBB
 	else   if (iD_isZbb)       eX_rslt_i = eX_zbbOut_i;
+	`endif
+	`ifdef PURV32ZBS
+	else   if (iD_isZbs)       eX_rslt_i = eX_zbsOut_i;
 	`endif
 	else                       eX_rslt_i = eX_aluOut_i;
 end

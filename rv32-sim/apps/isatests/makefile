@@ -70,6 +70,14 @@ TESTS += orc_b
 TESTS += clmul
 TESTS += clmulh
 TESTS += clmulr
+TESTS += bset
+TESTS += bclr
+TESTS += binv
+TESTS += bext
+TESTS += bseti
+TESTS += bclri
+TESTS += binvi
+TESTS += bexti
 TESTS += amoswap_w
 TESTS += amoadd_w
 TESTS += amoand_w
@@ -92,7 +100,7 @@ READELF := ${PREFIX}-readelf
 
 CFLAGS += -Werror -fdata-sections -ffunction-sections -Wl,--gc-sections -O3 -g
 CFLAGS += -nostdlib
-CFLAGS += -march=rv32ima_zba_zbb_zbc_zicsr_zifencei -mabi=ilp32 # zba/zbb/zbc needed to assemble bitmanip insns.
+CFLAGS += -march=rv32ima_zba_zbb_zbc_zbs_zicsr_zifencei -mabi=ilp32 # zba/zbb/zbc/zbs needed to assemble bitmanip insns.
 
 APPNAME := isatests
 
