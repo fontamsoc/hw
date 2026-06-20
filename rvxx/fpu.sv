@@ -178,15 +178,17 @@ wire [31:0] ifMag  = ifSign ? (~a + 32'd1) : a;     // magnitude (unsigned input
 wire        ifZero = (ifMag == 32'd0);
 wire [5:0]  ifLz   = clz32(ifMag);
 wire [7:0]  ifExp  = 8'd127 + (8'd31 - {2'd0, ifLz}); // biased exp = 127 + msbpos
-wire [31:0] ifAln  = ifMag << ifLz;                  // MSB now at bit31
-wire [23:0] ifSig  = ifAln[31:8];                    // 1.frac (24 bits)
-wire        ifG    = ifAln[7];
-wire        ifS    = |ifAln[6:0];
-wire        ifRup  = roundUp(ifSig[0], ifG, ifS, ifSign, rm);
+wire [31:0] ifAln  = ifMag << ifLz;                  // MSB now at bit31 (clz+shift)
+// PIPELINE: register the clz+shift outputs so the round is a separate stage.
+reg  [31:0] pp_ifAln; reg [7:0] pp_ifExp; reg pp_ifSign, pp_ifZero; // ### pipeline reg.
+wire [23:0] ifSig  = pp_ifAln[31:8];                 // 1.frac (24 bits)
+wire        ifG    = pp_ifAln[7];
+wire        ifS    = |pp_ifAln[6:0];
+wire        ifRup  = roundUp(ifSig[0], ifG, ifS, pp_ifSign, rm);
 wire [24:0] ifRnd  = {1'b0, ifSig} + {24'd0, ifRup};
 wire [22:0] ifFrac = ifRnd[24] ? 23'd0 : ifRnd[22:0];     // rounding carry -> mantissa 1.0
-wire [7:0]  ifExpF = ifRnd[24] ? (ifExp + 8'd1) : ifExp;
-wire [31:0] resCvtIF = ifZero ? 32'd0 : {ifSign, ifExpF, ifFrac};
+wire [7:0]  ifExpF = ifRnd[24] ? (pp_ifExp + 8'd1) : pp_ifExp;
+wire [31:0] resCvtIF = pp_ifZero ? 32'd0 : {pp_ifSign, ifExpF, ifFrac};
 wire [4:0]  flgCvtIF = {4'd0, (ifG | ifS)};               // NX only.
 
 // ===== float -> int (CVTWS signed int32 / CVTWUS uint32) =====
@@ -208,8 +210,12 @@ wire        fiRup = roundUp(fiRsInt[0], fiG, fiS, signA, rm);
 wire        fiLsBig = (fiE > 11'sd31);
 wire [3:0]  fiLsC   = fiLsBig ? 4'd0 : (fiE[3:0] - 4'd7); // E-23 for E in [23,31] (low nibble)
 wire [63:0] fiLsh   = fiLsBig ? 64'hFFFFFFFFFFFFFFFF : (fiSig64 << fiLsC);
-wire [63:0] fiMag   = fiLeft ? fiLsh : ({32'd0, fiRsInt} + {63'd0, fiRup});
-wire        fiInexact = fiLeft ? 1'b0 : (fiG | fiS);
+// PIPELINE: register the shifted magnitude so the saturate/clamp is a separate stage.
+wire [63:0] fiMag_c     = fiLeft ? fiLsh : ({32'd0, fiRsInt} + {63'd0, fiRup});
+wire        fiInexact_c = fiLeft ? 1'b0 : (fiG | fiS);
+reg  [63:0] pp_fiMag; reg pp_fiInexact; // ### pipeline reg.
+wire [63:0] fiMag   = pp_fiMag;
+wire        fiInexact = pp_fiInexact;
 
 reg  [31:0] resCvtFI; // ### comb-block-reg.
 reg         fiNV;     // ### comb-block-reg.
@@ -397,6 +403,8 @@ always_ff @(posedge clk_i) begin
 	pp_mulP   <= mulP;
 	pp_addR28 <= addR28_c;
 	pp_pkSign <= pkSign; pp_pkEb <= pkEb; pp_pkM <= pkM; pp_pkG <= pkG; pp_pkS <= pkS;
+	pp_ifAln  <= ifAln; pp_ifExp <= ifExp; pp_ifSign <= ifSign; pp_ifZero <= ifZero;
+	pp_fiMag  <= fiMag_c; pp_fiInexact <= fiInexact_c;
 end
 
 // PACKER STAGE A: the 48-bit subnormal denormalize-shift (the deep part). Register its
@@ -486,10 +494,12 @@ end
 // Only non-special fdiv/fsqrt iterate; every other op (incl special div/sqrt) is short.
 wire optIter = ((optype == OP_DIV && !divSpecial) || (optype == OP_SQRT && !sqrtSpecial));
 // Total latency to rdy_o (cycles after stb). The pp_* pipeline registers clock every cycle;
-// only the value at rdy_o is sampled. shallow/cvt: 2; fadd/fsub/fmul: 4 (front-end reg +
-// 2-stage packer); div/sqrt: ITERLAST iterations + 4 (the registered 2-stage pack tail).
+// only the value at rdy_o is sampled. shallow: 2; fcvt: 3 (shift reg); fadd/fsub/fmul: 4
+// (front-end reg + 2-stage packer); div/sqrt: ITERLAST iterations + 4 (2-stage pack tail).
+wire isCvt = (optype == OP_CVTWS || optype == OP_CVTWUS || optype == OP_CVTSW || optype == OP_CVTSWU);
 wire [6:0] opLat = optIter           ? ({1'b0, ITERLAST} + 7'd4)
                  : (optype == OP_MUL || optype == OP_ADD || optype == OP_SUB) ? 7'd4
+                 : isCvt              ? 7'd3
                  :                      7'd2;
 
 always_ff @(posedge clk_i) begin
