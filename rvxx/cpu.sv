@@ -66,6 +66,7 @@ parameter ICACHEWAYCNT  = 1;
 parameter DCACHEWAYCNT  = 1;
 parameter IMULCNT       = 2;
 parameter IDIVCNT       = 2;
+parameter CLMULCNT      = 1;
 parameter MAXPENDINGACK = 16;
 parameter PUCNT         = 1;
 parameter CPUID         = 0;
@@ -154,6 +155,7 @@ pu #(
 	,.DCACHEWAYCNT  (DCACHEWAYCNT)
 	,.IMULCNT       (IMULCNT)
 	,.IDIVCNT       (IDIVCNT)
+	,.CLMULCNT      (CLMULCNT)
 	,.MAXPENDINGACK (MAXPENDINGACK)
 	,.PUIDBITSZ     (PUIDBITSZ)
 	,.PUID          (CPUID + genpu_idx)

@@ -127,6 +127,9 @@
 `include "./imul.sv"
 `include "./idiv.sv"
 `endif
+`ifdef PURV32ZBC
+`include "./clmul.sv"
+`endif
 
 module pu (
 
@@ -191,6 +194,7 @@ parameter ICACHEWAYCNT  = 1;
 parameter DCACHEWAYCNT  = 1;
 parameter IMULCNT       = 2;
 parameter IDIVCNT       = 2;
+parameter CLMULCNT      = 1;
 parameter MAXPENDINGACK = 16;
 parameter PUIDBITSZ     = 1;
 parameter PUID          = 0;
@@ -432,6 +436,14 @@ wire iF_isZbb =
 wire iF_isZbbRol = (iF_isALUreg && iF_func3 == 3'b001); // OP-form func7=0110000 rol.
 `endif
 
+`ifdef PURV32ZBC
+// Zbc: clmul/clmulh/clmulr. OP-form, func7=0000101 (shared with Zbb min/max); func3[2]==0
+// distinguishes Zbc (func3 001/010/011) from Zbb min/max (func3[2]==1). Multi-cycle: the
+// result retires via the WriteBack arbiter, so clmul is a lateResultInsn (like RV32M).
+wire iF_isZbc       = (iF_isALUreg && iF_func7 == 7'b0000101 && !iF_func3[2]);
+wire iF_opClmul_stb = (iF_isZbc && iF_rdId); // rd!=x0 (mirrors iF_opImul_stb).
+`endif
+
 wire iF_isLr = (iF_isAMO && iF_func5 == 5'b00010);
 wire iF_isSc = (iF_isAMO && iF_func5 == 5'b00011);
 
@@ -458,6 +470,9 @@ wire iF_is1OprndD   = (iF_isJAL || iF_isAUIPC || iF_isLUI || (iF_isCSR && iF_fun
 wire iF_lateResultInsn = (
 	`ifdef PURV32M
 	iF_isRV32M ||
+	`endif
+	`ifdef PURV32ZBC
+	iF_opClmul_stb ||
 	`endif
 	iF_ldUnit_stb);
 
@@ -638,6 +653,9 @@ reg iD_isCSR;
 reg iD_opImul_stb;
 reg iD_opIdiv_stb;
 `endif
+`ifdef PURV32ZBC
+reg iD_opClmul_stb;
+`endif
 
 reg iD_isLr;
 reg iD_isSc;
@@ -678,6 +696,9 @@ reg [GPRCNT    -1 : 0] gprRdy;
 wire iD_opImul_bsy;
 wire iD_opIdiv_bsy;
 `endif
+`ifdef PURV32ZBC
+wire iD_opClmul_bsy;
+`endif
 wire iD_ldUnit_bsy;
 wire iD_stUnit_bsy;
 
@@ -700,6 +721,9 @@ wire iD_stalled = (!iD_eX_carryon ||
 	`ifdef PURV32M
 	(iD_opImul_stb && iD_opImul_bsy) ||
 	(iD_opIdiv_stb && iD_opIdiv_bsy) ||
+	`endif
+	`ifdef PURV32ZBC
+	(iD_opClmul_stb && iD_opClmul_bsy) ||
 	`endif
 	(iD_ldUnit_stb && iD_ldUnit_bsy) ||
 	(iD_stUnit_stb && iD_stUnit_bsy) ||
@@ -911,6 +935,9 @@ always_ff @(posedge clk_i) begin
 		`ifdef PURV32M
 		iD_opImul_stb <= iF_opImul_stb;
 		iD_opIdiv_stb <= iF_opIdiv_stb;
+		`endif
+		`ifdef PURV32ZBC
+		iD_opClmul_stb <= iF_opClmul_stb;
 		`endif
 
 		iD_isLr <= iF_isLr;
@@ -1304,10 +1331,16 @@ assign iD_eX_rslt         = eX_rslt;
 reg rW_opImul_done; // ### comb-block-reg.
 reg rW_opIdiv_done; // ### comb-block-reg.
 `endif
+`ifdef PURV32ZBC
+reg rW_opClmul_done; // ### comb-block-reg.
+`endif
 
 `ifdef PURV32M
 `include "./imul.pu.sv"
 `include "./idiv.pu.sv"
+`endif
+`ifdef PURV32ZBC
+`include "./clmul.pu.sv"
 `endif
 `include "./lsu.pu.sv"
 `include "./sys.pu.sv"
@@ -1328,6 +1361,9 @@ wire rW_multicyclePending = (
 	`ifdef PURV32M
 	|| opImul_done || opIdiv_done
 	`endif
+	`ifdef PURV32ZBC
+	|| opClmul_done
+	`endif
 	);
 
 assign eX_rW_stalled = rW_isMulticycle; // csrInstret counts a retiring multicycle result.
@@ -1344,6 +1380,9 @@ always_comb begin
 	`ifdef PURV32M
 	rW_opImul_done = 0;
 	rW_opIdiv_done = 0;
+	`endif
+	`ifdef PURV32ZBC
+	rW_opClmul_done = 0;
 	`endif
 
 	// Pipeline has priority; load/MUL/DIV retire only when the pipeline yields the
@@ -1368,6 +1407,13 @@ always_comb begin
 		rW_idx_i = opIdiv_rIdx;
 		rW_dat_i = opIdiv_rslt;
 		rW_opIdiv_done = 1;
+	`endif
+	`ifdef PURV32ZBC
+	end else if (opClmul_done) begin
+		rW_we_i  = 1;
+		rW_idx_i = opClmul_rIdx;
+		rW_dat_i = opClmul_rslt;
+		rW_opClmul_done = 1;
 	`endif
 	end
 end

@@ -67,6 +67,9 @@ TESTS += sext_h
 TESTS += zext_h
 TESTS += rev8
 TESTS += orc_b
+TESTS += clmul
+TESTS += clmulh
+TESTS += clmulr
 TESTS += amoswap_w
 TESTS += amoadd_w
 TESTS += amoand_w
@@ -89,7 +92,7 @@ READELF := ${PREFIX}-readelf
 
 CFLAGS += -Werror -fdata-sections -ffunction-sections -Wl,--gc-sections -O3 -g
 CFLAGS += -nostdlib
-CFLAGS += -march=rv32ima_zba_zbb_zicsr_zifencei
+CFLAGS += -march=rv32ima_zba_zbb_zbc_zicsr_zifencei -mabi=ilp32 # zba/zbb/zbc needed to assemble bitmanip insns.
 
 APPNAME := isatests
 

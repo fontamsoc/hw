@@ -16,6 +16,9 @@
 // PURV32ZBB disabled on FPGA tops: it pushes rv32-orangecrab0285 below 48 MHz
 // timing closure (scoreboard-region routing congestion). Still enabled in rv32-sim.
 //`define PURV32ZBB
+// PURV32ZBC (Zbc carry-less multiply): a multi-cycle clmul unit, register-isolated (unlike
+// Zbb's combinational logic) so it should not cost Fmax -- left off here pending measurement.
+//`define PURV32ZBC
 `define PUIMULDSP
 `define PUPREDICTJAL
 `define PUPREDICTBRANCH
@@ -175,6 +178,7 @@ cpu #(
 	,.DCACHEWAYCNT  (DCACHEWAYCNT)
 	,.IMULCNT       (2)
 	,.IDIVCNT       (2)
+	,.CLMULCNT      (1)
 	,.MAXPENDINGACK (WBPI_MAXPENDINGACK)
 	,.PUCNT         (CPU_COUNT)
 ) cpu (
