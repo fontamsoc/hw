@@ -53,7 +53,11 @@ localparam OP_EQ    = 5'd5;
 localparam OP_LT    = 5'd6;
 localparam OP_LE    = 5'd7;
 localparam OP_CLASS = 5'd8;
-// reserved (later stages): 9 CVTWS,10 CVTWUS,11 CVTSW,12 CVTSWU,13 ADD,14 SUB,15 MUL,16 DIV,17 SQRT.
+localparam OP_CVTWS  = 5'd9;  // f -> int32 (signed)
+localparam OP_CVTWUS = 5'd10; // f -> uint32
+localparam OP_CVTSW  = 5'd11; // int32 -> f
+localparam OP_CVTSWU = 5'd12; // uint32 -> f
+// reserved (later stages): 13 ADD,14 SUB,15 MUL,16 DIV,17 SQRT.
 
 input wire rst_i;
 
@@ -75,9 +79,32 @@ reg [(((WORDBITSZ*2)+CLOG2GPRCNT)+OPTYPEBITSZ+3) -1 : 0] operands;
 assign gprid_o = operands[OPTYPELSB-1 : WORDBITSZ*2];
 
 wire [OPTYPEBITSZ -1 : 0] optype = operands[OPTYPELSB +: OPTYPEBITSZ];
-/* verilator lint_off UNUSEDSIGNAL */
-wire [3 -1 : 0]           rm = operands[RMLSB +: 3]; // unused by the 1-cycle ops.
-/* verilator lint_on UNUSEDSIGNAL */
+wire [3 -1 : 0]           rm = operands[RMLSB +: 3]; // resolved rounding mode.
+
+// ---- shared rounding (all 5 modes) ----
+// Should the magnitude be incremented, given the kept LSB, the guard bit (weight 1/2
+// ULP), the sticky bit (OR of everything below guard), the result sign, and rm?
+function automatic logic roundUp(input logic lsb, input logic g, input logic s,
+                                 input logic sgn, input logic [2:0] rmode);
+	case (rmode)
+	3'b000:  roundUp = g && (s || lsb);  // RNE: ties to even.
+	3'b001:  roundUp = 1'b0;             // RTZ: truncate.
+	3'b010:  roundUp = (g || s) && sgn;  // RDN: toward -inf.
+	3'b011:  roundUp = (g || s) && !sgn; // RUP: toward +inf.
+	3'b100:  roundUp = g;                // RMM: ties to max magnitude.
+	default: roundUp = g && (s || lsb);  // reserved -> treat as RNE.
+	endcase
+endfunction
+
+// Count leading zeros of a 32-bit value (32 if zero).
+function automatic logic [5:0] clz32(input logic [31:0] x);
+	integer i; logic done;
+	begin
+		clz32 = 6'd32; done = 1'b0;
+		for (i = 31; i >= 0; i = i - 1)
+			if (!done && x[i]) begin clz32 = 6'd31 - i[5:0]; done = 1'b1; end
+	end
+endfunction
 
 wire [WORDBITSZ -1 : 0] a = operands[(WORDBITSZ*2)-1 : WORDBITSZ]; // rs1
 wire [WORDBITSZ -1 : 0] b = operands[WORDBITSZ-1 : 0];            // rs2
@@ -128,6 +155,74 @@ wire [9:0] classMask = {
 	  signA &&  normalA,      // [1] -normal
 	  signA &&  isInfA };     // [0] -inf
 
+// ===== int -> float (CVTSW signed / CVTSWU unsigned) =====
+// 32-bit int never overflows binary32 (max ~2^32 < 2^128) and never underflows, so the
+// only possible flag is NX (inexact, when the integer has > 24 significant bits).
+wire        ifUns  = (optype == OP_CVTSWU);
+wire        ifSign = (~ifUns) & a[31];              // signed-negative input
+wire [31:0] ifMag  = ifSign ? (~a + 32'd1) : a;     // magnitude (unsigned input as-is)
+wire        ifZero = (ifMag == 32'd0);
+wire [5:0]  ifLz   = clz32(ifMag);
+wire [7:0]  ifExp  = 8'd127 + (8'd31 - {2'd0, ifLz}); // biased exp = 127 + msbpos
+wire [31:0] ifAln  = ifMag << ifLz;                  // MSB now at bit31
+wire [23:0] ifSig  = ifAln[31:8];                    // 1.frac (24 bits)
+wire        ifG    = ifAln[7];
+wire        ifS    = |ifAln[6:0];
+wire        ifRup  = roundUp(ifSig[0], ifG, ifS, ifSign, rm);
+wire [24:0] ifRnd  = {1'b0, ifSig} + {24'd0, ifRup};
+wire [22:0] ifFrac = ifRnd[24] ? 23'd0 : ifRnd[22:0];     // rounding carry -> mantissa 1.0
+wire [7:0]  ifExpF = ifRnd[24] ? (ifExp + 8'd1) : ifExp;
+wire [31:0] resCvtIF = ifZero ? 32'd0 : {ifSign, ifExpF, ifFrac};
+wire [4:0]  flgCvtIF = {4'd0, (ifG | ifS)};               // NX only.
+
+// ===== float -> int (CVTWS signed int32 / CVTWUS uint32) =====
+wire cvtFiUns = (optype == OP_CVTWUS);
+wire signed [10:0] fiE = $signed({3'b0, expA}) - 11'sd127; // unbiased exponent
+wire [23:0] fiSig  = {normalA, fracA};                     // hidden = 1 (normal) / 0 (sub/zero)
+wire [63:0] fiSig64 = {40'd0, fiSig};
+wire        fiLeft  = (fiE >= 11'sd23);                    // exact integer (no fraction)
+// right (fractional) case: shift right by (23 - E), capture guard/sticky.
+wire signed [10:0] fiRsS = 11'sd23 - fiE;                  // >0 when E < 23
+wire [6:0]  fiRsC = (fiRsS >= 11'sd64) ? 7'd64 : fiRsS[6:0];
+wire [63:0] fiRsh = fiSig64 >> fiRsC;
+wire [31:0] fiRsInt = fiRsh[31:0];
+wire        fiG = (fiRsC == 7'd0) ? 1'b0 : fiSig64[fiRsC - 7'd1];
+wire        fiS = (fiRsC <= 7'd1) ? 1'b0 : (|(fiSig64 & ((64'd1 << (fiRsC - 7'd1)) - 64'd1)));
+wire        fiRup = roundUp(fiRsInt[0], fiG, fiS, signA, rm);
+// left (exact) case: shift left by (E - 23); E>31(signed)/E>32(unsigned) always overflows,
+// so cap the shift (<=8 for the in-range path) and force a saturating magnitude otherwise.
+wire        fiLsBig = (fiE > 11'sd31);
+wire [3:0]  fiLsC   = fiLsBig ? 4'd0 : (fiE[3:0] - 4'd7); // E-23 for E in [23,31] (low nibble)
+wire [63:0] fiLsh   = fiLsBig ? 64'hFFFFFFFFFFFFFFFF : (fiSig64 << fiLsC);
+wire [63:0] fiMag   = fiLeft ? fiLsh : ({32'd0, fiRsInt} + {63'd0, fiRup});
+wire        fiInexact = fiLeft ? 1'b0 : (fiG | fiS);
+
+reg  [31:0] resCvtFI; // ### comb-block-reg.
+reg         fiNV;     // ### comb-block-reg.
+always_comb begin
+	resCvtFI = 32'd0; fiNV = 1'b0;
+	if (cvtFiUns) begin // -> uint32
+		if (isNaNA || (!signA && isInfA))        begin resCvtFI = 32'hffffffff; fiNV = 1'b1; end
+		else if (signA)                          begin // negative input
+			if (fiMag == 64'd0) resCvtFI = 32'd0;                       // rounds to 0: just NX
+			else                begin resCvtFI = 32'd0; fiNV = 1'b1; end// truly negative: NV
+		end
+		else if (fiMag > 64'hffffffff)           begin resCvtFI = 32'hffffffff; fiNV = 1'b1; end
+		else                                            resCvtFI = fiMag[31:0];
+	end else begin // -> int32
+		if (isNaNA || (!signA && isInfA))        begin resCvtFI = 32'h7fffffff; fiNV = 1'b1; end
+		else if (signA && isInfA)                begin resCvtFI = 32'h80000000; fiNV = 1'b1; end
+		else if (!signA) begin
+			if (fiMag > 64'h7fffffff)            begin resCvtFI = 32'h7fffffff; fiNV = 1'b1; end
+			else                                        resCvtFI = fiMag[31:0];
+		end else begin // negative
+			if (fiMag > 64'h80000000)            begin resCvtFI = 32'h80000000; fiNV = 1'b1; end
+			else                                        resCvtFI = (~fiMag[31:0] + 32'd1);
+		end
+	end
+end
+wire [4:0] flgCvtFI = fiNV ? 5'b10000 : {4'd0, fiInexact}; // NV suppresses NX.
+
 always_comb begin
 	rslt_o  = {WORDBITSZ{1'b0}};
 	flags_o = 5'b0;
@@ -147,6 +242,8 @@ always_comb begin
 		       : bothZero ? (signA ? b : a) : (numLt ? b : a);
 		flags_o[4] = eitherSNaN;
 	end
+	OP_CVTWS, OP_CVTWUS: begin rslt_o = resCvtFI; flags_o = flgCvtFI; end
+	OP_CVTSW, OP_CVTSWU: begin rslt_o = resCvtIF; flags_o = flgCvtIF; end
 	default: begin rslt_o = {WORDBITSZ{1'b0}}; flags_o = 5'b0; end
 	endcase
 end
