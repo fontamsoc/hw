@@ -57,7 +57,10 @@ localparam OP_CVTWS  = 5'd9;  // f -> int32 (signed)
 localparam OP_CVTWUS = 5'd10; // f -> uint32
 localparam OP_CVTSW  = 5'd11; // int32 -> f
 localparam OP_CVTSWU = 5'd12; // uint32 -> f
-// reserved (later stages): 13 ADD,14 SUB,15 MUL,16 DIV,17 SQRT.
+localparam OP_ADD = 5'd13;
+localparam OP_SUB = 5'd14;
+localparam OP_MUL = 5'd15;
+// reserved (later stages): 16 DIV, 17 SQRT.
 
 input wire rst_i;
 
@@ -103,6 +106,16 @@ function automatic logic [5:0] clz32(input logic [31:0] x);
 		clz32 = 6'd32; done = 1'b0;
 		for (i = 31; i >= 0; i = i - 1)
 			if (!done && x[i]) begin clz32 = 6'd31 - i[5:0]; done = 1'b1; end
+	end
+endfunction
+
+// Count leading zeros of a 64-bit value (64 if zero).
+function automatic logic [6:0] clz64(input logic [63:0] x);
+	integer i; logic done;
+	begin
+		clz64 = 7'd64; done = 1'b0;
+		for (i = 63; i >= 0; i = i - 1)
+			if (!done && x[i]) begin clz64 = 7'd63 - i[6:0]; done = 1'b1; end
 	end
 endfunction
 
@@ -223,6 +236,131 @@ always_comb begin
 end
 wire [4:0] flgCvtFI = fiNV ? 5'b10000 : {4'd0, fiInexact}; // NV suppresses NX.
 
+// ===== normalized unpack (unify normal + subnormal): value = sig * 2^(eU-23), sig has bit23=1 =====
+wire [6:0]  aLz64 = clz64({41'd0, fracA});
+wire [5:0]  aLz   = aLz64[5:0] - 6'd41;           // leading zeros within the 23-bit frac
+wire [23:0] aSig  = normalA ? {1'b1, fracA} : (24'(fracA) << (aLz + 6'd1));
+wire signed [11:0] aEU = normalA ? ($signed({4'b0, expA}) - 12'sd127)
+                                 : (-12'sd127 - $signed({6'b0, aLz}));
+wire        normalB = (expB != 8'd0 && expB != 8'hff);
+wire [6:0]  bLz64 = clz64({41'd0, fracB});
+wire [5:0]  bLz   = bLz64[5:0] - 6'd41;
+wire [23:0] bSig  = normalB ? {1'b1, fracB} : (24'(fracB) << (bLz + 6'd1));
+wire signed [11:0] bEU = normalB ? ($signed({4'b0, expB}) - 12'sd127)
+                                 : (-12'sd127 - $signed({6'b0, bLz}));
+
+// ===== fmul =====
+wire        mulSign = signA ^ signB;
+wire [47:0] mulP    = aSig * bSig;                 // 24x24 product, MSB at bit47 or bit46
+wire        mulTop  = mulP[47];
+wire [23:0] mulMant = mulTop ? mulP[47:24] : mulP[46:23];
+wire        mulG    = mulTop ? mulP[23]    : mulP[22];
+wire        mulS    = mulTop ? (|mulP[22:0]) : (|mulP[21:0]);
+wire signed [11:0] mulEbU = aEU + bEU + (mulTop ? 12'sd1 : 12'sd0) + 12'sd127; // biased
+wire        mulIZ = (isInfA && isZeroB) || (isZeroA && isInfB);
+wire        mulSpecial = isNaNA || isNaNB || isInfA || isInfB || isZeroA || isZeroB;
+reg  [31:0] mulSpecRes; reg [4:0] mulSpecFlg; // ### comb-block-reg.
+always_comb begin
+	if (isNaNA || isNaNB)       begin mulSpecRes = CANON_QNAN;            mulSpecFlg = {eitherSNaN,4'd0}; end
+	else if (mulIZ)             begin mulSpecRes = CANON_QNAN;            mulSpecFlg = 5'b10000; end // inf*0
+	else if (isInfA || isInfB)  begin mulSpecRes = {mulSign, 8'hff, 23'd0}; mulSpecFlg = 5'b0; end
+	else                        begin mulSpecRes = {mulSign, 31'd0};     mulSpecFlg = 5'b0; end // zero
+end
+
+// ===== fadd / fsub (fsub flips b's sign) =====
+wire effSb = signB ^ (optype == OP_SUB);
+wire aBigger = (aEU > bEU) || ((aEU == bEU) && (aSig >= bSig));
+wire        bigSign = aBigger ? signA : effSb;
+wire signed [11:0] bigEU = aBigger ? aEU : bEU;
+wire [23:0] bigSig = aBigger ? aSig : bSig;
+wire        smlSign = aBigger ? effSb : signA;
+wire [23:0] smlSig = aBigger ? bSig : aSig;
+wire signed [11:0] addExpDiff = aBigger ? (aEU - bEU) : (bEU - aEU); // >= 0
+// Align with explicit guard/round/sticky (bits [2:0]) so SUBTRACTION borrows correctly
+// when the small operand is fully shifted out (a tiny opposite-sign operand must pull the
+// result just below the large mantissa, not merely set sticky).
+wire        addSame  = (bigSign == smlSign);
+wire [26:0] bigA     = {bigSig, 3'b000};           // mantissa[26:3], G/R/S at [2:0]
+wire [26:0] smlBase  = {smlSig, 3'b000};
+wire [7:0]  addD     = (addExpDiff > 12'sd27) ? 8'd27 : addExpDiff[7:0];
+wire [26:0] smlSh    = smlBase >> addD;
+wire        smlLost  = |(smlBase & (((27'd1) << addD) - 27'd1)); // bits shifted off bit0
+wire [26:0] smlAligned = {smlSh[26:1], (smlSh[0] | smlLost)};    // collapse lost bits into sticky
+wire [27:0] addR28   = addSame ? ({1'b0, bigA} + {1'b0, smlAligned})
+                               : ({1'b0, bigA} - {1'b0, smlAligned});
+wire        addZero  = (addR28 == 28'd0);
+wire [6:0]  addLz    = clz64({36'd0, addR28}) - 7'd36;
+wire [27:0] addNorm  = addR28 << addLz;            // MSB -> bit27
+wire [23:0] addMant  = addNorm[27:4];
+wire        addG     = addNorm[3];
+wire        addS     = |addNorm[2:0];
+wire signed [11:0] addEbU = bigEU + 12'sd1 - $signed({5'b0, addLz}) + 12'sd127; // biased
+wire        addSign  = bigSign;
+wire        addBothZero = isZeroA && isZeroB;
+wire        addSpecial  = isNaNA || isNaNB || isInfA || isInfB || addBothZero || addZero;
+reg  [31:0] addSpecRes; reg [4:0] addSpecFlg; // ### comb-block-reg.
+wire        zSign = (rm == 3'b010) ? 1'b1 : 1'b0;  // cancellation/0+0 -> +0, except RDN -> -0
+always_comb begin
+	if (isNaNA || isNaNB)               begin addSpecRes = CANON_QNAN; addSpecFlg = {eitherSNaN,4'd0}; end
+	else if (isInfA && isInfB)          begin
+		if (signA == effSb)             begin addSpecRes = {signA, 8'hff, 23'd0}; addSpecFlg = 5'b0; end
+		else                            begin addSpecRes = CANON_QNAN;            addSpecFlg = 5'b10000; end
+	end
+	else if (isInfA)                    begin addSpecRes = {signA, 8'hff, 23'd0}; addSpecFlg = 5'b0; end
+	else if (isInfB)                    begin addSpecRes = {effSb, 8'hff, 23'd0}; addSpecFlg = 5'b0; end
+	else if (addBothZero)               begin addSpecRes = {((signA==effSb)?signA:zSign), 31'd0}; addSpecFlg = 5'b0; end
+	else /* addZero (cancellation) */   begin addSpecRes = {zSign, 31'd0}; addSpecFlg = 5'b0; end
+end
+
+// ===== shared round + pack to binary32 (normal / overflow / subnormal) =====
+// Inputs selected by optype: a normalized 1.frac significand pkM (bit23=1), its SIGNED
+// biased exponent pkEb, guard pkG, sticky pkS, sign pkSign.
+reg        pkSign;          // ### comb-block-reg.
+reg signed [11:0] pkEb;     // ### comb-block-reg.
+reg [23:0] pkM;             // ### comb-block-reg.
+reg        pkG, pkS;        // ### comb-block-reg.
+always_comb begin
+	pkSign = mulSign; pkEb = mulEbU; pkM = mulMant; pkG = mulG; pkS = mulS;
+	if (optype == OP_ADD || optype == OP_SUB) begin
+		pkSign = addSign; pkEb = addEbU; pkM = addMant; pkG = addG; pkS = addS;
+	end
+end
+wire pkInx = pkG | pkS;
+// overflow target: inf vs max-normal per rm/sign.
+wire pkToInf = (rm == 3'b000) || (rm == 3'b100) || (rm == 3'b011 && !pkSign) || (rm == 3'b010 && pkSign);
+wire [31:0] pkOvfRes = pkToInf ? {pkSign, 8'hff, 23'd0} : {pkSign, 8'hfe, 23'h7fffff};
+// subnormal denormalize by (1 - pkEb).
+wire signed [11:0] pkShS = 12'sd1 - pkEb;
+wire [7:0]  pkShC = (pkShS > 12'sd48) ? 8'd48 : pkShS[7:0];
+wire [47:0] pkExt = {pkM, 24'd0};
+wire [47:0] pkExtSh = pkExt >> pkShC;
+wire [23:0] pkSubM = pkExtSh[47:24];
+wire        pkSubG = pkExtSh[23];
+wire        pkSubS = pkG | pkS | (|pkExtSh[22:0]) | (|(pkExt & (((48'd1) << pkShC) - 48'd1)));
+wire        pkSubRup = roundUp(pkSubM[0], pkSubG, pkSubS, pkSign, rm);
+wire [24:0] pkSubMr  = {1'b0, pkSubM} + {24'd0, pkSubRup};
+wire        pkSubInx = pkSubG | pkSubS;
+reg  [31:0] pkRes; reg [4:0] pkFlg; // ### comb-block-reg.
+always_comb begin
+	if (pkEb >= 12'sd255) begin                         // overflow before rounding
+		pkRes = pkOvfRes; pkFlg = 5'b00101;             // OF | NX
+	end else if (pkEb <= 12'sd0) begin                  // subnormal / underflow
+		pkRes = {pkSign, 7'd0, pkSubMr[23:0]};          // exp = pkSubMr[23] (1 if rounded up to smallest normal)
+		pkFlg = {1'b0,1'b0,1'b0, (pkSubInx && !pkSubMr[23]), pkSubInx}; // UF (still tiny) , NX
+	end else begin                                      // normal range
+		logic rup; logic [24:0] mr;
+		rup = roundUp(pkM[0], pkG, pkS, pkSign, rm);
+		mr = {1'b0, pkM} + {24'd0, rup};
+		if (mr[24] && (pkEb == 12'sd254)) begin         // rounding overflowed into inf range
+			pkRes = pkOvfRes; pkFlg = 5'b00101;
+		end else if (mr[24]) begin                      // mantissa carry -> 1.0, exp+1
+			pkRes = {pkSign, (pkEb[7:0] + 8'd1), 23'd0}; pkFlg = {4'd0, pkInx};
+		end else begin
+			pkRes = {pkSign, pkEb[7:0], mr[22:0]}; pkFlg = {4'd0, pkInx};
+		end
+	end
+end
+
 always_comb begin
 	rslt_o  = {WORDBITSZ{1'b0}};
 	flags_o = 5'b0;
@@ -244,6 +382,8 @@ always_comb begin
 	end
 	OP_CVTWS, OP_CVTWUS: begin rslt_o = resCvtFI; flags_o = flgCvtFI; end
 	OP_CVTSW, OP_CVTSWU: begin rslt_o = resCvtIF; flags_o = flgCvtIF; end
+	OP_MUL:          begin rslt_o = mulSpecial ? mulSpecRes : pkRes; flags_o = mulSpecial ? mulSpecFlg : pkFlg; end
+	OP_ADD, OP_SUB:  begin rslt_o = addSpecial ? addSpecRes : pkRes; flags_o = addSpecial ? addSpecFlg : pkFlg; end
 	default: begin rslt_o = {WORDBITSZ{1'b0}}; flags_o = 5'b0; end
 	endcase
 end

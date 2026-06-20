@@ -31,12 +31,30 @@ emit() {
 		}' >> "$out"
 }
 
+# emit2 <op_id> <rm_id> <tf_function> <rm_flag>   (two-operand: a b z flags)
+# RISC-V canonicalizes ANY NaN result to 0x7fc00000 (this SoftFloat uses the x86 NaN),
+# so rewrite NaN-valued results.
+# Two-operand level-1 sets are huge (~46k/mode minimum, can't subset via -n); decimate
+# by a uniform stride (corner cases are interspersed) to keep the embedded binary in range.
+ARITH_STRIDE=${ARITH_STRIDE:-8}
+emit2() {
+	"$TF" "$4" "$3" 2>/dev/null | \
+		gawk -v op="$1" -v rm="$2" -v st="$ARITH_STRIDE" '(NR % st)==1 {
+			a=$1; b=$2; z=$3; f=$4; zv=strtonum("0x"z);
+			if ((and(zv,0x7f800000)==0x7f800000) && (and(zv,0x007fffff)!=0)) z="7fc00000";
+			printf "{%s,%s,0x%su,0x%su,0x%su,0x%su},\n", op, rm, a, b, z, f;
+		}' >> "$out"
+}
+
 for spec in "0 -rnear_even" "1 -rminMag" "2 -rmin" "3 -rmax" "4 -rnear_maxMag"; do
 	set -- $spec; rmid="$1"; rmf="$2"
 	emit 0 "$rmid" f32_to_i32  "$rmf" -exact   # F2IS  fcvt.w.s
 	emit 1 "$rmid" f32_to_ui32 "$rmf" -exact   # F2IU  fcvt.wu.s
 	emit 2 "$rmid" i32_to_f32  "$rmf"          # I2FS  fcvt.s.w
 	emit 3 "$rmid" ui32_to_f32 "$rmf"          # I2FU  fcvt.s.wu
+	emit2 4 "$rmid" f32_add "$rmf"             # FADD
+	emit2 5 "$rmid" f32_sub "$rmf"             # FSUB
+	emit2 6 "$rmid" f32_mul "$rmf"             # FMUL
 done
 
 echo "};" >> "$out"
