@@ -625,6 +625,35 @@ always_ff @(posedge clk_i) begin
 	end
 end
 
+`ifdef PURV32ZFINX
+// fflags (0x001) / frm (0x002) / fcsr (0x003). fcsr[7:0] = {frm[2:0], fflags[4:0]};
+// fflags = {NV,DZ,OF,UF,NX}. A retiring FP result (rW_opFpu_done) OR-accumulates its
+// exception flags and is the PRIORITY case: a fcsr/frm/fflags CSR access is drain-gated
+// at iDecode (iD_isFcsrAccess && opFpu_busy), so it never coincides with a retiring FP op.
+always_ff @(posedge clk_i) begin
+	if (rst_i) begin
+		csrFflags <= 0;
+	end else if (rW_opFpu_done) begin
+		csrFflags <= (csrFflags | opFpu_flags);
+	end else if (iD_isCSRvalid && (iD_Iimm[11:0] == 12'h001 || iD_Iimm[11:0] == 12'h003)) begin
+		unique if   (iD_func3[1:0] == 2'b01) csrFflags <= csrIn[4:0];                // csrrw.
+		else if     (iD_func3[1:0] == 2'b10) csrFflags <= (csrFflags |  csrIn[4:0]); // csrrs.
+		else if     (iD_func3[1:0] == 2'b11) csrFflags <= (csrFflags & ~csrIn[4:0]); // csrrc.
+	end
+end
+// frm lives at bits[2:0] of 0x002 and bits[7:5] of fcsr (0x003).
+wire [3 -1 : 0] csrInFrm = (iD_Iimm[11:0] == 12'h003) ? csrIn[7:5] : csrIn[2:0];
+always_ff @(posedge clk_i) begin
+	if (rst_i) begin
+		csrFrm <= 0;
+	end else if (iD_isCSRvalid && (iD_Iimm[11:0] == 12'h002 || iD_Iimm[11:0] == 12'h003)) begin
+		unique if   (iD_func3[1:0] == 2'b01) csrFrm <= csrInFrm;             // csrrw.
+		else if     (iD_func3[1:0] == 2'b10) csrFrm <= (csrFrm |  csrInFrm); // csrrs.
+		else if     (iD_func3[1:0] == 2'b11) csrFrm <= (csrFrm & ~csrInFrm); // csrrc.
+	end
+end
+`endif
+
 localparam MXL = (WORDBITSZ/32); // Valid only when WORDBITSZ == 32 or WORDBITSZ == 64.
 always_comb
 	csrMisa = {MXL[1:0],
@@ -665,6 +694,11 @@ always_comb begin
 	12'h34b: eX_csrOut_i = csrMtval2;
 	12'h34d: eX_csrOut_i = csrMtimecmp;
 	12'h35d: eX_csrOut_i = csrMtimecmp[64-1:WORDBITSZ];
+	`ifdef PURV32ZFINX
+	12'h001: eX_csrOut_i = {{(WORDBITSZ-5){1'b0}}, csrFflags};
+	12'h002: eX_csrOut_i = {{(WORDBITSZ-3){1'b0}}, csrFrm};
+	12'h003: eX_csrOut_i = {{(WORDBITSZ-8){1'b0}}, csrFrm, csrFflags};
+	`endif
 	12'hc00: eX_csrOut_i = csrCycle[WORDBITSZ-1:0];
 	12'hc01: eX_csrOut_i = csrCycle[WORDBITSZ-1:0];
 	12'hc02: eX_csrOut_i = csrInstret[WORDBITSZ-1:0];
@@ -703,6 +737,11 @@ always_comb begin
 	12'h344: eX_csrOut_i = csrMip;
 	12'h34b: eX_csrOut_i = csrMtval2;
 	12'h34d: eX_csrOut_i = csrMtimecmp;
+	`ifdef PURV32ZFINX
+	12'h001: eX_csrOut_i = {{(WORDBITSZ-5){1'b0}}, csrFflags};
+	12'h002: eX_csrOut_i = {{(WORDBITSZ-3){1'b0}}, csrFrm};
+	12'h003: eX_csrOut_i = {{(WORDBITSZ-8){1'b0}}, csrFrm, csrFflags};
+	`endif
 	12'hc00: eX_csrOut_i = csrCycle;
 	12'hc01: eX_csrOut_i = csrCycle;
 	12'hc02: eX_csrOut_i = csrInstret;

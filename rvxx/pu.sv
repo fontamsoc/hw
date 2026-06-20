@@ -130,6 +130,9 @@
 `ifdef PURV32ZBC
 `include "./clmul.sv"
 `endif
+`ifdef PURV32ZFINX
+`include "./fpu.sv"
+`endif
 
 module pu (
 
@@ -195,6 +198,7 @@ parameter DCACHEWAYCNT  = 1;
 parameter IMULCNT       = 2;
 parameter IDIVCNT       = 2;
 parameter CLMULCNT      = 1;
+parameter FPUCNT        = 1;
 parameter MAXPENDINGACK = 16;
 parameter PUIDBITSZ     = 1;
 parameter PUID          = 0;
@@ -455,6 +459,44 @@ wire iF_isZbs =
 	((iF_isALUreg || iF_isALUimm) && iF_func3 == 3'b101 && iF_func7 == 7'b0100100);        // bext
 `endif
 
+`ifdef PURV32ZFINX
+// Zfinx: single-precision FP using the X registers. OP-FP opcode 1010011; fmt =
+// func7[1:0] must be 00 (single); sub-op via func7[6:2] (+func3, +rs2 for fcvt/fsqrt).
+// Multi-cycle: every FP op retires via the WriteBack arbiter (lateResultInsn), so the
+// whole FPU stays off the scoreboard/forwarding Fmax cone -- even the 1-cycle ops.
+// STAGE 1 decodes only the 1-cycle ops (sign/min-max/compare/class); arithmetic and
+// fcvt encodings stay illegal until their stages land. FMA/FLW/FSW/FMV are never
+// Zfinx, so they keep trapping illegal.
+wire iF_isOpFp  = (iF_insn[6:2] == 5'b10100);
+wire iF_fpFmtS  = (iF_func7[1:0] == 2'b00);
+wire [5 -1 : 0] iF_fpFunct5 = iF_func7[6:2];
+wire iF_isZfinxSgnj  = (iF_isOpFp && iF_fpFmtS && iF_fpFunct5 == 5'b00100 &&
+	(iF_func3 == 3'b000 || iF_func3 == 3'b001 || iF_func3 == 3'b010));
+wire iF_isZfinxMnmx  = (iF_isOpFp && iF_fpFmtS && iF_fpFunct5 == 5'b00101 &&
+	(iF_func3 == 3'b000 || iF_func3 == 3'b001));
+wire iF_isZfinxCmp   = (iF_isOpFp && iF_fpFmtS && iF_fpFunct5 == 5'b10100 &&
+	(iF_func3 == 3'b000 || iF_func3 == 3'b001 || iF_func3 == 3'b010));
+wire iF_isZfinxClass = (iF_isOpFp && iF_fpFmtS && iF_fpFunct5 == 5'b11100 &&
+	iF_func3 == 3'b001 && iF_rs2Id == 5'd0);
+wire iF_isZfinx = (iF_isZfinxSgnj || iF_isZfinxMnmx || iF_isZfinxCmp || iF_isZfinxClass);
+
+// optype encode -- MUST match the localparams in fpu.sv.
+reg [5 -1 : 0] iF_opFpu_optype; // ### comb-block-reg.
+always_comb begin
+	     if (iF_isZfinxSgnj)  iF_opFpu_optype = {3'd0, iF_func3[1:0]};                                  // 0=J,1=JN,2=JX
+	else if (iF_isZfinxMnmx)  iF_opFpu_optype = iF_func3[0] ? 5'd4 : 5'd3;                              // 3=MIN,4=MAX
+	else if (iF_isZfinxCmp)   iF_opFpu_optype = (iF_func3==3'b010) ? 5'd5 : (iF_func3==3'b001) ? 5'd6 : 5'd7; // 5=EQ,6=LT,7=LE
+	else                      iF_opFpu_optype = 5'd8;                                                   // 8=CLASS
+end
+
+// Binary ops need rs1+rs2; unary need rs1 only. Folded into the operand-need classes
+// below so the scoreboard locks rd (WAW single-writer invariant) and waits on sources.
+wire iF_isOpFp2src = (iF_isZfinxSgnj || iF_isZfinxMnmx || iF_isZfinxCmp);
+wire iF_isOpFp1src = (iF_isZfinxClass);
+
+wire iF_opFpu_stb = (iF_isZfinx && iF_rdId); // rd!=x0 (mirrors iF_opClmul_stb).
+`endif
+
 wire iF_isLr = (iF_isAMO && iF_func5 == 5'b00010);
 wire iF_isSc = (iF_isAMO && iF_func5 == 5'b00011);
 
@@ -471,10 +513,16 @@ wire iF_stUnit_stb = (iF_isStore || iF_isSc);
 wire iF_cancelLr = (iF_isSystem || iF_isMiscMem || iF_isLoad || iF_isStore || iF_isAMOwithSc);
 
 wire iF_isIllInsn = !(iF_isALUreg || iF_isALUimm || iF_isBranch || iF_isJALR || iF_isJAL ||
-	iF_isAUIPC || iF_isLUI || iF_isLoad || iF_isStore || iF_isSystem || iF_isAMO || iF_isMiscMem);
+	iF_isAUIPC || iF_isLUI || iF_isLoad || iF_isStore || iF_isSystem || iF_isAMO || iF_isMiscMem
+	`ifdef PURV32ZFINX
+	|| iF_isZfinx // legal Zfinx OP-FP encodings; illegal OP-FP sub-encodings still trap.
+	`endif
+	);
 
-wire iF_is3OprndD12 = (iF_isALUreg || iF_isAMOwithSc);
-wire iF_is2OprndD1  = (iF_isALUimm || iF_isJALR || iF_ldUnit_stb || (iF_isCSR && !iF_func3[2]));
+wire iF_is3OprndD12 = (iF_isALUreg || iF_isAMOwithSc
+	`ifdef PURV32ZFINX || iF_isOpFp2src `endif );
+wire iF_is2OprndD1  = (iF_isALUimm || iF_isJALR || iF_ldUnit_stb || (iF_isCSR && !iF_func3[2])
+	`ifdef PURV32ZFINX || iF_isOpFp1src `endif );
 wire iF_is2Oprnd12  = (iF_isBranch || iF_isStore);
 wire iF_is1OprndD   = (iF_isJAL || iF_isAUIPC || iF_isLUI || (iF_isCSR && iF_func3[2]));
 
@@ -484,6 +532,9 @@ wire iF_lateResultInsn = (
 	`endif
 	`ifdef PURV32ZBC
 	iF_opClmul_stb ||
+	`endif
+	`ifdef PURV32ZFINX
+	iF_opFpu_stb ||
 	`endif
 	iF_ldUnit_stb);
 
@@ -584,6 +635,10 @@ reg [WORDBITSZ -1 : 0] csrMisa; // ### comb-block-reg.
 reg [64 -1 : 0] csrCycle;
 reg [64 -1 : 0] csrInstret;
 reg [WORDBITSZ -1 : 0] csrClkFreq;
+`ifdef PURV32ZFINX
+reg [5 -1 : 0] csrFflags; // {NV,DZ,OF,UF,NX}.
+reg [3 -1 : 0] csrFrm;    // dynamic rounding mode.
+`endif
 `ifdef _SIMULATION_PERF
 `ifdef PUPREDICTBRANCH
 reg [WORDBITSZ -1 : 0] csrBranchPredictHit;
@@ -670,6 +725,10 @@ reg iD_opIdiv_stb;
 `ifdef PURV32ZBC
 reg iD_opClmul_stb;
 `endif
+`ifdef PURV32ZFINX
+reg iD_opFpu_stb;
+reg [5 -1 : 0] iD_opFpu_optype;
+`endif
 
 reg iD_isLr;
 reg iD_isSc;
@@ -713,6 +772,10 @@ wire iD_opIdiv_bsy;
 `ifdef PURV32ZBC
 wire iD_opClmul_bsy;
 `endif
+`ifdef PURV32ZFINX
+wire iD_opFpu_bsy;
+wire opFpu_busy; // driven by fpu.pu.sv (opfpu.busy_o); high while an FP op is in flight.
+`endif
 wire iD_ldUnit_bsy;
 wire iD_stUnit_bsy;
 
@@ -730,6 +793,12 @@ wire iD_needsRd  = (iD_is3OprndD12 || iD_is2OprndD1 || iD_is1OprndD);
 wire iD_needsRs1 = (iD_is3OprndD12 || iD_is2OprndD1 || iD_is2Oprnd12);
 wire iD_needsRs2 = (iD_is3OprndD12 || iD_is2Oprnd12);
 
+`ifdef PURV32ZFINX
+// fcsr/frm/fflags (0x001/0x002/0x003). Drain-gated against in-flight FP ops below.
+wire iD_isFcsrAccess = (iD_isCSR &&
+	(iD_Iimm[11:0] == 12'h001 || iD_Iimm[11:0] == 12'h002 || iD_Iimm[11:0] == 12'h003));
+`endif
+
 wire iD_stalled = (!iD_eX_carryon ||
 	(iD_isFenceOrFencei && dCache_m_pending) ||
 	`ifdef PURV32M
@@ -738,6 +807,12 @@ wire iD_stalled = (!iD_eX_carryon ||
 	`endif
 	`ifdef PURV32ZBC
 	(iD_opClmul_stb && iD_opClmul_bsy) ||
+	`endif
+	`ifdef PURV32ZFINX
+	(iD_opFpu_stb && iD_opFpu_bsy) ||
+	// Drain the FPU before any fcsr/frm/fflags access so it observes all prior FP
+	// ops' merged flags (and a frm write only affects later ops).
+	(iD_isFcsrAccess && opFpu_busy) ||
 	`endif
 	(iD_ldUnit_stb && iD_ldUnit_bsy) ||
 	(iD_stUnit_stb && iD_stUnit_bsy) ||
@@ -955,6 +1030,10 @@ always_ff @(posedge clk_i) begin
 		`endif
 		`ifdef PURV32ZBC
 		iD_opClmul_stb <= iF_opClmul_stb;
+		`endif
+		`ifdef PURV32ZFINX
+		iD_opFpu_stb    <= iF_opFpu_stb;
+		iD_opFpu_optype <= iF_opFpu_optype;
 		`endif
 
 		iD_isLr <= iF_isLr;
@@ -1371,6 +1450,9 @@ reg rW_opIdiv_done; // ### comb-block-reg.
 `ifdef PURV32ZBC
 reg rW_opClmul_done; // ### comb-block-reg.
 `endif
+`ifdef PURV32ZFINX
+reg rW_opFpu_done; // ### comb-block-reg.
+`endif
 
 `ifdef PURV32M
 `include "./imul.pu.sv"
@@ -1378,6 +1460,9 @@ reg rW_opClmul_done; // ### comb-block-reg.
 `endif
 `ifdef PURV32ZBC
 `include "./clmul.pu.sv"
+`endif
+`ifdef PURV32ZFINX
+`include "./fpu.pu.sv"
 `endif
 `include "./lsu.pu.sv"
 `include "./sys.pu.sv"
@@ -1401,6 +1486,9 @@ wire rW_multicyclePending = (
 	`ifdef PURV32ZBC
 	|| opClmul_done
 	`endif
+	`ifdef PURV32ZFINX
+	|| opFpu_done
+	`endif
 	);
 
 assign eX_rW_stalled = rW_isMulticycle; // csrInstret counts a retiring multicycle result.
@@ -1420,6 +1508,9 @@ always_comb begin
 	`endif
 	`ifdef PURV32ZBC
 	rW_opClmul_done = 0;
+	`endif
+	`ifdef PURV32ZFINX
+	rW_opFpu_done = 0;
 	`endif
 
 	// Pipeline has priority; load/MUL/DIV retire only when the pipeline yields the
@@ -1451,6 +1542,13 @@ always_comb begin
 		rW_idx_i = opClmul_rIdx;
 		rW_dat_i = opClmul_rslt;
 		rW_opClmul_done = 1;
+	`endif
+	`ifdef PURV32ZFINX
+	end else if (opFpu_done) begin
+		rW_we_i  = 1;
+		rW_idx_i = opFpu_rIdx;
+		rW_dat_i = opFpu_rslt;
+		rW_opFpu_done = 1;
 	`endif
 	end
 end

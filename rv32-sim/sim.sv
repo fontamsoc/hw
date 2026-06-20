@@ -14,6 +14,7 @@
 `define PURV32ZBB
 `define PURV32ZBC
 `define PURV32ZBS
+`define PURV32ZFINX
 `define PUIMULDSP
 `define PUPREDICTJAL
 `define PUPREDICTBRANCH
@@ -139,6 +140,7 @@ cpu #(
 	,.IMULCNT       (2)
 	,.IDIVCNT       (2)
 	,.CLMULCNT      (1)
+	,.FPUCNT        (1)
 	,.MAXPENDINGACK (WBPI_MAXPENDINGACK)
 	,.PUCNT         (CPU_COUNT)
 ) cpu (
