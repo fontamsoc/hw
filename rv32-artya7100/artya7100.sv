@@ -19,9 +19,9 @@
 // PURV32ZBC (Zbc carry-less multiply): a multi-cycle clmul unit, register-isolated (unlike
 // Zbb's combinational logic) so it should not cost Fmax -- left off here pending measurement.
 //`define PURV32ZBC
-// PURV32ZBS (Zbs single-bit ops): combinational EX-stage logic like Zbb, so the same Fmax
-// risk -- left off here (enable + measure as a follow-up, like Zbb/Zbc).
-//`define PURV32ZBS
+// PURV32ZBS (Zbs single-bit ops): combinational EX-stage logic but adds NO flip-flops, so it
+// measured Fmax-neutral even on the tighter OrangeCrab; the Artix-7 has more headroom. Enabled.
+`define PURV32ZBS
 `define PUIMULDSP
 `define PUPREDICTJAL
 `define PUPREDICTBRANCH
