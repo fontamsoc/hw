@@ -100,7 +100,7 @@ READELF := ${PREFIX}-readelf
 
 CFLAGS += -Werror -fdata-sections -ffunction-sections -Wl,--gc-sections -O3 -g
 CFLAGS += -nostdlib
-CFLAGS += -march=rv32ima_zba_zbb_zbc_zbs_zicsr_zifencei -mabi=ilp32 # zba/zbb/zbc/zbs needed to assemble bitmanip insns.
+CFLAGS += -march=rv32ima_zba_zbb_zbc_zbs_zicsr_zifencei
 
 APPNAME := isatests
 
