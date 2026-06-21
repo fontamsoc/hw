@@ -22,6 +22,10 @@
 // PURV32ZBS (Zbs single-bit ops): combinational EX-stage logic but adds NO flip-flops, so it
 // measured Fmax-neutral even on the tighter OrangeCrab; the Artix-7 has more headroom. Enabled.
 `define PURV32ZBS
+// PURV32ZFINX (Zfinx single-precision FPU) disabled on FPGA tops: even pipelined the FPU is
+// congestion-bound at ~34 MHz on rv32-orangecrab0285 (16-seed median), well below 48 MHz.
+// Still enabled in rv32-sim (TestFloat-verified).
+//`define PURV32ZFINX
 `define PUIMULDSP
 `define PUPREDICTJAL
 `define PUPREDICTBRANCH

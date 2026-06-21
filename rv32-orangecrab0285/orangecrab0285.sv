@@ -21,6 +21,10 @@
 // measured Fmax-neutral on this board (16-seed: mean 48.24->48.12, t=-0.19; vs Zbc/Gshare
 // which regressed via added-FF congestion). Enabled.
 `define PURV32ZBS
+// PURV32ZFINX (Zfinx single-precision FPU) disabled on FPGA tops: even pipelined the FPU is
+// congestion-bound at ~34 MHz on rv32-orangecrab0285 (16-seed median), well below 48 MHz.
+// Still enabled in rv32-sim (TestFloat-verified).
+//`define PURV32ZFINX
 `define PUIMULDSP
 `define PUPREDICTJAL
 `define PUPREDICTBRANCH
