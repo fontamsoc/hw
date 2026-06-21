@@ -71,9 +71,9 @@ input wire stb_i;
 
 input wire [(((WORDBITSZ*2)+CLOG2GPRCNT)+OPTYPEBITSZ+3) -1 : 0] args_i;
 
-output reg  [WORDBITSZ -1 : 0]   rslt_o;  // ### comb-block-reg.
+output reg  [WORDBITSZ -1 : 0]   rslt_o;  // ### pipeline reg (registered at op completion).
 output wire [CLOG2GPRCNT -1 : 0] gprid_o;
-output reg  [5 -1 : 0]           flags_o; // ### comb-block-reg. {NV,DZ,OF,UF,NX}.
+output reg  [5 -1 : 0]           flags_o; // ### pipeline reg. {NV,DZ,OF,UF,NX}.
 
 output reg rdy_o;
 
@@ -462,40 +462,46 @@ always_comb begin
 	end
 end
 
+// Combinational result/flags. Registered into rslt_o/flags_o at op completion (FSM below)
+// so they reach the WriteBack arbiter as a register -- the pack/round/select stays a
+// register-to-register path, off the arbiter -> iD_rW_rslt forwarding cone.
+reg [WORDBITSZ -1 : 0] rsltComb;  // ### comb-block-reg.
+reg [5 -1 : 0]         flagsComb; // ### comb-block-reg.
 always_comb begin
-	rslt_o  = {WORDBITSZ{1'b0}};
-	flags_o = 5'b0;
+	rsltComb  = {WORDBITSZ{1'b0}};
+	flagsComb = 5'b0;
 	case (optype)
-	OP_SGNJ, OP_SGNJN, OP_SGNJX: rslt_o = {signSel, a[30:0]};
-	OP_CLASS: rslt_o = {{(WORDBITSZ-10){1'b0}}, classMask};
-	OP_EQ: begin rslt_o = {{(WORDBITSZ-1){1'b0}},  fpEqNum};                        flags_o[4] = eitherSNaN; end
-	OP_LT: begin rslt_o = {{(WORDBITSZ-1){1'b0}}, (!eitherNaN && numLt)};           flags_o[4] = eitherNaN;  end
-	OP_LE: begin rslt_o = {{(WORDBITSZ-1){1'b0}}, (!eitherNaN && (numLt||fpEqNum))};flags_o[4] = eitherNaN;  end
+	OP_SGNJ, OP_SGNJN, OP_SGNJX: rsltComb = {signSel, a[30:0]};
+	OP_CLASS: rsltComb = {{(WORDBITSZ-10){1'b0}}, classMask};
+	OP_EQ: begin rsltComb = {{(WORDBITSZ-1){1'b0}},  fpEqNum};                        flagsComb[4] = eitherSNaN; end
+	OP_LT: begin rsltComb = {{(WORDBITSZ-1){1'b0}}, (!eitherNaN && numLt)};           flagsComb[4] = eitherNaN;  end
+	OP_LE: begin rsltComb = {{(WORDBITSZ-1){1'b0}}, (!eitherNaN && (numLt||fpEqNum))};flagsComb[4] = eitherNaN;  end
 	OP_MIN: begin
-		rslt_o = (isNaNA && isNaNB) ? CANON_QNAN : isNaNA ? b : isNaNB ? a
+		rsltComb = (isNaNA && isNaNB) ? CANON_QNAN : isNaNA ? b : isNaNB ? a
 		       : bothZero ? (signA ? a : b) : (numLt ? a : b);
-		flags_o[4] = eitherSNaN;
+		flagsComb[4] = eitherSNaN;
 	end
 	OP_MAX: begin
-		rslt_o = (isNaNA && isNaNB) ? CANON_QNAN : isNaNA ? b : isNaNB ? a
+		rsltComb = (isNaNA && isNaNB) ? CANON_QNAN : isNaNA ? b : isNaNB ? a
 		       : bothZero ? (signA ? b : a) : (numLt ? b : a);
-		flags_o[4] = eitherSNaN;
+		flagsComb[4] = eitherSNaN;
 	end
-	OP_CVTWS, OP_CVTWUS: begin rslt_o = resCvtFI; flags_o = flgCvtFI; end
-	OP_CVTSW, OP_CVTSWU: begin rslt_o = resCvtIF; flags_o = flgCvtIF; end
-	OP_MUL:          begin rslt_o = mulSpecial ? mulSpecRes : pkRes; flags_o = mulSpecial ? mulSpecFlg : pkFlg; end
-	OP_ADD, OP_SUB:  begin rslt_o = addSpecial ? addSpecRes : pkRes; flags_o = addSpecial ? addSpecFlg : pkFlg; end
-	OP_DIV:          begin rslt_o = divSpecial ? divSpecRes : pkRes; flags_o = divSpecial ? divSpecFlg : pkFlg; end
-	OP_SQRT:         begin rslt_o = sqrtSpecial ? sqrtSpecRes : pkRes; flags_o = sqrtSpecial ? sqrtSpecFlg : pkFlg; end
-	default: begin rslt_o = {WORDBITSZ{1'b0}}; flags_o = 5'b0; end
+	OP_CVTWS, OP_CVTWUS: begin rsltComb = resCvtFI; flagsComb = flgCvtFI; end
+	OP_CVTSW, OP_CVTSWU: begin rsltComb = resCvtIF; flagsComb = flgCvtIF; end
+	OP_MUL:          begin rsltComb = mulSpecial ? mulSpecRes : pkRes; flagsComb = mulSpecial ? mulSpecFlg : pkFlg; end
+	OP_ADD, OP_SUB:  begin rsltComb = addSpecial ? addSpecRes : pkRes; flagsComb = addSpecial ? addSpecFlg : pkFlg; end
+	OP_DIV:          begin rsltComb = divSpecial ? divSpecRes : pkRes; flagsComb = divSpecial ? divSpecFlg : pkFlg; end
+	OP_SQRT:         begin rsltComb = sqrtSpecial ? sqrtSpecRes : pkRes; flagsComb = sqrtSpecial ? sqrtSpecFlg : pkFlg; end
+	default: begin rsltComb = {WORDBITSZ{1'b0}}; flagsComb = 5'b0; end
 	endcase
 end
 
 // Only non-special fdiv/fsqrt iterate; every other op (incl special div/sqrt) is short.
 wire optIter = ((optype == OP_DIV && !divSpecial) || (optype == OP_SQRT && !sqrtSpecial));
-// Total latency to rdy_o (cycles after stb). The pp_* pipeline registers clock every cycle;
-// only the value at rdy_o is sampled. shallow: 2; fcvt: 3 (shift reg); fadd/fsub/fmul: 4
-// (front-end reg + 2-stage packer); div/sqrt: ITERLAST iterations + 4 (2-stage pack tail).
+// opLat = cycle (counting from stb) at which rsltComb is first valid (the pp_* pipeline depth):
+// shallow 2; fcvt 3 (shift reg); fadd/fsub/fmul 4 (front-end reg + 2-stage packer); div/sqrt
+// ITERLAST + 4 (2-stage pack tail). The FSM registers rsltComb -> rslt_o at cntr==opLat-1 and
+// asserts rdy_o there, so the value sampled by the arbiter is REGISTERED (total latency opLat+1).
 wire isCvt = (optype == OP_CVTWS || optype == OP_CVTWUS || optype == OP_CVTSW || optype == OP_CVTSWU);
 wire [6:0] opLat = optIter           ? ({1'b0, ITERLAST} + 7'd4)
                  : (optype == OP_MUL || optype == OP_ADD || optype == OP_SUB) ? 7'd4
@@ -522,7 +528,15 @@ always_ff @(posedge clk_i) begin
 				else                  begin fRem <= sqRemNext;  fQuo <= {fQuo[24:0], sqCmp}; fRad <= {fRad[49:0], 2'b0}; end
 			end
 		end
-		if ({1'b0, cntr} == (opLat - 7'd2)) rdy_o <= 1;
+		// rsltComb (pkRes etc.) is first valid in the cycle the pipeline output settles, i.e.
+		// at cntr == opLat-1 (the cycle the OLD code sampled it combinationally). Register it
+		// there AND assert rdy at the same edge, so rslt_o/flags_o reach the WriteBack arbiter
+		// as a register (off the arbiter -> iD_rW_rslt forwarding cone). Costs +1 latency.
+		if ({1'b0, cntr} == (opLat - 7'd1)) begin
+			rslt_o  <= rsltComb;
+			flags_o <= flagsComb;
+			rdy_o   <= 1;
+		end
 		cntr <= cntr + 6'd1;
 	end
 end
