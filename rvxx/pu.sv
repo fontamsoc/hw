@@ -127,7 +127,14 @@
 `include "./imul.sv"
 `include "./idiv.sv"
 `endif
+// Zbc clmul has two implementations: PUCLMULMC = the default 2-cycle register-isolated multi-cycle
+// unit; PUCLMUL1 (opt-in) = a single-cycle combinational EX-stage clmul (no unit, retires inline).
 `ifdef PURV32ZBC
+`ifndef PUCLMUL1
+`define PUCLMULMC
+`endif
+`endif
+`ifdef PUCLMULMC
 `include "./clmul.sv"
 `endif
 `ifdef PURV32ZFINX
@@ -442,10 +449,12 @@ wire iF_isZbbRol = (iF_isALUreg && iF_func3 == 3'b001); // OP-form func7=0110000
 
 `ifdef PURV32ZBC
 // Zbc: clmul/clmulh/clmulr. OP-form, func7=0000101 (shared with Zbb min/max); func3[2]==0
-// distinguishes Zbc (func3 001/010/011) from Zbb min/max (func3[2]==1). Multi-cycle: the
-// result retires via the WriteBack arbiter, so clmul is a lateResultInsn (like RV32M).
-wire iF_isZbc       = (iF_isALUreg && iF_func7 == 7'b0000101 && !iF_func3[2]);
+// distinguishes Zbc (func3 001/010/011) from Zbb min/max (func3[2]==1).
+wire iF_isZbc = (iF_isALUreg && iF_func7 == 7'b0000101 && !iF_func3[2]);
+`ifdef PUCLMULMC
+// Multi-cycle: the result retires via the WriteBack arbiter, so clmul is a lateResultInsn (RV32M-like).
 wire iF_opClmul_stb = (iF_isZbc && iF_rdId); // rd!=x0 (mirrors iF_opImul_stb).
+`endif
 `endif
 
 `ifdef PURV32ZBS
@@ -545,7 +554,7 @@ wire iF_lateResultInsn = (
 	`ifdef PURV32M
 	iF_isRV32M ||
 	`endif
-	`ifdef PURV32ZBC
+	`ifdef PUCLMULMC
 	iF_opClmul_stb ||
 	`endif
 	`ifdef PURV32ZFINX
@@ -716,6 +725,9 @@ reg iD_isZbbRol;
 `ifdef PURV32ZBS
 reg iD_isZbs;
 `endif
+`ifdef PUCLMUL1
+reg iD_isZbc; // single-cycle EX clmul select.
+`endif
 
 reg iD_isFence;
 reg iD_isFencei;
@@ -737,7 +749,7 @@ reg iD_isCSR;
 reg iD_opImul_stb;
 reg iD_opIdiv_stb;
 `endif
-`ifdef PURV32ZBC
+`ifdef PUCLMULMC
 reg iD_opClmul_stb;
 `endif
 `ifdef PURV32ZFINX
@@ -784,7 +796,7 @@ reg [GPRCNT    -1 : 0] gprRdy;
 wire iD_opImul_bsy;
 wire iD_opIdiv_bsy;
 `endif
-`ifdef PURV32ZBC
+`ifdef PUCLMULMC
 wire iD_opClmul_bsy;
 `endif
 `ifdef PURV32ZFINX
@@ -820,7 +832,7 @@ wire iD_stalled = (!iD_eX_carryon ||
 	(iD_opImul_stb && iD_opImul_bsy) ||
 	(iD_opIdiv_stb && iD_opIdiv_bsy) ||
 	`endif
-	`ifdef PURV32ZBC
+	`ifdef PUCLMULMC
 	(iD_opClmul_stb && iD_opClmul_bsy) ||
 	`endif
 	`ifdef PURV32ZFINX
@@ -1022,6 +1034,9 @@ always_ff @(posedge clk_i) begin
 		`ifdef PURV32ZBS
 		iD_isZbs <= iF_isZbs;
 		`endif
+		`ifdef PUCLMUL1
+		iD_isZbc <= iF_isZbc;
+		`endif
 
 		iD_isFence         <= iF_isFence;
 		iD_isFencei        <= iF_isFencei;
@@ -1043,7 +1058,7 @@ always_ff @(posedge clk_i) begin
 		iD_opImul_stb <= iF_opImul_stb;
 		iD_opIdiv_stb <= iF_opIdiv_stb;
 		`endif
-		`ifdef PURV32ZBC
+		`ifdef PUCLMULMC
 		iD_opClmul_stb <= iF_opClmul_stb;
 		`endif
 		`ifdef PURV32ZFINX
@@ -1231,6 +1246,32 @@ reg [WORDBITSZ -1 : 0] eX_csrOut_i; // ### comb-block-reg.
 
 wire [WORDBITSZ -1 : 0] eX_StoreCondOut_i;
 
+`ifdef PUCLMUL1
+// Single-cycle clmul: the carry-less product has no carry chains, so it's a combinational AND/XOR
+// tree computed straight in EX (clmul.sv's 2-cycle unit is not built in this mode). func3[1:0]
+// selects the slice. NOTE: this wide tree lands on the eX_rslt_i forwarding cone.
+function automatic [(WORDBITSZ*2) -1 : 0] clmulFull (
+		input [WORDBITSZ -1 : 0] a, input [WORDBITSZ -1 : 0] b);
+	integer i;
+	reg [(WORDBITSZ*2) -1 : 0] p;
+	begin
+		p = {(WORDBITSZ*2){1'b0}};
+		for (i = 0; i < WORDBITSZ; i = i + 1)
+			p = p ^ (b[i] ? ({{WORDBITSZ{1'b0}}, a} << i) : {(WORDBITSZ*2){1'b0}});
+		clmulFull = p;
+	end
+endfunction
+wire [(WORDBITSZ*2) -1 : 0] eX_clmulFull_i = clmulFull(eX_aluArg1_i, eX_aluArg2_i);
+reg [WORDBITSZ -1 : 0] eX_clmulOut_i; // ### comb-block-reg.
+always_comb begin
+	case (iD_func3[1:0])
+	2'b11:   eX_clmulOut_i = eX_clmulFull_i[(WORDBITSZ*2)-1 : WORDBITSZ];   // clmulh
+	2'b10:   eX_clmulOut_i = eX_clmulFull_i[(WORDBITSZ*2)-2 : WORDBITSZ-1]; // clmulr
+	default: eX_clmulOut_i = eX_clmulFull_i[WORDBITSZ-1 : 0];               // clmul
+	endcase
+end
+`endif
+
 reg [WORDBITSZ -1 : 0] eX_rslt_i; // ### comb-block-reg.
 always_comb begin
 	unique if (iD_isJAlOrJALR) eX_rslt_i = iD_pc_plus_INSNBITSzBy8;
@@ -1246,6 +1287,9 @@ always_comb begin
 	`endif
 	`ifdef PURV32ZBS
 	else   if (iD_isZbs)       eX_rslt_i = eX_zbsOut_i;
+	`endif
+	`ifdef PUCLMUL1
+	else   if (iD_isZbc)       eX_rslt_i = eX_clmulOut_i;
 	`endif
 	else                       eX_rslt_i = eX_aluOut_i;
 end
@@ -1462,7 +1506,7 @@ assign iD_eX_rslt         = eX_rslt;
 reg rW_opImul_done; // ### comb-block-reg.
 reg rW_opIdiv_done; // ### comb-block-reg.
 `endif
-`ifdef PURV32ZBC
+`ifdef PUCLMULMC
 reg rW_opClmul_done; // ### comb-block-reg.
 `endif
 `ifdef PURV32ZFINX
@@ -1473,7 +1517,7 @@ reg rW_opFpu_done; // ### comb-block-reg.
 `include "./imul.pu.sv"
 `include "./idiv.pu.sv"
 `endif
-`ifdef PURV32ZBC
+`ifdef PUCLMULMC
 `include "./clmul.pu.sv"
 `endif
 `ifdef PURV32ZFINX
@@ -1498,7 +1542,7 @@ wire rW_multicyclePending = (
 	`ifdef PURV32M
 	|| opImul_done || opIdiv_done
 	`endif
-	`ifdef PURV32ZBC
+	`ifdef PUCLMULMC
 	|| opClmul_done
 	`endif
 	`ifdef PURV32ZFINX
@@ -1521,7 +1565,7 @@ always_comb begin
 	rW_opImul_done = 0;
 	rW_opIdiv_done = 0;
 	`endif
-	`ifdef PURV32ZBC
+	`ifdef PUCLMULMC
 	rW_opClmul_done = 0;
 	`endif
 	`ifdef PURV32ZFINX
@@ -1551,7 +1595,7 @@ always_comb begin
 		rW_dat_i = opIdiv_rslt;
 		rW_opIdiv_done = 1;
 	`endif
-	`ifdef PURV32ZBC
+	`ifdef PUCLMULMC
 	end else if (opClmul_done) begin
 		rW_we_i  = 1;
 		rW_idx_i = opClmul_rIdx;
