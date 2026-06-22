@@ -56,37 +56,15 @@ output wire [CLOG2GPRCNT -1 : 0] gprid_o;
 
 output reg rdy_o;
 
-// Register in which the division will be computed.
+// Register in which the division result is assembled: cumulator[WORDBITSZ-1:0] = |quotient|,
+// cumulator[(WORDBITSZ*2)-1:WORDBITSZ] = |remainder|. Both cores fill it in this format.
 reg  [(WORDBITSZ*2) -1 : 0] cumulator;
 
-// Reg set to the right operand value of the division, which is the divider.
-reg [WORDBITSZ -1 : 0] rval;
-// 3*|divider|, precomputed once at stb for radix-4 quotient-digit selection.
-reg [(WORDBITSZ+2) -1 : 0] rval3;
 // |divider| from args_i (signed divisions use the absolute value).
 wire [WORDBITSZ -1 : 0] divabsdvsr =
 	((args_i[IDIVSIGNED] && args_i[(WORDBITSZ-1)]) ? -args_i[WORDBITSZ-1:0] : args_i[WORDBITSZ-1:0]);
 
-// Radix-4 restoring step (2 quotient bits/cycle). R' is the top (WORDBITSZ+2) bits of
-// cumulator (partial remainder with 2 new dividend bits shifted in); a leading 0 supplies
-// a sign bit for the three trial subtractions of 1x/2x/3x the divider (computed in
-// parallel, so the carry depth stays one ~(WORDBITSZ+2)-bit subtract plus a 4:1 select).
-wire [(WORDBITSZ+3) -1 : 0] divRp = {1'b0, cumulator[(WORDBITSZ*2)-1 : (WORDBITSZ-2)]};
-wire [(WORDBITSZ+3) -1 : 0] divd1 = (divRp - {3'b0, rval});       // R' - 1*divider
-wire [(WORDBITSZ+3) -1 : 0] divd2 = (divRp - {2'b0, rval, 1'b0}); // R' - 2*divider
-wire [(WORDBITSZ+3) -1 : 0] divd3 = (divRp - {1'b0, rval3});      // R' - 3*divider
-// Quotient digit = largest q in {0,1,2,3} whose trial difference is non-negative;
-// divrem is the corresponding reduced remainder (< divider).
-reg [2 -1 : 0]         divq;   // ### comb-block-reg.
-reg [WORDBITSZ -1 : 0] divrem; // ### comb-block-reg.
-always_comb begin
-	if      (!divd3[(WORDBITSZ+2)]) begin divq = 2'd3; divrem = divd3[WORDBITSZ-1:0]; end
-	else if (!divd2[(WORDBITSZ+2)]) begin divq = 2'd2; divrem = divd2[WORDBITSZ-1:0]; end
-	else if (!divd1[(WORDBITSZ+2)]) begin divq = 2'd1; divrem = divd1[WORDBITSZ-1:0]; end
-	else                            begin divq = 2'd0; divrem = cumulator[(WORDBITSZ*2)-3 : (WORDBITSZ-2)]; end
-end
-
-// Register used to count the number of bits already used from the divider.
+// Register used to count the division cycles.
 reg [CLOG2WORDBITSZ -1 : 0] cntr;
 
 // Reg used to capture args_i.
@@ -105,7 +83,7 @@ always_ff @(posedge clk_i) begin
 end
 
 always_comb begin
-	// Logic setting rslt_o using the result computed in cumulator.
+	// Logic setting rslt_o using the result computed in cumulator (shared by both cores).
 
 	// When operands[IDIVMSBRSLT] == 0, the quotient is used as result.
 	// When operands[IDIVMSBRSLT] == 1, the remainder is used as result.
@@ -133,6 +111,114 @@ always_comb begin
 	end
 end
 
+`ifdef PUIDIVDSP
+// ===== DSP Newton-Raphson divider (reciprocal NR, 1.32 fixed point, + residual fixup). =====
+// |D| normalized (Dn=|D|<<clz); seed r0~(1/dn)*2^32; 2 iters R<-R*(2-Dn*R); Q=(|N|*R)>>(64-clz);
+// rem=|N|-Q*|D| then a single +/-1 correction => EXACT quotient+remainder (validated by
+// rvxx/idiv_nr_model.py: 0 fails, max 1 correction step). |D|==0 needs NO special case: the residual
+// leaves rem=|N| (rem/0=dividend) and the shared result-select overrides the quotient to all-ones
+// (x/0=-1). Multiplies infer MULT18X18D. NR path assumes WORDBITSZ==32 (seed table + shift widths).
+`include "idiv_recip_seed.vh"
+function automatic [5:0] idivClz (input [WORDBITSZ -1 : 0] x);
+	integer i; reg hit;
+	begin idivClz = WORDBITSZ[5:0]; hit = 1'b0;
+		for (i = WORDBITSZ-1; i >= 0; i = i - 1)
+			if (!hit && x[i]) begin idivClz = (WORDBITSZ-1) - i[5:0]; hit = 1'b1; end
+	end
+endfunction
+// |dividend|.
+wire [WORDBITSZ -1 : 0] divabsdvd =
+	((args_i[IDIVSIGNED] && args_i[(WORDBITSZ*2)-1]) ? -args_i[(WORDBITSZ*2)-1:WORDBITSZ] : args_i[(WORDBITSZ*2)-1:WORDBITSZ]);
+wire [5:0]  idivS    = idivClz(divabsdvsr);        // clz(|D|) ; WORDBITSZ if |D|==0
+wire [31:0] idivDn   = (divabsdvsr << idivS);      // normalized divider (MSB at bit 31 if |D|!=0)
+wire [33:0] idivSeed = idivRecipSeed(idivDn[30:24]);
+
+reg [33:0] nrR;             // reciprocal r*2^32 (r=1/dn in (1,2])
+reg [33:0] nrDR;            // dn*r*2^32 (~2^32)
+reg [32:0] nrQ;             // approximate quotient
+reg [31:0] nrN, nrD, nrDn;  // |dividend|, |divider|, normalized divider
+reg [5:0]  nrS;             // clz(|D|)
+reg signed [33:0] nrRem;    // |N| - Q*|D| (pre-correction)
+
+// one muxed ~34x34 multiply per cycle (-> MULT18X18D), sequenced over the NR schedule.
+reg [33:0] nrMulA, nrMulB; // ### comb-block-reg.
+always_comb begin
+	nrMulA = {2'b0, nrDn}; nrMulB = nrR;
+	case (cntr)
+	6'd0: begin nrMulA = {2'b0, nrDn}; nrMulB = nrR;                   end // Dn * R0
+	6'd1: begin nrMulA = nrR;          nrMulB = ({1'b1,33'd0} - nrDR); end // R0 * (2 - Dn*R0)
+	6'd2: begin nrMulA = {2'b0, nrDn}; nrMulB = nrR;                   end // Dn * R1
+	6'd3: begin nrMulA = nrR;          nrMulB = ({1'b1,33'd0} - nrDR); end // R1 * (2 - Dn*R1)
+	6'd4: begin nrMulA = {2'b0, nrN};  nrMulB = nrR;                   end // |N| * R2
+	6'd5: begin nrMulA = {1'b0, nrQ};  nrMulB = {2'b0, nrD};           end // Q * |D|  (residual)
+	default: ;
+	endcase
+end
+wire [67:0] nrProd = nrMulA * nrMulB;
+
+// single +/-1 residual correction (combinational, from the registered nrRem/nrQ).
+wire signed [33:0] nrD_s  = $signed({2'b0, nrD});
+wire [32:0]        nrQc   = (nrRem < 0)      ? (nrQ - 1'b1)
+                          : (nrRem >= nrD_s) ? (nrQ + 1'b1) : nrQ;
+wire signed [33:0] nrRemC = (nrRem < 0)      ? (nrRem + nrD_s)
+                          : (nrRem >= nrD_s) ? (nrRem - nrD_s) : nrRem;
+
+always_ff @(posedge clk_i) begin
+	if (rst_i) begin
+		rdy_o <= 1;
+	end else if (rdy_o) begin
+		if (stb_i) begin
+			operands <= args_i;
+			nrN  <= divabsdvd;
+			nrD  <= divabsdvsr;
+			nrDn <= idivDn;
+			nrS  <= idivS;
+			nrR  <= idivSeed;
+			rdy_o <= 0;
+			cntr  <= 0;
+		end
+	end else begin
+		case (cntr)
+		6'd0: nrDR <= nrProd[65:32];                                          // Dn*R0 >> 32
+		6'd1: nrR  <= nrProd[65:32];                                          // R1
+		6'd2: nrDR <= nrProd[65:32];                                          // Dn*R1 >> 32
+		6'd3: nrR  <= nrProd[65:32];                                          // R2
+		6'd4: nrQ  <= (nrProd >> (7'd64 - {1'b0, nrS}));                      // (|N|*R2) >> (64 - clz)
+		6'd5: nrRem <= $signed({2'b0, nrN}) - $signed({1'b0, nrProd[32:0]});  // |N| - Q*|D|
+		6'd6: cumulator <= {nrRemC[WORDBITSZ-1:0], nrQc[WORDBITSZ-1:0]};
+		default: ;
+		endcase
+		if (cntr == 6'd6) rdy_o <= 1;
+		cntr <= cntr + 1'b1;
+	end
+end
+
+`else
+// ===== radix-4 restoring divider (2 quotient bits/cycle, WORDBITSZ/2 cycles). =====
+// Reg set to the right operand value of the division, which is the divider.
+reg [WORDBITSZ -1 : 0] rval;
+// 3*|divider|, precomputed once at stb for radix-4 quotient-digit selection.
+reg [(WORDBITSZ+2) -1 : 0] rval3;
+
+// Radix-4 restoring step (2 quotient bits/cycle). R' is the top (WORDBITSZ+2) bits of
+// cumulator (partial remainder with 2 new dividend bits shifted in); a leading 0 supplies
+// a sign bit for the three trial subtractions of 1x/2x/3x the divider (computed in
+// parallel, so the carry depth stays one ~(WORDBITSZ+2)-bit subtract plus a 4:1 select).
+wire [(WORDBITSZ+3) -1 : 0] divRp = {1'b0, cumulator[(WORDBITSZ*2)-1 : (WORDBITSZ-2)]};
+wire [(WORDBITSZ+3) -1 : 0] divd1 = (divRp - {3'b0, rval});       // R' - 1*divider
+wire [(WORDBITSZ+3) -1 : 0] divd2 = (divRp - {2'b0, rval, 1'b0}); // R' - 2*divider
+wire [(WORDBITSZ+3) -1 : 0] divd3 = (divRp - {1'b0, rval3});      // R' - 3*divider
+// Quotient digit = largest q in {0,1,2,3} whose trial difference is non-negative;
+// divrem is the corresponding reduced remainder (< divider).
+reg [2 -1 : 0]         divq;   // ### comb-block-reg.
+reg [WORDBITSZ -1 : 0] divrem; // ### comb-block-reg.
+always_comb begin
+	if      (!divd3[(WORDBITSZ+2)]) begin divq = 2'd3; divrem = divd3[WORDBITSZ-1:0]; end
+	else if (!divd2[(WORDBITSZ+2)]) begin divq = 2'd2; divrem = divd2[WORDBITSZ-1:0]; end
+	else if (!divd1[(WORDBITSZ+2)]) begin divq = 2'd1; divrem = divd1[WORDBITSZ-1:0]; end
+	else                            begin divq = 2'd0; divrem = cumulator[(WORDBITSZ*2)-3 : (WORDBITSZ-2)]; end
+end
+
 always_ff @(posedge clk_i) begin
 
 	if (rst_i) begin
@@ -146,16 +232,10 @@ always_ff @(posedge clk_i) begin
 			operands <= args_i;
 
 			// rval = |divider|, rval3 = 3*|divider|; both feed the radix-4 step.
-			// (For a signed computation the divider is made positive; see divabsdvsr.)
 			rval  <= divabsdvsr;
 			rval3 <= ({2'b0, divabsdvsr} + {1'b0, divabsdvsr, 1'b0});
 
-			// The dividend is in args_i[(WORDBITSZ*2)-1:WORDBITSZ].
-			// The divider is in args_i[WORDBITSZ-1:0].
-
-			// If args_i[IDIVSIGNED] == 0, an unsigned computation is to be done.
-			// If args_i[IDIVSIGNED] == 1, a signed computation is to be done.
-			// If a signed computation is to be done, I turn the left operand positive if it was negative.
+			// If a signed computation is to be done, turn the left operand positive if it was negative.
 			if (args_i[IDIVSIGNED] && args_i[(WORDBITSZ*2)-1])
 				cumulator <= {{WORDBITSZ{1'b0}}, -args_i[(WORDBITSZ*2)-1:WORDBITSZ]};
 			else
@@ -172,15 +252,14 @@ always_ff @(posedge clk_i) begin
 		cumulator <= {divrem, cumulator[(WORDBITSZ-3):0], divq};
 
 		if (cntr == ((WORDBITSZ/2)-1)) begin
-			// The division is complete after WORDBITSZ/2 radix-4 steps
-			// (2 quotient bits each); the result will be ready in
-			// cumulator after the next clockedge.
+			// Complete after WORDBITSZ/2 radix-4 steps; result ready in cumulator next clockedge.
 			rdy_o <= 1;
 		end
 
 		cntr <= cntr + 1'b1;
 	end
 end
+`endif
 
 endmodule
 
