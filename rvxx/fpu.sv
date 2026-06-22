@@ -16,6 +16,23 @@
 // (fcvt, fadd/fsub/fmul, fdiv/fsqrt are added in later revisions; their optype codes
 //  9..17 are reserved below and currently produce 0.)
 
+// DSP/Newton-Raphson fdiv/fsqrt variants (multiply-based, infer MULT18X18D), gated:
+//   PUFDIVDSP / PUFSQRTDSP   = faithfully-rounded (~1 ULP), no residual correction.
+//   PUFDIVDSP2 / PUFSQRTDSP2 = correctly-rounded IEEE (NR + residual). DSP2 wins if both set.
+// With none set, fdiv/fsqrt use the default LUT digit-recurrence (below).
+`ifdef PUFDIVDSP
+`define FDIV_NR
+`endif
+`ifdef PUFDIVDSP2
+`define FDIV_NR
+`endif
+`ifdef PUFSQRTDSP
+`define FSQRT_NR
+`endif
+`ifdef PUFSQRTDSP2
+`define FSQRT_NR
+`endif
+
 module fpu (
 
 	 rst_i
@@ -337,9 +354,11 @@ localparam ITERLAST = 6'd26; // 26 quotient/root bits (24 mantissa + guard + rou
 wire        divSign = signA ^ signB;
 wire        divLt   = (aSig < bSig);
 wire signed [11:0] divEb = (aEU - bEU - (divLt ? 12'sd1 : 12'sd0)) + 12'sd127;
+`ifndef FDIV_NR
 wire [23:0] divMant = fQuo[25:2];
 wire        divG    = fQuo[1];
 wire        divS    = fQuo[0] | (fRem != 30'd0);
+`endif // (FDIV_NR: divMant/divG/divS are driven by the NR datapath below)
 wire        divSpecial = isNaNA || isNaNB || isInfA || isInfB || isZeroA || isZeroB;
 reg  [31:0] divSpecRes; reg [4:0] divSpecFlg; // ### comb-block-reg.
 always_comb begin
@@ -376,6 +395,48 @@ wire [29:0] sqRemNext  = (sqCmp ? (sqRem2 - sqTrial) : sqRem2);
 // init values (from the now-valid unpacked operands, on the first post-stb cycle).
 wire [29:0] divInitRem = divLt ? {5'd0, aSig, 1'b0} : {6'd0, aSig}; // dividend = sigA<<1 or sigA
 wire [24:0] sqrtMint   = aEU[0] ? {aSig, 1'b0} : {1'b0, aSig};            // 1.frac or 2*1.frac
+
+`ifdef FDIV_NR
+// ===== DSP Newton-Raphson fdiv: reciprocal NR in U1.27 (+ residual) ; multiplies infer MULT18X18D.
+// Seed + 2 NR iters + 1 residual fixup == exact floor(N*2^24/bSig) (validated: rvxx/fpu_nr_model.py).
+`include "fpu_recip_seed.vh"
+reg  [27:0] nrR;            // reciprocal estimate y (y*2^27), U1.27
+reg  [27:0] nrDR;           // D*y (~2^27, U1.27)
+reg  [26:0] nrQ;            // floor(N*y*2^2) : [26:2]=Q (25-bit quotient), [1:0]=NR guard/round
+reg  signed [50:0] nrRemS;  // residual N*2^24 - Q*bSig (used by PUFDIVDSP2)
+wire [27:0] divDfx  = {bSig, 4'd0};                        // D*2^27 = bSig<<4
+wire [24:0] divN    = divLt ? {aSig, 1'b0} : {1'b0, aSig}; // normalized dividend, N/bSig in [1,2)
+wire [27:0] divSeed = fdivRecipSeed(bSig[22:16]);
+// one muxed multiply per cycle (cntr) -> a single ~29x29 MULT18X18D group reused across NR steps.
+reg  [28:0] nrMulA, nrMulB; // ### comb-block-reg.
+always_comb begin
+	nrMulA = {1'b0, divDfx}; nrMulB = {1'b0, nrR};                            // (default / cntr 2)
+	case (cntr)
+	6'd0: begin nrMulA = {1'b0, divDfx};    nrMulB = {1'b0, divSeed}; end      // D * y0
+	6'd1: begin nrMulA = {1'b0, nrR};       nrMulB = (29'd1 << 28) - {1'b0, nrDR}; end // y0*(2-D*y0)
+	6'd2: begin nrMulA = {1'b0, divDfx};    nrMulB = {1'b0, nrR}; end          // D * y1
+	6'd3: begin nrMulA = {1'b0, nrR};       nrMulB = (29'd1 << 28) - {1'b0, nrDR}; end // y1*(2-D*y1)
+	6'd4: begin nrMulA = {4'd0, divN};      nrMulB = {1'b0, nrR}; end          // N * y2
+	6'd5: begin nrMulA = {2'd0, nrQ[26:2]}; nrMulB = {5'd0, bSig}; end         // Q * bSig (residual)
+	endcase
+end
+wire [57:0] nrProd = nrMulA * nrMulB;
+`ifdef PUFDIVDSP2 // correctly-rounded: residual fixes the last ULP (NR is within +/-1 of true floor)
+wire signed [50:0] divBs = $signed({27'd0, bSig});
+wire [25:0] divQa = {1'b0, nrQ[26:2]};
+wire [25:0] divQc = (nrRemS < 0) ? (divQa - 1'b1) : (nrRemS >= divBs) ? (divQa + 1'b1) : divQa;
+wire signed [50:0] divRc = (nrRemS < 0) ? (nrRemS + divBs) : (nrRemS >= divBs) ? (nrRemS - divBs) : nrRemS;
+wire [23:0] divMant = divQc[24:1];
+wire        divG    = divQc[0];
+wire        divS    = (divRc != 51'sd0);
+`else             // PUFDIVDSP faithful (~1 ULP): round the NR quotient (sticky from NR low bits).
+// nrQ[26]==0 means the NR underestimated a quotient that is >=1.0 below the normalization
+// boundary; the <=1-ULP result there is exactly 1.0 (mantissa 0x800000). Clamp to stay normalized.
+wire [23:0] divMant = nrQ[26] ? nrQ[26:3] : 24'h800000;
+wire        divG    = nrQ[26] ? nrQ[2]    : 1'b0;
+wire        divS    = nrQ[26] ? (nrQ[1:0] != 2'd0) : 1'b0;
+`endif
+`endif // FDIV_NR
 
 // ===== shared round + pack to binary32 (normal / overflow / subnormal) =====
 // Inputs selected by optype: a normalized 1.frac significand pkM (bit23=1), its SIGNED
@@ -503,7 +564,15 @@ wire optIter = ((optype == OP_DIV && !divSpecial) || (optype == OP_SQRT && !sqrt
 // ITERLAST + 4 (2-stage pack tail). The FSM registers rsltComb -> rslt_o at cntr==opLat-1 and
 // asserts rdy_o there, so the value sampled by the arbiter is REGISTERED (total latency opLat+1).
 wire isCvt = (optype == OP_CVTWS || optype == OP_CVTWUS || optype == OP_CVTSW || optype == OP_CVTSWU);
-wire [6:0] opLat = optIter           ? ({1'b0, ITERLAST} + 7'd4)
+// fdiv latency: NR variants settle divMant earlier than the recurrence (divMant_valid + 3 pack-tail).
+`ifdef PUFDIVDSP2
+localparam [6:0] DIVLAT = 7'd9;                    // NR correct: divMant valid @cntr 6
+`elsif PUFDIVDSP
+localparam [6:0] DIVLAT = 7'd8;                    // NR faithful: divMant valid @cntr 5
+`else
+localparam [6:0] DIVLAT = {1'b0, ITERLAST} + 7'd4; // digit-recurrence
+`endif
+wire [6:0] opLat = optIter           ? (optype == OP_DIV ? DIVLAT : ({1'b0, ITERLAST} + 7'd4))
                  : (optype == OP_MUL || optype == OP_ADD || optype == OP_SUB) ? 7'd4
                  : isCvt              ? 7'd3
                  :                      7'd2;
@@ -520,12 +589,25 @@ always_ff @(posedge clk_i) begin
 	end else begin
 		// div/sqrt recurrence: cntr 0 = init, 1..ITERLAST = one quotient/root bit each.
 		if (optIter) begin
-			if (cntr == 6'd0) begin
-				if (optype == OP_DIV) begin fRem <= divInitRem; fQuo <= 26'd0; end
-				else                  begin fRad <= {sqrtMint, 27'd0}; fRem <= 30'd0; fQuo <= 26'd0; end
-			end else if (cntr <= ITERLAST) begin
-				if (optype == OP_DIV) begin fRem <= divRemNext; fQuo <= {fQuo[24:0], divCmp}; end
-				else                  begin fRem <= sqRemNext;  fQuo <= {fQuo[24:0], sqCmp}; fRad <= {fRad[49:0], 2'b0}; end
+			if (optype == OP_DIV) begin
+				`ifdef FDIV_NR
+				// NR reciprocal schedule: 1 muxed multiply/cycle (see the fdiv NR datapath above).
+				case (cntr)
+				6'd0: begin nrR <= divSeed;      nrDR <= nrProd[54:27]; end // D*y0
+				6'd1:       nrR <= nrProd[54:27];                          // y0*(2-D*y0) = y1
+				6'd2:       nrDR <= nrProd[54:27];                         // D*y1
+				6'd3:       nrR <= nrProd[54:27];                          // y1*(2-D*y1) = y2
+				6'd4:       nrQ <= (nrProd + 58'h800000) >> 24;            // round(N*y2*4) (+half-ULP bias), 27-bit
+				6'd5:       nrRemS <= $signed({2'd0, divN, 24'd0}) - $signed({2'd0, nrProd[48:0]});
+				default: ;
+				endcase
+				`else
+				if (cntr == 6'd0)          begin fRem <= divInitRem; fQuo <= 26'd0; end
+				else if (cntr <= ITERLAST) begin fRem <= divRemNext;  fQuo <= {fQuo[24:0], divCmp}; end
+				`endif
+			end else begin // OP_SQRT (digit-recurrence; DSP NR variant added in a later step)
+				if (cntr == 6'd0)          begin fRad <= {sqrtMint, 27'd0}; fRem <= 30'd0; fQuo <= 26'd0; end
+				else if (cntr <= ITERLAST) begin fRem <= sqRemNext; fQuo <= {fQuo[24:0], sqCmp}; fRad <= {fRad[49:0], 2'b0}; end
 			end
 		end
 		// rsltComb (pkRes etc.) is first valid in the cycle the pipeline output settles, i.e.

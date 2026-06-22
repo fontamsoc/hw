@@ -53,7 +53,15 @@ void main (void) {
 		cl_fflags();
 		unsigned z = run(v->op, v->a, v->b);
 		unsigned f = rd_fflags() & 0x1f;
+#ifdef FAITHFUL
+		// Faithfully-rounded (DSP/NR) variants: accept exact, or within 1 ULP for finite results
+		// (sign/exponent unchanged); special results (inf/NaN) must be exact; flags not checked.
+		unsigned ulp = (z > v->z) ? (z - v->z) : (v->z - z);
+		int spec = ((v->z & 0x7f800000u) == 0x7f800000u); // expected inf/NaN -> require exact
+		if (z == v->z || (!spec && ulp <= 1u)) { pass++; }
+#else
 		if (z == v->z && f == (v->f & 0x1f)) { pass++; }
+#endif
 		else {
 			fail++;
 			if (shown++ < 20)
