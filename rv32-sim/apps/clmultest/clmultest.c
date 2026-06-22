@@ -6,7 +6,7 @@
 // compared against the hardware instructions for edge cases, an exhaustive
 // single-bit sweep, and an xorshift32 random sweep. The hardware and the
 // reference compute the SAME carry-less product, so this is a complete
-// equivalence check for whichever clmul core is built (iterative or PUCLMULCOMB).
+// equivalence check for the clmul core.
 
 #include <stdio.h>
 #include <stdint.h>

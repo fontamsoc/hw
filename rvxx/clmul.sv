@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-// Carry-less multiply (RISC-V Zbc: clmul/clmulh/clmulr) as a multi-cycle unit,
-// modeled on the idiv unit. One bit of rs2 is consumed per cycle (WORDBITSZ
-// cycles); the full carry-less product accumulates in cumulator, and the
-// requested slice is selected by the type field. See the note at end of file.
+// Carry-less multiply (RISC-V Zbc: clmul/clmulh/clmulr). The carry-less product has no
+// carry chains, so the full product is a combinational AND/XOR tree; this is a 2-cycle
+// register-isolated unit (mirroring imul's PUIMULDSP): cycle 1 captures the operands,
+// cycle 2 registers the requested slice of the product. See the note at end of file.
 
 module clmul (
 
@@ -26,7 +26,6 @@ module clmul (
 parameter WORDBITSZ = 32;
 parameter GPRCNT    = 32;
 
-localparam CLOG2WORDBITSZ = clog2(WORDBITSZ);
 localparam CLOG2GPRCNT    = clog2(GPRCNT);
 
 // Significance of the type field within args_i; it is iD_func3[1:0]:
@@ -50,26 +49,24 @@ input wire stb_i;
 // respectively store the first (rs1) and second (rs2) operand values.
 input wire [(((WORDBITSZ*2)+CLOG2GPRCNT)+CLMULTYPEBITSZ) -1 : 0] args_i;
 
-// Net set to the result of the carry-less multiply.
-output reg [WORDBITSZ -1 : 0] rslt_o; // ### comb-block-reg.
+// Registered result of the carry-less multiply (the requested product slice).
+output reg [WORDBITSZ -1 : 0] rslt_o;
 
 // Net set to the id of the gpr to which the result is to be stored.
 output wire [CLOG2GPRCNT -1 : 0] gprid_o;
 
 output reg rdy_o;
 
-// Reg used to capture args_i (shared by the iterative and the PUCLMULCOMB cores).
+// Reg used to capture args_i.
 reg [(((WORDBITSZ*2)+CLOG2GPRCNT)+CLMULTYPEBITSZ) -1 : 0] operands;
 
 assign gprid_o = operands[((WORDBITSZ*2)+CLOG2GPRCNT)-1:WORDBITSZ*2];
 
 wire [CLMULTYPEBITSZ -1 : 0] optype = operands[CLMULTYPELSB +: CLMULTYPEBITSZ];
 
-`ifdef PUCLMULCOMB
-// Combinational carry-less product: it has NO carry chains, so the full 2*WORDBITSZ-bit product is
-// a shallow AND/XOR tree. Registered as a 2-cycle unit exactly like imul's PUIMULDSP path: cycle 1
-// captures the operands, cycle 2 registers the requested slice into rslt_o. Trades the 32-cycle
-// iterative core for one wide combinational tree (~16x lower latency).
+// The carry-less product has NO carry chains, so the full 2*WORDBITSZ-bit product is a shallow
+// AND/XOR tree. Registered as a 2-cycle unit (mirror imul's PUIMULDSP path): cycle 1 captures the
+// operands, cycle 2 registers the requested slice into rslt_o.
 function automatic [(WORDBITSZ*2) -1 : 0] clmulFull (
 		input [WORDBITSZ -1 : 0] a, input [WORDBITSZ -1 : 0] b);
 	integer i;
@@ -104,72 +101,6 @@ always_ff @(posedge clk_i) begin
 		rdy_o <= 1;
 	end
 end
-
-`else
-// --- iterative core: one bit of rs2 per cycle, WORDBITSZ (32) cycles ---
-// Register in which the carry-less product accumulates.
-// The full product spans bits [(2*WORDBITSZ)-2:0]; bit [(2*WORDBITSZ)-1] stays 0.
-reg [(WORDBITSZ*2) -1 : 0] cumulator;
-
-// rs1 (the multiplicand), zero-extended to the product width and shifted left one
-// position per cycle. It MUST be (2*WORDBITSZ) wide so partials rs1<<i (i up to
-// WORDBITSZ-1) reach product bit (2*WORDBITSZ)-2; a WORDBITSZ-wide reg would drop
-// the high product bits and break clmulh/clmulr.
-reg [(WORDBITSZ*2) -1 : 0] rval;
-// rs2 (the multiplier), consumed LSB-first one bit per cycle.
-reg [WORDBITSZ -1 : 0] rmul;
-
-// Register used to count the number of bits already consumed from rs2.
-reg [CLOG2WORDBITSZ -1 : 0] cntr;
-
-always_comb begin
-	// Select the requested slice of the full carry-less product P (in cumulator).
-	case (optype)
-	2'b11:   rslt_o = cumulator[(WORDBITSZ*2)-1 : WORDBITSZ];   // clmulh: P[2n-1:n]
-	2'b10:   rslt_o = cumulator[(WORDBITSZ*2)-2 : WORDBITSZ-1]; // clmulr: P[2n-2:n-1]
-	default: rslt_o = cumulator[WORDBITSZ-1 : 0];               // clmul : P[n-1:0]
-	endcase
-end
-
-always_ff @(posedge clk_i) begin
-
-	if (rst_i) begin
-
-		rdy_o <= 1;
-
-	end else if (rdy_o) begin
-
-		if (stb_i) begin
-
-			operands <= args_i;
-
-			cumulator <= {(WORDBITSZ*2){1'b0}};
-			// rs1 zero-extended to the product width; rs2 is the multiplier.
-			rval <= {{WORDBITSZ{1'b0}}, args_i[(WORDBITSZ*2)-1:WORDBITSZ]};
-			rmul <= args_i[WORDBITSZ-1:0];
-
-			rdy_o <= 0;
-
-			cntr <= 0;
-		end
-
-	end else begin
-		// Carry-less multiply step: XOR rs1<<i into the product when rs2 bit i is
-		// set, then shift rs1 up by one and bring in the next rs2 bit.
-		cumulator <= (cumulator ^ (rmul[0] ? rval : {(WORDBITSZ*2){1'b0}}));
-		rval <= {rval[(WORDBITSZ*2)-2 : 0], 1'b0}; // rs1 << (i+1)
-		rmul <= {1'b0, rmul[WORDBITSZ-1 : 1]};     // next rs2 bit into bit 0
-
-		if (cntr == (WORDBITSZ-1)) begin
-			// Complete after WORDBITSZ steps (one rs2 bit each); the result is
-			// ready in cumulator after the next clockedge.
-			rdy_o <= 1;
-		end
-
-		cntr <= cntr + 1'b1;
-	end
-end
-`endif
 
 endmodule
 
@@ -286,4 +217,4 @@ endmodule
 //   clmul  rd = P[WORDBITSZ-1:0]            (low word)
 //   clmulh rd = P[(2*WORDBITSZ)-1:WORDBITSZ] (high word)
 //   clmulr rd = P[(2*WORDBITSZ)-2:WORDBITSZ-1] (reversed: rev(clmul(rev(a),rev(b)))).
-// Computed here LSB-of-rs2 first, one bit per cycle, accumulating into cumulator.
+// Computed here as one combinational AND/XOR tree (no carry chains), registered as a 2-cycle unit.
