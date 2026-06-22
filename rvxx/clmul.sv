@@ -58,6 +58,55 @@ output wire [CLOG2GPRCNT -1 : 0] gprid_o;
 
 output reg rdy_o;
 
+// Reg used to capture args_i (shared by the iterative and the PUCLMULCOMB cores).
+reg [(((WORDBITSZ*2)+CLOG2GPRCNT)+CLMULTYPEBITSZ) -1 : 0] operands;
+
+assign gprid_o = operands[((WORDBITSZ*2)+CLOG2GPRCNT)-1:WORDBITSZ*2];
+
+wire [CLMULTYPEBITSZ -1 : 0] optype = operands[CLMULTYPELSB +: CLMULTYPEBITSZ];
+
+`ifdef PUCLMULCOMB
+// Combinational carry-less product: it has NO carry chains, so the full 2*WORDBITSZ-bit product is
+// a shallow AND/XOR tree. Registered as a 2-cycle unit exactly like imul's PUIMULDSP path: cycle 1
+// captures the operands, cycle 2 registers the requested slice into rslt_o. Trades the 32-cycle
+// iterative core for one wide combinational tree (~16x lower latency).
+function automatic [(WORDBITSZ*2) -1 : 0] clmulFull (
+		input [WORDBITSZ -1 : 0] a, input [WORDBITSZ -1 : 0] b);
+	integer i;
+	reg [(WORDBITSZ*2) -1 : 0] p;
+	begin
+		p = {(WORDBITSZ*2){1'b0}};
+		for (i = 0; i < WORDBITSZ; i = i + 1)
+			p = p ^ (b[i] ? ({{WORDBITSZ{1'b0}}, a} << i) : {(WORDBITSZ*2){1'b0}});
+		clmulFull = p;
+	end
+endfunction
+// Full product P from the registered operands (rs1 in the high half, rs2 in the low half).
+// P spans bits [(2*WORDBITSZ)-2:0]; bit [(2*WORDBITSZ)-1] stays 0.
+wire [(WORDBITSZ*2) -1 : 0] cumulator = clmulFull(
+	operands[(WORDBITSZ*2)-1:WORDBITSZ], operands[WORDBITSZ-1:0]);
+
+always_ff @(posedge clk_i) begin
+	if (rst_i) begin
+		rdy_o <= 1;
+	end else if (rdy_o) begin
+		if (stb_i) begin
+			operands <= args_i;
+			rdy_o    <= 0;
+		end
+	end else begin
+		// Register the requested slice of the full carry-less product P.
+		case (optype)
+		2'b11:   rslt_o <= cumulator[(WORDBITSZ*2)-1 : WORDBITSZ];   // clmulh: P[2n-1:n]
+		2'b10:   rslt_o <= cumulator[(WORDBITSZ*2)-2 : WORDBITSZ-1]; // clmulr: P[2n-2:n-1]
+		default: rslt_o <= cumulator[WORDBITSZ-1 : 0];               // clmul : P[n-1:0]
+		endcase
+		rdy_o <= 1;
+	end
+end
+
+`else
+// --- iterative core: one bit of rs2 per cycle, WORDBITSZ (32) cycles ---
 // Register in which the carry-less product accumulates.
 // The full product spans bits [(2*WORDBITSZ)-2:0]; bit [(2*WORDBITSZ)-1] stays 0.
 reg [(WORDBITSZ*2) -1 : 0] cumulator;
@@ -72,13 +121,6 @@ reg [WORDBITSZ -1 : 0] rmul;
 
 // Register used to count the number of bits already consumed from rs2.
 reg [CLOG2WORDBITSZ -1 : 0] cntr;
-
-// Reg used to capture args_i.
-reg [(((WORDBITSZ*2)+CLOG2GPRCNT)+CLMULTYPEBITSZ) -1 : 0] operands;
-
-assign gprid_o = operands[((WORDBITSZ*2)+CLOG2GPRCNT)-1:WORDBITSZ*2];
-
-wire [CLMULTYPEBITSZ -1 : 0] optype = operands[CLMULTYPELSB +: CLMULTYPEBITSZ];
 
 always_comb begin
 	// Select the requested slice of the full carry-less product P (in cumulator).
@@ -127,6 +169,7 @@ always_ff @(posedge clk_i) begin
 		cntr <= cntr + 1'b1;
 	end
 end
+`endif
 
 endmodule
 
