@@ -32,6 +32,12 @@
 `ifdef PUFSQRTDSP2
 `define FSQRT_NR
 `endif
+`ifdef FDIV_NR
+`define FPU_NR
+`endif
+`ifdef FSQRT_NR
+`define FPU_NR
+`endif
 
 module fpu (
 
@@ -373,9 +379,11 @@ end
 
 // sqrt
 wire signed [11:0] sqrtEb = (aEU >>> 1) + 12'sd127; // floor(aEU/2)
+`ifndef FSQRT_NR
 wire [23:0] sqrtMant = fQuo[25:2];
 wire        sqrtG    = fQuo[1];
 wire        sqrtS    = fQuo[0] | (fRem != 30'd0);
+`endif // (FSQRT_NR: sqrtMant/sqrtG/sqrtS are driven by the NR datapath below)
 wire        sqrtSpecial = isNaNA || isZeroA || signA || isInfA;
 reg  [31:0] sqrtSpecRes; reg [4:0] sqrtSpecFlg; // ### comb-block-reg.
 always_comb begin
@@ -407,20 +415,7 @@ reg  signed [50:0] nrRemS;  // residual N*2^24 - Q*bSig (used by PUFDIVDSP2)
 wire [27:0] divDfx  = {bSig, 4'd0};                        // D*2^27 = bSig<<4
 wire [24:0] divN    = divLt ? {aSig, 1'b0} : {1'b0, aSig}; // normalized dividend, N/bSig in [1,2)
 wire [27:0] divSeed = fdivRecipSeed(bSig[22:16]);
-// one muxed multiply per cycle (cntr) -> a single ~29x29 MULT18X18D group reused across NR steps.
-reg  [28:0] nrMulA, nrMulB; // ### comb-block-reg.
-always_comb begin
-	nrMulA = {1'b0, divDfx}; nrMulB = {1'b0, nrR};                            // (default / cntr 2)
-	case (cntr)
-	6'd0: begin nrMulA = {1'b0, divDfx};    nrMulB = {1'b0, divSeed}; end      // D * y0
-	6'd1: begin nrMulA = {1'b0, nrR};       nrMulB = (29'd1 << 28) - {1'b0, nrDR}; end // y0*(2-D*y0)
-	6'd2: begin nrMulA = {1'b0, divDfx};    nrMulB = {1'b0, nrR}; end          // D * y1
-	6'd3: begin nrMulA = {1'b0, nrR};       nrMulB = (29'd1 << 28) - {1'b0, nrDR}; end // y1*(2-D*y1)
-	6'd4: begin nrMulA = {4'd0, divN};      nrMulB = {1'b0, nrR}; end          // N * y2
-	6'd5: begin nrMulA = {2'd0, nrQ[26:2]}; nrMulB = {5'd0, bSig}; end         // Q * bSig (residual)
-	endcase
-end
-wire [57:0] nrProd = nrMulA * nrMulB;
+// The muxed ~29x29 NR multiplier (nrProd) is shared with fsqrt -- see the FPU_NR block below.
 `ifdef PUFDIVDSP2 // correctly-rounded: residual fixes the last ULP (NR is within +/-1 of true floor)
 wire signed [50:0] divBs = $signed({27'd0, bSig});
 wire [25:0] divQa = {1'b0, nrQ[26:2]};
@@ -437,6 +432,78 @@ wire        divG    = nrQ[26] ? nrQ[2]    : 1'b0;
 wire        divS    = nrQ[26] ? (nrQ[1:0] != 2'd0) : 1'b0;
 `endif
 `endif // FDIV_NR
+
+`ifdef FSQRT_NR
+// ===== DSP Newton-Raphson fsqrt: rsqrt NR in U1.27 (r <- r*(3-V*r^2)/2) + residual.
+// RG = floor(sqrt(M*2^25)) via seed + 2 rsqrt iters + 1 fixup (validated: rvxx/fpu_sqrt_model.py).
+`include "fpu_rsqrt_seed.vh"
+reg  [27:0] sqR;            // rsqrt estimate r (r*2^27), U1.27
+reg  [27:0] sqR2;           // r^2 * 2^27
+reg  [28:0] sqVr2;          // V*r^2 * 2^27 (~2^27)
+reg  [26:0] sqRG;           // sqrt(V)*2^26 : [26:2]=RG (25-bit root), [1:0]=NR guard/round
+reg  [49:0] sqRGsq;         // RG^2 (residual, used by PUFSQRTDSP2)
+wire [26:0] sqVfx  = {sqrtMint, 2'b0};                       // V*2^25 = M<<2 (27-bit)
+wire [27:0] sqSeed = fsqrtRsqrtSeed({aEU[0], aSig[22:17]});
+wire [28:0] sqT    = 29'h18000000 - {1'b0, sqVr2};          // (3 - V*r^2)*2^27 = 3*2^27 - V*r^2
+`ifdef PUFSQRTDSP2 // correctly-rounded: residual fixes the last ULP (RG within +/-1 of true floor)
+wire [49:0]        sqTarget = {sqrtMint, 25'd0};            // M*2^25 ; RG = floor(sqrt(target))
+wire [24:0]        sqRGv    = sqRG[26:2];                   // RG (25-bit)
+wire signed [51:0] sqRem    = $signed({2'd0, sqTarget}) - $signed({2'd0, sqRGsq}); // target - RG^2
+wire signed [51:0] sqTwoRGp = $signed({25'd0, sqRGv, 1'b1});// 2*RG + 1
+wire signed [51:0] sqTwoRGm = $signed({25'd0, sqRGv, 1'b1}) - 52'sd2; // 2*RG - 1
+wire [25:0] sqRGc = (sqRem < 0)          ? ({1'b0, sqRGv} - 1'b1)
+                  : (sqRem >= sqTwoRGp)  ? ({1'b0, sqRGv} + 1'b1) : {1'b0, sqRGv};
+wire signed [51:0] sqRemC = (sqRem < 0)         ? (sqRem + sqTwoRGm)
+                          : (sqRem >= sqTwoRGp) ? (sqRem - sqTwoRGp) : sqRem;
+wire [23:0] sqrtMant = sqRGc[24:1];
+wire        sqrtG    = sqRGc[0];
+wire        sqrtS    = (sqRemC != 52'sd0);
+`else             // PUFSQRTDSP faithful (~1 ULP): round the NR root (sticky from NR low bits).
+// sqRG[26]==0 means the NR underestimated sqrt(V) below the normalization boundary (V=1.0);
+// the <=1-ULP result there is exactly 1.0 (mantissa 0x800000). Clamp to stay normalized.
+wire [23:0] sqrtMant = sqRG[26] ? sqRG[26:3] : 24'h800000;
+wire        sqrtG    = sqRG[26] ? sqRG[2]    : 1'b0;
+wire        sqrtS    = sqRG[26] ? (sqRG[1:0] != 2'd0) : 1'b0;
+`endif
+`endif // FSQRT_NR
+
+`ifdef FPU_NR
+// One muxed ~29x29 multiplier (-> MULT18X18D group), reused across all NR steps AND shared
+// between fdiv and fsqrt (mutually exclusive ops): operands selected by optype + cntr.
+reg  [28:0] nrMulA, nrMulB; // ### comb-block-reg.
+always_comb begin
+	nrMulA = 29'd0; nrMulB = 29'd0;
+	`ifdef FDIV_NR
+	if (optype == OP_DIV) begin
+		nrMulA = {1'b0, divDfx}; nrMulB = {1'b0, nrR};                            // (default / cntr 2)
+		case (cntr)
+		6'd0: begin nrMulA = {1'b0, divDfx};    nrMulB = {1'b0, divSeed}; end      // D * y0
+		6'd1: begin nrMulA = {1'b0, nrR};       nrMulB = (29'd1 << 28) - {1'b0, nrDR}; end // y0*(2-D*y0)
+		6'd3: begin nrMulA = {1'b0, nrR};       nrMulB = (29'd1 << 28) - {1'b0, nrDR}; end // y1*(2-D*y1)
+		6'd4: begin nrMulA = {4'd0, divN};      nrMulB = {1'b0, nrR}; end          // N * y2
+		6'd5: begin nrMulA = {2'd0, nrQ[26:2]}; nrMulB = {5'd0, bSig}; end         // Q * bSig (residual)
+		default: ;
+		endcase
+	end
+	`endif
+	`ifdef FSQRT_NR
+	if (optype == OP_SQRT) begin
+		nrMulA = {1'b0, sqR}; nrMulB = {1'b0, sqR};                               // (default: r*r)
+		case (cntr)
+		6'd0: begin nrMulA = {1'b0, sqSeed};     nrMulB = {1'b0, sqSeed}; end      // r0*r0
+		6'd1: begin nrMulA = {2'd0, sqVfx};      nrMulB = {1'b0, sqR2}; end        // V * r^2
+		6'd2: begin nrMulA = {1'b0, sqR};        nrMulB = sqT; end                 // r*(3-V*r^2)
+		6'd4: begin nrMulA = {2'd0, sqVfx};      nrMulB = {1'b0, sqR2}; end        // V * r^2
+		6'd5: begin nrMulA = {1'b0, sqR};        nrMulB = sqT; end                 // r*(3-V*r^2)
+		6'd6: begin nrMulA = {2'd0, sqVfx};      nrMulB = {1'b0, sqR}; end         // V * r  (-> RG)
+		6'd7: begin nrMulA = {4'd0, sqRG[26:2]}; nrMulB = {4'd0, sqRG[26:2]}; end  // RG * RG (residual)
+		default: ; // cntr 3: r1*r1 (the default)
+		endcase
+	end
+	`endif
+end
+wire [57:0] nrProd = nrMulA * nrMulB;
+`endif // FPU_NR
 
 // ===== shared round + pack to binary32 (normal / overflow / subnormal) =====
 // Inputs selected by optype: a normalized 1.frac significand pkM (bit23=1), its SIGNED
@@ -572,7 +639,15 @@ localparam [6:0] DIVLAT = 7'd8;                    // NR faithful: divMant valid
 `else
 localparam [6:0] DIVLAT = {1'b0, ITERLAST} + 7'd4; // digit-recurrence
 `endif
-wire [6:0] opLat = optIter           ? (optype == OP_DIV ? DIVLAT : ({1'b0, ITERLAST} + 7'd4))
+// fsqrt latency: NR rsqrt schedule settles sqrtMant earlier than the recurrence (valid + 3 pack-tail).
+`ifdef PUFSQRTDSP2
+localparam [6:0] SQRTLAT = 7'd11;                   // NR correct: sqrtMant valid @cntr 8
+`elsif PUFSQRTDSP
+localparam [6:0] SQRTLAT = 7'd10;                   // NR faithful: sqrtMant valid @cntr 7
+`else
+localparam [6:0] SQRTLAT = {1'b0, ITERLAST} + 7'd4; // digit-recurrence
+`endif
+wire [6:0] opLat = optIter           ? (optype == OP_DIV ? DIVLAT : SQRTLAT)
                  : (optype == OP_MUL || optype == OP_ADD || optype == OP_SUB) ? 7'd4
                  : isCvt              ? 7'd3
                  :                      7'd2;
@@ -605,9 +680,24 @@ always_ff @(posedge clk_i) begin
 				if (cntr == 6'd0)          begin fRem <= divInitRem; fQuo <= 26'd0; end
 				else if (cntr <= ITERLAST) begin fRem <= divRemNext;  fQuo <= {fQuo[24:0], divCmp}; end
 				`endif
-			end else begin // OP_SQRT (digit-recurrence; DSP NR variant added in a later step)
+			end else begin // OP_SQRT
+				`ifdef FSQRT_NR
+				// NR rsqrt schedule: 1 muxed multiply/cycle (see the fsqrt NR datapath above).
+				case (cntr)
+				6'd0: begin sqR <= sqSeed;          sqR2 <= nrProd >> 27; end // r0 ; r0^2
+				6'd1:       sqVr2 <= nrProd >> 25;                            // V*r0^2
+				6'd2:       sqR   <= nrProd >> 28;                            // r1 = r0*(3-V*r0^2)/2
+				6'd3:       sqR2  <= nrProd >> 27;                            // r1^2
+				6'd4:       sqVr2 <= nrProd >> 25;                            // V*r1^2
+				6'd5:       sqR   <= nrProd >> 28;                            // r2 = r1*(3-V*r1^2)/2
+				6'd6:       sqRG  <= (nrProd + 58'h2000000) >> 26;            // round(sqrt(V)*2^26) (+half-ULP)
+				6'd7:       sqRGsq <= nrProd[49:0];                           // RG^2 (residual)
+				default: ;
+				endcase
+				`else
 				if (cntr == 6'd0)          begin fRad <= {sqrtMint, 27'd0}; fRem <= 30'd0; fQuo <= 26'd0; end
 				else if (cntr <= ITERLAST) begin fRem <= sqRemNext; fQuo <= {fQuo[24:0], sqCmp}; fRad <= {fRad[49:0], 2'b0}; end
+				`endif
 			end
 		end
 		// rsltComb (pkRes etc.) is first valid in the cycle the pipeline output settles, i.e.
