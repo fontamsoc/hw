@@ -10,21 +10,12 @@
 `include "lib/rstctrl.sv"
 
 `define PURV32M
-`define PURV32ZBA
-// PURV32ZBB disabled on FPGA tops: it pushes rv32-orangecrab0285 below 48 MHz
-// timing closure (scoreboard-region routing congestion). Still enabled in rv32-sim.
-//`define PURV32ZBB
-// PURV32ZBC (Zbc carry-less multiply): a 2-cycle combinational XOR-tree clmul (register-isolated).
-`define PURV32ZBC
-// PURV32ZBS (Zbs single-bit ops): combinational EX-stage logic but adds NO flip-flops, so
-// measured Fmax-neutral on this board (16-seed: mean 48.24->48.12, t=-0.19; vs Gshare
-// which regressed via added-FF congestion). Enabled.
-`define PURV32ZBS
-// PURV32ZFINX (Zfinx single-precision FPU) disabled on FPGA tops: even pipelined the FPU is
-// congestion-bound at ~34 MHz on rv32-orangecrab0285 (16-seed median), well below 48 MHz.
-// Still enabled in rv32-sim (TestFloat-verified).
-//`define PURV32ZFINX
 `define PUIMULDSP
+`define PURV32ZBA
+//`define PURV32ZBB
+`define PURV32ZBC
+`define PURV32ZBS
+//`define PURV32ZFINX
 `define PUPREDICTJAL
 `define PUPREDICTBRANCH
 `define PUPREDICTRET

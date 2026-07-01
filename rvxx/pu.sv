@@ -1,6 +1,91 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
+// Features:
+//
+// PURV32M
+// 	RV32 "M" standard extension: integer multiply/divide (mul, mulh,
+// 	mulhsu, mulhu, div, divu, rem, remu), computed by the multi-cycle
+// 	imul and idiv units.
+//
+// 	PUIMULDSP
+// 		Multiply in the imul unit using DSP hardware multipliers
+// 		(the "*" operator) instead of the iterative radix-4 shift-add.
+//
+// 	PUIDIVDSP
+// 		Divide in the idiv unit using a multiply-based Newton-Raphson
+// 		reciprocal (needs a multiplier) instead of the default radix-4
+// 		digit-recurrence; fewer cycles per division.
+//
+// PURV32ZBA
+// 	"Zba" address-generation bit-manipulation extension
+// 	(sh1add/sh2add/sh3add and their ".uw" address forms).
+//
+// PURV32ZBB
+// 	"Zbb" basic bit-manipulation extension (andn/orn/xnor, clz/ctz/cpop,
+// 	min/max, sext/zext, rol/ror, rev8, orc.b, ...).
+//
+// PURV32ZBC
+// 	"Zbc" carry-less multiply extension (clmul/clmulh/clmulr), computed by
+// 	the multi-cycle clmul unit (a 2-cycle, register-isolated XOR-tree).
+//
+// 	PUCLMUL1
+// 		Compute clmul in a single EX-stage cycle instead of through
+// 		the default 2-cycle register-isolated clmul unit.
+//
+// PURV32ZBS
+// 	"Zbs" single-bit extension (bclr/bext/binv/bset, register and
+// 	immediate); combinational EX-stage logic that adds no flip-flop.
+//
+// PURV32ZFINX
+// 	"Zfinx" single-precision floating-point, with operands held in the
+// 	integer GPRs (no separate f-registers), computed by the multi-cycle
+// 	fpu unit.
+//
+// 	PUFDIVDSP
+// 		fdiv using a multiply-based (DSP) Newton-Raphson reciprocal,
+// 		faithfully-rounded (~1 ULP).
+//
+// 	PUFDIVDSP2
+// 		fdiv using Newton-Raphson (DSP) plus a residual correction,
+// 		correctly-rounded IEEE. Takes precedence over PUFDIVDSP.
+//
+// 	PUFSQRTDSP
+// 		fsqrt using a multiply-based (DSP) Newton-Raphson iteration,
+// 		faithfully-rounded (~1 ULP).
+//
+// 	PUFSQRTDSP2
+// 		fsqrt using Newton-Raphson (DSP) plus a residual correction,
+// 		correctly-rounded IEEE. Takes precedence over PUFSQRTDSP.
+//
+// PUPREDICTJAL
+// 	Predict direct-jump (JAL) targets at fetch, so a taken JAL adds no
+// 	bubble.
+//
+// PUPREDICTJALR
+// 	Predict indirect-jump (JALR) targets. Reserved: not yet implemented.
+//
+// PUPREDICTBRANCH
+// 	Predict conditional branches using a 2-bit bimodal branch-prediction
+// 	table.
+//
+// PUPREDICTRET
+// 	Predict function returns (ret) using a return-address stack.
+//
+// PUPREDICTGSHARE
+// 	Index the branch-prediction table by (PC ^ global-history) -- a Gshare
+// 	predictor -- instead of by PC alone. Requires PUPREDICTBRANCH.
+//
+// 	PUGSHAREGHRSZ
+// 		Number of global-history bits folded into the branch-prediction
+// 		table index; defaults to the full index width.
+//
+// PUFWDALL
+// 	Also forward operands at the WriteBack stage (combinationally from the
+// 	WriteBack arbiter), in addition to the default forwarding done at the
+// 	Execute stage, so a late result (load/MUL/DIV) becomes forwardable the
+// 	same cycle it retires instead of a cycle later.
+
 // Parameters:
 //
 // WORDBITSZ

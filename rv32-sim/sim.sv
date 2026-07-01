@@ -10,15 +10,17 @@
 `define SIMULATION
 
 `define PURV32M
+`define PUIMULDSP
 `define PURV32ZBA
 `define PURV32ZBB
 `define PURV32ZBC
+`define PUCLMUL1
 `define PURV32ZBS
 `define PURV32ZFINX
-`define PUIMULDSP
 `define PUPREDICTJAL
 `define PUPREDICTBRANCH
 `define PUPREDICTRET
+`define PUFWDALL
 `include "rvxx/cpu.sv"
 /* makefile defined *///`define CPU_COUNT 1
 /* makefile defined *///`define XWORDBITSZ 32
