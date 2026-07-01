@@ -4,9 +4,19 @@
 // Parameters:
 //
 // WORDBITSZ
+// 	Bit-width of a CPU word: the general-purpose registers, the
+// 	program counter, immediates and the internal datapath. This is
+// 	the architectural XLEN (32 for RV32).
+//
 // XWORDBITSZ
-// 	TODO: Document ...
-// 	TODO: XWORDBITSZ must be >= WORDBITSZ.
+// 	Bit-width of an external-memory word: the width of the Wishbone
+// 	data bus ("wb_dat_i"/"wb_dat_o"), of a cache-line set, and of the
+// 	dcache-coherency ports. When larger than WORDBITSZ, each memory
+// 	transaction carries several CPU words (hence several instructions)
+// 	per access, widening the cache line; the pu then extracts the
+// 	wanted CPU word/instruction from the fetched XWORDBITSZ-wide word.
+// 	It must be a power-of-2 multiple of WORDBITSZ, and hence
+// 	>= WORDBITSZ.
 //
 // CLKFREQ
 // 	Frequency of the clock input "clk_i" in Hz.
