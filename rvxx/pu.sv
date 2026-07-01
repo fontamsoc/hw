@@ -44,18 +44,13 @@
 // 	Number of units making up the idiv pipeline.
 // 	It must be non-null, a power-of-2 less-than-or-equal to 8.
 //
-// FADDFSUBCNT
-// 	Number of units making up the faddfsub pipeline.
-// 	It must be non-null, a power-of-2 less-than-or-equal to 2.
-//
-// FMULCNT
-// 	Number of units making up the fmul pipeline.
-// 	It must be non-null, a power-of-2 less-than-or-equal
-// 	to 4 (ifdef PUFMULDSP) or 8.
-//
-// FDIVCNT
-// 	Number of units making up the fdiv pipeline.
+// CLMULCNT
+// 	Number of units making up the clmul pipeline (used by PURV32ZBC).
 // 	It must be non-null, a power-of-2 less-than-or-equal to 8.
+//
+// FPUCNT
+// 	Number of units making up the fpu pipeline.
+// 	It must be non-null, a power-of-2 less-than-or-equal to 2.
 //
 // MAXPENDINGACK
 // 	TODO: Describe ...
