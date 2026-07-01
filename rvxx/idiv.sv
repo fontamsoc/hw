@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-// The implementation of the division is documented at the end of this file.
-
 module idiv (
 
 	 rst_i
@@ -413,7 +411,8 @@ end endgenerate
 
 endmodule
 
-// Implementation of the division.
+// Radix-2 restoring division (implementations above use radix-4 restoring
+// by default, or Newton-Raphson under PUIDIVDSP).
 //
 // 4bits binary division when done by hand:
 //
