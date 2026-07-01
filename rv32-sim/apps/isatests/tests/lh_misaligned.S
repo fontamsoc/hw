@@ -11,7 +11,7 @@
 #include "riscv_test.h"
 #include "test_macros.h"
 
-RVTEST_RV64M
+RVTEST_RV32M
 RVTEST_CODE_BEGIN
 
   TEST_LD_OP( 2, lh, 0x0201, 0,  tdat );

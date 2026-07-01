@@ -10,7 +10,7 @@
 #include "riscv_test.h"
 #include "test_macros.h"
 
-RVTEST_RV64S
+RVTEST_RV32S
 RVTEST_CODE_BEGIN
 
 #ifdef __MACHINE_MODE

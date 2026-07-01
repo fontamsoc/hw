@@ -89,6 +89,15 @@ TESTS += amominu_w
 TESTS += amomaxu_w
 TESTS += lrsc
 TESTS += x0fwd
+TESTS += mcsr
+TESTS += scsr
+TESTS += mfetch_misaligned
+TESTS += sfetch_misaligned
+TESTS += ma_addr
+TESTS += lh_misaligned
+TESTS += lw_misaligned
+TESTS += sh_misaligned
+TESTS += sw_misaligned
 
 TESTS_OBJS = $(addsuffix .o,${TESTS})
 
@@ -102,6 +111,10 @@ READELF := ${PREFIX}-readelf
 CFLAGS += -Werror -fdata-sections -ffunction-sections -Wl,--gc-sections -O3 -g
 CFLAGS += -nostdlib
 CFLAGS += -march=rv32ima_zba_zbb_zbc_zbs_zicsr_zifencei
+# Below used to make stvec_handler and mtvec_handler null when not used by a test;
+# Making stvec_handler and mtvec_handler weak symbols does not work because they become global
+# but they need to be local to each test.
+CFLAGS += -Wl,--unresolved-symbols=ignore-all
 
 APPNAME := isatests
 

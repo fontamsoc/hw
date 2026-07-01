@@ -106,6 +106,15 @@ _start:
 	TEST(amomaxu_w)
 	TEST(lrsc)
 	TEST(x0fwd)
+	TEST(mcsr)
+	TEST(scsr)
+	TEST(mfetch_misaligned)
+	TEST(sfetch_misaligned)
+	TEST(ma_addr)
+	TEST(lh_misaligned)
+	TEST(lw_misaligned)
+	TEST(sh_misaligned)
+	TEST(sw_misaligned)
 
 	csrw mtvec, x0; /* needed to indefinitely halt on ebreak */
 	ebreak;
