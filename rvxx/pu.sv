@@ -53,7 +53,13 @@
 // 	It must be non-null, a power-of-2 less-than-or-equal to 2.
 //
 // MAXPENDINGACK
-// 	TODO: Describe ...
+// 	Maximum number of memory requests that can be outstanding at
+// 	once on the pipelined Wishbone master interface, ie: accepted
+// 	onto the bus but not yet acknowledged through "wb_ack_i". Once
+// 	this many acks are pending, the bus is treated as busy and
+// 	further requests back-pressure at issue. Larger values let more
+// 	loads/stores overlap the memory latency, at the cost of a deeper
+// 	load-response FIFO and wider pending-ack counters.
 // 	It must be at least 2 and a power of 2.
 //
 // PUID
