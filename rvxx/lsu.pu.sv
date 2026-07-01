@@ -47,9 +47,9 @@ wire [(CLOG2MAXPENDINGACK +1) -1 : 0] ldUnit_rqsts_seq;
 
 wire ldUnit_rqsts_empty;
 
-wire ldUnit_memAck = (
-	dCache_m_ack_o && !ldUnit_rqsts_empty &&
-	ldUnit_rqsts_seq == dCache_m_rsp_cnt);
+wire ldUnit_memAck_ = (!ldUnit_rqsts_empty && (ldUnit_rqsts_seq == dCache_m_rsp_cnt));
+
+wire ldUnit_memAck = (dCache_m_ack_o && ldUnit_memAck_);
 
 fifo_fwft #(
 	 .WIDTH (1 + 1 + CLOG2GPRCNT + (WORDBITSZ/8) + (CLOG2MAXPENDINGACK +1))
@@ -71,14 +71,14 @@ fifo_fwft #(
 // load retires (ldUnit_memAck fires) the cycle the pipeline yields. Only the load
 // at the head of the response stream (seq == rsp_cnt) is held, so store responses
 // (and loads behind a not-yet-arrived one) are not blocked.
-assign dCache_m_bsy_i = (rW_pipeWrites && !ldUnit_rqsts_empty && (ldUnit_rqsts_seq == dCache_m_rsp_cnt));
+assign dCache_m_bsy_i = (rW_pipeWrites && ldUnit_memAck_);
 
 // Precise "a completed load result is held": same head-of-stream match as ldUnit_memAck
 // but using the un-gated response-available (dCache_m_ack_avail_o), so it stays true the
 // whole time the response is held by dCache_m_bsy_i (ldUnit_memAck goes low while held).
 // Used to gate async traps exactly while a held result exists, instead of for the whole
 // load lifetime (!ldUnit_rqsts_empty).
-wire ldUnit_respHeld = (dCache_m_ack_avail_o && !ldUnit_rqsts_empty && (ldUnit_rqsts_seq == dCache_m_rsp_cnt));
+wire ldUnit_respHeld = (dCache_m_ack_avail_o && ldUnit_memAck_);
 
 // Store Unit.
 
