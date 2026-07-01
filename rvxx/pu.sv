@@ -432,13 +432,6 @@ wire iF_isWfi    = (iF_isSystemAndFunc3Null && iF_Iimm[11:0] == 12'b000100000101
 
 wire iF_isCSR = (iF_isSystem && iF_func3[1:0]);
 
-`ifdef PURV32ZFINX
-// fcsr/frm/fflags (0x001/0x002/0x003). Decoded at iF and registered into
-// iD_isFcsrAccess; drain-gated against in-flight FP ops at the iD stall.
-wire iF_isFcsrAccess = (iF_isCSR &&
-	(iF_Iimm[11:0] == 12'h001 || iF_Iimm[11:0] == 12'h002 || iF_Iimm[11:0] == 12'h003));
-`endif
-
 `ifdef PURV32M
 // Match the full M funct7 (not just func7[0]) so other func7[0]==1 OP encodings
 // (e.g. Zbb min/max with funct7 0000101) are not misdecoded as mul/div.
@@ -773,7 +766,6 @@ reg iD_opClmul_stb;
 `ifdef PURV32ZFINX
 reg iD_opFpu_stb;
 reg [5 -1 : 0] iD_opFpu_optype;
-reg iD_isFcsrAccess;
 `endif
 
 reg iD_isLr;
@@ -838,6 +830,12 @@ wire dCache_m_pending;
 wire iD_needsRd  = (iD_is3OprndD12 || iD_is2OprndD1 || iD_is1OprndD);
 wire iD_needsRs1 = (iD_is3OprndD12 || iD_is2OprndD1 || iD_is2Oprnd12);
 wire iD_needsRs2 = (iD_is3OprndD12 || iD_is2Oprnd12);
+
+`ifdef PURV32ZFINX
+// fcsr/frm/fflags (0x001/0x002/0x003). Drain-gated against in-flight FP ops below.
+wire iD_isFcsrAccess = (iD_isCSR &&
+	(iD_Iimm[11:0] == 12'h001 || iD_Iimm[11:0] == 12'h002 || iD_Iimm[11:0] == 12'h003));
+`endif
 
 wire iD_stalled = (!iD_eX_carryon ||
 	(iD_isFenceOrFencei && dCache_m_pending) ||
@@ -1077,7 +1075,6 @@ always_ff @(posedge clk_i) begin
 		`ifdef PURV32ZFINX
 		iD_opFpu_stb    <= iF_opFpu_stb;
 		iD_opFpu_optype <= iF_opFpu_optype;
-		iD_isFcsrAccess <= iF_isFcsrAccess;
 		`endif
 
 		iD_isLr <= iF_isLr;
