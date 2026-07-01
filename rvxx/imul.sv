@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-// The non-PUIMULDSP implementation of the multiplication is documented at the end of this file.
-
 `ifdef PUIMULDSP
 
 module imul (
@@ -422,11 +420,10 @@ end endgenerate
 
 endmodule
 
-// Implementation of the multiplication.
+// Multiplication algorithms (implementation above uses radix-4).
 //
-// Radix-2 Multiplication
-// 	The multiplier is examined
-// 	one bit at a time.
+// Radix-2 Multiplication.
+// The multiplier is examined one bit at a time.
 //
 // Multiply 5 times 12.
 //
@@ -440,18 +437,18 @@ endmodule
 // """""""
 // 0111100  Product
 //
-// Radix-4 Multiplication
-// 	The multiplier is examined two bits at a time.
-// 	Twice as fast as radix-2.
+// Radix-4 Multiplication.
+// The multiplier is examined two bits at a time.
+// Twice as fast as radix-2.
 //
-// 	Let "a" denotes the multiplicand
-// 	and b denotes the multiplier.
-// 	Pre-compute 2a and 3a.
-// 	Examine multiplier two bits at
-// 	a time (rather than one bit at a time);
-// 	based on the value of those bits
-// 	add 0, a, 2a, or 3a (shifted by
-// 	the appropriate amount).
+// Let `a` denotes the multiplicand
+// and `b` denotes the multiplier.
+// Pre-compute 2a and 3a.
+// Examine multiplier two bits at
+// a time (rather than one bit at a time);
+// based on the value of those bits
+// add 0, a, 2a, or 3a (shifted by
+// the appropriate amount).
 //
 // Multiply 5 times 12.
 //
@@ -472,9 +469,6 @@ endmodule
 // 01010    10 x 0101
 // """""""
 // 0101101  Product
-//
-//
-// This implementation use radix-4.
 //
 // Signed multiplication is implemented by using the absolute value
 // of operands and later remembering what were their signs.
