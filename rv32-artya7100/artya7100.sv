@@ -17,10 +17,7 @@
 // timing closure (scoreboard-region routing congestion). Still enabled in rv32-sim.
 //`define PURV32ZBB
 // PURV32ZBC (Zbc carry-less multiply): a 2-cycle combinational XOR-tree clmul (register-isolated).
-// Measured FPGA-viable on the OrangeCrab (ECP5) -- 16-seed median ~50 MHz, fits 48 (the former
-// 32-cycle iterative core regressed Fmax via added-FF congestion; the combinational one does not).
-// Artix-7 has more headroom and is not the binding case; left off here by choice -- enable to use it.
-//`define PURV32ZBC
+`define PURV32ZBC
 // PURV32ZBS (Zbs single-bit ops): combinational EX-stage logic but adds NO flip-flops, so it
 // measured Fmax-neutral even on the tighter OrangeCrab; the Artix-7 has more headroom. Enabled.
 `define PURV32ZBS

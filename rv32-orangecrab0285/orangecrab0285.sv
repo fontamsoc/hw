@@ -15,12 +15,9 @@
 // timing closure (scoreboard-region routing congestion). Still enabled in rv32-sim.
 //`define PURV32ZBB
 // PURV32ZBC (Zbc carry-less multiply): a 2-cycle combinational XOR-tree clmul (register-isolated).
-// Measured FPGA-viable here -- 16-seed median ~50 MHz, fits the 48 MHz budget (the former 32-cycle
-// iterative core regressed Fmax via added-FF congestion; the combinational one does not). Left off
-// here by choice (Zbc is a rare op); enable to use it.
-//`define PURV32ZBC
+`define PURV32ZBC
 // PURV32ZBS (Zbs single-bit ops): combinational EX-stage logic but adds NO flip-flops, so
-// measured Fmax-neutral on this board (16-seed: mean 48.24->48.12, t=-0.19; vs Zbc/Gshare
+// measured Fmax-neutral on this board (16-seed: mean 48.24->48.12, t=-0.19; vs Gshare
 // which regressed via added-FF congestion). Enabled.
 `define PURV32ZBS
 // PURV32ZFINX (Zfinx single-precision FPU) disabled on FPGA tops: even pipelined the FPU is
