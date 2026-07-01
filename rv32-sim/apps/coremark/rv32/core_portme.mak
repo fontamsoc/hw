@@ -18,10 +18,10 @@ READELF = riscv32-unknown-elf-readelf
 # Flag : CFLAGS
 #	Use this flag to define compiler options. Note, you can add compiler options from the command line using XCFLAGS="other flags"
 PORT_CFLAGS = -O3 -DMULTITHREAD=16 -DUSE__OS=1
-EXTRA_CFLAGS = -mbranch-cost=2 -funroll-all-loops -falign-functions=32 -finline-functions \
+EXTRA_CFLAGS = -mbranch-cost=2 -funroll-all-loops -finline-functions \
 	-finline-limit=10000 --param max-inline-insns-auto=200 -fno-tree-dominator-opts \
 	-fno-tree-loop-if-convert -fno-tree-sink -fselective-scheduling -fno-if-conversion2 \
-	-fno-code-hoisting -fno-strict-overflow
+	-fno-code-hoisting -fno-strict-overflow -fira-region=one -falign-functions=4
 FLAGS_STR = "$(PORT_CFLAGS) $(XCFLAGS)"
 CFLAGS = -g -fstack-usage -fdata-sections -ffunction-sections -Wl,--gc-sections \
 	$(PORT_CFLAGS) $(EXTRA_CFLAGS) -I$(PORT_DIR) -I. -DFLAGS_STR=\"$(FLAGS_STR)\" \
