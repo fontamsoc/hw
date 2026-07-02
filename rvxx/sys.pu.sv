@@ -303,7 +303,7 @@ reg [WORDBITSZ -1 : 0] excTval; // ### comb-block-reg.
 reg [WORDBITSZ -1 : 0] excTval2; // ### comb-block-reg.
 reg [2 -1 : 0] excNxtPriv; // ### comb-block-reg.
 // Interrupt handling is done in following decreasing
-// priority order: MEI, MSI, MTI, SEI, SSI, STI.
+// priority order: MEI, SEI, MSI, SSI, MTI, STI.
 always_comb begin
 	excCause = 17'd0;
 	excEpc = (eX_JumpOrBranch ? iF_pc : iD_pc);
