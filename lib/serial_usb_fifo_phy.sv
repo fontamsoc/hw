@@ -10,8 +10,7 @@
 //
 // PHYCLKFREQ
 // 	Frequency of the phy clock "clk_phy_i" in Hz.
-// 	Must be 48000000 or 60000000 for full speed,
-// 	60000000 for high speed.
+// 	Must be 48000000.
 //
 // DEPTH
 // 	Max number of data that the fifo can contain.
@@ -40,9 +39,8 @@
 //
 // clk_phy_i
 // 	Clock input used by the internal module which transmit
-// 	and receive each bit; due to usb_cdc_core requirements,
-// 	its frequency must be 48 MHz or 60 MHz for full speed,
-// 	60 MHz for high speed.
+// 	and receive each bit; due to usb_fs_phy requirements,
+// 	its frequency must be 48 MHz.
 //
 // usb_dp_io
 // usb_dn_io

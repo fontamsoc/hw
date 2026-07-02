@@ -10,8 +10,7 @@
 //
 // PHYCLKFREQ
 // 	Frequency of the clock input "clk_i" in Hz.
-// 	Must be 48000000 or 60000000 for full speed,
-// 	60000000 for high speed.
+// 	Must be 48000000.
 
 // Ports:
 //
