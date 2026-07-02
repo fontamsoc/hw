@@ -135,7 +135,7 @@ READELF := ${PREFIX}-readelf
 
 CFLAGS += -Werror -fdata-sections -ffunction-sections -Wl,--gc-sections -O3 -g
 CFLAGS += -nostdlib
-CFLAGS += -march=rv32ima_zba_zbb_zbc_zbs_zicsr_zifencei
+CFLAGS += -march=rv32ima_zicsr_zifencei_zba_zbb_zbc_zbs
 # Below used to make stvec_handler and mtvec_handler null when not used by a test;
 # Making stvec_handler and mtvec_handler weak symbols does not work because they become global
 # but they need to be local to each test.
