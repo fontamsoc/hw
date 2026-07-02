@@ -112,8 +112,8 @@ end
 `ifdef PUIDIVDSP
 // ===== DSP Newton-Raphson divider (reciprocal NR, 1.32 fixed point, + residual fixup). =====
 // |D| normalized (Dn=|D|<<clz); seed r0~(1/dn)*2^32; 2 iters R<-R*(2-Dn*R); Q=(|N|*R)>>(64-clz);
-// rem=|N|-Q*|D| then a single +/-1 correction => EXACT quotient+remainder (validated by
-// rvxx/idiv_nr_model.py: 0 fails, max 1 correction step). |D|==0 needs NO special case: the residual
+// rem=|N|-Q*|D| then a single +/-1 correction => EXACT quotient+remainder (validated:
+// 0 fails, max 1 correction step). |D|==0 needs NO special case: the residual
 // leaves rem=|N| (rem/0=dividend) and the shared result-select overrides the quotient to all-ones
 // (x/0=-1). Multiplies infer MULT18X18D. NR path assumes WORDBITSZ==32 (seed table + shift widths).
 `include "idiv_recip_seed.vh"
@@ -442,7 +442,7 @@ endmodule
 // The remainder and quotient use the same
 // register; 0 is shifted-in from the right
 // everytime the divider is greater than
-// the quotien, otherwise 1 is shifted-in
+// the remainder, otherwise 1 is shifted-in
 // from the right.
 // The example below is a 4bits division,
 // hence four shift are needed; rq stands

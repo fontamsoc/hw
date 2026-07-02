@@ -202,7 +202,7 @@ always_comb begin
 		rslt_o = rslt_o_[WORDBITSZ-1:0];
 end
 
-// Register used to count the number of two-bits-set already used from the multiplier.
+// Register used to count the number of two-bits-set already used from the multiplicand.
 reg [(CLOG2WORDBITSZ-1) -1 : 0] cntr;
 
 always_ff @(posedge clk_i) begin
@@ -382,7 +382,7 @@ always_ff @(posedge clk_i) begin
 	// be registered using clk_i so to be stable input values; it also means that
 	// sigmal rdy_o posegde must happen at least (freq(clk_imul_i)/freq(clk_i))
 	// clk_imul_i cycles after its negedge; which is guarateed by the fact that
-	// imul computation takes at least that many clk_imul_i cycles.
+	// the iterative (non-PUIMULDSP) imul computation takes at least that many clk_imul_i cycles.
 	if (rst_i)
 		_stb_i <= 0;
 	else begin
@@ -420,7 +420,8 @@ end endgenerate
 
 endmodule
 
-// Multiplication algorithms (implementation above uses radix-4).
+// Multiplication algorithms (implementation above uses radix-4 by default,
+// or DSP hardware multipliers under PUIMULDSP).
 //
 // Radix-2 Multiplication.
 // The multiplier is examined one bit at a time.

@@ -5,7 +5,7 @@
 # The divider |D| is normalized so its MSB sits at bit 31: Dn = |D| << clz(|D|), Dn in [2^31, 2^32).
 # The seed r0 ~ (1/dn)*2^32, dn = Dn/2^32 in [0.5,1), so r0 in (2^32, 2^33] (34-bit). Index = the
 # 7 bits Dn[30:24] (128 bins; the implied MSB bit31 is dropped). Two NR iterations from this seed
-# reach exact 32-bit floor division with a single +/-1 residual correction (validated idiv_nr_model.py).
+# reach exact 32-bit floor division with a single +/-1 residual correction (validated).
 F = 32
 SEEDBITS = 7
 NSEED = 1 << SEEDBITS
