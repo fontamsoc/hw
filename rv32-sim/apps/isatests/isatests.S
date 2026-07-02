@@ -105,6 +105,7 @@ _start:
 	TEST(amominu_w)
 	TEST(amomaxu_w)
 	TEST(lrsc)
+	TEST(x0fwd)
 
 	csrw mtvec, x0; /* needed to indefinitely halt on ebreak */
 	ebreak;

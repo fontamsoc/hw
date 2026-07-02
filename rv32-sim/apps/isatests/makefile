@@ -88,6 +88,7 @@ TESTS += amomax_w
 TESTS += amominu_w
 TESTS += amomaxu_w
 TESTS += lrsc
+TESTS += x0fwd
 
 TESTS_OBJS = $(addsuffix .o,${TESTS})
 
