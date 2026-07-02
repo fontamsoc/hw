@@ -54,11 +54,11 @@
 //
 // IRQDSTCOUNT
 // 	Number of interrupt destination.
-// 	It must be non-null and less than ((1<<(WORDBITSZ-5))-2).
+// 	It must be non-null and less than ((1<<(WORDBITSZ-3))-2).
 //
 // IRQSRCCOUNT
 // 	Number of interrupt source.
-// 	It must be non-null and less than ((1<<(WORDBITSZ-5))-2).
+// 	It must be non-null and less than ((1<<(WORDBITSZ-3))-2).
 
 // Ports:
 //
