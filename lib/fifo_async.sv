@@ -22,7 +22,7 @@
 // Ports:
 //
 // rst_i
-// 	When high on "clk_write_i" posedge, the fifo reset
+// 	When high on "clk_write_i" and "clk_read_i" posedges, the fifo reset
 // 	itself empty; it must be low to write data in the fifo.
 //
 // usage_o

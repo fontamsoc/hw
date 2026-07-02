@@ -22,7 +22,7 @@
 // Ports:
 //
 // rst_i
-// 	When high on "clk_write_i" posedge, the fifo reset
+// 	When high on "clk_write_i" and "clk_read_i" posedges, the fifo reset
 // 	itself empty; it must be low to write data in the fifo.
 //
 // usage_o
@@ -61,11 +61,9 @@
 //
 // near_full_o
 // 	High when the fifo is full or one write away to full.
-//  Asynchronous-safe with respect to "clk_write_i" and "clk_read_i".
 //
 // full_o
 // 	High when the fifo is full.
-//  Asynchronous-safe with respect to "clk_write_i" and "clk_read_i".
 //
 // Ports for reading data from the fifo:
 //
@@ -82,11 +80,9 @@
 //
 // near_empty_o
 // 	High when the fifo is empty or one read away to empty.
-//  Asynchronous-safe with respect to "clk_write_i" and "clk_read_i".
 //
 // empty_o
 // 	High when the fifo is empty.
-//  Asynchronous-safe with respect to "clk_write_i" and "clk_read_i".
 
 `include "lib/ram/bram.sv"
 

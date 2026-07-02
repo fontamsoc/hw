@@ -22,7 +22,7 @@
 // Ports:
 //
 // rst_i
-// 	When high on "clk_pop_i" posedge, the fifo reset
+// 	When high on "clk_push_i" and "clk_pop_i" posedges, the fifo reset
 // 	itself empty; it must be low to push data in the fifo.
 //
 // usage_o
@@ -61,7 +61,7 @@
 //
 // near_full_o
 // 	High when the fifo is full or one write away to full.
-//  Asynchronous-safe with respect to "clk_write_i" and "clk_read_i".
+//  Asynchronous-safe with respect to "clk_push_i" and "clk_pop_i".
 //
 // full_o
 // 	High when the fifo is full.
@@ -77,12 +77,12 @@
 // 	on "data_o"; the fifo must not be empty.
 //
 // data_o
-// 	Data from the fifo; its value is updated
-// 	on "clk_pop_i" posedge, if "pop_i" is high.
+// 	Data from the fifo; its value falls through without "pop_i",
+// 	and advances on "clk_pop_i" posedge, if "pop_i" is high.
 //
 // near_empty_o
 // 	High when the fifo is empty or one read away to empty.
-//  Asynchronous-safe with respect to "clk_write_i" and "clk_read_i".
+//  Asynchronous-safe with respect to "clk_push_i" and "clk_pop_i".
 //
 // empty_o
 // 	High when the fifo is empty.
