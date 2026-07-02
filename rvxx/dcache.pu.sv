@@ -362,7 +362,7 @@ end
 
 always_ff @(posedge clk_i) begin
 	// Note that dCache_m_stb_i is false when dCache_m_max_pending is true,
-	// because __dCache_m_bsy would be false causing iD_insn_valid to be false as well.
+	// because __dCache_m_bsy would be true causing iD_insn_valid to be false as well.
 	dCache_m_bsy_r <= (dCache_m_bsy_o && dCache_m_stb_i);
 	if (dCache_m_stb_i) begin
 		dCache_m_lock_r <= dCache_m_lock_i;

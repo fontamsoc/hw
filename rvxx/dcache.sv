@@ -16,7 +16,8 @@
 			discarded while the requesting data-cache proceed to the REFILL state to fetch the data needed.
 - When writing:
 	- Send write request to update any other data-caches with a matching cache-tag,
-		keeping their dirty state unchanged, because only the data-cache being written will have
+		keeping their dirty state unchanged (made clean instead when the write request updates
+		all bits), because only the data-cache being written will have
 		its cache-entry set dirty, and we only want one of the data-caches to flush-to-memory.
 - Coherency requests have priority over regular operations that are not atomic.
 - Coherency requests never create/flush/refill a cache-entry in a data-cache; they only use/update
