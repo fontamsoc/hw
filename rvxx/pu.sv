@@ -19,7 +19,7 @@
 //
 // PURV32ZBA
 // 	"Zba" address-generation bit-manipulation extension
-// 	(sh1add/sh2add/sh3add and their ".uw" address forms).
+// 	(sh1add/sh2add/sh3add).
 //
 // PURV32ZBB
 // 	"Zbb" basic bit-manipulation extension (andn/orn/xnor, clz/ctz/cpop,
@@ -108,20 +108,15 @@
 //
 // ICACHESETCNT
 // 	Number of instruction cache set.
-// 	Each cache set is WORDBITSZ bits.
+// 	Each cache set is XWORDBITSZ bits.
 // 	It must be at least 2, a power-of-2,
 // 	and less than or equal to 2^(ADDRBITSZ-1).
 //
 // DCACHESETCNT
 // 	Number of data cache set.
-// 	Each cache set is WORDBITSZ bits.
-// 	It must be at least 2, a power-of-2,
+// 	Each cache set is XWORDBITSZ bits.
+// 	It must be 0, or at least 2, a power-of-2,
 // 	and less than or equal to 2^(ADDRBITSZ-1).
-//
-// TLBSETCNT
-// 	Number of tlb entries.
-// 	It must be at least 2, a power-of-2,
-// 	and less than or equal to 2^(PAGENUMBITSZ-1).
 //
 // ICACHEWAYCNT
 // 	Number of icache ways.
@@ -197,8 +192,7 @@
 //
 // rstaddr_i
 // 	Address where the pu begin executing instruction after reset.
-// 	It is to be a 32bits address for which the least significant
-// 	bit has been discarded.
+// 	It is to be a 32bits address.
 //
 // irq_stb_i
 // irq_stb_o
@@ -557,7 +551,7 @@ wire iF_opClmul_stb = (iF_isZbc && iF_rdId); // rd!=x0 (mirrors iF_opImul_stb).
 // Zbs single-bit: bset(func7=0010100)/bclr(0100100)/binv(0110100) with func3=001, and
 // bext(0100100) with func3=101; both OP and OP-IMM forms (the immediate forms carry func7
 // in imm[11:5] and the bit index in imm[4:0]). These func7 values are distinct from
-// Zba/Zbb/M/Zbc, so no double-decode.
+// Zba/Zbb/M/Zbc within each func3, so no double-decode.
 wire iF_isZbs =
 	((iF_isALUreg || iF_isALUimm) && iF_func3 == 3'b001 &&
 		(iF_func7 == 7'b0010100 || iF_func7 == 7'b0100100 || iF_func7 == 7'b0110100)) || // bset/bclr/binv
@@ -569,9 +563,8 @@ wire iF_isZbs =
 // func7[1:0] must be 00 (single); sub-op via func7[6:2] (+func3, +rs2 for fcvt/fsqrt).
 // Multi-cycle: every FP op retires via the WriteBack arbiter (lateResultInsn), so the
 // whole FPU stays off the scoreboard/forwarding Fmax cone -- even the 1-cycle ops.
-// STAGE 1 decodes only the 1-cycle ops (sign/min-max/compare/class); arithmetic and
-// fcvt encodings stay illegal until their stages land. FMA/FLW/FSW/FMV are never
-// Zfinx, so they keep trapping illegal.
+// FLW/FSW/FMV are never Zfinx, and FMA is not implemented, so they keep
+// trapping illegal.
 wire iF_isOpFp  = (iF_insn[6:2] == 5'b10100);
 wire iF_fpFmtS  = (iF_func7[1:0] == 2'b00);
 wire [5 -1 : 0] iF_fpFunct5 = iF_func7[6:2];
@@ -917,7 +910,7 @@ wire iD_needsRs1 = (iD_is3OprndD12 || iD_is2OprndD1 || iD_is2Oprnd12);
 wire iD_needsRs2 = (iD_is3OprndD12 || iD_is2Oprnd12);
 
 `ifdef PURV32ZFINX
-// fcsr/frm/fflags (0x001/0x002/0x003). Drain-gated against in-flight FP ops below.
+// fflags/frm/fcsr (0x001/0x002/0x003). Drain-gated against in-flight FP ops below.
 wire iD_isFcsrAccess = (iD_isCSR &&
 	(iD_Iimm[11:0] == 12'h001 || iD_Iimm[11:0] == 12'h002 || iD_Iimm[11:0] == 12'h003));
 `endif
@@ -1017,7 +1010,7 @@ assign iD_rs2 = (
 	iD_rs2Id_eq_iD_rW_rdId ? iD_rW_rslt :
 	iD_rs2Id ? iD_rs2_ : {WORDBITSZ{1'b0}});
 // iD*_r*Rdy_ registers capture the availability of rd, rs1 and rs2
-// registers only when an instruction enters the iDecoded stage.
+// registers when an instruction enters the iDecoded stage.
 // iD*_r*Rdy__ registers become true when rd, rs1 and rs2 registers become
 // available while the instruction is stalled at the iDecoded stage.
 reg iD_rdRdy_,  iD_rdRdy__;
@@ -1199,7 +1192,7 @@ wire [WORDBITSZ -1 : 0] eX_aluArg2_i = (iD_isALUregOrBranch ? iD_rs2 : iD_Iimm);
 // The adder is used by both arithmetic instructions and JALR.
 wire [WORDBITSZ -1 : 0] eX_aluPlus_i = (eX_aluArg1_i + eX_aluArg2_i);
 
-// Use a single (WORDBITSZ+1) bits subtract to do subtraction and all comparisons.
+// Use a single (WORDBITSZ+1) bits subtract to do subtraction and all non-branch comparisons.
 wire [(WORDBITSZ+1) -1 : 0] eX_aluMinus_i = (({1'b1, ~eX_aluArg2_i} + {1'b0, eX_aluArg1_i}) + 1'b1);
 wire eX_lt_i = (
 	(eX_aluArg1_i[WORDBITSZ-1] ^ eX_aluArg2_i[WORDBITSZ-1]) ?

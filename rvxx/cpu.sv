@@ -10,8 +10,7 @@
 //
 // rstaddr2_i
 // 	Address where PUs with non-null PUID begin executing
-// 	instructions when woken-up. It is to be a 32bits address
-// 	for which the least significant bit has been discarded.
+// 	instructions when woken-up. It is to be a 32bits address.
 //
 // Refer to documentation in pu.sv head for remaining parameters and ports.
 
