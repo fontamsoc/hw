@@ -361,8 +361,9 @@ always_ff @(posedge clk_i) begin
 end
 
 always_ff @(posedge clk_i) begin
-	// Note that dCache_m_stb_i is false when dCache_m_max_pending is true,
-	// because __dCache_m_bsy would be true causing iD_insn_valid to be false as well.
+	// Note that dCache_m_max_pending blocks dCache_m_stb_i only for newly-issued operations
+	// (__dCache_m_bsy stalls the memory op at decode, nulling iD_insn_valid); a retry under
+	// dCache_m_bsy_r or the AMO write-back on amoUnit_memAck can still raise it.
 	dCache_m_bsy_r <= (dCache_m_bsy_o && dCache_m_stb_i);
 	if (dCache_m_stb_i) begin
 		dCache_m_lock_r <= dCache_m_lock_i;
