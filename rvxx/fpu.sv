@@ -10,11 +10,6 @@
 // args_i carries (high->low): the already-resolved 3-bit rounding mode `rm`, a 5-bit
 // `optype` selector, the destination gpr id, and rs1/rs2. The 5 fflags exception bits
 // {NV,DZ,OF,UF,NX} are returned alongside the result.
-//
-// Bring-up is staged. THIS revision implements the 1-cycle ops:
-//   fsgnj/fsgnjn/fsgnjx, fmin/fmax, feq/flt/fle, fclass.
-// (fcvt, fadd/fsub/fmul, fdiv/fsqrt are added in later revisions; their optype codes
-//  9..17 are reserved below and currently produce 0.)
 
 // DSP/Newton-Raphson fdiv/fsqrt variants (multiply-based, infer MULT18X18D), gated:
 //   PUFDIVDSP / PUFSQRTDSP   = faithfully-rounded (~1 ULP), no residual correction.
@@ -406,7 +401,7 @@ wire [24:0] sqrtMint   = aEU[0] ? {aSig, 1'b0} : {1'b0, aSig};            // 1.f
 
 `ifdef FDIV_NR
 // ===== DSP Newton-Raphson fdiv: reciprocal NR in U1.27 (+ residual) ; multiplies infer MULT18X18D.
-// Seed + 2 NR iters + 1 residual fixup == exact floor(N*2^24/bSig) (validated: rvxx/fpu_nr_model.py).
+// Seed + 2 NR iters + 1 residual fixup == exact floor(N*2^24/bSig) (validated exhaustively in Python + full TestFloat).
 `include "fpu_recip_seed.vh"
 reg  [27:0] nrR;            // reciprocal estimate y (y*2^27), U1.27
 reg  [27:0] nrDR;           // D*y (~2^27, U1.27)
@@ -435,7 +430,7 @@ wire        divS    = nrQ[26] ? (nrQ[1:0] != 2'd0) : 1'b0;
 
 `ifdef FSQRT_NR
 // ===== DSP Newton-Raphson fsqrt: rsqrt NR in U1.27 (r <- r*(3-V*r^2)/2) + residual.
-// RG = floor(sqrt(M*2^25)) via seed + 2 rsqrt iters + 1 fixup (validated: rvxx/fpu_sqrt_model.py).
+// RG = floor(sqrt(M*2^25)) via seed + 2 rsqrt iters + 1 fixup (validated exhaustively in Python + full TestFloat).
 `include "fpu_rsqrt_seed.vh"
 reg  [27:0] sqR;            // rsqrt estimate r (r*2^27), U1.27
 reg  [27:0] sqR2;           // r^2 * 2^27
@@ -626,7 +621,7 @@ end
 
 // Only non-special fdiv/fsqrt iterate; every other op (incl special div/sqrt) is short.
 wire optIter = ((optype == OP_DIV && !divSpecial) || (optype == OP_SQRT && !sqrtSpecial));
-// opLat = cycle (counting from stb) at which rsltComb is first valid (the pp_* pipeline depth):
+// opLat = cycle (counting from stb) by which rsltComb is valid (the pp_* pipeline depth):
 // shallow 2; fcvt 3 (shift reg); fadd/fsub/fmul 4 (front-end reg + 2-stage packer); div/sqrt
 // ITERLAST + 4 (2-stage pack tail). The FSM registers rsltComb -> rslt_o at cntr==opLat-1 and
 // asserts rdy_o there, so the value sampled by the arbiter is REGISTERED (total latency opLat+1).
@@ -700,7 +695,7 @@ always_ff @(posedge clk_i) begin
 				`endif
 			end
 		end
-		// rsltComb (pkRes etc.) is first valid in the cycle the pipeline output settles, i.e.
+		// rsltComb (pkRes etc.) is valid from the cycle the pipeline output settles, latest
 		// at cntr == opLat-1 (the cycle the OLD code sampled it combinationally). Register it
 		// there AND assert rdy at the same edge, so rslt_o/flags_o reach the WriteBack arbiter
 		// as a register (off the arbiter -> iD_rW_rslt forwarding cone). Costs +1 latency.

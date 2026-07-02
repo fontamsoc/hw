@@ -1,3 +1,4 @@
+// 128-entry rsqrt seed r0 ~ (1/sqrt(V))*2^27, V in [1,4), idx={aEU[0],aSig[22:17]}. From fpu_seedgen.py.
 function automatic logic [27:0] fsqrtRsqrtSeed (input logic [6:0] idx);
 	case (idx)
 	7'd0: fsqrtRsqrtSeed = 28'h7f80bec;

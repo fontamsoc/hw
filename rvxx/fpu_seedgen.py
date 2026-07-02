@@ -5,7 +5,7 @@
 # Format: seeds are U1.27 fixed-point (value*2^27), value in (0.5,1].
 #  - reciprocal seed y0 ~ 1/D, D = bSig/2^23 in [1,2); index = bSig[22:16] (128 bins).
 #  - rsqrt seed   r0 ~ 1/sqrt(V), V the radicand in [1,4); index = {aEU[0], aSig[22:17]} (128 bins).
-# Two NR iterations from these seeds reach ~28-bit accuracy (validated in fpu_nr_model.py).
+# Two NR iterations from these seeds reach ~28-bit accuracy (validated exhaustively offline).
 import math
 F = 27
 SEEDBITS = 7

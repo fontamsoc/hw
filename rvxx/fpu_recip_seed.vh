@@ -1,3 +1,4 @@
+// 128-entry reciprocal seed y0 ~ (1/D)*2^27, D=bSig/2^23, idx=bSig[22:16]. From fpu_seedgen.py.
 function automatic logic [27:0] fdivRecipSeed (input logic [6:0] idx);
 	case (idx)
 	7'd0: fdivRecipSeed = 28'h7f807f8;
@@ -131,5 +132,3 @@ function automatic logic [27:0] fdivRecipSeed (input logic [6:0] idx);
 	default: fdivRecipSeed = 28'h8000000;
 	endcase
 endfunction
-
-// 128-entry rsqrt seed r0 ~ (1/sqrt(V))*2^27, V in [1,4), idx={aEU[0],aSig[22:17]}. From fpu_seedgen.py.
