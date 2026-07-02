@@ -13,7 +13,7 @@
 // 	instructions when woken-up. It is to be a 32bits address
 // 	for which the least significant bit has been discarded.
 //
-// Refer to documentation in pu.v head for remaining parameters and ports.
+// Refer to documentation in pu.sv head for remaining parameters and ports.
 
 `include "./pu.sv"
 

@@ -5,10 +5,10 @@ localparam ICACHETAGBITSZ = ((ADDRBITSZ-MSBSZIGN) - (CLOG2ICACHESETCNT + CLOG2XW
 
 wire                            iCache_invd_w;
 wire                            iCache_nxtway_w;
-wire                            iCache_we_w;     /* set in memctrl.pu.v */
-wire [CLOG2ICACHESETCNT -1 : 0] iCache_widx_w;   /* set in memctrl.pu.v */
-wire [ICACHETAGBITSZ -1 : 0]    iCache_wtag_w;   /* set in memctrl.pu.v */
-wire [XWORDBITSZ -1 : 0]        iCache_dati_w;   /* set in memctrl.pu.v */
+wire                            iCache_we_w;     /* set in memctrl.pu.sv */
+wire [CLOG2ICACHESETCNT -1 : 0] iCache_widx_w;   /* set in memctrl.pu.sv */
+wire [ICACHETAGBITSZ -1 : 0]    iCache_wtag_w;   /* set in memctrl.pu.sv */
+wire [XWORDBITSZ -1 : 0]        iCache_dati_w;   /* set in memctrl.pu.sv */
 wire                            iCache_re_w;
 wire [CLOG2ICACHESETCNT -1 : 0] iCache_ridx_w;
 wire [ICACHETAGBITSZ -1 : 0]    iCache_rtag_w;
