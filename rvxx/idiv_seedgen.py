@@ -16,8 +16,7 @@ print("function automatic logic [33:0] idivRecipSeed (input logic [6:0] idx);")
 print("\tcase (idx)")
 for i in range(NSEED):
     Dn_mid = (1 << 31) + (i << (31 - SEEDBITS)) + (1 << (30 - SEEDBITS))
-    r0 = round((1 << 64) // 1 / Dn_mid)  # 2^64 / Dn_mid  == (1/dn)*2^32
-    r0 = min(int(round((1 << 64) / Dn_mid)), 1 << (F + 1))
+    r0 = min(int(round((1 << 64) / Dn_mid)), 1 << (F + 1))  # 2^64 / Dn_mid  == (1/dn)*2^32
     print(f"\t7'd{i}: idivRecipSeed = 34'h{r0:09x};")
 print("\tdefault: idivRecipSeed = 34'h100000000;")  # 2^32
 print("\tendcase")
