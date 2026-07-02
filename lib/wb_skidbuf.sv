@@ -76,25 +76,29 @@ input  wire [WORDBITSZ -1 : 0]            s_wb_dat_i;
 
 localparam CLOG2DEPTH = clog2(DEPTH);
 
-// Single up/down occupancy counter (accepted requests not yet responded), instead
-// of separate rqst_cnt/resp_cnt and a subtract: max_pending comes from a registered
-// bit rather than a subtract result.
-reg [(CLOG2DEPTH +1) -1 : 0] pending_acks;
+// Single up/down occupancy counter (accepted requests not yet delivered, deliveries
+// counted one cycle late), instead of separate rqst_cnt/resp_cnt and a subtract:
+// max_outstanding comes from a registered bit rather than a subtract result.
+reg [(CLOG2DEPTH +1) -1 : 0] outstanding_rqsts;
 
-wire max_pending = pending_acks[CLOG2DEPTH];
+wire max_outstanding = outstanding_rqsts[CLOG2DEPTH];
 
 wire rqst_bsy_o_w;
 
-assign m_wb_bsy_o = (rqst_bsy_o_w || max_pending);
+assign m_wb_bsy_o = (rqst_bsy_o_w || max_outstanding);
 
 wire rqst_accepted = (m_wb_stb_i && !m_wb_bsy_o); // a request enters
-wire resp_received = s_wb_ack_i;                  // a response leaves
+reg  resp_received; // a response was delivered to the master a cycle ago; registered so
+// that the counter cone stays off the m_wb_bsy_i/resp_stb_o_w combinational fanin; the
+// lagged decrement only throttles earlier, so (accepted - delivered) <= DEPTH still holds.
+always_ff @(posedge clk_i)
+	resp_received <= (!rst_i && m_wb_ack_o);
 
 always_ff @(posedge clk_i) begin
 	if (rst_i)
-		pending_acks <= 0;
+		outstanding_rqsts <= 0;
 	else if (rqst_accepted != resp_received) // net change only when exactly one occurs
-		pending_acks <= (rqst_accepted ? (pending_acks + 1'b1) : (pending_acks - 1'b1));
+		outstanding_rqsts <= (rqst_accepted ? (outstanding_rqsts + 1'b1) : (outstanding_rqsts - 1'b1));
 end
 
 skidbuf #(
@@ -107,7 +111,7 @@ skidbuf #(
 
 	,.clk_i (clk_i)
 
-	,.stb_i (m_wb_stb_i && !max_pending)
+	,.stb_i (m_wb_stb_i && !max_outstanding)
 	,.dat_i ({m_wb_lock_i, m_wb_we_i, m_wb_addr_i, m_wb_sel_i, m_wb_dat_i})
 	,.bsy_o (rqst_bsy_o_w)
 
@@ -117,6 +121,7 @@ skidbuf #(
 );
 
 wire resp_stb_o_w;
+wire resp_bsy_o_w; // only read by the SIMULATION-only guard below; pruned in synthesis.
 
 assign m_wb_ack_o = (resp_stb_o_w && !m_wb_bsy_i);
 // Un-gated response-available: stays high while a completed response is held by
@@ -135,12 +140,21 @@ skidbuf #(
 
 	,.stb_i (s_wb_ack_i)
 	,.dat_i (s_wb_dat_i)
-	,.bsy_o (/* never becomes true because `max_pending` protects */)
+	,.bsy_o (resp_bsy_o_w /* stays low: max_outstanding bounds undelivered responses to DEPTH, so no ack ever arrives while full */)
 
 	,.stb_o (resp_stb_o_w)
 	,.dat_o (m_wb_dat_o)
 	,.bsy_i (m_wb_bsy_i)
 );
+
+`ifdef SIMULATION
+// Guard for the invariant stated at the `skidbuf_resp` bsy_o port above: an ack
+// is a pulse (never held/retried), so a push while full would be silently dropped.
+always_ff @(posedge clk_i) begin
+	if (!rst_i && s_wb_ack_i && resp_bsy_o_w)
+		$error("%m: response fifo overflow: ack dropped");
+end
+`endif
 
 endmodule
 
