@@ -1589,7 +1589,8 @@ reg [CLOG2GPRCNT -1 : 0] rW_idx_i; // ### comb-block-reg.
 reg [WORDBITSZ -1 : 0]   rW_dat_i; // ### comb-block-reg.
 
 `ifdef PUFWDALL
-assign iD_eX_rdId_isTrue  = rW_we_i;
+// (|rW_idx_i): x0 guard -- a multicycle result retiring into rd == x0 must not be forwarded.
+assign iD_eX_rdId_isTrue  = (rW_we_i && (|rW_idx_i));
 assign iD_eX_rdId         = rW_idx_i;
 assign iD_eX_rslt         = rW_dat_i;
 `else
@@ -1754,7 +1755,8 @@ always_ff @(posedge clk_i) begin
 			iD_rW_rdId_isTrue <= 1'b0;
 			iD_rW_rdId <= {CLOG2GPRCNT{1'b0}};
 		end else begin
-			iD_rW_rdId_isTrue <= 1'b1;
+			// (|rW_idx_i): x0 guard -- a multicycle op can have rd == x0 (lw/div/amo* x0,...).
+			iD_rW_rdId_isTrue <= (|rW_idx_i);
 			iD_rW_rdId <= rW_idx_i;
 		end
 		iD_rW_rslt <= rW_dat_i;
