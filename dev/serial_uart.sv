@@ -36,7 +36,7 @@
 // 	CMDSETSPEED: Set the speed to use when sending and receiving bytes.
 // 	"arg" value is the speed computed as follow: (PHYCLKFREQ/bitrate);
 // 	ei: For a PHYCLKFREQ of 100 Mhz and a bitrate of 115200 bps,
-// 	the above formula yield 867.
+// 	the above formula yield 868.
 // 	"resp" in the result get set to PHYCLKFREQ.
 //
 // To be multi core proof, an atomic read-write must be used to send

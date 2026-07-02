@@ -32,7 +32,7 @@
 //
 // clockcyclesperbit_i
 // 	This input is used to adjust the transmission bitrate.
-// 	Given the bitrate and frequency of the clock input clk_i,
+// 	Given the bitrate and frequency of the clock input clk_phy_i,
 // 	the value of this input is calculated using the following formula:
 // 	((clkfreq/bitrate) + ((clkfreq/bitrate)/10/2)); where the expression
 // 	((clkfreq/bitrate)/10/2) is the clock cycles amount that insures
@@ -41,7 +41,7 @@
 // 	receiving the next byte, any accumulated skew from the beginning of
 // 	a bit get discarded as the receiver detects the exact beginning of a bit.
 // 	ie: For a clkfreq of 100 Mhz and a bitrate of 115200 bps, the above
-// 	formula yield 909.458; the value of this input is then picked as: 909.
+// 	formula yield 911.458; the value of this input is then picked as: 911.
 //
 // read_i
 // data_o

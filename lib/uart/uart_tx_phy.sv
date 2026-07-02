@@ -9,7 +9,7 @@
 // - Expect to send 8 data bits;
 // 	no parity bits.
 // - Send least significant bit first.
-// - Transmit 2 stop bits.
+// - Transmit 1 stop bit.
 // An 8 bits data transmission begins with a start bit
 // which is a logic low state of the tx_o line, followed
 // by the 8 bits to transmit and terminated by 1 or more
@@ -40,8 +40,8 @@
 // 	of a bit, this way a receiver is guarantied to always sample
 // 	past the beginning of each bit, and not fall short by sampling
 // 	the same bit twice. ie: For a clkfreq of 100 Mhz and a bitrate
-// 	of 115200 bps, the above formula yield 866.056;
-// 	the value of this input is then picked as: 866.
+// 	of 115200 bps, the above formula yield 868.056;
+// 	the value of this input is then picked as: 868.
 //
 // stb_i
 // 	This signal is to be set high to transmit "data_i" if "rdy_o" is high.
@@ -55,9 +55,8 @@
 // tx_o
 // 	Outgoing serial line.
 //
-// To flush unknown states through "tx_o" after poweron,
-// this module must be run for a clock cycle count of at least
-// (10 * CLOCKCYCLESPERBITLIMIT), with "stb_i" low.
+// To set "tx_o" to a known state after poweron,
+// "rst_i" must be asserted for at least one clock cycle.
 
 module uart_tx_phy (
 
