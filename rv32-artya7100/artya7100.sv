@@ -22,8 +22,8 @@
 `define PUPREDICTBRANCH
 `define PUPREDICTRET
 `include "rvxx/cpu.sv"
-/* makefile defined *///`define CPU_COUNT 1
-/* makefile defined *///`define XWORDBITSZ 32
+/* impl_1.sv defined *///`define CPU_COUNT 1
+/* impl_1.sv defined *///`define XWORDBITSZ 32
 
 `include "lib/wb_arbiter.sv"
 `include "lib/wb_mux.sv"
@@ -34,8 +34,8 @@
 `include "dev/serial_uart.sv"
 
 `include "dev/sram.sv"
-/* makefile defined *///`define SRAM_KBSIZE (256/*KB*/)
-/* makefile defined *///`define SRAM_INITFILE "artya7100.sram.hex"
+/* impl_1.sv defined *///`define SRAM_KBSIZE (256/*KB*/)
+/* impl_1.sv defined *///`define SRAM_INITFILE "artya7100.sram.hex"
 
 module artya7100 (
 
