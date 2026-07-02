@@ -18,6 +18,9 @@ TESTS += divu
 TESTS += jalr
 TESTS += jal
 TESTS += j
+# Disabled: fence.i invalidates the icache but dirty dcache lines are not
+# evicted (dcache.pu.sv .invd_i TODO), so refetch reads stale memory.
+#TESTS += fence_i
 TESTS += lb
 TESTS += lbu
 TESTS += lh
@@ -37,13 +40,17 @@ TESTS += sh
 TESTS += slli
 TESTS += sll
 TESTS += slti
+TESTS += sltiu
 TESTS += slt
+TESTS += sltu
 TESTS += srai
 TESTS += sra
 TESTS += srli
 TESTS += srl
 TESTS += sub
 TESTS += sw
+TESTS += ld_st
+TESTS += st_ld
 TESTS += xori
 TESTS += xor
 TESTS += sh1add
@@ -90,16 +97,34 @@ TESTS += amomaxu_w
 TESTS += lrsc
 TESTS += x0fwd
 TESTS += mcsr
+TESTS += machine_csr
 TESTS += scsr
+TESTS += msbreak
+TESTS += ssbreak
+TESTS += mscall
+TESTS += sscall
 TESTS += mfetch_misaligned
 TESTS += sfetch_misaligned
 TESTS += ma_addr
+# Disabled: the decoder accepts slli encodings with shamt[5] set instead of
+# trapping illegal-instruction.
+#TESTS += shamt
+# Disabled: needs sfence.vma (not decoded; traps illegal-instruction) and the
+# mstatus.TVM/TSR virtualization controls.
+#TESTS += illegal
 TESTS += lh_misaligned
 TESTS += lw_misaligned
 TESTS += sh_misaligned
 TESTS += sw_misaligned
+TESTS += zicntr
+# rv32si/wfi is not included: wfi only wakes on external/timer interrupts
+# (sys.pu.sv halted_o mask lacks the software-interrupt bits), so the upstream
+# test, which relies on a pending SSIP, would hang.
+# rv64mi/instret_overflow is not included: minstret reads as hardwired zero,
+# so the test would pass vacuously.
 
 TESTS_OBJS = $(addsuffix .o,${TESTS})
+
 
 PREFIX := riscv32-unknown-elf
 
@@ -124,6 +149,13 @@ all: ${APPNAME}.bin
 %.o : tests/%.S
 	${CC} ${CFLAGS} -I ./tests/ -c -o $@ \
 		-DTEST_FUNC_NAME=$* -DTEST_FUNC_TXT='"$*"' -DTEST_FUNC_RET=$*_ret $<
+
+# Rebuild objects when the shared headers or #include'd test bodies change.
+${TESTS_OBJS}: tests/riscv_test.h tests/test_macros.h tests/encoding.h
+mcsr.o: tests/scsr.S
+mfetch_misaligned.o: tests/sfetch_misaligned.S
+msbreak.o: tests/ssbreak.S
+mscall.o: tests/sscall.S
 
 ${APPNAME}.bin: ${APPNAME}.S ${TESTS_OBJS}
 	${CC} ${CFLAGS} -I ./ -o ${APPNAME}.elf -Wl,-T${APPNAME}.lds $^

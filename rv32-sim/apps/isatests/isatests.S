@@ -35,6 +35,7 @@ _start:
 	TEST(jalr)
 	TEST(jal)
 	TEST(j)
+/*	TEST(fence_i) */
 	TEST(lb)
 	TEST(lbu)
 	TEST(lh)
@@ -54,13 +55,17 @@ _start:
 	TEST(slli)
 	TEST(sll)
 	TEST(slti)
+	TEST(sltiu)
 	TEST(slt)
+	TEST(sltu)
 	TEST(srai)
 	TEST(sra)
 	TEST(srli)
 	TEST(srl)
 	TEST(sub)
 	TEST(sw)
+	TEST(ld_st)
+	TEST(st_ld)
 	TEST(xori)
 	TEST(xor)
 	TEST(sh1add)
@@ -107,14 +112,22 @@ _start:
 	TEST(lrsc)
 	TEST(x0fwd)
 	TEST(mcsr)
+	TEST(machine_csr)
 	TEST(scsr)
+	TEST(msbreak)
+	TEST(ssbreak)
+	TEST(mscall)
+	TEST(sscall)
 	TEST(mfetch_misaligned)
 	TEST(sfetch_misaligned)
 	TEST(ma_addr)
+/*	TEST(shamt) */
+/*	TEST(illegal) */
 	TEST(lh_misaligned)
 	TEST(lw_misaligned)
 	TEST(sh_misaligned)
 	TEST(sw_misaligned)
+	TEST(zicntr)
 
 	csrw mtvec, x0; /* needed to indefinitely halt on ebreak */
 	ebreak;

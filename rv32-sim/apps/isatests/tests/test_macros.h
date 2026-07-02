@@ -10,6 +10,14 @@
 
 #define MASK_XLEN(x) ((x) & ((1 << (__riscv_xlen - 1) << 1) - 1))
 
+#if __riscv_xlen == 64
+#define LOAD_PTR ld
+#define STORE_PTR sd
+#else
+#define LOAD_PTR lw
+#define STORE_PTR sw
+#endif
+
 #define TEST_CASE( testnum, testreg, correctval, code... ) \
 test_ ## testnum: \
     li  TESTNUM, testnum; \
@@ -294,6 +302,35 @@ test_ ## testnum: \
     addi  x4, x4, 1; \
     li  x5, 2; \
     bne x4, x5, 1b \
+
+#define TEST_LD_ST_BYPASS(testnum, load_inst, store_inst, result, offset, base) \
+test_ ## testnum: \
+    li  TESTNUM, testnum; \
+    la  x2, base;        \
+    li x1, result; \
+    store_inst x1, offset(x2); \
+    load_inst x14, offset(x2);  \
+    store_inst x14, offset(x2); \
+    load_inst x2, offset(x2);  \
+    li  x7, result; \
+    bne x2, x7, fail;  \
+    la  x2, base;        \
+    STORE_PTR x2,8(x2); \
+    LOAD_PTR x4,8(x2); \
+    store_inst x1, offset(x4); \
+    bne x4, x2, fail;  \
+    load_inst x14, offset(x4);  \
+    bne x14, x7, fail;  \
+
+#define TEST_ST_LD_BYPASS(testnum, load_inst, store_inst, result, offset, base) \
+test_ ## testnum: \
+    li  TESTNUM, testnum;            \
+    la  x2, base;                    \
+    li  x1, result;                  \
+    store_inst x1, offset(x2);       \
+    load_inst x14, offset(x2);       \
+    li  x7, result;                  \
+    bne x14, x7, fail;               \
 
 #define TEST_BR2_OP_TAKEN( testnum, inst, val1, val2 ) \
 test_ ## testnum: \

@@ -1,3 +1,9 @@
 Tests from:
-https://github.com/riscv-software-src/riscv-tests/tree/master/isa/rv32ui
-https://github.com/riscv-software-src/riscv-tests/tree/master/isa/rv32ua
+https://github.com/riscv-software-src/riscv-tests/tree/master/isa
+(rv32ui/rv64ui, rv32um, rv32ua, rv32uzba, rv32uzbb/rv64uzbb, rv32uzbs/rv64uzbs,
+rv32uzbc, rv32mi/rv64mi, rv32si/rv64si)
+
+Local adaptations: RVTEST_RV64U/S/M renamed to the RV32 forms; trap-handler
+.global lines removed so each test's handler stays local (all tests link into
+one binary); see sscall.S for the ecall-delivery adaptations required by the
+shared pass/fail ecall handler in riscv_test.h.
