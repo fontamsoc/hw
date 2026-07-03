@@ -1614,7 +1614,6 @@ reg rW_opFpu_done; // ### comb-block-reg.
 `include "./fpu.pu.sv"
 `endif
 `include "./lsu.pu.sv"
-`include "./sys.pu.sv"
 
 // The pipeline has WriteBack priority; load/MUL/DIV hold their result and retire
 // in cycles the pipeline yields the WriteBack slot, so the pipeline never stalls
@@ -1639,6 +1638,8 @@ wire rW_multicyclePending = (
 	|| opFpu_done
 	`endif
 	);
+
+`include "./sys.pu.sv"
 
 assign eX_rW_stalled = rW_isMulticycle; // csrInstret counts a retiring multicycle result.
 assign eX_rW_carryon = 1'b1;            // eX never stalls for WriteBack.
