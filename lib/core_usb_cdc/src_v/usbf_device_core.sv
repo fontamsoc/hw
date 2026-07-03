@@ -36,82 +36,45 @@
 //                          Generated File
 //-----------------------------------------------------------------
 
-module usbf_device_core (
+module usbf_device_core #(
+    parameter NUM_EP = 4 // number of endpoints implemented (EP0 included, max 16)
+)(
     // Inputs
-     input  wire        clk_i
-    ,input  wire        rst_i
-    ,input  wire [7:0]  utmi_data_i
-    ,input  wire        utmi_txready_i
-    ,input  wire        utmi_rxvalid_i
-    ,input  wire        utmi_rxactive_i
-    ,input  wire        utmi_rxerror_i
-    ,input  wire [1:0]  utmi_linestate_i
-    ,input  wire        ep0_stall_i
-    ,input  wire        ep0_iso_i
-    ,input  wire        ep0_cfg_int_rx_i
-    ,input  wire        ep0_cfg_int_tx_i
-    ,input  wire        ep0_rx_space_i
-    ,input  wire        ep0_tx_ready_i
-    ,input  wire        ep0_tx_data_valid_i
-    ,input  wire        ep0_tx_data_strb_i
-    ,input  wire [7:0]  ep0_tx_data_i
-    ,input  wire        ep0_tx_data_last_i
-    ,input  wire        ep1_stall_i
-    ,input  wire        ep1_iso_i
-    ,input  wire        ep1_cfg_int_rx_i
-    ,input  wire        ep1_cfg_int_tx_i
-    ,input  wire        ep1_rx_space_i
-    ,input  wire        ep1_tx_ready_i
-    ,input  wire        ep1_tx_data_valid_i
-    ,input  wire        ep1_tx_data_strb_i
-    ,input  wire [7:0]  ep1_tx_data_i
-    ,input  wire        ep1_tx_data_last_i
-    ,input  wire        ep2_stall_i
-    ,input  wire        ep2_iso_i
-    ,input  wire        ep2_cfg_int_rx_i
-    ,input  wire        ep2_cfg_int_tx_i
-    ,input  wire        ep2_rx_space_i
-    ,input  wire        ep2_tx_ready_i
-    ,input  wire        ep2_tx_data_valid_i
-    ,input  wire        ep2_tx_data_strb_i
-    ,input  wire [7:0]  ep2_tx_data_i
-    ,input  wire        ep2_tx_data_last_i
-    ,input  wire        ep3_stall_i
-    ,input  wire        ep3_iso_i
-    ,input  wire        ep3_cfg_int_rx_i
-    ,input  wire        ep3_cfg_int_tx_i
-    ,input  wire        ep3_rx_space_i
-    ,input  wire        ep3_tx_ready_i
-    ,input  wire        ep3_tx_data_valid_i
-    ,input  wire        ep3_tx_data_strb_i
-    ,input  wire [7:0]  ep3_tx_data_i
-    ,input  wire        ep3_tx_data_last_i
-    ,input  wire        reg_chirp_en_i
-    ,input  wire        reg_int_en_sof_i
-    ,input  wire        reg_sts_rst_clr_i
-    ,input  wire [6:0]  reg_dev_addr_i
+     input  wire                  clk_i
+    ,input  wire                  rst_i
+    ,input  wire [7:0]            utmi_data_i
+    ,input  wire                  utmi_txready_i
+    ,input  wire                  utmi_rxvalid_i
+    ,input  wire                  utmi_rxactive_i
+    ,input  wire                  utmi_rxerror_i
+    ,input  wire [1:0]            utmi_linestate_i
+    ,input  wire [NUM_EP-1:0]     ep_stall_i
+    ,input  wire [NUM_EP-1:0]     ep_iso_i
+    ,input  wire [NUM_EP-1:0]     ep_cfg_int_rx_i
+    ,input  wire [NUM_EP-1:0]     ep_cfg_int_tx_i
+    ,input  wire [NUM_EP-1:0]     ep_rx_space_i
+    ,input  wire [NUM_EP-1:0]     ep_tx_ready_i
+    ,input  wire [NUM_EP-1:0]     ep_tx_data_valid_i
+    ,input  wire [NUM_EP-1:0]     ep_tx_data_strb_i
+    ,input  wire [(8*NUM_EP)-1:0] ep_tx_data_i
+    ,input  wire [NUM_EP-1:0]     ep_tx_data_last_i
+    ,input  wire                  reg_chirp_en_i
+    ,input  wire                  reg_int_en_sof_i
+    ,input  wire                  reg_sts_rst_clr_i
+    ,input  wire [6:0]            reg_dev_addr_i
     // Outputs
-    ,output wire        intr_o
-    ,output wire [7:0]  utmi_data_o
-    ,output wire        utmi_txvalid_o
-    ,output wire        rx_strb_o
-    ,output wire [7:0]  rx_data_o
-    ,output wire        rx_last_o
-    ,output wire        rx_crc_err_o
-    ,output wire        ep0_rx_setup_o
-    ,output wire        ep0_rx_valid_o
-    ,output wire        ep0_tx_data_accept_o
-    ,output wire        ep1_rx_setup_o
-    ,output wire        ep1_rx_valid_o
-    ,output wire        ep1_tx_data_accept_o
-    ,output wire        ep2_rx_setup_o
-    ,output wire        ep2_rx_valid_o
-    ,output wire        ep2_tx_data_accept_o
-    ,output wire        ep3_rx_setup_o
-    ,output wire        ep3_rx_valid_o
-    ,output wire        ep3_tx_data_accept_o
-    ,output wire        reg_sts_rst_o
-    ,output wire [10:0] reg_sts_frame_num_o
+    ,output wire                  intr_o
+    ,output wire [7:0]            utmi_data_o
+    ,output wire                  utmi_txvalid_o
+    ,output wire                  rx_strb_o
+    ,output wire [7:0]            rx_data_o
+    ,output wire                  rx_last_o
+    ,output wire                  rx_crc_err_o
+    ,output wire [NUM_EP-1:0]     ep_rx_setup_o
+    ,output wire [NUM_EP-1:0]     ep_rx_valid_o
+    ,output wire [NUM_EP-1:0]     ep_tx_data_accept_o
+    ,output wire                  reg_sts_rst_o
+    ,output wire [10:0]           reg_sts_frame_num_o
 );
 
 //-----------------------------------------------------------------
@@ -196,14 +159,8 @@ reg                     ep_iso_r;
 reg                     rx_enable_q;
 reg                     rx_setup_q;
 
-reg                     ep0_out_data_bit_q;
-reg                     ep0_in_data_bit_q;
-reg                     ep1_out_data_bit_q;
-reg                     ep1_in_data_bit_q;
-reg                     ep2_out_data_bit_q;
-reg                     ep2_in_data_bit_q;
-reg                     ep3_out_data_bit_q;
-reg                     ep3_in_data_bit_q;
+reg [NUM_EP-1:0]        ep_out_data_bit_q;
+reg [NUM_EP-1:0]        ep_in_data_bit_q;
 
 reg [`USB_DEV_W-1:0]    current_addr_q;
 
@@ -244,44 +201,24 @@ begin
     tx_data_r       = 8'b0;
     tx_data_last_r  = 1'b0;
 
-    case (token_ep_w)
-    4'd0:
+    // Endpoints beyond NUM_EP-1 keep the default (zero) values
+    // that the case statement default arm used to provide.
+    if (token_ep_w < NUM_EP)
     begin
-        tx_data_valid_r = ep0_tx_data_valid_i;
-        tx_data_strb_r  = ep0_tx_data_strb_i;
-        tx_data_r       = ep0_tx_data_i;
-        tx_data_last_r  = ep0_tx_data_last_i;
+        tx_data_valid_r = ep_tx_data_valid_i[token_ep_w];
+        tx_data_strb_r  = ep_tx_data_strb_i[token_ep_w];
+        tx_data_r       = ep_tx_data_i[8*token_ep_w +: 8];
+        tx_data_last_r  = ep_tx_data_last_i[token_ep_w];
     end
-    4'd1:
-    begin
-        tx_data_valid_r = ep1_tx_data_valid_i;
-        tx_data_strb_r  = ep1_tx_data_strb_i;
-        tx_data_r       = ep1_tx_data_i;
-        tx_data_last_r  = ep1_tx_data_last_i;
-    end
-    4'd2:
-    begin
-        tx_data_valid_r = ep2_tx_data_valid_i;
-        tx_data_strb_r  = ep2_tx_data_strb_i;
-        tx_data_r       = ep2_tx_data_i;
-        tx_data_last_r  = ep2_tx_data_last_i;
-    end
-    4'd3:
-    begin
-        tx_data_valid_r = ep3_tx_data_valid_i;
-        tx_data_strb_r  = ep3_tx_data_strb_i;
-        tx_data_r       = ep3_tx_data_i;
-        tx_data_last_r  = ep3_tx_data_last_i;
-    end
-    default:
-        ;
-    endcase    
 end
 
-assign ep0_tx_data_accept_o = tx_data_accept_w & (token_ep_w == 4'd0);
-assign ep1_tx_data_accept_o = tx_data_accept_w & (token_ep_w == 4'd1);
-assign ep2_tx_data_accept_o = tx_data_accept_w & (token_ep_w == 4'd2);
-assign ep3_tx_data_accept_o = tx_data_accept_w & (token_ep_w == 4'd3);
+genvar gen_ep;
+generate
+for (gen_ep = 0; gen_ep < NUM_EP; gen_ep = gen_ep + 1)
+begin : gen_ep_tx_data_accept
+    assign ep_tx_data_accept_o[gen_ep] = tx_data_accept_w & (token_ep_w == gen_ep);
+end
+endgenerate
 
 always_comb
 begin
@@ -293,46 +230,15 @@ begin
     ep_stall_r = 1'b0;
     ep_iso_r   = 1'b0;
 
-    case (token_ep_w)
-    4'd0:
+    if (token_ep_w < NUM_EP)
     begin
-        rx_space_r    = ep0_rx_space_i;
-        tx_ready_r    = ep0_tx_ready_i;
-        out_data_bit_r= ep0_out_data_bit_q;
-        in_data_bit_r = ep0_in_data_bit_q;
-        ep_stall_r    = ep0_stall_i;
-        ep_iso_r      = ep0_iso_i;
+        rx_space_r    = ep_rx_space_i[token_ep_w];
+        tx_ready_r    = ep_tx_ready_i[token_ep_w];
+        out_data_bit_r= ep_out_data_bit_q[token_ep_w];
+        in_data_bit_r = ep_in_data_bit_q[token_ep_w];
+        ep_stall_r    = ep_stall_i[token_ep_w];
+        ep_iso_r      = ep_iso_i[token_ep_w];
     end
-    4'd1:
-    begin
-        rx_space_r    = ep1_rx_space_i;
-        tx_ready_r    = ep1_tx_ready_i;
-        out_data_bit_r= ep1_out_data_bit_q;
-        in_data_bit_r = ep1_in_data_bit_q;
-        ep_stall_r    = ep1_stall_i;
-        ep_iso_r      = ep1_iso_i;
-    end
-    4'd2:
-    begin
-        rx_space_r    = ep2_rx_space_i;
-        tx_ready_r    = ep2_tx_ready_i;
-        out_data_bit_r= ep2_out_data_bit_q;
-        in_data_bit_r = ep2_in_data_bit_q;
-        ep_stall_r    = ep2_stall_i;
-        ep_iso_r      = ep2_iso_i;
-    end
-    4'd3:
-    begin
-        rx_space_r    = ep3_rx_space_i;
-        tx_ready_r    = ep3_tx_ready_i;
-        out_data_bit_r= ep3_out_data_bit_q;
-        in_data_bit_r = ep3_in_data_bit_q;
-        ep_stall_r    = ep3_stall_i;
-        ep_iso_r      = ep3_iso_i;
-    end
-    default:
-        ;
-    endcase
 end
 
 always_ff @(posedge clk_i)
@@ -380,14 +286,13 @@ u_sie_rx
     .data_crc_err_o(rx_crc_err_o)
 );
 
-assign ep0_rx_valid_o = rx_enable_q & rx_data_valid_w & (token_ep_w == 4'd0);
-assign ep0_rx_setup_o = rx_setup_q & (token_ep_w == 4'd0);
-assign ep1_rx_valid_o = rx_enable_q & rx_data_valid_w & (token_ep_w == 4'd1);
-assign ep1_rx_setup_o = rx_setup_q & (token_ep_w == 4'd0);
-assign ep2_rx_valid_o = rx_enable_q & rx_data_valid_w & (token_ep_w == 4'd2);
-assign ep2_rx_setup_o = rx_setup_q & (token_ep_w == 4'd0);
-assign ep3_rx_valid_o = rx_enable_q & rx_data_valid_w & (token_ep_w == 4'd3);
-assign ep3_rx_setup_o = rx_setup_q & (token_ep_w == 4'd0);
+generate
+for (gen_ep = 0; gen_ep < NUM_EP; gen_ep = gen_ep + 1)
+begin : gen_ep_rx_valid_setup
+    assign ep_rx_valid_o[gen_ep] = rx_enable_q & rx_data_valid_w & (token_ep_w == gen_ep);
+    assign ep_rx_setup_o[gen_ep] = rx_setup_q & (token_ep_w == 4'd0);
+end
+endgenerate
 
 //-----------------------------------------------------------------
 // Next state
@@ -730,8 +635,8 @@ else
 //-----------------------------------------------------------------
 reg addr_update_pending_q;
 
-wire ep0_tx_zlp_w = ep0_tx_data_valid_i && (ep0_tx_data_strb_i == 1'b0) && 
-                    ep0_tx_data_last_i && ep0_tx_data_accept_o;
+wire ep0_tx_zlp_w = ep_tx_data_valid_i[0] && (ep_tx_data_strb_i[0] == 1'b0) &&
+                    ep_tx_data_last_i[0] && ep_tx_data_accept_o[0];
 
 reg sent_status_zlp_q;
 
@@ -829,69 +734,24 @@ begin
     endcase
 end
 
+// One update per clock cycle, on the endpoint that the current
+// token addresses; equivalent to the per-endpoint always_ff
+// blocks it replaces.
 always_ff @(posedge clk_i)
 if (rst_i)
 begin
-    ep0_out_data_bit_q <= 1'b0;
-    ep0_in_data_bit_q  <= 1'b0;
+    ep_out_data_bit_q <= {NUM_EP{1'b0}};
+    ep_in_data_bit_q  <= {NUM_EP{1'b0}};
 end
 else if (usb_rst_w)
 begin
-    ep0_out_data_bit_q <= 1'b0;
-    ep0_in_data_bit_q  <= 1'b0;
+    ep_out_data_bit_q <= {NUM_EP{1'b0}};
+    ep_in_data_bit_q  <= {NUM_EP{1'b0}};
 end
-else if (token_ep_w == 4'd0)
+else if (token_ep_w < NUM_EP)
 begin
-    ep0_out_data_bit_q <= new_out_bit_r;
-    ep0_in_data_bit_q  <= new_in_bit_r;
-end
-always_ff @(posedge clk_i)
-if (rst_i)
-begin
-    ep1_out_data_bit_q <= 1'b0;
-    ep1_in_data_bit_q  <= 1'b0;
-end
-else if (usb_rst_w)
-begin
-    ep1_out_data_bit_q <= 1'b0;
-    ep1_in_data_bit_q  <= 1'b0;
-end
-else if (token_ep_w == 4'd1)
-begin
-    ep1_out_data_bit_q <= new_out_bit_r;
-    ep1_in_data_bit_q  <= new_in_bit_r;
-end
-always_ff @(posedge clk_i)
-if (rst_i)
-begin
-    ep2_out_data_bit_q <= 1'b0;
-    ep2_in_data_bit_q  <= 1'b0;
-end
-else if (usb_rst_w)
-begin
-    ep2_out_data_bit_q <= 1'b0;
-    ep2_in_data_bit_q  <= 1'b0;
-end
-else if (token_ep_w == 4'd2)
-begin
-    ep2_out_data_bit_q <= new_out_bit_r;
-    ep2_in_data_bit_q  <= new_in_bit_r;
-end
-always_ff @(posedge clk_i)
-if (rst_i)
-begin
-    ep3_out_data_bit_q <= 1'b0;
-    ep3_in_data_bit_q  <= 1'b0;
-end
-else if (usb_rst_w)
-begin
-    ep3_out_data_bit_q <= 1'b0;
-    ep3_in_data_bit_q  <= 1'b0;
-end
-else if (token_ep_w == 4'd3)
-begin
-    ep3_out_data_bit_q <= new_out_bit_r;
-    ep3_in_data_bit_q  <= new_in_bit_r;
+    ep_out_data_bit_q[token_ep_w] <= new_out_bit_r;
+    ep_in_data_bit_q[token_ep_w]  <= new_in_bit_r;
 end
 
 //-----------------------------------------------------------------
@@ -922,30 +782,11 @@ begin
     cfg_int_rx_r = 1'b0;
     cfg_int_tx_r = 1'b0;
 
-    case (token_ep_w)
-    4'd0:
+    if (token_ep_w < NUM_EP)
     begin
-        cfg_int_rx_r = ep0_cfg_int_rx_i;
-        cfg_int_tx_r = ep0_cfg_int_tx_i;
+        cfg_int_rx_r = ep_cfg_int_rx_i[token_ep_w];
+        cfg_int_tx_r = ep_cfg_int_tx_i[token_ep_w];
     end
-    4'd1:
-    begin
-        cfg_int_rx_r = ep1_cfg_int_rx_i;
-        cfg_int_tx_r = ep1_cfg_int_tx_i;
-    end
-    4'd2:
-    begin
-        cfg_int_rx_r = ep2_cfg_int_rx_i;
-        cfg_int_tx_r = ep2_cfg_int_tx_i;
-    end
-    4'd3:
-    begin
-        cfg_int_rx_r = ep3_cfg_int_rx_i;
-        cfg_int_tx_r = ep3_cfg_int_tx_i;
-    end
-    default:
-        ;
-    endcase
 end
 
 always_ff @(posedge clk_i)
