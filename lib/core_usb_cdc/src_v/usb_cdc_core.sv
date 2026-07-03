@@ -65,6 +65,8 @@ module usb_cdc_core (
 
 parameter USB_SPEED_HS = "False"; // True or False
 
+localparam NUM_EP = 4; // number of endpoints implemented (EP0 included)
+
 //-----------------------------------------------------------------
 // Defines
 //-----------------------------------------------------------------
@@ -222,45 +224,30 @@ wire [7:0]  ep0_tx_data_w;
 wire        ep0_tx_data_last_w;
 wire        ep0_tx_data_accept_w;
 wire        ep0_tx_stall_w;
-// EP1 Rx SIE Interface
-wire        ep1_rx_space_w;
-wire        ep1_rx_valid_w;
-wire        ep1_rx_setup_w;
 
-// EP1 Tx SIE Interface
-wire        ep1_tx_ready_w;
-wire        ep1_tx_data_valid_w;
-wire        ep1_tx_data_strb_w;
-wire [7:0]  ep1_tx_data_w;
-wire        ep1_tx_data_last_w;
-wire        ep1_tx_data_accept_w;
-wire        ep1_tx_stall_w;
-// EP2 Rx SIE Interface
-wire        ep2_rx_space_w;
-wire        ep2_rx_valid_w;
-wire        ep2_rx_setup_w;
+// Per-endpoint SIE Interfaces, indexed by endpoint number
+wire [NUM_EP-1:0]     ep_rx_space_w;
+wire [NUM_EP-1:0]     ep_rx_valid_w;
+wire [NUM_EP-1:0]     ep_rx_setup_w;
+wire [NUM_EP-1:0]     ep_tx_ready_w;
+wire [NUM_EP-1:0]     ep_tx_data_valid_w;
+wire [NUM_EP-1:0]     ep_tx_data_strb_w;
+wire [(8*NUM_EP)-1:0] ep_tx_data_w;
+wire [NUM_EP-1:0]     ep_tx_data_last_w;
+wire [NUM_EP-1:0]     ep_tx_data_accept_w;
+wire [NUM_EP-1:0]     ep_stall_w;
 
-// EP2 Tx SIE Interface
-wire        ep2_tx_ready_w;
-wire        ep2_tx_data_valid_w;
-wire        ep2_tx_data_strb_w;
-wire [7:0]  ep2_tx_data_w;
-wire        ep2_tx_data_last_w;
-wire        ep2_tx_data_accept_w;
-wire        ep2_tx_stall_w;
-// EP3 Rx SIE Interface
-wire        ep3_rx_space_w;
-wire        ep3_rx_valid_w;
-wire        ep3_rx_setup_w;
-
-// EP3 Tx SIE Interface
-wire        ep3_tx_ready_w;
-wire        ep3_tx_data_valid_w;
-wire        ep3_tx_data_strb_w;
-wire [7:0]  ep3_tx_data_w;
-wire        ep3_tx_data_last_w;
-wire        ep3_tx_data_accept_w;
-wire        ep3_tx_stall_w;
+// EP0 (control endpoint) bridged into index 0
+assign ep_rx_space_w[0]      = ep0_rx_space_w;
+assign ep0_rx_valid_w        = ep_rx_valid_w[0];
+assign ep0_rx_setup_w        = ep_rx_setup_w[0];
+assign ep_tx_ready_w[0]      = ep0_tx_ready_w;
+assign ep_tx_data_valid_w[0] = ep0_tx_data_valid_w;
+assign ep_tx_data_strb_w[0]  = ep0_tx_data_strb_w;
+assign ep_tx_data_w[7:0]     = ep0_tx_data_w;
+assign ep_tx_data_last_w[0]  = ep0_tx_data_last_w;
+assign ep0_tx_data_accept_w  = ep_tx_data_accept_w[0];
+assign ep_stall_w[0]         = ep0_tx_stall_w;
 
 wire utmi_chirp_en_w;
 wire usb_hs_w;
@@ -483,6 +470,9 @@ endgenerate
 // Core
 //-----------------------------------------------------------------
 usbf_device_core
+#(
+    .NUM_EP(NUM_EP)
+)
 u_core
 (
     .clk_i(clk_i),
@@ -511,81 +501,24 @@ u_core
     .rx_last_o(rx_last_w),
     .rx_crc_err_o(rx_crc_err_w),
 
-    // EP0 Config
-    .ep0_iso_i(1'b0),
-    .ep0_stall_i(ep0_tx_stall_w),
-    .ep0_cfg_int_rx_i(1'b0),
-    .ep0_cfg_int_tx_i(1'b0),
+    // Endpoint Config
+    .ep_iso_i({NUM_EP{1'b0}}),
+    .ep_stall_i(ep_stall_w),
+    .ep_cfg_int_rx_i({NUM_EP{1'b0}}),
+    .ep_cfg_int_tx_i({NUM_EP{1'b0}}),
 
-    // EP0 Rx SIE Interface
-    .ep0_rx_setup_o(ep0_rx_setup_w),
-    .ep0_rx_valid_o(ep0_rx_valid_w),
-    .ep0_rx_space_i(ep0_rx_space_w),
+    // Endpoint Rx SIE Interface
+    .ep_rx_setup_o(ep_rx_setup_w),
+    .ep_rx_valid_o(ep_rx_valid_w),
+    .ep_rx_space_i(ep_rx_space_w),
 
-    // EP0 Tx SIE Interface
-    .ep0_tx_ready_i(ep0_tx_ready_w),
-    .ep0_tx_data_valid_i(ep0_tx_data_valid_w),
-    .ep0_tx_data_strb_i(ep0_tx_data_strb_w),
-    .ep0_tx_data_i(ep0_tx_data_w),
-    .ep0_tx_data_last_i(ep0_tx_data_last_w),
-    .ep0_tx_data_accept_o(ep0_tx_data_accept_w),
-
-    // EP1 Config
-    .ep1_iso_i(1'b0),
-    .ep1_stall_i(ep1_tx_stall_w),
-    .ep1_cfg_int_rx_i(1'b0),
-    .ep1_cfg_int_tx_i(1'b0),
-
-    // EP1 Rx SIE Interface
-    .ep1_rx_setup_o(ep1_rx_setup_w),
-    .ep1_rx_valid_o(ep1_rx_valid_w),
-    .ep1_rx_space_i(ep1_rx_space_w),
-
-    // EP1 Tx SIE Interface
-    .ep1_tx_ready_i(ep1_tx_ready_w),
-    .ep1_tx_data_valid_i(ep1_tx_data_valid_w),
-    .ep1_tx_data_strb_i(ep1_tx_data_strb_w),
-    .ep1_tx_data_i(ep1_tx_data_w),
-    .ep1_tx_data_last_i(ep1_tx_data_last_w),
-    .ep1_tx_data_accept_o(ep1_tx_data_accept_w),
-
-    // EP2 Config
-    .ep2_iso_i(1'b0),
-    .ep2_stall_i(ep2_tx_stall_w),
-    .ep2_cfg_int_rx_i(1'b0),
-    .ep2_cfg_int_tx_i(1'b0),
-
-    // EP2 Rx SIE Interface
-    .ep2_rx_setup_o(ep2_rx_setup_w),
-    .ep2_rx_valid_o(ep2_rx_valid_w),
-    .ep2_rx_space_i(ep2_rx_space_w),
-
-    // EP2 Tx SIE Interface
-    .ep2_tx_ready_i(ep2_tx_ready_w),
-    .ep2_tx_data_valid_i(ep2_tx_data_valid_w),
-    .ep2_tx_data_strb_i(ep2_tx_data_strb_w),
-    .ep2_tx_data_i(ep2_tx_data_w),
-    .ep2_tx_data_last_i(ep2_tx_data_last_w),
-    .ep2_tx_data_accept_o(ep2_tx_data_accept_w),
-
-    // EP3 Config
-    .ep3_iso_i(1'b0),
-    .ep3_stall_i(ep3_tx_stall_w),
-    .ep3_cfg_int_rx_i(1'b0),
-    .ep3_cfg_int_tx_i(1'b0),
-
-    // EP3 Rx SIE Interface
-    .ep3_rx_setup_o(ep3_rx_setup_w),
-    .ep3_rx_valid_o(ep3_rx_valid_w),
-    .ep3_rx_space_i(ep3_rx_space_w),
-
-    // EP3 Tx SIE Interface
-    .ep3_tx_ready_i(ep3_tx_ready_w),
-    .ep3_tx_data_valid_i(ep3_tx_data_valid_w),
-    .ep3_tx_data_strb_i(ep3_tx_data_strb_w),
-    .ep3_tx_data_i(ep3_tx_data_w),
-    .ep3_tx_data_last_i(ep3_tx_data_last_w),
-    .ep3_tx_data_accept_o(ep3_tx_data_accept_w),
+    // Endpoint Tx SIE Interface
+    .ep_tx_ready_i(ep_tx_ready_w),
+    .ep_tx_data_valid_i(ep_tx_data_valid_w),
+    .ep_tx_data_strb_i(ep_tx_data_strb_w),
+    .ep_tx_data_i(ep_tx_data_w),
+    .ep_tx_data_last_i(ep_tx_data_last_w),
+    .ep_tx_data_accept_o(ep_tx_data_accept_w),
 
     // Status
     .reg_sts_rst_clr_i(1'b1),
@@ -1049,21 +982,25 @@ u_rom
 //-----------------------------------------------------------------
 // Unused Endpoints
 //-----------------------------------------------------------------
-assign ep1_tx_ready_w      = 1'b0;
-assign ep1_tx_data_valid_w = 1'b0;
-assign ep1_tx_data_strb_w  = 1'b0;
-assign ep1_tx_data_w       = 8'b0;
-assign ep1_tx_data_last_w  = 1'b0;
-assign ep1_tx_stall_w      = 1'b0;
-assign ep3_tx_ready_w      = 1'b0;
-assign ep3_tx_data_valid_w = 1'b0;
-assign ep3_tx_data_strb_w  = 1'b0;
-assign ep3_tx_data_w       = 8'b0;
-assign ep3_tx_data_last_w  = 1'b0;
-assign ep3_tx_stall_w      = 1'b0;
+assign ep_tx_ready_w[1]      = 1'b0;
+assign ep_tx_data_valid_w[1] = 1'b0;
+assign ep_tx_data_strb_w[1]  = 1'b0;
+assign ep_tx_data_w[15:8]    = 8'b0;
+assign ep_tx_data_last_w[1]  = 1'b0;
+assign ep_stall_w[1]         = 1'b0;
+assign ep_tx_ready_w[3]      = 1'b0;
+assign ep_tx_data_valid_w[3] = 1'b0;
+assign ep_tx_data_strb_w[3]  = 1'b0;
+assign ep_tx_data_w[31:24]   = 8'b0;
+assign ep_tx_data_last_w[3]  = 1'b0;
+assign ep_stall_w[3]         = 1'b0;
 
-assign ep2_rx_space_w      = 1'b0;
-assign ep3_rx_space_w      = 1'b0;
+assign ep_rx_space_w[2]      = 1'b0;
+assign ep_rx_space_w[3]      = 1'b0;
+
+// The EP2 stall input was an undriven wire in the original code;
+// it is now explicitly tied low.
+assign ep_stall_w[2]         = 1'b0;
 
 //-----------------------------------------------------------------
 // Stream I/O
@@ -1090,21 +1027,21 @@ wire        inport_last_w  = !inport_valid_i || (inport_cnt_q == max_packet_w);
 always_ff @(posedge clk_i)
 if (rst_i)
     inport_cnt_q  <= 11'b0;
-else if (inport_last_w && ep2_tx_data_accept_w)
+else if (inport_last_w && ep_tx_data_accept_w[2])
     inport_cnt_q  <= 11'b0;
-else if (inport_valid_q && ep2_tx_data_accept_w)
+else if (inport_valid_q && ep_tx_data_accept_w[2])
     inport_cnt_q  <= inport_cnt_q + 11'd1;
 
-assign ep2_tx_data_valid_w = inport_valid_q;
-assign ep2_tx_data_w       = inport_data_q;
-assign ep2_tx_ready_w      = ep2_tx_data_valid_w;
-assign ep2_tx_data_strb_w  = ep2_tx_data_valid_w;
-assign ep2_tx_data_last_w  = inport_last_w;
-assign inport_accept_o     = !inport_valid_q | ep2_tx_data_accept_w;
+assign ep_tx_data_valid_w[2] = inport_valid_q;
+assign ep_tx_data_w[23:16]   = inport_data_q;
+assign ep_tx_ready_w[2]      = ep_tx_data_valid_w[2];
+assign ep_tx_data_strb_w[2]  = ep_tx_data_valid_w[2];
+assign ep_tx_data_last_w[2]  = inport_last_w;
+assign inport_accept_o       = !inport_valid_q | ep_tx_data_accept_w[2];
 
-assign outport_valid_o  = ep1_rx_valid_w && rx_strb_w;
+assign outport_valid_o  = ep_rx_valid_w[1] && rx_strb_w;
 assign outport_data_o   = rx_data_w;
-assign ep1_rx_space_w   = outport_accept_i;
+assign ep_rx_space_w[1] = outport_accept_i;
 
 
 
