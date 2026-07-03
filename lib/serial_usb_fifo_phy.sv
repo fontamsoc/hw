@@ -19,7 +19,7 @@
 // Ports:
 //
 // rst_i
-// 	This input reset the module.
+// 	This input resets the module.
 // 	It must be held low for normal operation.
 //
 // rx_clk_i
@@ -38,8 +38,8 @@
 // 	FIFO interface to transmit data.
 //
 // clk_phy_i
-// 	Clock input used by the internal module which transmit
-// 	and receive each bit; due to usb_fs_phy requirements,
+// 	Clock input used by the internal module which transmits
+// 	and receives each bit; due to usb_fs_phy requirements,
 // 	its frequency must be 48 MHz.
 //
 // usb_dp_io

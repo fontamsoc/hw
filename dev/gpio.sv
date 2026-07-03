@@ -18,7 +18,7 @@
 // CMDCONFIGUREIO: "arg" value is a bitmap where each bit 0/1 configures
 // the corresponding GPIO as an input/output.
 // "resp" in the result gets set to the IO count.
-// CMDSETDEBOUNCE: "arg" value set the clockcycle count used to debounce GPIs.
+// CMDSETDEBOUNCE: "arg" value sets the clockcycle count used to debounce GPIs.
 // "resp" in the result gets set to the clock frequency in Hz used by the device.
 
 // Parameters:
@@ -31,7 +31,7 @@
 // 	It must be non-null and less than WORDBITSZ.
 //
 // IODIR:
-// 	Bitfield of which inputs is initially an input/output.
+// 	Bitfield of which inputs are initially an input/output.
 //
 // DBNCR_EN:
 // 	Bitfield of which inputs to insert a debouncer.
@@ -43,7 +43,7 @@
 // Ports:
 //
 // rst_i
-// 	This input reset this module when held high
+// 	This input resets this module when held high
 // 	and must be held low for normal operation.
 //
 // clk_i
@@ -64,7 +64,7 @@
 // 	an interrupt is raised when any of the input "i" state changes.
 //
 // irq_rdy_i
-// 	This signal become low when the interrupt request
+// 	This signal becomes low when the interrupt request
 // 	has been acknowledged, and is used by this module
 // 	to lower irq_stb_o.
 //

@@ -21,7 +21,7 @@
 //
 // rst_i
 // 	When held high at the rising edge
-// 	of the clock signal, the module reset.
+// 	of the clock signal, the module resets.
 // 	It must be held low for normal operation.
 //
 // clk_i

@@ -122,7 +122,7 @@ assign wb_dat_o = (rx_read_w_sampled ? rx_data_w0 : wb_dat_o_);
 always_ff @(posedge clk_i) begin
 	// Logic enabling/disabling interrupt.
 	if (rst_i) begin
-		// On reset, interrupt is disabled, and must be explicitely enabled.
+		// On reset, interrupt is disabled, and must be explicitly enabled.
 		// It prevents unwanted interrupt after reset.
 		intrqstthresh <= 0;
 	end else if (cmdsetint) begin

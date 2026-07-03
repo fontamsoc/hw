@@ -142,8 +142,8 @@ wire wbpi_clk_w = clk48mhz_w;
 
 localparam IRQ_SERIAL = 0;
 
-localparam IRQSRCCOUNT = (IRQ_SERIAL +1); // Number of interrupt source.
-localparam IRQDSTCOUNT = CPU_COUNT; // Number of interrupt destination.
+localparam IRQSRCCOUNT = (IRQ_SERIAL +1); // Number of interrupt sources.
+localparam IRQDSTCOUNT = CPU_COUNT; // Number of interrupt destinations.
 wire [IRQSRCCOUNT -1 : 0] irq_src_stb_w;
 wire [IRQSRCCOUNT -1 : 0] irq_src_rdy_w;
 wire [IRQDSTCOUNT -1 : 0] irq_dst_stb_w0;

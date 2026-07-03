@@ -2,8 +2,8 @@
 // (c) William Fonkou Tambe
 
 // TODO: Ports description:
-// conly_i: Make cache behave like an sram; no slave memory operation occur.
-// cmiss_i: Cache-miss to force slave memory operation; any cache-tag-hit get flushed-and-invalidated.
+// conly_i: Make cache behave like an sram; no slave memory operation occurs.
+// cmiss_i: Cache-miss to force slave memory operation; any cache-tag-hit gets flushed-and-invalidated.
 // coherency_en_i: Enable logic that uses/generates coherency traffic.
 
 /* ### Cache Coherency logic:

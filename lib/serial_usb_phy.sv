@@ -15,7 +15,7 @@
 // Ports:
 //
 // rst_i
-// 	This input reset the module.
+// 	This input resets the module.
 // 	It must be held low for normal operation.
 //
 // clk_i
