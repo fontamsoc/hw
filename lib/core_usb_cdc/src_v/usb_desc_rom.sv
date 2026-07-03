@@ -33,193 +33,207 @@
 //-----------------------------------------------------------------
 
 //-----------------------------------------------------------------
-//                          Generated File
+// ROM built at elaboration from PORTCOUNT; it describes PORTCOUNT
+// CDC-ACM functions (ie: COM ports) grouped by interface
+// association descriptors when PORTCOUNT > 1, and is byte-identical
+// to the original single-port generated ROM when PORTCOUNT == 1.
 //-----------------------------------------------------------------
 module usb_desc_rom (
-    input  wire       hs_i,
-    input  wire [7:0] addr_i,
-    output wire [7:0] data_o
+    input  wire        hs_i,
+    input  wire [15:0] addr_i,
+    output wire [7:0]  data_o
 );
 
-reg [7:0] desc_rom_r;
+parameter PORTCOUNT = 1; // number of CDC-ACM functions (1 to 5)
 
-always_comb
+// Sizes of the configuration descriptor and of the whole ROM;
+// the per-port block is 58 bytes, plus 8 bytes of interface
+// association descriptor when PORTCOUNT > 1; the trailing 85 bytes
+// are the string descriptors and the CDC line-coding data.
+localparam ROM_DESC_CONF_SIZE = (9 + (((PORTCOUNT == 1) ? 58 : 66) * PORTCOUNT));
+localparam ROM_SIZE           = (18 + ROM_DESC_CONF_SIZE + 85);
+
+function automatic [(ROM_SIZE*8)-1:0] desc_rom_build (input hs);
+    integer p;
+    integer o;
+    reg [(ROM_SIZE*8)-1:0] rom;
 begin
-    case (addr_i)
-    8'd0: desc_rom_r = 8'h12;
-    8'd1: desc_rom_r = 8'h01;
-    8'd2: desc_rom_r = 8'h00;
-    8'd3: desc_rom_r = 8'h02;
-    8'd4: desc_rom_r = 8'h02;
-    8'd5: desc_rom_r = 8'h00;
-    8'd6: desc_rom_r = 8'h00;
-    8'd7: desc_rom_r = hs_i ? 8'h40 : 8'h08;
-    8'd8: desc_rom_r = 8'h50;  // VID_L
-    8'd9: desc_rom_r = 8'h1d;  // VID_H
-    8'd10: desc_rom_r = 8'h49; // PID_L 
-    8'd11: desc_rom_r = 8'h61; // PID_H
-    8'd12: desc_rom_r = 8'h01;
-    8'd13: desc_rom_r = 8'h01;
-    8'd14: desc_rom_r = 8'h00;
-    8'd15: desc_rom_r = 8'h00;
-    8'd16: desc_rom_r = 8'h00;
-    8'd17: desc_rom_r = 8'h01;
-    8'd18: desc_rom_r = 8'h09;
-    8'd19: desc_rom_r = 8'h02;
-    8'd20: desc_rom_r = 8'h43;
-    8'd21: desc_rom_r = 8'h00;
-    8'd22: desc_rom_r = 8'h02;
-    8'd23: desc_rom_r = 8'h01;
-    8'd24: desc_rom_r = 8'h00;
-    8'd25: desc_rom_r = 8'h80;
-    8'd26: desc_rom_r = 8'h32;
-    8'd27: desc_rom_r = 8'h09;
-    8'd28: desc_rom_r = 8'h04;
-    8'd29: desc_rom_r = 8'h00;
-    8'd30: desc_rom_r = 8'h00;
-    8'd31: desc_rom_r = 8'h01;
-    8'd32: desc_rom_r = 8'h02;
-    8'd33: desc_rom_r = 8'h02;
-    8'd34: desc_rom_r = 8'h01;
-    8'd35: desc_rom_r = 8'h00;
-    8'd36: desc_rom_r = 8'h05;
-    8'd37: desc_rom_r = 8'h24;
-    8'd38: desc_rom_r = 8'h00;
-    8'd39: desc_rom_r = 8'h10;
-    8'd40: desc_rom_r = 8'h01;
-    8'd41: desc_rom_r = 8'h05;
-    8'd42: desc_rom_r = 8'h24;
-    8'd43: desc_rom_r = 8'h01;
-    8'd44: desc_rom_r = 8'h03;
-    8'd45: desc_rom_r = 8'h01;
-    8'd46: desc_rom_r = 8'h04;
-    8'd47: desc_rom_r = 8'h24;
-    8'd48: desc_rom_r = 8'h02;
-    8'd49: desc_rom_r = 8'h06;
-    8'd50: desc_rom_r = 8'h05;
-    8'd51: desc_rom_r = 8'h24;
-    8'd52: desc_rom_r = 8'h06;
-    8'd53: desc_rom_r = 8'h00;
-    8'd54: desc_rom_r = 8'h01;
-    8'd55: desc_rom_r = 8'h07;
-    8'd56: desc_rom_r = 8'h05;
-    8'd57: desc_rom_r = 8'h83;
-    8'd58: desc_rom_r = 8'h03;
-    8'd59: desc_rom_r = 8'h40;
-    8'd60: desc_rom_r = 8'h00;
-    8'd61: desc_rom_r = 8'h02;
-    8'd62: desc_rom_r = 8'h09;
-    8'd63: desc_rom_r = 8'h04;
-    8'd64: desc_rom_r = 8'h01;
-    8'd65: desc_rom_r = 8'h00;
-    8'd66: desc_rom_r = 8'h02;
-    8'd67: desc_rom_r = 8'h0a;
-    8'd68: desc_rom_r = 8'h00;
-    8'd69: desc_rom_r = 8'h00;
-    8'd70: desc_rom_r = 8'h00;
-    8'd71: desc_rom_r = 8'h07;
-    8'd72: desc_rom_r = 8'h05;
-    8'd73: desc_rom_r = 8'h01;
-    8'd74: desc_rom_r = 8'h02;
-    8'd75: desc_rom_r = hs_i ? 8'h00 : 8'h40;
-    8'd76: desc_rom_r = hs_i ? 8'h02 : 8'h00;
-    8'd77: desc_rom_r = 8'h00;
-    8'd78: desc_rom_r = 8'h07;
-    8'd79: desc_rom_r = 8'h05;
-    8'd80: desc_rom_r = 8'h82;
-    8'd81: desc_rom_r = 8'h02;
-    8'd82: desc_rom_r = hs_i ? 8'h00 : 8'h40;
-    8'd83: desc_rom_r = hs_i ? 8'h02 : 8'h00;
-    8'd84: desc_rom_r = 8'h00;
-    8'd85: desc_rom_r = 8'h04;
-    8'd86: desc_rom_r = 8'h03;
-    8'd87: desc_rom_r = 8'h09;
-    8'd88: desc_rom_r = 8'h04;
-    8'd89: desc_rom_r = 8'h1e;
-    8'd90: desc_rom_r = 8'h03;
-    8'd91: desc_rom_r = 8'h55;
-    8'd92: desc_rom_r = 8'h00;
-    8'd93: desc_rom_r = 8'h4c;
-    8'd94: desc_rom_r = 8'h00;
-    8'd95: desc_rom_r = 8'h54;
-    8'd96: desc_rom_r = 8'h00;
-    8'd97: desc_rom_r = 8'h52;
-    8'd98: desc_rom_r = 8'h00;
-    8'd99: desc_rom_r = 8'h41;
-    8'd100: desc_rom_r = 8'h00;
-    8'd101: desc_rom_r = 8'h2d;
-    8'd102: desc_rom_r = 8'h00;
-    8'd103: desc_rom_r = 8'h45;
-    8'd104: desc_rom_r = 8'h00;
-    8'd105: desc_rom_r = 8'h4d;
-    8'd106: desc_rom_r = 8'h00;
-    8'd107: desc_rom_r = 8'h42;
-    8'd108: desc_rom_r = 8'h00;
-    8'd109: desc_rom_r = 8'h45;
-    8'd110: desc_rom_r = 8'h00;
-    8'd111: desc_rom_r = 8'h44;
-    8'd112: desc_rom_r = 8'h00;
-    8'd113: desc_rom_r = 8'h44;
-    8'd114: desc_rom_r = 8'h00;
-    8'd115: desc_rom_r = 8'h45;
-    8'd116: desc_rom_r = 8'h00;
-    8'd117: desc_rom_r = 8'h44;
-    8'd118: desc_rom_r = 8'h00;
-    8'd119: desc_rom_r = 8'h1e;
-    8'd120: desc_rom_r = 8'h03;
-    8'd121: desc_rom_r = 8'h55;
-    8'd122: desc_rom_r = 8'h00;
-    8'd123: desc_rom_r = 8'h53;
-    8'd124: desc_rom_r = 8'h00;
-    8'd125: desc_rom_r = 8'h42;
-    8'd126: desc_rom_r = 8'h00;
-    8'd127: desc_rom_r = 8'h20;
-    8'd128: desc_rom_r = 8'h00;
-    8'd129: desc_rom_r = 8'h44;
-    8'd130: desc_rom_r = 8'h00;
-    8'd131: desc_rom_r = 8'h45;
-    8'd132: desc_rom_r = 8'h00;
-    8'd133: desc_rom_r = 8'h4d;
-    8'd134: desc_rom_r = 8'h00;
-    8'd135: desc_rom_r = 8'h4f;
-    8'd136: desc_rom_r = 8'h00;
-    8'd137: desc_rom_r = 8'h20;
-    8'd138: desc_rom_r = 8'h00;
-    8'd139: desc_rom_r = 8'h20;
-    8'd140: desc_rom_r = 8'h00;
-    8'd141: desc_rom_r = 8'h20;
-    8'd142: desc_rom_r = 8'h00;
-    8'd143: desc_rom_r = 8'h20;
-    8'd144: desc_rom_r = 8'h00;
-    8'd145: desc_rom_r = 8'h20;
-    8'd146: desc_rom_r = 8'h00;
-    8'd147: desc_rom_r = 8'h20;
-    8'd148: desc_rom_r = 8'h00;
-    8'd149: desc_rom_r = 8'h0e;
-    8'd150: desc_rom_r = 8'h03;
-    8'd151: desc_rom_r = 8'h30;
-    8'd152: desc_rom_r = 8'h00;
-    8'd153: desc_rom_r = 8'h30;
-    8'd154: desc_rom_r = 8'h00;
-    8'd155: desc_rom_r = 8'h30;
-    8'd156: desc_rom_r = 8'h00;
-    8'd157: desc_rom_r = 8'h30;
-    8'd158: desc_rom_r = 8'h00;
-    8'd159: desc_rom_r = 8'h30;
-    8'd160: desc_rom_r = 8'h00;
-    8'd161: desc_rom_r = 8'h30;
-    8'd162: desc_rom_r = 8'h00;
-    8'd163: desc_rom_r = 8'h00;
-    8'd164: desc_rom_r = 8'hc2;
-    8'd165: desc_rom_r = 8'h01;
-    8'd166: desc_rom_r = 8'h00;
-    8'd167: desc_rom_r = 8'h00;
-    8'd168: desc_rom_r = 8'h00;
-    8'd169: desc_rom_r = 8'h08;
-    default: desc_rom_r = 8'h00;
-    endcase
+    rom = {(ROM_SIZE*8){1'b0}};
+    o   = 0;
+    // ---- device descriptor ----
+    rom[o*8 +: 8] = 8'h12;                            o = o + 1; // bLength
+    rom[o*8 +: 8] = 8'h01;                            o = o + 1; // bDescriptorType (DEVICE)
+    rom[o*8 +: 8] = 8'h00;                            o = o + 1; // bcdUSB[7:0]
+    rom[o*8 +: 8] = 8'h02;                            o = o + 1; // bcdUSB[15:8]
+    rom[o*8 +: 8] = (PORTCOUNT == 1) ? 8'h02 : 8'hef; o = o + 1; // bDeviceClass (CDC : Misc)
+    rom[o*8 +: 8] = (PORTCOUNT == 1) ? 8'h00 : 8'h02; o = o + 1; // bDeviceSubClass
+    rom[o*8 +: 8] = (PORTCOUNT == 1) ? 8'h00 : 8'h01; o = o + 1; // bDeviceProtocol (IAD)
+    rom[o*8 +: 8] = hs ? 8'h40 : 8'h08;               o = o + 1; // bMaxPacketSize0
+    rom[o*8 +: 8] = 8'h50;                            o = o + 1; // idVendor[7:0]
+    rom[o*8 +: 8] = 8'h1d;                            o = o + 1; // idVendor[15:8]
+    rom[o*8 +: 8] = 8'h49;                            o = o + 1; // idProduct[7:0]
+    rom[o*8 +: 8] = 8'h61;                            o = o + 1; // idProduct[15:8]
+    rom[o*8 +: 8] = 8'h01;                            o = o + 1; // bcdDevice[7:0]
+    rom[o*8 +: 8] = 8'h01;                            o = o + 1; // bcdDevice[15:8]
+    rom[o*8 +: 8] = 8'h00;                            o = o + 1; // iManufacturer
+    rom[o*8 +: 8] = 8'h00;                            o = o + 1; // iProduct
+    rom[o*8 +: 8] = 8'h00;                            o = o + 1; // iSerialNumber
+    rom[o*8 +: 8] = 8'h01;                            o = o + 1; // bNumConfigurations
+    // ---- configuration descriptor ----
+    rom[o*8 +: 8] = 8'h09;                            o = o + 1; // bLength
+    rom[o*8 +: 8] = 8'h02;                            o = o + 1; // bDescriptorType (CONFIGURATION)
+    rom[o*8 +: 8] = 8'(ROM_DESC_CONF_SIZE);           o = o + 1; // wTotalLength[7:0]
+    rom[o*8 +: 8] = 8'(ROM_DESC_CONF_SIZE >> 8);      o = o + 1; // wTotalLength[15:8]
+    rom[o*8 +: 8] = 8'(2*PORTCOUNT);                  o = o + 1; // bNumInterfaces
+    rom[o*8 +: 8] = 8'h01;                            o = o + 1; // bConfigurationValue
+    rom[o*8 +: 8] = 8'h00;                            o = o + 1; // iConfiguration
+    rom[o*8 +: 8] = 8'h80;                            o = o + 1; // bmAttributes
+    rom[o*8 +: 8] = 8'h32;                            o = o + 1; // bMaxPower (100mA)
+    for (p = 0; p < PORTCOUNT; p = p + 1) begin
+        if (PORTCOUNT > 1) begin
+            // ---- interface association descriptor ----
+            rom[o*8 +: 8] = 8'h08;                    o = o + 1; // bLength
+            rom[o*8 +: 8] = 8'h0b;                    o = o + 1; // bDescriptorType (IAD)
+            rom[o*8 +: 8] = 8'(2*p);                  o = o + 1; // bFirstInterface
+            rom[o*8 +: 8] = 8'h02;                    o = o + 1; // bInterfaceCount
+            rom[o*8 +: 8] = 8'h02;                    o = o + 1; // bFunctionClass (CDC)
+            rom[o*8 +: 8] = 8'h02;                    o = o + 1; // bFunctionSubClass (ACM)
+            rom[o*8 +: 8] = 8'h01;                    o = o + 1; // bFunctionProtocol
+            rom[o*8 +: 8] = 8'h00;                    o = o + 1; // iFunction
+        end
+        // ---- communication interface descriptor ----
+        rom[o*8 +: 8] = 8'h09;                        o = o + 1; // bLength
+        rom[o*8 +: 8] = 8'h04;                        o = o + 1; // bDescriptorType (INTERFACE)
+        rom[o*8 +: 8] = 8'(2*p);                      o = o + 1; // bInterfaceNumber
+        rom[o*8 +: 8] = 8'h00;                        o = o + 1; // bAlternateSetting
+        rom[o*8 +: 8] = 8'h01;                        o = o + 1; // bNumEndpoints
+        rom[o*8 +: 8] = 8'h02;                        o = o + 1; // bInterfaceClass (CDC)
+        rom[o*8 +: 8] = 8'h02;                        o = o + 1; // bInterfaceSubClass (ACM)
+        rom[o*8 +: 8] = 8'h01;                        o = o + 1; // bInterfaceProtocol
+        rom[o*8 +: 8] = 8'h00;                        o = o + 1; // iInterface
+        // ---- CDC header functional descriptor ----
+        rom[o*8 +: 8] = 8'h05;                        o = o + 1; // bFunctionLength
+        rom[o*8 +: 8] = 8'h24;                        o = o + 1; // bDescriptorType (CS_INTERFACE)
+        rom[o*8 +: 8] = 8'h00;                        o = o + 1; // bDescriptorSubtype (HEADER)
+        rom[o*8 +: 8] = 8'h10;                        o = o + 1; // bcdCDC[7:0]
+        rom[o*8 +: 8] = 8'h01;                        o = o + 1; // bcdCDC[15:8]
+        // ---- CDC call management functional descriptor ----
+        rom[o*8 +: 8] = 8'h05;                        o = o + 1; // bFunctionLength
+        rom[o*8 +: 8] = 8'h24;                        o = o + 1; // bDescriptorType (CS_INTERFACE)
+        rom[o*8 +: 8] = 8'h01;                        o = o + 1; // bDescriptorSubtype (CALL_MGMT)
+        rom[o*8 +: 8] = 8'h03;                        o = o + 1; // bmCapabilities
+        rom[o*8 +: 8] = 8'((2*p)+1);                  o = o + 1; // bDataInterface
+        // ---- CDC ACM functional descriptor ----
+        rom[o*8 +: 8] = 8'h04;                        o = o + 1; // bFunctionLength
+        rom[o*8 +: 8] = 8'h24;                        o = o + 1; // bDescriptorType (CS_INTERFACE)
+        rom[o*8 +: 8] = 8'h02;                        o = o + 1; // bDescriptorSubtype (ACM)
+        rom[o*8 +: 8] = 8'h06;                        o = o + 1; // bmCapabilities
+        // ---- CDC union functional descriptor ----
+        rom[o*8 +: 8] = 8'h05;                        o = o + 1; // bFunctionLength
+        rom[o*8 +: 8] = 8'h24;                        o = o + 1; // bDescriptorType (CS_INTERFACE)
+        rom[o*8 +: 8] = 8'h06;                        o = o + 1; // bDescriptorSubtype (UNION)
+        rom[o*8 +: 8] = 8'(2*p);                      o = o + 1; // bControlInterface
+        rom[o*8 +: 8] = 8'((2*p)+1);                  o = o + 1; // bSubordinateInterface0
+        // ---- notification endpoint descriptor ----
+        rom[o*8 +: 8] = 8'h07;                        o = o + 1; // bLength
+        rom[o*8 +: 8] = 8'h05;                        o = o + 1; // bDescriptorType (ENDPOINT)
+        rom[o*8 +: 8] = 8'((8'h80|((3*p)+3)));        o = o + 1; // bEndpointAddress (IN)
+        rom[o*8 +: 8] = 8'h03;                        o = o + 1; // bmAttributes (INTERRUPT)
+        rom[o*8 +: 8] = 8'h40;                        o = o + 1; // wMaxPacketSize[7:0]
+        rom[o*8 +: 8] = 8'h00;                        o = o + 1; // wMaxPacketSize[15:8]
+        rom[o*8 +: 8] = 8'h02;                        o = o + 1; // bInterval
+        // ---- data interface descriptor ----
+        rom[o*8 +: 8] = 8'h09;                        o = o + 1; // bLength
+        rom[o*8 +: 8] = 8'h04;                        o = o + 1; // bDescriptorType (INTERFACE)
+        rom[o*8 +: 8] = 8'((2*p)+1);                  o = o + 1; // bInterfaceNumber
+        rom[o*8 +: 8] = 8'h00;                        o = o + 1; // bAlternateSetting
+        rom[o*8 +: 8] = 8'h02;                        o = o + 1; // bNumEndpoints
+        rom[o*8 +: 8] = 8'h0a;                        o = o + 1; // bInterfaceClass (CDC-Data)
+        rom[o*8 +: 8] = 8'h00;                        o = o + 1; // bInterfaceSubClass
+        rom[o*8 +: 8] = 8'h00;                        o = o + 1; // bInterfaceProtocol
+        rom[o*8 +: 8] = 8'h00;                        o = o + 1; // iInterface
+        // ---- bulk-out endpoint descriptor ----
+        rom[o*8 +: 8] = 8'h07;                        o = o + 1; // bLength
+        rom[o*8 +: 8] = 8'h05;                        o = o + 1; // bDescriptorType (ENDPOINT)
+        rom[o*8 +: 8] = 8'((3*p)+1);                  o = o + 1; // bEndpointAddress (OUT)
+        rom[o*8 +: 8] = 8'h02;                        o = o + 1; // bmAttributes (BULK)
+        rom[o*8 +: 8] = hs ? 8'h00 : 8'h40;           o = o + 1; // wMaxPacketSize[7:0]
+        rom[o*8 +: 8] = hs ? 8'h02 : 8'h00;           o = o + 1; // wMaxPacketSize[15:8]
+        rom[o*8 +: 8] = 8'h00;                        o = o + 1; // bInterval
+        // ---- bulk-in endpoint descriptor ----
+        rom[o*8 +: 8] = 8'h07;                        o = o + 1; // bLength
+        rom[o*8 +: 8] = 8'h05;                        o = o + 1; // bDescriptorType (ENDPOINT)
+        rom[o*8 +: 8] = 8'((8'h80|((3*p)+2)));        o = o + 1; // bEndpointAddress (IN)
+        rom[o*8 +: 8] = 8'h02;                        o = o + 1; // bmAttributes (BULK)
+        rom[o*8 +: 8] = hs ? 8'h00 : 8'h40;           o = o + 1; // wMaxPacketSize[7:0]
+        rom[o*8 +: 8] = hs ? 8'h02 : 8'h00;           o = o + 1; // wMaxPacketSize[15:8]
+        rom[o*8 +: 8] = 8'h00;                        o = o + 1; // bInterval
+    end
+    // ---- string descriptor 0 (language id) ----
+    rom[o*8 +: 8] = 8'h04;                            o = o + 1; // bLength
+    rom[o*8 +: 8] = 8'h03;                            o = o + 1; // bDescriptorType (STRING)
+    rom[o*8 +: 8] = 8'h09;                            o = o + 1; // wLANGID[7:0] (0x0409)
+    rom[o*8 +: 8] = 8'h04;                            o = o + 1; // wLANGID[15:8]
+    // ---- string descriptor 1 ("ULTRA-EMBEDDED") ----
+    rom[o*8 +: 8] = 8'h1e;                            o = o + 1; // bLength
+    rom[o*8 +: 8] = 8'h03;                            o = o + 1; // bDescriptorType (STRING)
+    rom[o*8 +: 8] = 8'h55; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // 'U'
+    rom[o*8 +: 8] = 8'h4c; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // 'L'
+    rom[o*8 +: 8] = 8'h54; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // 'T'
+    rom[o*8 +: 8] = 8'h52; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // 'R'
+    rom[o*8 +: 8] = 8'h41; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // 'A'
+    rom[o*8 +: 8] = 8'h2d; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // '-'
+    rom[o*8 +: 8] = 8'h45; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // 'E'
+    rom[o*8 +: 8] = 8'h4d; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // 'M'
+    rom[o*8 +: 8] = 8'h42; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // 'B'
+    rom[o*8 +: 8] = 8'h45; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // 'E'
+    rom[o*8 +: 8] = 8'h44; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // 'D'
+    rom[o*8 +: 8] = 8'h44; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // 'D'
+    rom[o*8 +: 8] = 8'h45; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // 'E'
+    rom[o*8 +: 8] = 8'h44; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // 'D'
+    // ---- string descriptor 2 ("USB DEMO      ") ----
+    rom[o*8 +: 8] = 8'h1e;                            o = o + 1; // bLength
+    rom[o*8 +: 8] = 8'h03;                            o = o + 1; // bDescriptorType (STRING)
+    rom[o*8 +: 8] = 8'h55; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // 'U'
+    rom[o*8 +: 8] = 8'h53; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // 'S'
+    rom[o*8 +: 8] = 8'h42; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // 'B'
+    rom[o*8 +: 8] = 8'h20; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // ' '
+    rom[o*8 +: 8] = 8'h44; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // 'D'
+    rom[o*8 +: 8] = 8'h45; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // 'E'
+    rom[o*8 +: 8] = 8'h4d; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // 'M'
+    rom[o*8 +: 8] = 8'h4f; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // 'O'
+    rom[o*8 +: 8] = 8'h20; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // ' '
+    rom[o*8 +: 8] = 8'h20; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // ' '
+    rom[o*8 +: 8] = 8'h20; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // ' '
+    rom[o*8 +: 8] = 8'h20; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // ' '
+    rom[o*8 +: 8] = 8'h20; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // ' '
+    rom[o*8 +: 8] = 8'h20; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // ' '
+    // ---- string descriptor 3 ("000000") ----
+    rom[o*8 +: 8] = 8'h0e;                            o = o + 1; // bLength
+    rom[o*8 +: 8] = 8'h03;                            o = o + 1; // bDescriptorType (STRING)
+    rom[o*8 +: 8] = 8'h30; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // '0'
+    rom[o*8 +: 8] = 8'h30; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // '0'
+    rom[o*8 +: 8] = 8'h30; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // '0'
+    rom[o*8 +: 8] = 8'h30; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // '0'
+    rom[o*8 +: 8] = 8'h30; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // '0'
+    rom[o*8 +: 8] = 8'h30; o = o + 1; rom[o*8 +: 8] = 8'h00; o = o + 1; // '0'
+    // ---- CDC line coding (115200 baud, 1 stop bit, no parity, 8 data bits) ----
+    rom[o*8 +: 8] = 8'h00;                            o = o + 1; // dwDTERate[7:0]
+    rom[o*8 +: 8] = 8'hc2;                            o = o + 1; // dwDTERate[15:8]
+    rom[o*8 +: 8] = 8'h01;                            o = o + 1; // dwDTERate[23:16]
+    rom[o*8 +: 8] = 8'h00;                            o = o + 1; // dwDTERate[31:24]
+    rom[o*8 +: 8] = 8'h00;                            o = o + 1; // bCharFormat
+    rom[o*8 +: 8] = 8'h00;                            o = o + 1; // bParityType
+    rom[o*8 +: 8] = 8'h08;                            o = o + 1; // bDataBits
+    desc_rom_build = rom;
 end
+endfunction
 
-assign data_o = desc_rom_r;
+localparam [(ROM_SIZE*8)-1:0] ROM_FS = desc_rom_build(1'b0);
+localparam [(ROM_SIZE*8)-1:0] ROM_HS = desc_rom_build(1'b1);
+
+wire [(ROM_SIZE*8)-1:0] rom_w = hs_i ? ROM_HS : ROM_FS;
+
+assign data_o = (addr_i < 16'(ROM_SIZE)) ? rom_w[addr_i*8 +: 8] : 8'h00;
 
 endmodule
