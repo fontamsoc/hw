@@ -20,7 +20,7 @@
 // Ports:
 //
 // rst_i
-// 	This input reset the trasmit buffer empty.
+// 	This input resets the transmit buffer empty.
 //
 // clk_i
 // 	Clock input used to write data in the transmit buffer.
@@ -36,10 +36,10 @@
 // 	of this input is calculated using the following formula: (clkfreq/bitrate);
 // 	The result of the above formula should be rounded-down, because
 // 	it is better to have a slightly lower estimation of the duration
-// 	of a bit, this way a receiver is guarantied to always sample
+// 	of a bit, this way a receiver is guaranteed to always sample
 // 	past the beginning of each bit, and not fall short by sampling
-// 	the same bit twice. ie: For a clkfreq of 100 Mhz and a bitrate
-// 	of 115200 bps, the above formula yield 868.056;
+// 	the same bit twice. ie: For a clkfreq of 100 MHz and a bitrate
+// 	of 115200 bps, the above formula yields 868.056;
 // 	the value of this input is then picked as: 868.
 //
 // write_i

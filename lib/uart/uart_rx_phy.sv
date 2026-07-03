@@ -27,7 +27,7 @@
 // Ports:
 //
 // rst_i
-// 	This input reset the module.
+// 	This input resets the module.
 // 	It must be held low for normal operation.
 //
 // clk_i
@@ -42,9 +42,9 @@
 // 	that the receiver will sample past the start of each bit.
 // 	Note that, as the receiver goes through its idle state to start
 // 	receiving the next byte, any accumulated skew from the beginning of
-// 	a bit get discarded as the receiver detects the exact beginning of a bit.
-// 	ie: For a clkfreq of 100 Mhz and a bitrate of 115200 bps, the above
-// 	formula yield 911.458; the value of this input is then picked as: 911.
+// 	a bit gets discarded as the receiver detects the exact beginning of a bit.
+// 	ie: For a clkfreq of 100 MHz and a bitrate of 115200 bps, the above
+// 	formula yields 911.458; the value of this input is then picked as: 911.
 //
 // rx_i
 // 	Incoming serial line.
@@ -151,7 +151,7 @@ always_ff @(posedge clk_i) begin
 				rcvd_o <= 1;
 			// If the expected stop bit is never found,
 			// the received bits get discarded since
-			// the output "rcvd_o" never get set high.
+			// the output "rcvd_o" never gets set high.
 
 			// I set the receiver state to iddle so
 			// as to wait for the next transmission.

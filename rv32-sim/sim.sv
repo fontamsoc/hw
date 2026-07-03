@@ -37,7 +37,7 @@
 /* makefile defined *///`define SRAM_INITFILE "apps/helloworld/helloworld.hex"
 /* makefile defined *///`define SRAM_KBSIZE (256/*KB*/)
 
-/* makefile defined *///`define CLKFREQ (100000000/* 100 Mhz */)
+/* makefile defined *///`define CLKFREQ (100000000/* 100 MHz */)
 
 module sim (
 	 rst_i

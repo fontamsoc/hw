@@ -4,7 +4,7 @@
 // Serial peripheral through USB.
 //
 // The device memory mapping usage is similar to serial_uart peripheral,
-// with the difference that command CMDSETSPEED "arg" is ignnored.
+// with the difference that command CMDSETSPEED "arg" is ignored.
 
 // Parameters:
 //
@@ -19,15 +19,15 @@
 // Ports:
 //
 // rst_i
-// 	This input reset this module when held high
+// 	This input resets this module when held high
 // 	and must be held low for normal operation.
 //
 // clk_i
 // 	Clock input used by the memory interface.
 //
 // clk_phy_i
-// 	Clock input used by the internal module which transmit
-// 	and receive each bit; due to usb_fs_phy requirements,
+// 	Clock input used by the internal module which transmits
+// 	and receives each bit; due to usb_fs_phy requirements,
 // 	its frequency must be 48 MHz.
 //
 // wb_stb_i
@@ -46,7 +46,7 @@
 // 	buffer usage interrupt threshold is reached.
 //
 // irq_rdy_i
-// 	This signal become low when the interrupt request
+// 	This signal becomes low when the interrupt request
 // 	has been acknowledged, and is used by this module
 // 	to lower irq_stb_o and disable interrupt.
 //
@@ -196,7 +196,7 @@ assign wb_dat_o = (rx_read_w_sampled ? rx_data_w0 : wb_dat_o_);
 always_ff @(posedge clk_i) begin
 	// Logic enabling/disabling interrupt.
 	if (rst_i) begin
-		// On reset, interrupt is disabled, and must be explicitely enabled.
+		// On reset, interrupt is disabled, and must be explicitly enabled.
 		// It prevents unwanted interrupt after reset.
 		intrqstthresh <= 0;
 	end else if (cmdsetint) begin

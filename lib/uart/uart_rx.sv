@@ -20,7 +20,7 @@
 // Ports:
 //
 // rst_i
-// 	This input reset the receive buffer empty.
+// 	This input resets the receive buffer empty.
 //
 // clk_i
 // 	Clock input used to read data from the receive buffer.
@@ -39,9 +39,9 @@
 // 	that the receiver will sample past the start of each bit.
 // 	Note that, as the receiver goes through its idle state to start
 // 	receiving the next byte, any accumulated skew from the beginning of
-// 	a bit get discarded as the receiver detects the exact beginning of a bit.
-// 	ie: For a clkfreq of 100 Mhz and a bitrate of 115200 bps, the above
-// 	formula yield 911.458; the value of this input is then picked as: 911.
+// 	a bit gets discarded as the receiver detects the exact beginning of a bit.
+// 	ie: For a clkfreq of 100 MHz and a bitrate of 115200 bps, the above
+// 	formula yields 911.458; the value of this input is then picked as: 911.
 //
 // read_i
 // data_o
