@@ -36,36 +36,41 @@
 //                          Generated File
 //-----------------------------------------------------------------
 
-module usb_cdc_core (
+module usb_cdc_core #(
+     parameter USB_SPEED_HS = "False" // True or False
+    ,parameter PORTCOUNT    = 1       // number of CDC-ACM functions (ie: COM ports), 1 to 5
+)(
     // Inputs
-     input  wire       clk_i
-    ,input  wire       rst_i
-    ,input  wire       enable_i
-    ,input  wire [7:0] utmi_data_in_i
-    ,input  wire       utmi_txready_i
-    ,input  wire       utmi_rxvalid_i
-    ,input  wire       utmi_rxactive_i
-    ,input  wire       utmi_rxerror_i
-    ,input  wire [1:0] utmi_linestate_i
-    ,input  wire       inport_valid_i
-    ,input  wire [7:0] inport_data_i
-    ,input  wire       outport_accept_i
+     input  wire                     clk_i
+    ,input  wire                     rst_i
+    ,input  wire                     enable_i
+    ,input  wire [7:0]               utmi_data_in_i
+    ,input  wire                     utmi_txready_i
+    ,input  wire                     utmi_rxvalid_i
+    ,input  wire                     utmi_rxactive_i
+    ,input  wire                     utmi_rxerror_i
+    ,input  wire [1:0]               utmi_linestate_i
+    ,input  wire [PORTCOUNT-1:0]     inport_valid_i
+    ,input  wire [(8*PORTCOUNT)-1:0] inport_data_i
+    ,input  wire [PORTCOUNT-1:0]     outport_accept_i
     // Outputs
-    ,output wire [7:0] utmi_data_out_o
-    ,output wire       utmi_txvalid_o
-    ,output wire [1:0] utmi_op_mode_o
-    ,output wire [1:0] utmi_xcvrselect_o
-    ,output wire       utmi_termselect_o
-    ,output wire       utmi_dppulldown_o
-    ,output wire       utmi_dmpulldown_o
-    ,output wire       inport_accept_o
-    ,output wire       outport_valid_o
-    ,output wire [7:0] outport_data_o
+    ,output wire [7:0]               utmi_data_out_o
+    ,output wire                     utmi_txvalid_o
+    ,output wire [1:0]               utmi_op_mode_o
+    ,output wire [1:0]               utmi_xcvrselect_o
+    ,output wire                     utmi_termselect_o
+    ,output wire                     utmi_dppulldown_o
+    ,output wire                     utmi_dmpulldown_o
+    ,output wire [PORTCOUNT-1:0]     inport_accept_o
+    ,output wire [PORTCOUNT-1:0]     outport_valid_o
+    ,output wire [(8*PORTCOUNT)-1:0] outport_data_o
 );
 
-parameter USB_SPEED_HS = "False"; // True or False
-
-localparam NUM_EP = 4; // number of endpoints implemented (EP0 included)
+// Each CDC-ACM function uses three endpoints in addition to the
+// EP0 control endpoint that all functions share: bulk-out 3p+1,
+// bulk-in 3p+2 and interrupt-in 3p+3 for function p; the 4-bit
+// endpoint field of the token decoder limits PORTCOUNT to 5.
+localparam NUM_EP = (1 + (3*PORTCOUNT)); // number of endpoints implemented (EP0 included)
 
 //-----------------------------------------------------------------
 // Defines
@@ -143,10 +148,6 @@ localparam NUM_EP = 4; // number of endpoints implemented (EP0 included)
 `define PRODUCT_NAME_STR_ID             8'd2
 `define SERIAL_NUM_STR_ID               8'd3
 
-`define CDC_ENDPOINT_BULK_OUT           1
-`define CDC_ENDPOINT_BULK_IN            2
-`define CDC_ENDPOINT_INTR_IN            3
-
 `define CDC_SEND_ENCAPSULATED_COMMAND   8'h00
 `define CDC_GET_ENCAPSULATED_RESPONSE   8'h01
 `define CDC_GET_LINE_CODING             8'h21
@@ -158,7 +159,7 @@ localparam NUM_EP = 4; // number of endpoints implemented (EP0 included)
 localparam ROM_DESC_DEVICE_ADDR     = 0;
 localparam ROM_DESC_DEVICE_SIZE     = 18;
 localparam ROM_DESC_CONF_ADDR       = (ROM_DESC_DEVICE_ADDR + ROM_DESC_DEVICE_SIZE);
-localparam ROM_DESC_CONF_SIZE       = 67;
+localparam ROM_DESC_CONF_SIZE       = (9 + (((PORTCOUNT == 1) ? 58 : 66) * PORTCOUNT));
 localparam ROM_DESC_STR_LANG_ADDR   = (ROM_DESC_CONF_ADDR + ROM_DESC_CONF_SIZE);
 localparam ROM_DESC_STR_LANG_SIZE   = 4;
 localparam ROM_DESC_STR_MAN_ADDR    = (ROM_DESC_STR_LANG_ADDR + ROM_DESC_STR_LANG_SIZE);
@@ -972,6 +973,9 @@ assign ep0_tx_stall_w      = ctrl_txstall_q;
 // Descriptor ROM
 //-----------------------------------------------------------------
 usb_desc_rom
+#(
+    .PORTCOUNT(PORTCOUNT)
+)
 u_rom
 (
     .hs_i(usb_hs_w),
@@ -980,68 +984,78 @@ u_rom
 );
 
 //-----------------------------------------------------------------
-// Unused Endpoints
+// Stream I/O, one instance per CDC-ACM function
 //-----------------------------------------------------------------
-assign ep_tx_ready_w[1]      = 1'b0;
-assign ep_tx_data_valid_w[1] = 1'b0;
-assign ep_tx_data_strb_w[1]  = 1'b0;
-assign ep_tx_data_w[15:8]    = 8'b0;
-assign ep_tx_data_last_w[1]  = 1'b0;
-assign ep_stall_w[1]         = 1'b0;
-assign ep_tx_ready_w[3]      = 1'b0;
-assign ep_tx_data_valid_w[3] = 1'b0;
-assign ep_tx_data_strb_w[3]  = 1'b0;
-assign ep_tx_data_w[31:24]   = 8'b0;
-assign ep_tx_data_last_w[3]  = 1'b0;
-assign ep_stall_w[3]         = 1'b0;
+wire [10:0] max_packet_w = usb_hs_w ? 11'd511 : 11'd63;
 
-assign ep_rx_space_w[2]      = 1'b0;
-assign ep_rx_space_w[3]      = 1'b0;
+genvar gen_port;
+generate
+for (gen_port = 0; gen_port < PORTCOUNT; gen_port = gen_port + 1)
+begin : gen_stream
+    localparam EP_BULK_OUT = ((3*gen_port) + 1);
+    localparam EP_BULK_IN  = ((3*gen_port) + 2);
+    localparam EP_INTR_IN  = ((3*gen_port) + 3);
 
-// The EP2 stall input was an undriven wire in the original code;
-// it is now explicitly tied low.
-assign ep_stall_w[2]         = 1'b0;
+    // Unused endpoint directions: the bulk-out and interrupt-in
+    // endpoints never transmit, the bulk-in and interrupt-in
+    // endpoints never receive, and no endpoint ever stalls.
+    assign ep_tx_ready_w[EP_BULK_OUT]        = 1'b0;
+    assign ep_tx_data_valid_w[EP_BULK_OUT]   = 1'b0;
+    assign ep_tx_data_strb_w[EP_BULK_OUT]    = 1'b0;
+    assign ep_tx_data_w[8*EP_BULK_OUT +: 8]  = 8'b0;
+    assign ep_tx_data_last_w[EP_BULK_OUT]    = 1'b0;
+    assign ep_stall_w[EP_BULK_OUT]           = 1'b0;
+    assign ep_tx_ready_w[EP_INTR_IN]         = 1'b0;
+    assign ep_tx_data_valid_w[EP_INTR_IN]    = 1'b0;
+    assign ep_tx_data_strb_w[EP_INTR_IN]     = 1'b0;
+    assign ep_tx_data_w[8*EP_INTR_IN +: 8]   = 8'b0;
+    assign ep_tx_data_last_w[EP_INTR_IN]     = 1'b0;
+    assign ep_stall_w[EP_INTR_IN]            = 1'b0;
 
-//-----------------------------------------------------------------
-// Stream I/O
-//-----------------------------------------------------------------
-reg        inport_valid_q;
-reg [7:0]  inport_data_q;
-reg [10:0] inport_cnt_q;
+    assign ep_rx_space_w[EP_BULK_IN]         = 1'b0;
+    assign ep_rx_space_w[EP_INTR_IN]         = 1'b0;
+    assign ep_stall_w[EP_BULK_IN]            = 1'b0;
 
-always_ff @(posedge clk_i)
-if (rst_i)
-begin
-    inport_valid_q <= 1'b0;
-    inport_data_q  <= 8'b0;
+    // Device to host (bulk-in endpoint)
+    reg        inport_valid_q;
+    reg [7:0]  inport_data_q;
+    reg [10:0] inport_cnt_q;
+
+    always_ff @(posedge clk_i)
+    if (rst_i)
+    begin
+        inport_valid_q <= 1'b0;
+        inport_data_q  <= 8'b0;
+    end
+    else if (inport_accept_o[gen_port])
+    begin
+        inport_valid_q <= inport_valid_i[gen_port];
+        inport_data_q  <= inport_data_i[8*gen_port +: 8];
+    end
+
+    wire inport_last_w = !inport_valid_i[gen_port] || (inport_cnt_q == max_packet_w);
+
+    always_ff @(posedge clk_i)
+    if (rst_i)
+        inport_cnt_q  <= 11'b0;
+    else if (inport_last_w && ep_tx_data_accept_w[EP_BULK_IN])
+        inport_cnt_q  <= 11'b0;
+    else if (inport_valid_q && ep_tx_data_accept_w[EP_BULK_IN])
+        inport_cnt_q  <= inport_cnt_q + 11'd1;
+
+    assign ep_tx_data_valid_w[EP_BULK_IN]   = inport_valid_q;
+    assign ep_tx_data_w[8*EP_BULK_IN +: 8]  = inport_data_q;
+    assign ep_tx_ready_w[EP_BULK_IN]        = ep_tx_data_valid_w[EP_BULK_IN];
+    assign ep_tx_data_strb_w[EP_BULK_IN]    = ep_tx_data_valid_w[EP_BULK_IN];
+    assign ep_tx_data_last_w[EP_BULK_IN]    = inport_last_w;
+    assign inport_accept_o[gen_port]        = !inport_valid_q | ep_tx_data_accept_w[EP_BULK_IN];
+
+    // Host to device (bulk-out endpoint)
+    assign outport_valid_o[gen_port]        = ep_rx_valid_w[EP_BULK_OUT] && rx_strb_w;
+    assign outport_data_o[8*gen_port +: 8]  = rx_data_w;
+    assign ep_rx_space_w[EP_BULK_OUT]       = outport_accept_i[gen_port];
 end
-else if (inport_accept_o)
-begin
-    inport_valid_q <= inport_valid_i;
-    inport_data_q  <= inport_data_i;
-end
-
-wire [10:0] max_packet_w   = usb_hs_w ? 11'd511 : 11'd63;
-wire        inport_last_w  = !inport_valid_i || (inport_cnt_q == max_packet_w);
-
-always_ff @(posedge clk_i)
-if (rst_i)
-    inport_cnt_q  <= 11'b0;
-else if (inport_last_w && ep_tx_data_accept_w[2])
-    inport_cnt_q  <= 11'b0;
-else if (inport_valid_q && ep_tx_data_accept_w[2])
-    inport_cnt_q  <= inport_cnt_q + 11'd1;
-
-assign ep_tx_data_valid_w[2] = inport_valid_q;
-assign ep_tx_data_w[23:16]   = inport_data_q;
-assign ep_tx_ready_w[2]      = ep_tx_data_valid_w[2];
-assign ep_tx_data_strb_w[2]  = ep_tx_data_valid_w[2];
-assign ep_tx_data_last_w[2]  = inport_last_w;
-assign inport_accept_o       = !inport_valid_q | ep_tx_data_accept_w[2];
-
-assign outport_valid_o  = ep_rx_valid_w[1] && rx_strb_w;
-assign outport_data_o   = rx_data_w;
-assign ep_rx_space_w[1] = outport_accept_i;
+endgenerate
 
 
 
