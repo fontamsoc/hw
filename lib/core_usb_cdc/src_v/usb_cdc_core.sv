@@ -155,20 +155,20 @@ localparam NUM_EP = 4; // number of endpoints implemented (EP0 included)
 `define CDC_SEND_BREAK                  8'h23
 
 // Descriptor ROM offsets / sizes
-`define ROM_DESC_DEVICE_ADDR            8'd0
-`define ROM_DESC_DEVICE_SIZE            16'd18
-`define ROM_DESC_CONF_ADDR              8'd18
-`define ROM_DESC_CONF_SIZE              16'd67
-`define ROM_DESC_STR_LANG_ADDR          8'd85
-`define ROM_DESC_STR_LANG_SIZE          16'd4
-`define ROM_DESC_STR_MAN_ADDR           8'd89
-`define ROM_DESC_STR_MAN_SIZE           16'd30
-`define ROM_DESC_STR_PROD_ADDR          8'd119
-`define ROM_DESC_STR_PROD_SIZE          16'd30
-`define ROM_DESC_STR_SERIAL_ADDR        8'd149
-`define ROM_DESC_STR_SERIAL_SIZE        16'd14
-`define ROM_CDC_LINE_CODING_ADDR        8'd163
-`define ROM_CDC_LINE_CODING_SIZE        16'd7
+localparam ROM_DESC_DEVICE_ADDR     = 0;
+localparam ROM_DESC_DEVICE_SIZE     = 18;
+localparam ROM_DESC_CONF_ADDR       = (ROM_DESC_DEVICE_ADDR + ROM_DESC_DEVICE_SIZE);
+localparam ROM_DESC_CONF_SIZE       = 67;
+localparam ROM_DESC_STR_LANG_ADDR   = (ROM_DESC_CONF_ADDR + ROM_DESC_CONF_SIZE);
+localparam ROM_DESC_STR_LANG_SIZE   = 4;
+localparam ROM_DESC_STR_MAN_ADDR    = (ROM_DESC_STR_LANG_ADDR + ROM_DESC_STR_LANG_SIZE);
+localparam ROM_DESC_STR_MAN_SIZE    = 30;
+localparam ROM_DESC_STR_PROD_ADDR   = (ROM_DESC_STR_MAN_ADDR + ROM_DESC_STR_MAN_SIZE);
+localparam ROM_DESC_STR_PROD_SIZE   = 30;
+localparam ROM_DESC_STR_SERIAL_ADDR = (ROM_DESC_STR_PROD_ADDR + ROM_DESC_STR_PROD_SIZE);
+localparam ROM_DESC_STR_SERIAL_SIZE = 14;
+localparam ROM_CDC_LINE_CODING_ADDR = (ROM_DESC_STR_SERIAL_ADDR + ROM_DESC_STR_SERIAL_SIZE);
+localparam ROM_CDC_LINE_CODING_SIZE = 7;
 
 //-----------------------------------------------------------------
 // Wires
@@ -616,7 +616,7 @@ reg        ctrl_stall_r; // Send STALL
 reg        ctrl_ack_r;   // Send STATUS (ZLP)
 reg [15:0] ctrl_get_len_r;
 
-reg [7:0]  desc_addr_r;
+reg [15:0] desc_addr_r;
 
 reg        addressed_q;
 reg        addressed_r;
@@ -634,7 +634,7 @@ begin
     ctrl_stall_r    = 1'b0;
     ctrl_get_len_r  = 16'b0;
     ctrl_ack_r      = 1'b0;
-    desc_addr_r     = 8'b0;
+    desc_addr_r     = 16'b0;
     device_addr_r   = device_addr_q;
     addressed_r     = addressed_q;
     configured_r    = configured_q;
@@ -676,36 +676,36 @@ begin
                 case (bDescriptorType_w)
                 `DESC_DEVICE:
                 begin
-                    desc_addr_r    = `ROM_DESC_DEVICE_ADDR;
-                    ctrl_get_len_r = `ROM_DESC_DEVICE_SIZE;
+                    desc_addr_r    = ROM_DESC_DEVICE_ADDR;
+                    ctrl_get_len_r = ROM_DESC_DEVICE_SIZE;
                 end
                 `DESC_CONFIGURATION:
                 begin
-                    desc_addr_r    = `ROM_DESC_CONF_ADDR;
-                    ctrl_get_len_r = `ROM_DESC_CONF_SIZE;
+                    desc_addr_r    = ROM_DESC_CONF_ADDR;
+                    ctrl_get_len_r = ROM_DESC_CONF_SIZE;
                 end
                 `DESC_STRING:
                 begin
                     case (bDescriptorIndex_w)
                     `UNICODE_LANGUAGE_STR_ID:
                     begin
-                        desc_addr_r    = `ROM_DESC_STR_LANG_ADDR;
-                        ctrl_get_len_r = `ROM_DESC_STR_LANG_SIZE;
+                        desc_addr_r    = ROM_DESC_STR_LANG_ADDR;
+                        ctrl_get_len_r = ROM_DESC_STR_LANG_SIZE;
                     end
                     `MANUFACTURER_STR_ID:
                     begin
-                        desc_addr_r    = `ROM_DESC_STR_MAN_ADDR;
-                        ctrl_get_len_r = `ROM_DESC_STR_MAN_SIZE;
+                        desc_addr_r    = ROM_DESC_STR_MAN_ADDR;
+                        ctrl_get_len_r = ROM_DESC_STR_MAN_SIZE;
                     end
                     `PRODUCT_NAME_STR_ID:
                     begin
-                        desc_addr_r    = `ROM_DESC_STR_PROD_ADDR;
-                        ctrl_get_len_r = `ROM_DESC_STR_PROD_SIZE;
+                        desc_addr_r    = ROM_DESC_STR_PROD_ADDR;
+                        ctrl_get_len_r = ROM_DESC_STR_PROD_SIZE;
                     end
                     `SERIAL_NUM_STR_ID:
                     begin
-                        desc_addr_r    = `ROM_DESC_STR_SERIAL_ADDR;
-                        ctrl_get_len_r = `ROM_DESC_STR_SERIAL_SIZE;
+                        desc_addr_r    = ROM_DESC_STR_SERIAL_ADDR;
+                        ctrl_get_len_r = ROM_DESC_STR_SERIAL_SIZE;
                     end
                     default:
                         ;
@@ -767,8 +767,8 @@ begin
             `CDC_GET_LINE_CODING:
             begin
                 //$display("CDC_GET_LINE_CODING");
-                desc_addr_r    = `ROM_CDC_LINE_CODING_ADDR;
-                ctrl_get_len_r = `ROM_CDC_LINE_CODING_SIZE;
+                desc_addr_r    = ROM_CDC_LINE_CODING_ADDR;
+                ctrl_get_len_r = ROM_CDC_LINE_CODING_SIZE;
             end
             default:
             begin
@@ -836,7 +836,7 @@ reg        ctrl_txstall_r;
 
 wire       ctrl_send_accept_w = ep0_tx_data_accept_w || !ep0_tx_data_valid_w;
 
-reg [7:0]  desc_addr_q;
+reg [15:0] desc_addr_q;
 wire[7:0]  desc_data_w;
 
 always_comb
@@ -930,7 +930,7 @@ begin
     ctrl_txstrb_q   <= 1'b0;
     ctrl_txlast_q   <= 1'b0;
     ctrl_txstall_q  <= 1'b0;
-    desc_addr_q     <= 8'b0;
+    desc_addr_q     <= 16'b0;
 end
 else if (usb_reset_w)
 begin
@@ -942,7 +942,7 @@ begin
     ctrl_txstrb_q   <= 1'b0;
     ctrl_txlast_q   <= 1'b0;
     ctrl_txstall_q  <= 1'b0;
-    desc_addr_q     <= 8'b0;
+    desc_addr_q     <= 16'b0;
 end
 else
 begin
@@ -958,7 +958,7 @@ begin
     if (setup_valid_q)
         desc_addr_q     <= desc_addr_r;
     else if (ctrl_sending_r && ctrl_send_accept_w)
-        desc_addr_q     <= desc_addr_q + 8'd1;
+        desc_addr_q     <= desc_addr_q + 16'd1;
 end
 
 assign ep0_tx_ready_w      = ctrl_txvalid_q;
