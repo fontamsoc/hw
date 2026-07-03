@@ -11,6 +11,15 @@
 // PHYCLKFREQ
 // 	Frequency of the clock input "clk_i" in Hz.
 // 	Must be 48000000.
+//
+// PORTCOUNT
+// 	Number of COM ports presented to the host through the same
+// 	USB link; it must be at least 1 and at most 5, as each port
+// 	uses 3 endpoints in addition to the endpoint 0 shared by all
+// 	ports, out of the 16 endpoints addressable.
+// 	The port "p" uses the bit "p" of each single-bit-per-port
+// 	signal, and the byte slice [((p+1)*8)-1:(p*8)] of "data_o"
+// 	and "data_i".
 
 // Ports:
 //
@@ -22,22 +31,28 @@
 // 	Clock signal.
 //
 // rcvd_o
-// 	Signal high for one clock cycle when a byte has been received.
+// 	Bit "p" high for one clock cycle when a byte has been
+// 	received for the port "p".
 //
 // data_o
-// 	Byte received which is valid only when "rcvd_o" is high.
+// 	Byte slice "p" is the byte received for the port "p", and is
+// 	valid only when the bit "p" of "rcvd_o" is high.
 //
 // rdy_i
-// 	Signal high when ready to receive through "data_o".
+// 	Bit "p" to be set high when ready to receive the port "p"
+// 	byte through "data_o".
 //
 // stb_i
-// 	Signal to be set high to transmit "data_i" if "rdy_o" is high.
+// 	Bit "p" to be set high to transmit the port "p" byte slice
+// 	of "data_i" if the bit "p" of "rdy_o" is high.
 //
 // data_i
-// 	Byte value to transmit when (stb_i && rdy_o) is true.
+// 	Byte slice "p" is the byte value to transmit for the port "p"
+// 	when (stb_i[p] && rdy_o[p]) is true.
 //
 // rdy_o
-// 	Signal high when ready to transmit through "data_i".
+// 	Bit "p" high when ready to transmit the port "p" byte
+// 	through "data_i".
 
 `include "lib/core_usb_cdc/src_v/usb_cdc_core.sv"
 `include "lib/core_usb_cdc/src_v/usb_desc_rom.sv"
@@ -67,10 +82,14 @@ module serial_usb_phy (
 );
 
 parameter PHYCLKFREQ = 48000000;
+parameter PORTCOUNT  = 1;
 
 initial begin
 	if (!(  PHYCLKFREQ == 48000000 ||
 		PHYCLKFREQ == 60000000)) begin
+		$finish;
+	end
+	if (!(PORTCOUNT >= 1 && PORTCOUNT <= 5)) begin
 		$finish;
 	end
 end
@@ -79,13 +98,13 @@ input wire rst_i;
 
 input wire clk_i;
 
-output wire            rcvd_o;
-output wire [8 -1 : 0] data_o;
-input  wire            rdy_i;
+output wire [PORTCOUNT -1 : 0]     rcvd_o;
+output wire [(8*PORTCOUNT) -1 : 0] data_o;
+input  wire [PORTCOUNT -1 : 0]     rdy_i;
 
-input  wire            stb_i;
-input  wire [8 -1 : 0] data_i;
-output wire            rdy_o;
+input  wire [PORTCOUNT -1 : 0]     stb_i;
+input  wire [(8*PORTCOUNT) -1 : 0] data_i;
+output wire [PORTCOUNT -1 : 0]     rdy_o;
 
 inout wire usb_dp_io;
 inout wire usb_dn_io;
@@ -106,7 +125,8 @@ wire            utmi_dmpulldown_w;
 
 usb_cdc_core #(
 
-	.USB_SPEED_HS (PHYCLKFREQ == 60000000 ? "True" : "False")
+	 .USB_SPEED_HS (PHYCLKFREQ == 60000000 ? "True" : "False")
+	,.PORTCOUNT    (PORTCOUNT)
 
 ) usb_cdc_core0 (
 
