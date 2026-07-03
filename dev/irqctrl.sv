@@ -24,47 +24,52 @@
 // 	"resp" in the result gets set to 0.
 // 	CMDACKIRQ: Acknowledges an interrupt source; field "arg" is expected
 // 	to have following format | idx: (WORDBITSZ-3) bits | en: 1 bit |
-// 	where "idx" is the interrupt destination index, "en" enable/disable
+// 	where "idx" is the interrupt destination index, "en" enables/disables
 // 	further interrupt delivery to the interrupt destination "idx".
 // 	"resp" in the result gets set to the interrupt source index, or -2
-// 	if there are no pending interrupt for the destination "idx", or -1
+// 	if there are no pending interrupts for the destination "idx", or -1
 // 	for an interrupt triggered by CMDINTDST.
 // 	CMDINTDST: Triggers an interrupt targeting a specific destination;
 // 	the field "arg" is the index of the interrupt destination to target,
 // 	while "resp" in the result gets set to the interrupt destination index
 // 	if valid, -2 if not ready due to an interrupt pending ack, or -1 if invalid.
 // 	CMDENAIRQ: Enable/Disable an interrupt source; field "arg" is expected
-// 	to have following format | idx: (WORDBITSZ-3) bits | en: 1 bit|
-// 	where "idx" is the interrupt source index, "en" enable/disable
+// 	to have following format | idx: (WORDBITSZ-3) bits | en: 1 bit |
+// 	where "idx" is the interrupt source index, "en" enables/disables
 // 	interrupts from the interrupt source "idx".
 // 	"resp" in the result gets set to the interrupt source index, or -1
 // 	if invalid.
 //
-// To be threadsafe, an atomic read-write can be used to send a command
-// to the controller until CMDDEVRDY is returned, then another atomic
-// read-write sending CMDDEVRDY must be used to retrieve the result while
-// making the controller ready for the next command.
+// The controller silently drops any command, other than CMDDEVRDY,
+// written while the previous command isn't CMDDEVRDY (in other words
+// while processing a transaction); CMDDEVRDY is always accepted and
+// discards any result not yet retrieved.
+// Hence a non-CMDDEVRDY command is the start of a transaction,
+// and to insure threadsafety, an atomic read-write must be used to send
+// a command to the controller until CMDDEVRDY is returned, then another
+// atomic read-write sending CMDDEVRDY must be used to retrieve the
+// result while making the controller ready for the next command.
 //
 // An interrupt must be acknowledged as soon as possible using CMDACKIRQ
-// (which drives irq_src_rdy_o low and retuns its index) so that
+// (which drives irq_src_rdy_o low and returns its index) so that
 // the controller can dispatch another interrupt, because the controller
 // does not buffer requests.
 
 // Parameters:
 //
 // IRQDSTCOUNT
-// 	Number of interrupt destination.
+// 	Number of interrupt destinations.
 // 	It must be non-null and less than ((1<<(WORDBITSZ-3))-2).
 //
 // IRQSRCCOUNT
-// 	Number of interrupt source.
+// 	Number of interrupt sources.
 // 	It must be non-null and less than ((1<<(WORDBITSZ-3))-2).
 
 // Ports:
 //
 // rst_i
 // 	When held high at the rising edge
-// 	of the clock signal, the module reset.
+// 	of the clock signal, the module resets.
 // 	It must be held low for normal operation.
 //
 // clk_i

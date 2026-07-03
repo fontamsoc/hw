@@ -3,7 +3,7 @@
 
 // UART peripheral.
 //
-// The device transfer data byte at a time.
+// The device transfers data a byte at a time.
 // The first word of the device memory mapping is used to send/receive
 // bytes while the second word is used to send commands to the device.
 //
@@ -21,34 +21,39 @@
 //
 // The description of commands is as follow:
 // 	CMDDEVRDY: Make the device accept a new command.
-// 	"resp" in the result get set to 0.
+// 	"resp" in the result gets set to 0.
 // 	CMDGETBUFFERUSAGE: Get receive/transmit buffer usage.
-// 	"arg" value encode which buffer should the usage be returned.
+// 	"arg" value encodes which buffer should the usage be returned.
 // 	When "arg" is 0, the receive buffer usage is returned;
 // 	when "arg" is 1, the transmit buffer usage is returned.
-// 	"resp" in the result get set to the usage in number of bytes.
+// 	"resp" in the result gets set to the usage in number of bytes.
 // 	CMDSETINTERRUPT: enable/disable interrupt.
-// 	"arg" value when 0 disable interrupt, and when non-null, enables
-// 	interrupt and set the minimum receive buffer usage that would
+// 	"arg" value when 0 disables interrupt, and when non-null, enables
+// 	interrupt and sets the minimum receive buffer usage that would
 // 	trigger an interrupt.
-// 	"resp" in the result get set to the size in bytes of the transmit
+// 	"resp" in the result gets set to the size in bytes of the transmit
 // 	and receive buffer.
 // 	CMDSETSPEED: Set the speed to use when sending and receiving bytes.
 // 	"arg" value is the speed computed as follow: (PHYCLKFREQ/bitrate);
-// 	ei: For a PHYCLKFREQ of 100 Mhz and a bitrate of 115200 bps,
-// 	the above formula yield 868.
-// 	"resp" in the result get set to PHYCLKFREQ.
+// 	ie: For a PHYCLKFREQ of 100 MHz and a bitrate of 115200 bps,
+// 	the above formula yields 868.
+// 	"resp" in the result gets set to PHYCLKFREQ.
 //
-// To be multi core proof, an atomic read-write must be used to send
+// The device silently drops any command, other than CMDDEVRDY,
+// written while the previous command isn't CMDDEVRDY (in other words
+// while processing a transaction); CMDDEVRDY is always accepted and
+// discards any result not yet retrieved.
+// Hence a non-CMDDEVRDY command is the start of a transaction,
+// and to insure threadsafety, an atomic read-write must be used to send
 // a command to the device until CMDDEVRDY is returned, then another
 // atomic read-write sending CMDDEVRDY must be used to retrieve the
 // result while making the device ready for the next command.
 //
-// On reset, interrupt is disabled, and must be explicitely enabled.
-// It prevent an unwanted interrupt after reset.
+// On reset, interrupt is disabled, and must be explicitly enabled.
+// It prevents an unwanted interrupt after reset.
 // When enabled, an interrupt request is raised if the receive buffer
-// usage interrupt threshold is reached; interrupt get disabled when
-// the raised interrupt get acknowledged.
+// usage interrupt threshold is reached; interrupt gets disabled when
+// the raised interrupt gets acknowledged.
 
 // Parameters:
 //
@@ -68,7 +73,7 @@
 // Ports:
 //
 // rst_i
-// 	This input reset this module when held high
+// 	This input resets this module when held high
 // 	and must be held low for normal operation.
 //
 // clk_i
@@ -95,7 +100,7 @@
 // 	buffer usage interrupt threshold is reached.
 //
 // irq_rdy_i
-// 	This signal become low when the interrupt request
+// 	This signal becomes low when the interrupt request
 // 	has been acknowledged, and is used by this module
 // 	to lower irq_stb_o and disable interrupt.
 //
@@ -250,7 +255,7 @@ localparam CLOCKCYCLESPERBIT = (PHYCLKFREQ/DEFAULTBAUD);
 always_ff @(posedge clk_i) begin
 	// Logic enabling/disabling interrupt.
 	if (rst_i) begin
-		// On reset, interrupt is disabled, and must be explicitely enabled.
+		// On reset, interrupt is disabled, and must be explicitly enabled.
 		// It prevents unwanted interrupt after reset.
 		intrqstthresh <= 0;
 	end else if (cmdsetint) begin
