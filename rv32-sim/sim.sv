@@ -42,6 +42,12 @@
 
 /* makefile defined *///`define CLKFREQ (100000000/* 100 MHz */)
 
+/* makefile defined *///`define SERIAL_PTY0 "/dev/null"
+/* makefile defined *///`define SERIAL_PTY1 "/dev/null"
+/* makefile defined *///`define SERIAL_PTY2 "/dev/null"
+/* makefile defined *///`define SERIAL_PTY3 "/dev/null"
+/* makefile defined *///`define SERIAL_PTY_POLLCYCLES 1024
+
 module sim (
 	 rst_i
 	,clk_i
@@ -65,22 +71,30 @@ localparam CPU_COUNT = `CPU_COUNT;
 
 localparam M_WBPI_CPU     = 0;
 localparam M_WBPI_LAST    = M_WBPI_CPU;
-localparam S_WBPI_IRQCTRL = 0;
-localparam S_WBPI_SERIAL  = (S_WBPI_IRQCTRL + 1);
-localparam S_WBPI_SRAM    = (S_WBPI_SERIAL + 1);
-localparam S_WBPI_DEFAULT = (S_WBPI_SRAM + 1);
+localparam S_WBPI_SERIAL_PTY = 0;
+// Count of pty-backed serial_sim channels; see the makefile
+// variables SERIAL_PTY0-3.
+localparam SERIAL_PTY_COUNT  = 4;
+localparam S_WBPI_IRQCTRL    = (S_WBPI_SERIAL_PTY + SERIAL_PTY_COUNT);
+localparam S_WBPI_SERIAL     = (S_WBPI_IRQCTRL + 1);
+localparam S_WBPI_SRAM       = (S_WBPI_SERIAL + 1);
+localparam S_WBPI_DEFAULT    = (S_WBPI_SRAM + 1);
 
 localparam WBPI_MDEVCOUNT = (M_WBPI_LAST + 1);
 localparam WBPI_SDEVCOUNT = (S_WBPI_DEFAULT + 1);
 
 localparam [0:(WBPI_SDEVCOUNT*2*32)-1] WBPI_SDEVS = {
-	/* S_WBPI_IRQCTRL */ 32'hf00,  32'(WORDBITSZ/8),
-	/* S_WBPI_SERIAL  */ 32'hf80,  32'(2*(WORDBITSZ/8)),
-	/* S_WBPI_SRAM    */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
-	/* S_WBPI_DEFAULT */ 32'h0,    32'h0};
+	/* S_WBPI_SERIAL_PTY+0 */ 32'he80,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_SERIAL_PTY+1 */ 32'hea0,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_SERIAL_PTY+2 */ 32'hec0,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_SERIAL_PTY+3 */ 32'hee0,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_IRQCTRL      */ 32'hf00,  32'(WORDBITSZ/8),
+	/* S_WBPI_SERIAL       */ 32'hf80,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_SRAM         */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
+	/* S_WBPI_DEFAULT      */ 32'h0,    32'h0};
 
 localparam WBPI_MAXPENDINGACK     = 32;
-localparam WBPI_DNSIZR            = 4'b0011;
+localparam WBPI_DNSIZR            = 8'b00111111;
 localparam WBPI_WORDBITSZ         = `XWORDBITSZ;
 localparam WBPI_CLOG2WORDBITSZBY8 = clog2(WBPI_WORDBITSZ/8);
 localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
@@ -111,9 +125,10 @@ wire wbpi_clk_w = clk_i;
 // 	input  [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dati_w [WBPI_SDEVCOUNT];
 `include "lib/wbpi_inst.sv"
 
-localparam IRQ_SERIAL = 0;
+localparam IRQ_SERIAL     = 0;
+localparam IRQ_SERIAL_PTY = (IRQ_SERIAL + 1);
 
-localparam IRQSRCCOUNT = (IRQ_SERIAL +1); // Number of interrupt sources.
+localparam IRQSRCCOUNT = (IRQ_SERIAL_PTY + SERIAL_PTY_COUNT); // Number of interrupt sources.
 localparam IRQDSTCOUNT = CPU_COUNT; // Number of interrupt destinations.
 wire [IRQSRCCOUNT -1 : 0] irq_src_stb_w;
 wire [IRQSRCCOUNT -1 : 0] irq_src_rdy_w;
@@ -235,6 +250,105 @@ serial_sim #(
 
 	,.irq_stb_o (irq_src_stb_w[IRQ_SERIAL])
 	,.irq_rdy_i (irq_src_rdy_w[IRQ_SERIAL])
+);
+
+// Additional serial channels, each host-connectable through the
+// path given by the makefile variables SERIAL_PTY0-3 (ie: a pty
+// created with `socat pty,link=s0.pty,raw,echo=0 stdio`); the
+// default "/dev/null" leaves a channel inert. Unlike the console
+// instance above, the host fd is polled every SERIAL_PTY_POLLCYCLES
+// clock cycles (makefile variable; default 1024), so that the added
+// read() syscalls do not slow the simulation down.
+serial_sim #(
+	 .WORDBITSZ  (WORDBITSZ)
+	,.PTY        (`SERIAL_PTY0)
+	,.POLLCYCLES (`SERIAL_PTY_POLLCYCLES)
+) serial_pty0 (
+
+	 .rst_i (wbpi_rst_w)
+
+	,.clk_i (wbpi_clk_w)
+
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_SERIAL_PTY + 0])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_SERIAL_PTY + 0])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_SERIAL_PTY + 0])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_SERIAL_PTY + 0])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_SERIAL_PTY + 0])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_SERIAL_PTY + 0])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SERIAL_PTY + 0])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SERIAL_PTY + 0])
+
+	,.irq_stb_o (irq_src_stb_w[IRQ_SERIAL_PTY + 0])
+	,.irq_rdy_i (irq_src_rdy_w[IRQ_SERIAL_PTY + 0])
+);
+
+serial_sim #(
+	 .WORDBITSZ  (WORDBITSZ)
+	,.PTY        (`SERIAL_PTY1)
+	,.POLLCYCLES (`SERIAL_PTY_POLLCYCLES)
+) serial_pty1 (
+
+	 .rst_i (wbpi_rst_w)
+
+	,.clk_i (wbpi_clk_w)
+
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_SERIAL_PTY + 1])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_SERIAL_PTY + 1])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_SERIAL_PTY + 1])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_SERIAL_PTY + 1])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_SERIAL_PTY + 1])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_SERIAL_PTY + 1])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SERIAL_PTY + 1])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SERIAL_PTY + 1])
+
+	,.irq_stb_o (irq_src_stb_w[IRQ_SERIAL_PTY + 1])
+	,.irq_rdy_i (irq_src_rdy_w[IRQ_SERIAL_PTY + 1])
+);
+
+serial_sim #(
+	 .WORDBITSZ  (WORDBITSZ)
+	,.PTY        (`SERIAL_PTY2)
+	,.POLLCYCLES (`SERIAL_PTY_POLLCYCLES)
+) serial_pty2 (
+
+	 .rst_i (wbpi_rst_w)
+
+	,.clk_i (wbpi_clk_w)
+
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_SERIAL_PTY + 2])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_SERIAL_PTY + 2])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_SERIAL_PTY + 2])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_SERIAL_PTY + 2])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_SERIAL_PTY + 2])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_SERIAL_PTY + 2])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SERIAL_PTY + 2])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SERIAL_PTY + 2])
+
+	,.irq_stb_o (irq_src_stb_w[IRQ_SERIAL_PTY + 2])
+	,.irq_rdy_i (irq_src_rdy_w[IRQ_SERIAL_PTY + 2])
+);
+
+serial_sim #(
+	 .WORDBITSZ  (WORDBITSZ)
+	,.PTY        (`SERIAL_PTY3)
+	,.POLLCYCLES (`SERIAL_PTY_POLLCYCLES)
+) serial_pty3 (
+
+	 .rst_i (wbpi_rst_w)
+
+	,.clk_i (wbpi_clk_w)
+
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_SERIAL_PTY + 3])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_SERIAL_PTY + 3])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_SERIAL_PTY + 3])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_SERIAL_PTY + 3])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_SERIAL_PTY + 3])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_SERIAL_PTY + 3])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SERIAL_PTY + 3])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SERIAL_PTY + 3])
+
+	,.irq_stb_o (irq_src_stb_w[IRQ_SERIAL_PTY + 3])
+	,.irq_rdy_i (irq_src_rdy_w[IRQ_SERIAL_PTY + 3])
 );
 
 sram #(
