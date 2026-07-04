@@ -28,6 +28,13 @@ parameter WORDBITSZ = 32;
 
 parameter PTY = "";
 
+// Count of clock cycles between host reads while the receive
+// buffer is empty; each poll is a read() syscall, hence a top
+// instantiating several serial_sim should throttle all but its
+// console instance. The default of 1 polls every cycle, which is
+// the historical behavior.
+parameter POLLCYCLES = 1;
+
 localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
 localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 
@@ -162,13 +169,18 @@ integer stdIn, stdOut;
 reg [15 : 0] devdat;
 assign rx_data_w0 = devdat[7:0];
 assign rx_usage_w = devdat[15:8];
+// Counter throttling host reads to once every POLLCYCLES cycles.
+reg [32 -1 : 0] pollcnt = 0;
 always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		devdat <= 0;
 	end else if (rx_usage_w) begin
 		if (devrd) // Reset rx_usage_w null.
 			devdat <= {{8{1'b0}}, devdat[7:0]};
+	end else if (pollcnt != 0) begin
+		pollcnt <= (pollcnt - 1'b1);
 	end else begin
+		pollcnt <= (POLLCYCLES - 1);
 		devdat <= $c("({",
 		"union {struct {char buf; char cnt; } s; short dat; } ret;",
 		"ret.s.cnt = read(", stdIn, ", &ret.s.buf, 1);",
