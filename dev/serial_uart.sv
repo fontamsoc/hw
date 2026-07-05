@@ -244,7 +244,7 @@ reg rx_read_w_sampled;
 
 assign wb_dat_o = (rx_read_w_sampled ? rx_data_w0 : wb_dat_o_);
 
-localparam CLOCKCYCLESPERBITLIMIT = (PHYCLKFREQ/110); // 110 is the standard minimum baudrate.
+localparam CLOCKCYCLESPERBITLIMIT = (PHYCLKFREQ/1200); // 1200 is the minimum supported baudrate.
 localparam CLOG2CLOCKCYCLESPERBITLIMIT = clog2(CLOCKCYCLESPERBITLIMIT);
 
 reg [CLOG2CLOCKCYCLESPERBITLIMIT -1 : 0] rxclockcyclesperbit;
