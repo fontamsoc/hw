@@ -66,6 +66,7 @@ parameter DCACHEWAYCNT  = 1;
 parameter IMULCNT       = 2;
 parameter IDIVCNT       = 2;
 parameter CLMULCNT      = 1;
+parameter ZBBCNT        = 1;
 parameter FPUCNT        = 1;
 parameter MAXPENDINGACK = 16;
 parameter PUCNT         = 1;
@@ -156,6 +157,7 @@ pu #(
 	,.IMULCNT       (IMULCNT)
 	,.IDIVCNT       (IDIVCNT)
 	,.CLMULCNT      (CLMULCNT)
+	,.ZBBCNT        (ZBBCNT)
 	,.FPUCNT        (FPUCNT)
 	,.MAXPENDINGACK (MAXPENDINGACK)
 	,.PUIDBITSZ     (PUIDBITSZ)

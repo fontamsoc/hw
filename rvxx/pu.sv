@@ -23,7 +23,8 @@
 //
 // PURV32ZBB
 // 	"Zbb" basic bit-manipulation extension (andn/orn/xnor, clz/ctz/cpop,
-// 	min/max, sext/zext, rol/ror, rev8, orc.b, ...).
+// 	min/max, sext/zext, rol/ror, rev8, orc.b, ...), computed by the
+// 	multi-cycle zbb unit (2-cycle, register-isolated).
 //
 // PURV32ZBC
 // 	"Zbc" carry-less multiply extension (clmul/clmulh/clmulr), computed by
@@ -138,6 +139,10 @@
 // 	Number of units making up the clmul pipeline (used by PURV32ZBC).
 // 	It must be non-null, a power-of-2 less-than-or-equal to 8.
 //
+// ZBBCNT
+// 	Number of units making up the zbb pipeline (used by PURV32ZBB).
+// 	It must be non-null, a power-of-2 less-than-or-equal to 8.
+//
 // FPUCNT
 // 	Number of units making up the fpu pipeline.
 // 	It must be non-null, a power-of-2 less-than-or-equal to 2.
@@ -227,6 +232,9 @@
 `ifdef PUCLMULMC
 `include "./clmul.sv"
 `endif
+`ifdef PURV32ZBB
+`include "./zbb.sv"
+`endif
 `ifdef PURV32ZFINX
 `include "./fpu.sv"
 `endif
@@ -295,6 +303,7 @@ parameter DCACHEWAYCNT  = 1;
 parameter IMULCNT       = 2;
 parameter IDIVCNT       = 2;
 parameter CLMULCNT      = 1;
+parameter ZBBCNT        = 1;
 parameter FPUCNT        = 1;
 parameter MAXPENDINGACK = 16;
 parameter PUIDBITSZ     = 1;
@@ -534,7 +543,39 @@ wire iF_isZbb =
 	(iF_isALUimm && iF_func7 == 7'b0110000 &&  iF_func3 == 3'b101)                                              || // rori
 	(iF_isALUimm && iF_func3 == 3'b101 && iF_Iimm[11:0] == 12'h698)                                             || // rev8
 	(iF_isALUimm && iF_func3 == 3'b101 && iF_Iimm[11:0] == 12'h287);                                               // orc.b
-wire iF_isZbbRol = (iF_isALUreg && iF_func3 == 3'b001); // OP-form func7=0110000 rol.
+// Multi-cycle Zbb unit (rvxx/zbb.sv): a 5-bit optype selects the op; the result retires via
+// the WriteBack arbiter (lateResultInsn), so the deep Zbb logic stays off the EX Fmax cone.
+wire iF_opZbb_stb = (iF_isZbb && iF_rdId); // rd!=x0 (mirrors iF_opClmul_stb).
+reg [5 -1 : 0] iF_opZbb_optype; // ### comb-block-reg. Codes MUST match zbb.sv ZBB_*.
+always_comb begin
+	if (iF_isALUreg) begin // OP-form.
+		case (iF_func7)
+		7'b0100000: iF_opZbb_optype = (iF_func3 == 3'b100) ? 5'd2  // xnor
+		                            : (iF_func3 == 3'b110) ? 5'd1  // orn
+		                            :                        5'd0; // andn (111)
+		7'b0000101: iF_opZbb_optype = (iF_func3 == 3'b100) ? 5'd3  // min
+		                            : (iF_func3 == 3'b101) ? 5'd4  // minu
+		                            : (iF_func3 == 3'b110) ? 5'd5  // max
+		                            :                        5'd6; // maxu (111)
+		7'b0110000: iF_opZbb_optype = (iF_func3 == 3'b001) ? 5'd7  // rol
+		                            :                        5'd8; // ror (101)
+		default:    iF_opZbb_optype = 5'd10;                       // zext.h (0000100)
+		endcase
+	end else begin // OP-IMM.
+		if (iF_func3 == 3'b001) // clz/ctz/cpop/sext.b/sext.h, by imm[4:0].
+			case (iF_Iimm[4:0])
+			5'd0:    iF_opZbb_optype = 5'd11; // clz
+			5'd1:    iF_opZbb_optype = 5'd12; // ctz
+			5'd2:    iF_opZbb_optype = 5'd13; // cpop
+			5'd4:    iF_opZbb_optype = 5'd14; // sext.b
+			default: iF_opZbb_optype = 5'd15; // sext.h (5)
+			endcase
+		else // func3 == 101: rev8/orc.b/rori.
+			iF_opZbb_optype = (iF_Iimm[11:0] == 12'h698) ? 5'd16  // rev8
+			                : (iF_Iimm[11:0] == 12'h287) ? 5'd17  // orc.b
+			                :                              5'd9;  // rori
+	end
+end
 `endif
 
 `ifdef PURV32ZBC
@@ -645,6 +686,9 @@ wire iF_lateResultInsn = (
 	`endif
 	`ifdef PUCLMULMC
 	iF_opClmul_stb ||
+	`endif
+	`ifdef PURV32ZBB
+	iF_opZbb_stb ||
 	`endif
 	`ifdef PURV32ZFINX
 	iF_opFpu_stb ||
@@ -807,10 +851,6 @@ reg iD_isAMO;
 `ifdef PURV32ZBA
 reg iD_isZba;
 `endif
-`ifdef PURV32ZBB
-reg iD_isZbb;
-reg iD_isZbbRol;
-`endif
 `ifdef PURV32ZBS
 reg iD_isZbs;
 `endif
@@ -840,6 +880,10 @@ reg iD_opIdiv_stb;
 `endif
 `ifdef PUCLMULMC
 reg iD_opClmul_stb;
+`endif
+`ifdef PURV32ZBB
+reg iD_opZbb_stb;
+reg [5 -1 : 0] iD_opZbb_optype;
 `endif
 `ifdef PURV32ZFINX
 reg iD_opFpu_stb;
@@ -888,6 +932,9 @@ wire iD_opIdiv_bsy;
 `ifdef PUCLMULMC
 wire iD_opClmul_bsy;
 `endif
+`ifdef PURV32ZBB
+wire iD_opZbb_bsy;
+`endif
 `ifdef PURV32ZFINX
 wire iD_opFpu_bsy;
 wire opFpu_busy; // driven by fpu.pu.sv (opfpu.busy_o); high while an FP op is in flight.
@@ -923,6 +970,9 @@ wire iD_stalled = (!iD_eX_carryon ||
 	`endif
 	`ifdef PUCLMULMC
 	(iD_opClmul_stb && iD_opClmul_bsy) ||
+	`endif
+	`ifdef PURV32ZBB
+	(iD_opZbb_stb && iD_opZbb_bsy) ||
 	`endif
 	`ifdef PURV32ZFINX
 	(iD_opFpu_stb && iD_opFpu_bsy) ||
@@ -1116,10 +1166,6 @@ always_ff @(posedge clk_i) begin
 		`ifdef PURV32ZBA
 		iD_isZba    <= iF_isZba;
 		`endif
-		`ifdef PURV32ZBB
-		iD_isZbb    <= iF_isZbb;
-		iD_isZbbRol <= iF_isZbbRol;
-		`endif
 		`ifdef PURV32ZBS
 		iD_isZbs <= iF_isZbs;
 		`endif
@@ -1149,6 +1195,10 @@ always_ff @(posedge clk_i) begin
 		`endif
 		`ifdef PUCLMULMC
 		iD_opClmul_stb <= iF_opClmul_stb;
+		`endif
+		`ifdef PURV32ZBB
+		iD_opZbb_stb    <= iF_opZbb_stb;
+		iD_opZbb_optype <= iF_opZbb_optype;
 		`endif
 		`ifdef PURV32ZFINX
 		iD_opFpu_stb    <= iF_opFpu_stb;
@@ -1218,86 +1268,6 @@ wire [WORDBITSZ -1 : 0] eX_aluShift_i = // Single shifter for left and right shi
 `ifdef PURV32ZBA
 // Zba sh1add/sh2add/sh3add: (rs1 << iD_func3[2:1]) + rs2.
 wire [WORDBITSZ -1 : 0] eX_aluShadd_i = ((eX_aluArg1_i << iD_func3[2:1]) + eX_aluArg2_i);
-`endif
-
-`ifdef PURV32ZBB
-function automatic bit [WORDBITSZ -1 : 0] zbb_ctz; // Count trailing zeros.
-	input bit [WORDBITSZ -1 : 0] v;
-	bit found;
-	begin
-		zbb_ctz = 0;
-		found = 0;
-		for (int i = 0; i < WORDBITSZ; ++i)
-			if (!found) begin
-				if (v[i]) found = 1'b1;
-				else      zbb_ctz = zbb_ctz + 1'b1;
-			end
-	end
-endfunction
-function automatic bit [WORDBITSZ -1 : 0] zbb_cpop; // Population count.
-	input bit [WORDBITSZ -1 : 0] v;
-	begin
-		zbb_cpop = 0;
-		for (int i = 0; i < WORDBITSZ; ++i)
-			zbb_cpop = zbb_cpop + v[i];
-	end
-endfunction
-function automatic bit [WORDBITSZ -1 : 0] zbb_rev8; // Reverse byte order.
-	input bit [WORDBITSZ -1 : 0] v;
-	for (int i = 0; i < WORDBITSZ/8; ++i)
-		zbb_rev8[i*8 +: 8] = v[(WORDBITSZ-8) - i*8 +: 8];
-endfunction
-function automatic bit [WORDBITSZ -1 : 0] zbb_orcb; // OR-combine within each byte.
-	input bit [WORDBITSZ -1 : 0] v;
-	for (int i = 0; i < WORDBITSZ/8; ++i)
-		zbb_orcb[i*8 +: 8] = {8{|v[i*8 +: 8]}};
-endfunction
-
-// Rotate via a single right-shifter: ror(x,a) = ({x,x} >> a) low word, and
-// rol(x,a) = ror(x, 32-a), so left-rotate just negates the 5-bit amount.
-// Amount comes from rs2[4:0] for the OP form (rol/ror), iD_Iimm[4:0] for the OP-IMM form (rori).
-wire [5            -1 : 0] eX_zbbRotAmt_i = (iD_isALUreg ? eX_aluArg2_i[4:0] : iD_Iimm[4:0]);
-wire [5            -1 : 0] eX_zbbRorAmt_i = (iD_isZbbRol ? (5'd0 - eX_zbbRotAmt_i) : eX_zbbRotAmt_i);
-wire [(2*WORDBITSZ)-1 : 0] eX_zbbDbl_i    = {eX_aluArg1_i, eX_aluArg1_i};
-wire [WORDBITSZ    -1 : 0] eX_zbbRot_i    = (eX_zbbDbl_i >> eX_zbbRorAmt_i); // low word.
-
-reg [WORDBITSZ -1 : 0] eX_zbbOut_i; // ### comb-block-reg.
-always_comb begin
-	if (iD_isALUreg) begin // OP-form Zbb.
-		case (iD_func7)
-		7'b0100000: // Logic with negate.
-			case (iD_func3)
-			3'b100:  eX_zbbOut_i = ~(eX_aluArg1_i ^ eX_aluArg2_i); // xnor
-			3'b110:  eX_zbbOut_i =  (eX_aluArg1_i | ~eX_aluArg2_i); // orn
-			default: eX_zbbOut_i =  (eX_aluArg1_i & ~eX_aluArg2_i); // andn (3'b111)
-			endcase
-		7'b0000101: // Integer min/max.
-			case (iD_func3)
-			3'b100:  eX_zbbOut_i = (eX_lt_i  ? eX_aluArg1_i : eX_aluArg2_i); // min
-			3'b101:  eX_zbbOut_i = (eX_ltu_i ? eX_aluArg1_i : eX_aluArg2_i); // minu
-			3'b110:  eX_zbbOut_i = (eX_lt_i  ? eX_aluArg2_i : eX_aluArg1_i); // max
-			default: eX_zbbOut_i = (eX_ltu_i ? eX_aluArg2_i : eX_aluArg1_i); // maxu (3'b111)
-			endcase
-		7'b0110000: // Rotate.
-			eX_zbbOut_i = eX_zbbRot_i; // rol/ror (eX_zbbRorAmt_i already negated for rol)
-		default: // 7'b0000100: zext.h.
-			eX_zbbOut_i = {{(WORDBITSZ-16){1'b0}}, eX_aluArg1_i[15:0]};
-		endcase
-	end else begin // OP-IMM-form Zbb.
-		if (iD_func3 == 3'b001) // clz/ctz/cpop/sext.b/sext.h, selected by imm[4:0].
-			case (iD_Iimm[4:0])
-			5'd0:    eX_zbbOut_i = zbb_ctz(reverseBits(eX_aluArg1_i)); // clz = ctz of bit-reversed.
-			5'd1:    eX_zbbOut_i = zbb_ctz(eX_aluArg1_i);
-			5'd2:    eX_zbbOut_i = zbb_cpop(eX_aluArg1_i);
-			5'd4:    eX_zbbOut_i = {{(WORDBITSZ-8){eX_aluArg1_i[7]}},   eX_aluArg1_i[7:0]};  // sext.b
-			default: eX_zbbOut_i = {{(WORDBITSZ-16){eX_aluArg1_i[15]}}, eX_aluArg1_i[15:0]}; // sext.h (5'd5)
-			endcase
-		else // iD_func3 == 3'b101: rev8/orc.b/rori.
-			if      (iD_Iimm[11:0] == 12'h698) eX_zbbOut_i = zbb_rev8(eX_aluArg1_i);
-			else if (iD_Iimm[11:0] == 12'h287) eX_zbbOut_i = zbb_orcb(eX_aluArg1_i);
-			else                               eX_zbbOut_i = eX_zbbRot_i; // rori
-	end
-end
 `endif
 
 `ifdef PURV32ZBS
@@ -1370,9 +1340,6 @@ always_comb begin
 	else   if (iD_isSc)        eX_rslt_i = eX_StoreCondOut_i;
 	`ifdef PURV32ZBA
 	else   if (iD_isZba)       eX_rslt_i = eX_aluShadd_i;
-	`endif
-	`ifdef PURV32ZBB
-	else   if (iD_isZbb)       eX_rslt_i = eX_zbbOut_i;
 	`endif
 	`ifdef PURV32ZBS
 	else   if (iD_isZbs)       eX_rslt_i = eX_zbsOut_i;
@@ -1599,6 +1566,9 @@ reg rW_opIdiv_done; // ### comb-block-reg.
 `ifdef PUCLMULMC
 reg rW_opClmul_done; // ### comb-block-reg.
 `endif
+`ifdef PURV32ZBB
+reg rW_opZbb_done; // ### comb-block-reg.
+`endif
 `ifdef PURV32ZFINX
 reg rW_opFpu_done; // ### comb-block-reg.
 `endif
@@ -1609,6 +1579,9 @@ reg rW_opFpu_done; // ### comb-block-reg.
 `endif
 `ifdef PUCLMULMC
 `include "./clmul.pu.sv"
+`endif
+`ifdef PURV32ZBB
+`include "./zbb.pu.sv"
 `endif
 `ifdef PURV32ZFINX
 `include "./fpu.pu.sv"
@@ -1634,6 +1607,9 @@ wire rW_multicyclePending = (
 	`ifdef PUCLMULMC
 	|| opClmul_done
 	`endif
+	`ifdef PURV32ZBB
+	|| opZbb_done
+	`endif
 	`ifdef PURV32ZFINX
 	|| opFpu_done
 	`endif
@@ -1658,6 +1634,9 @@ always_comb begin
 	`endif
 	`ifdef PUCLMULMC
 	rW_opClmul_done = 0;
+	`endif
+	`ifdef PURV32ZBB
+	rW_opZbb_done = 0;
 	`endif
 	`ifdef PURV32ZFINX
 	rW_opFpu_done = 0;
@@ -1692,6 +1671,13 @@ always_comb begin
 		rW_idx_i = opClmul_rIdx;
 		rW_dat_i = opClmul_rslt;
 		rW_opClmul_done = 1;
+	`endif
+	`ifdef PURV32ZBB
+	end else if (opZbb_done) begin
+		rW_we_i  = 1;
+		rW_idx_i = opZbb_rIdx;
+		rW_dat_i = opZbb_rslt;
+		rW_opZbb_done = 1;
 	`endif
 	`ifdef PURV32ZFINX
 	end else if (opFpu_done) begin
