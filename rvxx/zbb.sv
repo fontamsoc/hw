@@ -31,9 +31,8 @@ parameter GPRCNT    = 32;
 
 localparam CLOG2GPRCNT = clog2(GPRCNT);
 
-// optype field within args_i. Codes MUST match the iF_opZbb_optype decode in pu.sv.
+// optype field within args_i. Codes MUST match the opZbb_optype decode in zbb.pu.sv.
 localparam ZBBTYPEBITSZ = 5;
-localparam ZBBTYPELSB   = ((WORDBITSZ*2)+CLOG2GPRCNT);
 localparam [ZBBTYPEBITSZ-1:0]
 	ZBB_ANDN  = 5'd0,  ZBB_ORN   = 5'd1,  ZBB_XNOR = 5'd2,
 	ZBB_MIN   = 5'd3,  ZBB_MINU  = 5'd4,  ZBB_MAX  = 5'd5,  ZBB_MAXU = 5'd6,
@@ -53,23 +52,31 @@ input wire stb_i;
 // OP-IMM ops, the immediate -- only its low 5 bits matter, as the rotate amount for rori).
 input wire [(((WORDBITSZ*2)+CLOG2GPRCNT)+ZBBTYPEBITSZ) -1 : 0] args_i;
 
-// Registered result: the deep Zbb compute is operands-reg -> zbbRes -> rslt_o-reg, a
+// Registered result: the deep Zbb compute is operands-reg -> zbbRes -> result-reg, a
 // self-contained register-to-register path. (If rslt_o were combinational from operands,
 // the compute would sit on the arbiter -> iD_rW_rslt forwarding cone and cap Fmax.)
-output reg [WORDBITSZ -1 : 0] rslt_o; // ### pipeline reg (clocked below).
+output wire [WORDBITSZ -1 : 0] rslt_o;
 
 output wire [CLOG2GPRCNT -1 : 0] gprid_o;
 
 output reg rdy_o;
 
-// Reg used to capture args_i.
-reg [(((WORDBITSZ*2)+CLOG2GPRCNT)+ZBBTYPEBITSZ) -1 : 0] operands;
+// Regs used to capture args_i, one per field. The captured rs1 is dead once zbbRes has
+// been computed from it, so the result is written back into rs1Slot (its FFs double as
+// the result register; rslt_o aliases it) instead of a separate rslt_o register. Safe:
+// the opzbb wrapper usage counter blocks a new stb into this instance until ostb_i has
+// retired the held result, so a capture can never clobber it.
+reg [ZBBTYPEBITSZ -1 : 0] optypeSlot;
+reg [CLOG2GPRCNT  -1 : 0] gpridSlot;
+reg [WORDBITSZ    -1 : 0] rs1Slot; // ### pipeline reg: rs1, then the result (clocked below).
+reg [WORDBITSZ    -1 : 0] rs2Slot;
 
-assign gprid_o = operands[((WORDBITSZ*2)+CLOG2GPRCNT)-1 : WORDBITSZ*2];
+assign rslt_o  = rs1Slot;
+assign gprid_o = gpridSlot;
 
-wire [ZBBTYPEBITSZ -1 : 0] optype = operands[ZBBTYPELSB +: ZBBTYPEBITSZ];
-wire [WORDBITSZ    -1 : 0] rs1    = operands[(WORDBITSZ*2)-1 : WORDBITSZ];
-wire [WORDBITSZ    -1 : 0] rs2    = operands[WORDBITSZ-1 : 0];
+wire [ZBBTYPEBITSZ -1 : 0] optype = optypeSlot;
+wire [WORDBITSZ    -1 : 0] rs1    = rs1Slot;
+wire [WORDBITSZ    -1 : 0] rs2    = rs2Slot;
 
 function automatic bit [WORDBITSZ -1 : 0] reverseBits;
 	input bit [WORDBITSZ -1 : 0] bits;
@@ -147,14 +154,15 @@ always_ff @(posedge clk_i) begin
 	end else if (rdy_o) begin
 
 		if (stb_i) begin
-			operands <= args_i;
+			{optypeSlot, gpridSlot, rs1Slot, rs2Slot} <= args_i;
 			rdy_o <= 0;
 		end
 
 	end else begin
-		// Register the result so the deep compute stays a register-to-register path off
-		// the arbiter/forwarding cone; ready (and rslt_o valid) after this edge.
-		rslt_o <= zbbRes;
+		// Register the result (into rs1Slot, whose captured value is now dead) so the
+		// deep compute stays a register-to-register path off the arbiter/forwarding
+		// cone; ready (and rslt_o valid) after this edge.
+		rs1Slot <= zbbRes;
 		rdy_o <= 1;
 	end
 end

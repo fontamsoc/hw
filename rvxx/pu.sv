@@ -545,37 +545,9 @@ wire iF_isZbb =
 	(iF_isALUimm && iF_func3 == 3'b101 && iF_Iimm[11:0] == 12'h287);                                               // orc.b
 // Multi-cycle Zbb unit (rvxx/zbb.sv): a 5-bit optype selects the op; the result retires via
 // the WriteBack arbiter (lateResultInsn), so the deep Zbb logic stays off the EX Fmax cone.
+// The optype is decoded at iD in zbb.pu.sv from the already-registered iD_func3/iD_func7/
+// iD_Iimm fields (mirrors clmul's iD_func3-sliced type field), so no pipeline reg for it.
 wire iF_opZbb_stb = (iF_isZbb && iF_rdId); // rd!=x0 (mirrors iF_opClmul_stb).
-reg [5 -1 : 0] iF_opZbb_optype; // ### comb-block-reg. Codes MUST match zbb.sv ZBB_*.
-always_comb begin
-	if (iF_isALUreg) begin // OP-form.
-		case (iF_func7)
-		7'b0100000: iF_opZbb_optype = (iF_func3 == 3'b100) ? 5'd2  // xnor
-		                            : (iF_func3 == 3'b110) ? 5'd1  // orn
-		                            :                        5'd0; // andn (111)
-		7'b0000101: iF_opZbb_optype = (iF_func3 == 3'b100) ? 5'd3  // min
-		                            : (iF_func3 == 3'b101) ? 5'd4  // minu
-		                            : (iF_func3 == 3'b110) ? 5'd5  // max
-		                            :                        5'd6; // maxu (111)
-		7'b0110000: iF_opZbb_optype = (iF_func3 == 3'b001) ? 5'd7  // rol
-		                            :                        5'd8; // ror (101)
-		default:    iF_opZbb_optype = 5'd10;                       // zext.h (0000100)
-		endcase
-	end else begin // OP-IMM.
-		if (iF_func3 == 3'b001) // clz/ctz/cpop/sext.b/sext.h, by imm[4:0].
-			case (iF_Iimm[4:0])
-			5'd0:    iF_opZbb_optype = 5'd11; // clz
-			5'd1:    iF_opZbb_optype = 5'd12; // ctz
-			5'd2:    iF_opZbb_optype = 5'd13; // cpop
-			5'd4:    iF_opZbb_optype = 5'd14; // sext.b
-			default: iF_opZbb_optype = 5'd15; // sext.h (5)
-			endcase
-		else // func3 == 101: rev8/orc.b/rori.
-			iF_opZbb_optype = (iF_Iimm[11:0] == 12'h698) ? 5'd16  // rev8
-			                : (iF_Iimm[11:0] == 12'h287) ? 5'd17  // orc.b
-			                :                              5'd9;  // rori
-	end
-end
 `endif
 
 `ifdef PURV32ZBC
@@ -883,7 +855,6 @@ reg iD_opClmul_stb;
 `endif
 `ifdef PURV32ZBB
 reg iD_opZbb_stb;
-reg [5 -1 : 0] iD_opZbb_optype;
 `endif
 `ifdef PURV32ZFINX
 reg iD_opFpu_stb;
@@ -1197,8 +1168,7 @@ always_ff @(posedge clk_i) begin
 		iD_opClmul_stb <= iF_opClmul_stb;
 		`endif
 		`ifdef PURV32ZBB
-		iD_opZbb_stb    <= iF_opZbb_stb;
-		iD_opZbb_optype <= iF_opZbb_optype;
+		iD_opZbb_stb <= iF_opZbb_stb;
 		`endif
 		`ifdef PURV32ZFINX
 		iD_opFpu_stb    <= iF_opFpu_stb;
