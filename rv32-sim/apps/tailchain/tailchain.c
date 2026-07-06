@@ -61,8 +61,8 @@ static void rawstr (const char *s) {
 		*(volatile char *)SERIAL0_ADDR = c;
 }
 
-// Local copy of hwdrvirqctrl_int() from machine/hwdrvirqctrl.h,
-// which does not get installed with the toolchain.
+// Local copies of hwdrvirqctrl_int() and hwdrvirqctrl_ack() from
+// machine/hwdrvirqctrl.h, which does not get installed with the toolchain.
 #define IRQCTRLADDR ((uintptr_t *)0xf00 /* By convention, the interrupt controller is located at 0xf00 */)
 static inline uintptr_t irqctrl_int (uintptr_t idx) {
 	uintptr_t irqdst;
@@ -73,6 +73,25 @@ static inline uintptr_t irqctrl_int (uintptr_t idx) {
 	irqdst = 0;
 	irqdst = _xchg(IRQCTRLADDR, irqdst);
 	return ((intptr_t)irqdst >> 2);
+}
+static inline uintptr_t irqctrl_ack (uintptr_t idx, uintptr_t en) {
+	uintptr_t irqsrc;
+	do {
+		irqsrc = ((idx<<3) | ((en&1)<<2) | 0b01);
+		irqsrc = _xchg(IRQCTRLADDR, irqsrc);
+	} while (irqsrc & 0b11);
+	irqsrc = 0;
+	irqsrc = _xchg(IRQCTRLADDR, irqsrc);
+	return ((intptr_t)irqsrc >> 2);
+}
+
+// Test0: acknowledging with no interrupt routed to this cpu must report
+// none pending; the irqctrl used to instead report, and fake-service, the
+// interrupt source that its round-robin scan happened to be indexing,
+// when the acknowledging cpu matched its resting destination index.
+static void test0 (void) {
+	printf("test0: blind acknowledge ...\n");
+	CHECK(irqctrl_ack(_cpuid(), 1) == -2, "test0: blind ack did not report none-pending");
 }
 
 // Trigger an IPI targeting the given cpu, retrying while the irqctrl
@@ -189,6 +208,7 @@ static void test2 (void) {
 
 void main (void) {
 	printf("Starting ...\n");
+	test0();
 	_irq_register(&test1_ipi);
 	test1();
 	if (TEST2_ENABLE && (_ncpu() >= 2))
