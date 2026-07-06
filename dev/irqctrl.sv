@@ -219,6 +219,13 @@ wire [IRQDSTCOUNT -1 : 0] irqpending_abort = (~irq_dst_rdy_i & irq_dst_rdy_i_and
 
 wire irqpending_abort_dstidx = irqpending_abort[dstidx];
 
+// An acknowledgement hits only when an interrupt is pending, routed to the
+// acknowledging destination, and not being aborted; any other acknowledgement
+// reports no pending interrupts and must not signal irq_src_rdy_o, otherwise
+// an interrupt source which is not being serviced would silently drop its
+// request; ie: an acknowledgement sent while nothing is routed to the
+// acknowledging destination would otherwise report, and fake-service, the
+// interrupt source that the round-robin scan happens to be indexing.
 genvar gen_irq_src_rdy_o_idx;
 generate for (
 	gen_irq_src_rdy_o_idx = 0;
@@ -226,7 +233,8 @@ generate for (
 	gen_irq_src_rdy_o_idx = gen_irq_src_rdy_o_idx + 1) begin :gen_irq_src_rdy_o
 	assign irq_src_rdy_o[gen_irq_src_rdy_o_idx] = (
 		srcidx != gen_irq_src_rdy_o_idx || irqdstdat[1:0] == CMDINTDST ||
-			irqpending_abort_dstidx || !cmdackirq);
+			!(cmdackirq && irqpending && !irqpending_abort_dstidx &&
+				wb_dat_r[WORDBITSZ -1 : 3] == dstidx));
 end endgenerate
 
 genvar gen_irq_dst_stb_o_idx;
@@ -288,10 +296,11 @@ always_ff @(posedge clk_i) begin
 		// Keep incrementing dstidx until the targeted interrupt destination is indexed.
 		dstidx <= nextdstidx;
 	end else if (irqpending || cmdackirq) begin
-		if (irqpending_abort_dstidx) begin
+		if (irqpending_abort_dstidx)
 			irqpending <= 1'b0;
-		end else if (cmdackirq) begin // Logic that acknowledges a triggered interrupt.
-			if (wb_dat_r[WORDBITSZ -1 : 3] == dstidx) begin
+		if (cmdackirq) begin // Logic that acknowledges a triggered interrupt.
+			if (irqpending && !irqpending_abort_dstidx &&
+				wb_dat_r[WORDBITSZ -1 : 3] == dstidx) begin
 				wb_dat_o <= ((irqdstdat[1:0] == CMDINTDST) ?
 					{{(WORDBITSZ-2){1'b1}}, wb_dat_r[1:0]} :
 					{{((WORDBITSZ-2)-CLOG2IRQSRCCOUNT){1'b0}}, srcidx, wb_dat_r[1:0]});
@@ -301,6 +310,10 @@ always_ff @(posedge clk_i) begin
 				dstidx <= {CLOG2IRQDSTCOUNT{1'b0}};
 				srcidx <= nextsrcidx;
 			end else begin
+				// No pending interrupt is routed to the acknowledging destination;
+				// this also responds to an acknowledgement which lost against
+				// irqpending_abort_dstidx, which would otherwise leave the ready
+				// result in place and get read back as interrupt source 0.
 				wb_dat_o <= {{(WORDBITSZ-3){1'b1}}, 1'b0, wb_dat_r[1:0]};
 			end
 			if (wb_dat_r[WORDBITSZ -1 : 3] < IRQDSTCOUNT)
