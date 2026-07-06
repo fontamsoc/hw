@@ -277,11 +277,22 @@ always_ff @(posedge clk_i) begin
 end
 
 reg [16 -1 : 0] excIrq;
+// Set when excIrq was non-null on a clock cycle for which rW_multicyclePending allowed it
+// to trigger; registered so that the excIrq expression below stays a shallow select.
+reg excIrqBlank;
 always_ff @(posedge clk_i) begin
-	// Set excIrq null when non-null in order to use only the up to date value of csrMstatus.
+	excIrqBlank <= (excIrq && !rW_multicyclePending);
 	// Using excTriggered prevents an asynchronous exception from triggering if a synchronous
-	// exception has just triggered with csrMstatus not yet updated.
-	excIrq <= (excTriggered || excIrq) ? 16'd0 : {
+	// exception has just triggered with csrMstatus not yet updated. excIrq is otherwise set
+	// null only after a clock cycle for which rW_multicyclePending allowed it to trigger, so
+	// that a pending interrupt refreshes every clock cycle, staying no more than one clock
+	// cycle behind csrMip_/csrMie/csrMstatus and visible until allowed to trigger; setting
+	// excIrq null whenever non-null would make it alternate every other clock cycle, and a
+	// two-instruction load spinloop asserting rW_multicyclePending on exactly the non-null
+	// clock cycles would then starve interrupts indefinitely. The simpler cycle-identical
+	// `excIrq <= excTriggered ? 16'd0 : { ... };` (excIrqBlank can only be non-null right after
+	// a taken trap already nulled the refreshed value) measurably made timing harder to meet.
+	excIrq <= (excTriggered || excIrqBlank) ? 16'd0 : {
 		4'd0,
 		csrMip_[11/*MEIP*/] && csrMie[11/*MEIE*/] && (csrCurPrivIsM ? csrMstatus[3/*MIE*/] : 1'b1),
 		1'b0,
