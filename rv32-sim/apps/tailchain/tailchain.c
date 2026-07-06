@@ -28,17 +28,18 @@
 // IPI dispatches tail-chaining around the scheduler preemption path.
 // All timer ticks must be accounted for.
 //
-// TEST2_ENABLE is currently 0 because test2 reproduces a pre-existing
-// rvxx interrupt-starvation hardware bug (present without tail-chaining):
-// the threads spinloop on `while (test2_ticks < TEST2_TICKS);`, a
-// two-instruction load loop, whose held load result asserts
-// rW_multicyclePending in lockstep with the self-clearing excIrq pulse
-// (rvxx/sys.pu.sv), which alternates every other cycle while an interrupt
-// is pending; when the loop period aligns, `excIrq[x] && !rW_multicyclePending`
-// is false on every cycle and the CPU never takes the trap: it was observed
+// Test2 also regression-tests a since-fixed rvxx interrupt-starvation
+// hardware bug: the threads spinloop on `while (test2_ticks < TEST2_TICKS);`,
+// a two-instruction load loop, whose held load result used to assert
+// rW_multicyclePending in lockstep with a self-blanking excIrq pulse
+// (rvxx/sys.pu.sv) which alternated every other cycle while an interrupt
+// was pending; when the loop period aligned, `excIrq[x] && !rW_multicyclePending`
+// was false on every cycle and the CPU never took the trap: it was observed
 // spinning with mstatus.mie set, mie 0x880 and mip 0x880 indefinitely,
 // while cpu0 hung awaiting acknowledgment of the IPI it had triggered.
-// Enable test2 once the hardware starvation is fixed.
+// excIrq is now set null only after a cycle for which it was allowed
+// to trigger, staying visible while a pending interrupt is gated, and
+// this test wedging is how a regression of that fix would manifest.
 
 #include <stdio.h>
 
@@ -145,7 +146,7 @@ static void test1 (void) {
 
 // Test2: IPI-storming a CPU which is busy taking timer interrupts.
 
-#define TEST2_ENABLE 0
+#define TEST2_ENABLE 1
 #define TEST2_TICKS 20
 #define THREADS_STACKSZ 2048
 
