@@ -339,4 +339,35 @@ always_ff @(posedge clk_i) begin
 		srcidx <= nextsrcidx;
 end
 
+`ifdef SIMULATION
+// Report an acknowledgement which does not hit, since software is expected
+// to acknowledge an interrupt only from the destination it was dispatched
+// to; each of these corners used to be mishandled before the hardening
+// which made every acknowledgement miss report no pending interrupts:
+// a blind acknowledgement, or one from a destination other than the routed
+// one, used to fake-service the interrupt source that the round-robin scan
+// happened to be indexing, while one colliding with an interrupt abort used
+// to leave the ready result in place to be read back as interrupt source 0.
+// An acknowledgement miss from a destination with interrupt delivery
+// disabled is not reported, as it is the documented way for software to
+// enable interrupt delivery to a destination; ie: the _OS (UnderLineOS)
+// cpu bring-up deliberately acknowledges with nothing pending just for
+// the enable side effect.
+always_ff @(posedge clk_i) begin
+	if (!rst_i && cmdackirq && !irqdstseek &&
+		(wb_dat_r[WORDBITSZ -1 : 3] >= IRQDSTCOUNT ||
+			irqdsten[wb_dat_r[(CLOG2IRQDSTCOUNT +3) -1 : 3]])) begin
+		if (!irqpending)
+			$display("irqctrl: error: acknowledgement from destination %0d with no interrupt pending",
+				wb_dat_r[WORDBITSZ -1 : 3]);
+		else if (wb_dat_r[WORDBITSZ -1 : 3] != dstidx)
+			$display("irqctrl: error: acknowledgement from destination %0d while the pending interrupt is routed to destination %0d",
+				wb_dat_r[WORDBITSZ -1 : 3], dstidx);
+		else if (irqpending_abort_dstidx)
+			$display("irqctrl: error: acknowledgement from destination %0d colliding with the abort of its routed interrupt",
+				wb_dat_r[WORDBITSZ -1 : 3]);
+	end
+end
+`endif
+
 endmodule
