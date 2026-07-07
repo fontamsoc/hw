@@ -199,6 +199,12 @@ initial begin
 	if (PTY != "") begin
 		stdIn = $c("({",
 		"auto ptystr = ", PTY, ";",
+		// Copy to a NUL terminated buffer, as the string exactly
+		// fills ptystr when its length is a multiple of 4.
+		"char ptybuf[sizeof(ptystr) + 1];",
+		"for (unsigned i = 0; i < sizeof(ptystr); ++i)",
+		"	ptybuf[i] = ((char *)&ptystr)[i];",
+		"ptybuf[sizeof(ptystr)] = 0;",
 		"auto swapStrEndianness = [](char *str) -> void {",
 		"	int len = 0;",
 		"	while (str[len]) ++len;",
@@ -207,8 +213,8 @@ initial begin
 		"		str[i] = str[len - i - 1];",
 		"		str[len - i - 1] = c;",
 		"	}",
-		"}; swapStrEndianness((char*)&ptystr);",
-		"open((const char*)&ptystr, O_RDWR | O_DSYNC | O_NONBLOCK); })");
+		"}; swapStrEndianness(ptybuf);",
+		"open(ptybuf, O_RDWR | O_DSYNC | O_NONBLOCK); })");
 		if (stdIn < 0)
 			$finish;
 		stdOut = stdIn;
