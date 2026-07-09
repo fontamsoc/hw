@@ -42,6 +42,8 @@
 
 `include "dev/serial_uart.sv"
 
+`include "dev/serial_jtag.sv"
+
 `include "dev/sram.sv"
 /* impl_1.sv defined *///`define SRAM_KBSIZE (256/*KB*/)
 /* impl_1.sv defined *///`define SRAM_INITFILE "artya7100.sram.hex"
@@ -99,22 +101,30 @@ localparam CPU_COUNT = `CPU_COUNT;
 
 localparam M_WBPI_CPU     = 0;
 localparam M_WBPI_LAST    = M_WBPI_CPU;
-localparam S_WBPI_IRQCTRL = 0;
-localparam S_WBPI_SERIAL  = (S_WBPI_IRQCTRL + 1);
-localparam S_WBPI_SRAM    = (S_WBPI_SERIAL + 1);
-localparam S_WBPI_DEFAULT = (S_WBPI_SRAM + 1);
+localparam S_WBPI_SERIAL_JTAG = 0;
+// Count of serial_jtag channels; the xc7 supports one BSCANE2
+// per USER1-4 instruction.
+localparam SERIAL_JTAG_COUNT  = 4;
+localparam S_WBPI_IRQCTRL     = (S_WBPI_SERIAL_JTAG + SERIAL_JTAG_COUNT);
+localparam S_WBPI_SERIAL      = (S_WBPI_IRQCTRL + 1);
+localparam S_WBPI_SRAM        = (S_WBPI_SERIAL + 1);
+localparam S_WBPI_DEFAULT     = (S_WBPI_SRAM + 1);
 
 localparam WBPI_MDEVCOUNT = (M_WBPI_LAST + 1);
 localparam WBPI_SDEVCOUNT = (S_WBPI_DEFAULT + 1);
 
 localparam [0:(WBPI_SDEVCOUNT*2*32)-1] WBPI_SDEVS = {
-	/* S_WBPI_IRQCTRL */ 32'hf00,  32'(WORDBITSZ/8),
-	/* S_WBPI_SERIAL  */ 32'hf80,  32'(2*(WORDBITSZ/8)),
-	/* S_WBPI_SRAM    */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
-	/* S_WBPI_DEFAULT */ 32'h0,    32'h0};
+	/* S_WBPI_SERIAL_JTAG+0 */ 32'he80,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_SERIAL_JTAG+1 */ 32'hea0,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_SERIAL_JTAG+2 */ 32'hec0,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_SERIAL_JTAG+3 */ 32'hee0,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_IRQCTRL       */ 32'hf00,  32'(WORDBITSZ/8),
+	/* S_WBPI_SERIAL        */ 32'hf80,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_SRAM          */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
+	/* S_WBPI_DEFAULT       */ 32'h0,    32'h0};
 
 localparam WBPI_MAXPENDINGACK     = 32;
-localparam WBPI_DNSIZR            = 4'b0011;
+localparam WBPI_DNSIZR            = 8'b00111111;
 localparam WBPI_WORDBITSZ         = `XWORDBITSZ;
 localparam WBPI_CLOG2WORDBITSZBY8 = clog2(WBPI_WORDBITSZ/8);
 localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
@@ -145,9 +155,10 @@ wire wbpi_clk_w = clk100mhz_w;
 // 	input  [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dati_w [WBPI_SDEVCOUNT];
 `include "lib/wbpi_inst.sv"
 
-localparam IRQ_SERIAL = 0;
+localparam IRQ_SERIAL      = 0;
+localparam IRQ_SERIAL_JTAG = (IRQ_SERIAL + 1);
 
-localparam IRQSRCCOUNT = (IRQ_SERIAL +1); // Number of interrupt sources.
+localparam IRQSRCCOUNT = (IRQ_SERIAL_JTAG + SERIAL_JTAG_COUNT); // Number of interrupt sources.
 localparam IRQDSTCOUNT = CPU_COUNT; // Number of interrupt destinations.
 wire [IRQSRCCOUNT -1 : 0] irq_src_stb_w;
 wire [IRQSRCCOUNT -1 : 0] irq_src_rdy_w;
@@ -266,6 +277,82 @@ serial_uart #(
 	,.rx_i (uart_rx)
 	,.tx_o (uart_tx)
 );
+
+// JTAG USER1-4 boundary-scan primitives through which the four
+// serial_jtag channels are accessed; there is no pin constraint to
+// add, as they tap the dedicated JTAG pins internally. All BSCANE2
+// instances output the same TAP signals except SEL, which decodes
+// the USER instruction of the instance JTAG_CHAIN, and TDO which is
+// muxed per instruction; hence TCK/TDI/SHIFT/CAPTURE/RESET are used
+// from instance 0 only, and the single TCK clocking fabric logic is
+// buffered through a BUFG for deterministic low-skew routing; see
+// the create_clock constraint in the xdc file.
+wire [SERIAL_JTAG_COUNT -1 : 0] bscane2_capture_w;
+wire [SERIAL_JTAG_COUNT -1 : 0] bscane2_reset_w;
+wire [SERIAL_JTAG_COUNT -1 : 0] bscane2_sel_w;
+wire [SERIAL_JTAG_COUNT -1 : 0] bscane2_shift_w;
+wire [SERIAL_JTAG_COUNT -1 : 0] bscane2_tck_w;
+wire [SERIAL_JTAG_COUNT -1 : 0] bscane2_tdi_w;
+wire [SERIAL_JTAG_COUNT -1 : 0] bscane2_tdo_w;
+
+wire tap_tck_w;
+BUFG bscane2_tck_bufg (
+	 .I (bscane2_tck_w[0])
+	,.O (tap_tck_w)
+);
+
+genvar gen_serial_jtag_idx;
+generate for (
+	gen_serial_jtag_idx = 0;
+	gen_serial_jtag_idx < SERIAL_JTAG_COUNT;
+	gen_serial_jtag_idx = gen_serial_jtag_idx + 1) begin :gen_serial_jtag
+
+BSCANE2 #(
+	 .JTAG_CHAIN (gen_serial_jtag_idx + 1)
+) bscane2 (
+	 .CAPTURE (bscane2_capture_w[gen_serial_jtag_idx])
+	,.DRCK    ()
+	,.RESET   (bscane2_reset_w[gen_serial_jtag_idx])
+	,.RUNTEST ()
+	,.SEL     (bscane2_sel_w[gen_serial_jtag_idx])
+	,.SHIFT   (bscane2_shift_w[gen_serial_jtag_idx])
+	,.TCK     (bscane2_tck_w[gen_serial_jtag_idx])
+	,.TDI     (bscane2_tdi_w[gen_serial_jtag_idx])
+	,.TMS     ()
+	,.UPDATE  ()
+	,.TDO     (bscane2_tdo_w[gen_serial_jtag_idx])
+);
+
+serial_jtag #(
+	 .WORDBITSZ (WORDBITSZ)
+	,.BUFSZ     (256)
+) serial_jtag (
+
+	 .rst_i (wbpi_rst_w)
+
+	,.clk_i (wbpi_clk_w)
+
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_SERIAL_JTAG + gen_serial_jtag_idx])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_SERIAL_JTAG + gen_serial_jtag_idx])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_SERIAL_JTAG + gen_serial_jtag_idx])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_SERIAL_JTAG + gen_serial_jtag_idx])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_SERIAL_JTAG + gen_serial_jtag_idx])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_SERIAL_JTAG + gen_serial_jtag_idx])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SERIAL_JTAG + gen_serial_jtag_idx])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SERIAL_JTAG + gen_serial_jtag_idx])
+
+	,.irq_stb_o (irq_src_stb_w[IRQ_SERIAL_JTAG + gen_serial_jtag_idx])
+	,.irq_rdy_i (irq_src_rdy_w[IRQ_SERIAL_JTAG + gen_serial_jtag_idx])
+
+	,.tap_tck_i     (tap_tck_w)
+	,.tap_reset_i   (bscane2_reset_w[0])
+	,.tap_sel_i     (bscane2_sel_w[gen_serial_jtag_idx])
+	,.tap_capture_i (bscane2_capture_w[0])
+	,.tap_shift_i   (bscane2_shift_w[0])
+	,.tap_tdi_i     (bscane2_tdi_w[0])
+	,.tap_tdo_o     (bscane2_tdo_w[gen_serial_jtag_idx])
+);
+end endgenerate
 
 sram #(
 	 .WORDBITSZ (WBPI_WORDBITSZ)
