@@ -257,3 +257,11 @@ set_property CONFIG_VOLTAGE 3.3 [current_design]
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design];
 set_property BITSTREAM.CONFIG.CONFIGRATE 33 [current_design];
 set_property CONFIG_MODE SPIx4 [current_design];
+
+## BSCANE2 JTAG TAP clock used by the serial_jtag peripheral.
+## 33.33ns (30 MHz) is the ceiling of the on-board FTDI JTAG clock.
+## The clock domain crossing to the system clocks is done with
+## gray-code asynchronous fifos, hence the domains are declared
+## asynchronous instead of being timed against each other.
+create_clock -name jtag_tck -period 33.33 [get_pins {gen_serial_jtag[0].bscane2/TCK}];
+set_clock_groups -asynchronous -group [get_clocks jtag_tck] -group [get_clocks -include_generated_clocks clk100mhz_i];
