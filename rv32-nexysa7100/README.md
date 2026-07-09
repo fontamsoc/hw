@@ -39,23 +39,26 @@ targeting the Digilent Nexys A7-100T.**
 
 `nexysa7100.sv` is the top level of a compact RV32 SoC: one `ftpu` hart with private
 instruction and data caches, a Wishbone peripheral interconnect, an interrupt
-controller, a UART console, an SD host driving the microSD slot in SD mode, a SPI master
-on the configuration flash, 256 KB of on-chip SRAM, the 128 MiB DDR2 SDRAM of the board
-through a LiteDRAM controller, and a *default device* that acknowledges and reports
-every access to an address no other device maps.
+controller, a UART console, four serial consoles tunneled through the FPGA's JTAG port
+(`serial_jtag`, the first of which can carry underLineOS's gdb stub), an SD host driving
+the microSD slot in SD mode, a SPI master on the configuration flash, 256 KB of on-chip
+SRAM, the 128 MiB DDR2 SDRAM of the board through a LiteDRAM controller, and a *default
+device* that acknowledges and reports every access to an address no other device maps.
 
 The program is baked into the SRAM at synthesis time via `$readmemh`, so the SoC
 boots straight into application code at `0x1000`. That program can be
 [`apps/bootldr`](apps/bootldr), a bootloader which initializes and calibrates the
 DDR2 SDRAM, then loads the application from the SPI flash or the SD card, so that the
-application changes without a new bitstream and can use the DDR2 SDRAM.
+application changes without a new bitstream and can use the DDR2 SDRAM. An underLineOS
+image linked with the gdb stub can be replaced from gdb as well, over the first JTAG
+console (see [Loading a program](#loading-a-program)).
 
 ---
 
 ## Block diagram
 
 <p align="center">
-  <img src=".README.md/block_diagram.svg" alt="Nexys A7-100T SoC block diagram: FonTamPU core complex mastering a 32-bit Wishbone bus with irqctrl, serial_uart, sram, sdram_ddr2, sdsdio, spiflash and dfltdev slaves; the PLL of the DDR2 controller clocks the SoC; dfltdev, serial_uart, sdsdio and spiflash raise interrupt sources 0, 1, 2 and 3 at irqctrl" width="960">
+  <img src=".README.md/block_diagram.svg" alt="Nexys A7-100T SoC block diagram: FonTamPU core complex mastering a 32-bit Wishbone bus with irqctrl, serial_uart, sram, sdram_ddr2, sdsdio, spiflash, four serial_jtag channels and dfltdev slaves; the PLL of the DDR2 controller clocks the SoC; dfltdev, serial_uart, sdsdio, spiflash and the serial_jtag channels raise interrupt sources 0, 1, 2, 3 and 4 to 7 at irqctrl; the serial_jtag channels reach the on-board USB-JTAG through the FPGA's dedicated JTAG pins" width="960">
 </p>
 
 <div align="center">
@@ -80,10 +83,11 @@ application changes without a new bitstream and can use the DDR2 SDRAM.
 | **RAM** | 256 KB on-chip BRAM (`SRAM_KBSIZE = 256`) and 128 MiB of DDR2 SDRAM |
 | **DDR2 SDRAM** | Micron MT47H64M16, 128 MiB at `0x00041000`, through LiteDRAM (A7DDRPHY at 200 MHz, DDR2-400); initialized and calibrated by `apps/bootldr` |
 | **Console** | UART, 115200 8N1 by default, 2 KB RX + 2 KB TX buffers |
+| **JTAG consoles** | 4 `serial_jtag` channels over the BSCANE2 `USER1`–`USER4` chains, at `0xE80` + `0x20·n`, 64 B RX + 64 B TX buffers each; channel 0 can carry the gdb stub |
 | **SD card** | SD host on the microSD slot, in SD mode on a 4-bit bus: a CMD and a DAT interface, 400 kbps at reset, up to 50 Mbps, 128 B RX + 128 B TX buffers on CMD, 8 KB RX + 8 KB TX on DAT |
 | **SPI flash** | SPI master on the configuration flash, a 16 MiB Spansion S25FL128S (or S25FL127S): `cs` high during control words, `miso` sampled on the falling edge, `sclk` through `STARTUPE2`, up to 50 Mbps, 2 KB RX + 2 KB TX buffers |
 | **Unmapped access** | Acknowledged by `dfltdev`: reads as `nop`, writes dropped, IRQ source 0 raised, address latched at `0xFFFFFFFC` |
-| **Interrupt sources** | 4 — `dfltdev` (0), `serial_uart` (1), `sdsdio` (2), `spiflash` (3) |
+| **Interrupt sources** | 8 — `dfltdev` (0), `serial_uart` (1), `sdsdio` (2), `spiflash` (3), `serial_jtag` channels 0–3 (4–7) |
 | **Reset vector** | `0x00001000` |
 | **Initial `sp`** | `0x00041000` (end of the SRAM); bootldr gives its payload the end of the DDR2 SDRAM, `0x08041000`, in `a1` |
 | **Toolchain** | Vivado 2020.2 · `riscv32-unknown-elf` GCC |
@@ -105,7 +109,11 @@ converts them to word indices internally.
 | 4 | DDR2 controller registers | `rv32-nexysa7100/dev/sdram_ddr2.v` | `0x08041000` | `0x08050FFF` | 64 KiB | no |
 | 5 | SD card | `dev/sdio.sv` | `0x00000E00` | `0x00000E0F` | 16 B (4 words) | no |
 | 6 | SPI flash | `dev/spi.sv` | `0x00000E40` | `0x00000E47` | 8 B (2 words) | no |
-| 7 | Default device | `dev/dfltdev.sv` | *every other address* | — | — | no |
+| 7 | JTAG console, channel 0 | `dev/serial_jtag.sv` | `0x00000E80` | `0x00000E87` | 8 B (2 words) | no |
+| 8 | JTAG console, channel 1 | `dev/serial_jtag.sv` | `0x00000EA0` | `0x00000EA7` | 8 B (2 words) | no |
+| 9 | JTAG console, channel 2 | `dev/serial_jtag.sv` | `0x00000EC0` | `0x00000EC7` | 8 B (2 words) | no |
+| 10 | JTAG console, channel 3 | `dev/serial_jtag.sv` | `0x00000EE0` | `0x00000EE7` | 8 B (2 words) | no |
+| 11 | Default device | `dev/dfltdev.sv` | *every other address* | — | — | no |
 | ↳ | Fault address register | `dev/dfltdev.sv` | `0xFFFFFFFC` | `0xFFFFFFFF` | 4 B (1 word) | no |
 
 ```
@@ -121,6 +129,26 @@ converts them to word indices internally.
             │   spiflash · 8 B                   │   0xE40 data · 0xE44 command
  0x00000E47 └────────────────────────────────────┘
  0x00000E48        · · · unmapped → dfltdev · · ·
+ 0x00000E7F
+ 0x00000E80 ┌────────────────────────────────────┐
+            │   serial_jtag 0 · 8 B              │   0xE80 data · 0xE84 command
+ 0x00000E87 └────────────────────────────────────┘
+ 0x00000E88        · · · unmapped → dfltdev · · ·
+ 0x00000E9F
+ 0x00000EA0 ┌────────────────────────────────────┐
+            │   serial_jtag 1 · 8 B              │   0xEA0 data · 0xEA4 command
+ 0x00000EA7 └────────────────────────────────────┘
+ 0x00000EA8        · · · unmapped → dfltdev · · ·
+ 0x00000EBF
+ 0x00000EC0 ┌────────────────────────────────────┐
+            │   serial_jtag 2 · 8 B              │   0xEC0 data · 0xEC4 command
+ 0x00000EC7 └────────────────────────────────────┘
+ 0x00000EC8        · · · unmapped → dfltdev · · ·
+ 0x00000EDF
+ 0x00000EE0 ┌────────────────────────────────────┐
+            │   serial_jtag 3 · 8 B              │   0xEE0 data · 0xEE4 command
+ 0x00000EE7 └────────────────────────────────────┘
+ 0x00000EE8        · · · unmapped → dfltdev · · ·
  0x00000EFF
  0x00000F00 ┌────────────────────────────────────┐
             │   irqctrl · 4 B                    │
@@ -159,7 +187,7 @@ interconnect sizes its address bus from that: only bits `[27:2]` of the byte add
 are carried, with bits `[31:28]` OR-reduced into a single extra "out of range" bit so
 **nothing aliases back into a real device** for any access at or above `0x10000000`.
 
-Slave 7 (`dev/dfltdev.sv`) is the catch-all for every address the table does not
+Slave 11 (`dev/dfltdev.sv`) is the catch-all for every address the table does not
 claim. It never drives `bsy` and acknowledges every access on the following cycle,
 so **an unmapped access always completes**. A read returns the instruction `nop`
 (`0x00000013`) and a write is dropped. Both are faults: the address is latched in
@@ -175,11 +203,12 @@ entry per cycle, holding the bus busy, until it finds the range containing the
 address or exhausts the table (which selects the default device). Back-to-back
 accesses within one device cost nothing extra; alternating between, say, the UART
 and the SRAM re-walks the table at every switch. The DDR2 SDRAM and the registers of
-its controller are the entries right after the SRAM; the SD card and the SPI flash,
-although mapped below the others, come last, so that adding them left the walk to the
-interrupt controller, the UART and the SRAM as short as it was. The default-device
-selection is valid only for the address it was walked for: another address presented
-in that cycle restarts the walk rather than being handed the default device.
+its controller are the entries right after the SRAM; the SD card, the SPI flash and the
+four JTAG consoles, although mapped below the others, come last, so that adding them
+left the walk to the interrupt controller, the UART and the SRAM as short as it was.
+The default-device selection is valid only for the address it was walked for: another
+address presented in that cycle restarts the walk rather than being handed the
+default device.
 
 > [!NOTE]
 > The core marks everything outside `[0x1000, 0x8041000)`, the SRAM and the DDR2
@@ -483,6 +512,44 @@ the lock of the PLL of the controller resets the controller, the system and the 
 of its PHY, which nothing calibrates again: the next accesses complete on the DDR2
 SDRAM uncalibrated.
 
+### JTAG consoles — `0x00000E80`, `0x00000EA0`, `0x00000EC0`, `0x00000EE0`
+
+Four `dev/serial_jtag.sv` channels, each reached from the host through one of the
+FPGA's `USER1`–`USER4` JTAG instructions (a BSCANE2 primitive per chain) by the
+OpenOCD bridge of [`tools/serial_jtag/`](../tools/serial_jtag), which serves a channel
+on its terminal, or as a pty with `--pty`, and several channels as one pty each; its
+README covers the host side. Channel `n` sits at `0xE80 + 0x20·n` with the UART's two
+registers and command protocol:
+
+| Offset | Register | Description |
+| :-: | :--- | :--- |
+| `+0x0` | Data | Read receives one byte, write transmits one byte |
+| `+0x4` | Command | Write submits a command, read retrieves the result |
+
+| `cmd` | Name | Purpose |
+| :-: | :--- | :--- |
+| `0b00` | `CMDDEVRDY` | Make the device accept a new command |
+| `0b01` | `CMDGETBUFFERUSAGE` | `arg = 0` → RX bytes used, `arg = 1` → TX bytes used |
+| `0b10` | `CMDSETINTERRUPT` | `arg = 0` disables; non-zero enables and sets the RX-usage threshold. Returns the buffer size |
+| `0b11` | `CMDSETSPEED` | Ignores `arg` and returns 0: the transfer rate is set by the JTAG host, through its TCK and scan sizing |
+
+Buffers are 64 bytes per direction (`BUFSZ = 64` rather than the UART's 2048). Both
+fifos live in distributed RAM: the transmit one is first-word-fall-through, so its
+asynchronous read leaves it no choice, and at this depth Vivado puts the receive one
+there too; the `RAM_STYLE` constraints at the end of [`nexysa7100.xdc`](nexysa7100.xdc)
+pin both, so that a larger `BUFSZ` cannot silently hand the receive fifo a block RAM.
+The interrupt is **disabled at reset**, like the UART's, and disarms itself when
+acknowledged. A reset drains the receive buffer, discarding stale host bytes, but
+leaves the transmit buffer alone: bytes written before a bridge attached are
+delivered once one does.
+
+> [!IMPORTANT]
+> Both directions of the data register can hold the bus. A read with the receive buffer
+> empty blocks until a byte arrives, as on the UART; a write with the transmit buffer
+> full blocks until a JTAG host attaches and drains it — and nothing drains it while no
+> bridge is running, so a program writing more than 63 bytes to a channel nobody reads
+> stalls there. Software that must not block checks `CMDGETBUFFERUSAGE` first.
+
 ### Default device — every unmapped address
 
 `dev/dfltdev.sv` owns every address the table does not claim. It has one register,
@@ -525,7 +592,7 @@ Two details worth knowing:
 
 ## Interrupts
 
-The SoC instantiates `IRQSRCCOUNT = 4` sources and `IRQDSTCOUNT = CPU_COUNT = 1`
+The SoC instantiates `IRQSRCCOUNT = 8` sources and `IRQDSTCOUNT = CPU_COUNT = 1`
 destination.
 
 ### Sources
@@ -536,6 +603,10 @@ destination.
 | 1 | `serial_uart` | `IRQ_SERIAL` | RX buffer usage reaches the threshold set by `CMDSETINTERRUPT` |
 | 2 | `sdsdio` | `IRQ_SDSDIO` | RX buffer usage of either interface reaches the threshold set by its `CMDSETINTERRUPT`, while both interfaces are ready for a command |
 | 3 | `spiflash` | `IRQ_SPIFLASH` | RX buffer usage reaches the threshold set by `CMDSETINTERRUPT` |
+| 4 | `serial_jtag` channel 0 | `IRQ_SERIAL_JTAG + 0` | RX buffer usage reaches the threshold set by the channel's `CMDSETINTERRUPT` |
+| 5 | `serial_jtag` channel 1 | `IRQ_SERIAL_JTAG + 1` | RX buffer usage reaches the threshold set by the channel's `CMDSETINTERRUPT` |
+| 6 | `serial_jtag` channel 2 | `IRQ_SERIAL_JTAG + 2` | RX buffer usage reaches the threshold set by the channel's `CMDSETINTERRUPT` |
+| 7 | `serial_jtag` channel 3 | `IRQ_SERIAL_JTAG + 3` | RX buffer usage reaches the threshold set by the channel's `CMDSETINTERRUPT` |
 
 Source 0 is reserved for the default device by convention on every top in the
 repository, including `rv32-sim/` where it never fires.
@@ -570,9 +641,10 @@ Three behaviours worth coding around:
 - **Acknowledge promptly.** `irqctrl` dispatches source interrupts one at a time for
   all destinations; until the current one is acknowledged with `CMDACKIRQ` it cannot
   dispatch another. Interrupts raised with `CMDINTDST` are held per destination instead.
-- **The UART, SD card and SPI flash interrupts disarm themselves.** Each is disabled at
-  reset (so no spurious interrupt can fire immediately after release) and disabled
-  again each time a raised interrupt is acknowledged, so the handler must re-enable it.
+- **The UART, JTAG console, SD card and SPI flash interrupts disarm themselves.** Each is
+  disabled at reset (so no spurious interrupt can fire immediately after release) and
+  disabled again each time a raised interrupt is acknowledged, so the handler must
+  re-enable it.
   On the SPI flash, `CMDSETINTERRUPT 0` also closes the transmission in progress:
   disable the interrupt within a transaction with a threshold of 2049 instead. On the
   SD card, an acknowledgement disables the interrupt on both interfaces, and a close on
@@ -626,10 +698,16 @@ the DDR2 SDRAM being uninitialized at reset.
 
 The PLL of the DDR2 controller turns the 100 MHz board oscillator into the 100 MHz
 clock of the controller, the 200 MHz reference of its input delays, and the 200 MHz
-clocks of its PHY. Its 100 MHz is the clock of the whole SoC — CPU, interconnect,
-UART, SD card and SPI flash PHYs — which runs in that single **100 MHz** domain, so
-there is no clock-domain crossing (`USEMEMCLKDOM` evaluates to 0 for a single hart with
-a D-cache).
+clocks of its PHY. Its 100 MHz is the clock of the SoC proper — CPU, interconnect,
+UART, SD card and SPI flash PHYs — which runs in that **100 MHz** domain
+(`USEMEMCLKDOM` evaluates to 0 for a single hart with a D-cache). The SoC proper has one
+other clock, `jtag_tck`: the TAP clock the BSCANE2 primitives hand out, taken from chain
+1, buffered through a `BUFG` and shared by the four `serial_jtag` PHYs. It runs at
+whatever the JTAG host drives — 10 MHz by default, 30 MHz at most, the on-board
+FT2232H's ceiling and the period the xdc constrains — and the crossing into the 100 MHz
+domain happens in `lib/serial_jtag_fifo_phy.sv`, through gray-code asynchronous FIFOs
+and, for the buffer usages, a debounce on the 100 MHz side, which is why the xdc
+declares the two clock groups asynchronous instead of timing them against each other.
 
 > [!NOTE]
 > `lib/xc7pll_100_to_50_100_200.sv` is still instantiated, but none of its outputs is
@@ -709,6 +787,13 @@ strobes `ddr2_dqs_p/n` and the clock `ddr2_ck_p/n`, `SLEW FAST`, an
 0.9 V. The xdc also constrains the reset synchronizers of the DDR2 controller as LiteX
 does.
 
+The JTAG consoles need no pin constraint: the BSCANE2 primitives tap the FPGA's
+dedicated JTAG pins internally, on the same cable that programs the bitstream. What the
+xdc adds for them is the `jtag_tck` clock on chain 1's `TCK` output (`create_clock
+-period 33.33`, 30 MHz), a `set_clock_groups -asynchronous` between it and the
+`clk100mhz_i` family — see [Clocking](#clocking) — and, at its end, the two `RAM_STYLE`
+constraints on the fifos of the consoles.
+
 Bitstream settings: compression enabled, `CONFIGRATE 33`, `CONFIG_MODE SPIx4`,
 `CFGBVS VCCO` at 3.3 V.
 
@@ -756,19 +841,60 @@ Open a console on the board's USB-UART bridge at **115200 8N1**:
 picocom -q --imap lfcrlf -b 115200 /dev/ttyUSB1     # or screen, minicom, ...
 ```
 
+The JTAG consoles come up through the OpenOCD bridge of
+[`tools/serial_jtag/`](../tools/serial_jtag), over the same USB cable — which the
+bridge needs for itself, so close the Hardware Manager (or any auto-refreshing hardware
+target) once the board is programmed:
+
+```sh
+openocd -f tools/serial_jtag/openocd_xc7.cfg                   # terminal 1
+tools/serial_jtag/openocd_bridge.py --pty                      # terminal 2: channel 0, pty path on stderr
+tools/serial_jtag/openocd_bridge.py --ir 0x02,0x03,0x22,0x23   # or all four channels, one pty each
+```
+
+The bridge's README has the rest: JTAG clock, TDO sampling edge, wire protocol. All
+four `USER` chains are claimed by the channels, so a Vivado debug core (ILA/VIO) does
+not fit alongside them.
+
 ---
 
 ## Loading a program
 
-SRAM contents come from `$readmemh` at elaboration time, so on this top as committed —
-one console, no gdb channel — **changing the program baked in means re-running
-synthesis and implementation**, unless that program is the bootloader
-[`apps/bootldr`](#from-the-spi-flash-or-the-sd-card-appsbootldr), which loads the
-application from the SPI flash or the SD card. The `examples/rv32-nexysa7100/serial_jtag`
-branch demonstrates four serial consoles tunneled over JTAG, which can carry underLineOS's
-gdb stub, the first one, at `0xE80`, being its default device, so that a running image
-linked with the stub can be replaced from gdb without a new bitstream; the underLineOS
-documentation (GDB stub, *Loading a new program*) describes the procedure.
+SRAM contents come from `$readmemh` at elaboration time, so **changing the program
+baked in means re-running synthesis and implementation**, unless that program is the
+bootloader [`apps/bootldr`](#from-the-spi-flash-or-the-sd-card-appsbootldr), which loads
+the application from the SPI flash or the SD card, or an underLineOS image linked with
+`-lgdbstub`, which gdb can replace over JTAG console 0 without a new bitstream.
+
+The stub's default device is `0xe80`, channel 0 here, but its default interrupt source
+is 1, the UART on this top: channel 0 raises source 4, so link the image with
+`-lgdbstub -Wl,--defsym=_gdbstub_irq=4` — ie: an application of
+[`rv32-sim/apps/`](../rv32-sim/apps) built with
+`CFLAGS='-lgdbstub -Wl,--defsym=_gdbstub_irq=4' make`, or `XCFLAGS=` in place of
+`CFLAGS=` for CoreMark, whose makefile sets `CFLAGS` itself — then bake it in through
+`SRAM_INITFILE` (with the wrong source the stub still attaches, but crawls through a
+50 ms timeout per wait). With the bridge running (see
+[Building the bitstream](#building-the-bitstream)), gdb opens the channel-0 pty:
+
+```sh
+riscv32-unknown-elf-gdb -nx -x tools/underLineOS.gdb \
+    -ex 'file app.elf' -ex 'target remote /dev/pts/N'      # N: the bridge's channel-0 pty
+```
+
+The image boots and runs as usual, and gdb attaches without stopping it, its prompt
+resting on the stub's debug-shell thread, even long after the image finished — with the
+stub linked, a program's exit parks its thread for the debugger instead of halting the
+CPU, so the stub stays reachable and gdb attaches at any time
+(`set var __gdbstub_tp = __gdbstub_next()` adopts the exited thread). To replace the
+image, `delete` the breakpoints (inserted ones would be carried into the loaded image),
+then `reload` (from `tools/underLineOS.gdb`: it sets the stub's reload flag and resumes
+into `_sysreset()`, the software reset request of [Reset behaviour](#reset-behaviour)),
+`Ctrl-C` once the UART console shows `gdbstub: awaiting gdb`, then `file`, `load`,
+`continue`; the loaded image starts by another soft reset. Holding `CPU RESET` for four
+seconds after setting the flag is the manual alternative, and it is the way back when a
+reload flag was left set: the next boot then parks in the loader saying so on the
+console, and `continue` reboots. The underLineOS documentation (GDB stub, *Loading a new
+program*) has the details and the limitations.
 
 The build knobs are `` `ifndef ``-guarded defaults at the top of `nexysa7100.sv`, so
 they can be overridden from the Vivado *Verilog options* (`verilog_define`) without
@@ -952,7 +1078,7 @@ SD card, whose driver is larger.
 | Path | Description |
 | :--- | :--- |
 | `nexysa7100.sv` | SoC top level: build-time defaults, PLL, reset, core complex, interconnect, peripherals |
-| `nexysa7100.xdc` | Pin, clock and bitstream constraints, and those of the reset synchronizers of the DDR2 controller |
+| `nexysa7100.xdc` | Pin, clock (the 100 MHz input, the 30 MHz `jtag_tck`) and bitstream constraints, those of the reset synchronizers of the DDR2 controller, and the `RAM_STYLE` of the fifos of the JTAG consoles |
 | `vivado/nexysa7100.xpr` | Vivado 2020.2 project: one synthesis run, 21 implementation runs, latch-is-an-error and unmatched-constraint-is-an-error rules |
 | `apps/sdcardtest/` | Benchmark and data check of the SD card, in SD mode or SPI mode, with copies of its drivers |
 | `apps/spiflashtest/` | Benchmark and data check of the SPI flash, with copies of its drivers |
@@ -962,9 +1088,12 @@ SD card, whose driver is larger.
 | `.README.md/block_diagram.svg` | The block diagram above |
 
 Shared sources come from the repository root: [`cpu/`](../cpu) (core complex),
-[`dev/`](../dev) (Wishbone peripherals, the SD host `sdio.sv` and the default device
-included) and [`lib/`](../lib) (PLL, reset, FIFOs, interconnect, SPI master, the Wishbone
-bridges to the DDR2 controller); [`tools/mkBootldrDat.py`](../tools/mkBootldrDat.py)
+[`dev/`](../dev) (Wishbone peripherals — the SD host `sdio.sv` and `serial_jtag.sv` among
+them — the default device included) and [`lib/`](../lib) (PLL, reset, FIFOs,
+interconnect, SPI master, the Wishbone bridges to the DDR2 controller, and the
+serial_jtag PHY: `serial_jtag_phy.sv`, `serial_jtag_fifo_phy.sv`);
+[`tools/serial_jtag/`](../tools/serial_jtag) holds the OpenOCD bridge `openocd_bridge.py`
+and its `openocd_xc7.cfg`, and [`tools/mkBootldrDat.py`](../tools/mkBootldrDat.py)
 formats the data which `apps/bootldr` loads.
 
 ---
@@ -1000,7 +1129,14 @@ formats the data which `apps/bootldr` loads.
   Zbc executes as a shift — so an image built for one, like `isatests` (Zba, Zbb, Zbc,
   Zbs), `clmultest` and `clmulbench` (Zbc), or `fpusmoke` and `fputests` (Zfinx), does not
   run correctly here.
-- **A read of the UART data register blocks** until a byte is available.
+- **A read of a serial data register blocks** until a byte is available, on the UART and
+  the JTAG channels alike — and **a write to a JTAG channel blocks while its transmit
+  buffer is full**, until a bridge drains it: more than 63 bytes written to a channel
+  no bridge is reading stall the bus until one attaches. Check `CMDGETBUFFERUSAGE`
+  where that can happen.
+- **All four `USER` JTAG chains are taken** by the consoles, so no Vivado debug core
+  (ILA/VIO) fits alongside them, and the bridge needs the cable to itself: close the
+  Hardware Manager before starting OpenOCD.
 - **Only a configuration of the FPGA power-cycles the SD card.** A card left in SPI
   mode by another design returns to SD mode then, not at a reset of this one.
 - The Wishbone arbiter is not instantiated here — with a single master
