@@ -121,9 +121,12 @@ localparam S_WBPI_DEFAULT = (S_WBPI_SRAM + 1);
 localparam WBPI_MDEVCOUNT = (M_WBPI_LAST + 1);
 localparam WBPI_SDEVCOUNT = (S_WBPI_DEFAULT + 1);
 
+// Number of COM ports presented to the host through the USB link.
+localparam SERIAL_PORTCOUNT = 2;
+
 localparam [0:(WBPI_SDEVCOUNT*2*32)-1] WBPI_SDEVS = {
 	/* S_WBPI_IRQCTRL */ 32'hf00,  32'(WORDBITSZ/8),
-	/* S_WBPI_SERIAL  */ 32'hf80,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_SERIAL  */ 32'hf80,  32'(2*(WORDBITSZ/8)*SERIAL_PORTCOUNT),
 	/* S_WBPI_SRAM    */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
 	/* S_WBPI_DEFAULT */ 32'h0,    32'h0};
 
@@ -159,9 +162,9 @@ wire wbpi_clk_w = clk48mhz_w;
 // 	input  [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dati_w [WBPI_SDEVCOUNT];
 `include "lib/wbpi_inst.sv"
 
-localparam IRQ_SERIAL = 0;
+localparam IRQ_SERIAL = 0; // First of SERIAL_PORTCOUNT serial interrupt sources.
 
-localparam IRQSRCCOUNT = (IRQ_SERIAL +1); // Number of interrupt sources.
+localparam IRQSRCCOUNT = (IRQ_SERIAL + SERIAL_PORTCOUNT); // Number of interrupt sources.
 localparam IRQDSTCOUNT = CPU_COUNT; // Number of interrupt destinations.
 wire [IRQSRCCOUNT -1 : 0] irq_src_stb_w;
 wire [IRQSRCCOUNT -1 : 0] irq_src_rdy_w;
@@ -262,6 +265,7 @@ end
 serial_usb #(
 	 .WORDBITSZ  (WORDBITSZ)
 	,.PHYCLKFREQ (CLKFREQ48MHZ) // Must be 48MHz.
+	,.PORTCOUNT  (SERIAL_PORTCOUNT)
 	,.BUFSZ      (4096)
 ) serial (
 
@@ -281,8 +285,8 @@ serial_usb #(
 	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SERIAL])
 	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SERIAL])
 
-	,.irq_stb_o (irq_src_stb_w[IRQ_SERIAL])
-	,.irq_rdy_i (irq_src_rdy_w[IRQ_SERIAL])
+	,.irq_stb_o (irq_src_stb_w[IRQ_SERIAL +: SERIAL_PORTCOUNT])
+	,.irq_rdy_i (irq_src_rdy_w[IRQ_SERIAL +: SERIAL_PORTCOUNT])
 
 	,.usb_dp_io (usb_d_p)
 	,.usb_dn_io (usb_d_n)
