@@ -78,8 +78,8 @@
   <text x="195" y="487.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#000000">irqctrl</text>
   <text x="195" y="506.0" text-anchor="middle" font-family="'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="400" fill="#4A4A4A">0x00000F00</text>
   <polygon points="286,450 426,450 440,464 440,530 300,530 286,516" fill="#FFFFFF" stroke="#7C7C7C" stroke-width="1.2" filter="url(#glow-shadow)"/>
-  <text x="363" y="487.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#000000">serial_usb</text>
-  <text x="363" y="506.0" text-anchor="middle" font-family="'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="400" fill="#4A4A4A">0x00000F80</text>
+  <text x="363" y="487.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#000000">serial_usb ×2</text>
+  <text x="363" y="506.0" text-anchor="middle" font-family="'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="400" fill="#4A4A4A">0x00000F80 · 0xF88</text>
   <polygon points="454,450 594,450 608,464 608,530 468,530 454,516" fill="#FFFFFF" stroke="#7C7C7C" stroke-width="1.2" filter="url(#glow-shadow)"/>
   <text x="531" y="487.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#000000">sram · 256 KB</text>
   <text x="531" y="506.0" text-anchor="middle" font-family="'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="400" fill="#4A4A4A">0x00001000</text>
@@ -101,7 +101,7 @@
   <line x1="320" y1="544" x2="245" y2="544" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
   <line x1="245" y1="544" x2="245" y2="536" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
   <polygon points="245,530 241.28,536 248.72,536" fill="#595959"/>
-  <text x="327" y="542" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#4A4A4A">IRQ src 1</text>
+  <text x="327" y="542" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#4A4A4A">IRQ src 1, 4</text>
   <line x1="824" y1="530" x2="824" y2="552" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
   <line x1="824" y1="552" x2="220" y2="552" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
   <line x1="220" y1="552" x2="220" y2="536" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>

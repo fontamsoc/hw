@@ -223,9 +223,14 @@ localparam WBPI_SDEVCOUNT = (S_WBPI_DEFAULT + 1);
 localparam LITEDRAM_MAPSZ     = 'h20000000;
 localparam LITEDRAMCTRL_MAPSZ = 'h10000;
 
+// Number of COM ports presented to the host through the USB link; it
+// must be at least 2, as the interrupt sources of the ports beyond
+// port 0 follow those of the other devices, see IRQ_SERIALX.
+localparam SERIAL_PORTCOUNT = 2;
+
 localparam [0:(WBPI_SDEVCOUNT*2*32)-1] WBPI_SDEVS = {
 	/* S_WBPI_IRQCTRL      */ 32'hf00,  32'(WORDBITSZ/8),
-	/* S_WBPI_SERIAL       */ 32'hf80,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_SERIAL       */ 32'hf80,  32'(2*(WORDBITSZ/8)*SERIAL_PORTCOUNT),
 	/* S_WBPI_SRAM         */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
 	/* S_WBPI_LITEDRAM     */ 32'('h1000+(`SRAM_KBSIZE*1024)), 32'(LITEDRAM_MAPSZ),
 	/* S_WBPI_LITEDRAMCTRL */ 32'('h1000+(`SRAM_KBSIZE*1024)+LITEDRAM_MAPSZ), 32'(LITEDRAMCTRL_MAPSZ),
@@ -266,11 +271,12 @@ wire wbpi_clk_w = sdram_ddr3_clk_w;
 `include "lib/wbpi_inst.sv"
 
 localparam IRQ_DFLTDEV = 0;
-localparam IRQ_SERIAL = (IRQ_DFLTDEV + 1);
+localparam IRQ_SERIAL = (IRQ_DFLTDEV + 1); // Interrupt source of the serial port 0.
 localparam IRQ_SDSPI = (IRQ_SERIAL + 1);
 localparam IRQ_SPIFLASH = (IRQ_SDSPI + 1);
+localparam IRQ_SERIALX = (IRQ_SPIFLASH + 1); // First of the interrupt sources of the serial ports beyond port 0.
 
-localparam IRQSRCCOUNT = (IRQ_SPIFLASH +1); // Number of interrupt sources.
+localparam IRQSRCCOUNT = (IRQ_SERIALX + SERIAL_PORTCOUNT - 1); // Number of interrupt sources.
 localparam IRQDSTCOUNT = CPU_COUNT; // Number of interrupt destinations.
 wire [IRQSRCCOUNT -1 : 0] irq_src_stb_w;
 wire [IRQSRCCOUNT -1 : 0] irq_src_rdy_w;
@@ -379,6 +385,7 @@ end
 serial_usb #(
 	 .WORDBITSZ  (WORDBITSZ)
 	,.PHYCLKFREQ (CLKFREQ48MHZ) // Must be 48MHz.
+	,.PORTCOUNT  (SERIAL_PORTCOUNT)
 	,.BUFSZ      (2048)
 ) serial (
 
@@ -398,8 +405,8 @@ serial_usb #(
 	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SERIAL])
 	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SERIAL])
 
-	,.irq_stb_o (irq_src_stb_w[IRQ_SERIAL])
-	,.irq_rdy_i (irq_src_rdy_w[IRQ_SERIAL])
+	,.irq_stb_o ({irq_src_stb_w[IRQ_SERIALX +: (SERIAL_PORTCOUNT-1)], irq_src_stb_w[IRQ_SERIAL]})
+	,.irq_rdy_i ({irq_src_rdy_w[IRQ_SERIALX +: (SERIAL_PORTCOUNT-1)], irq_src_rdy_w[IRQ_SERIAL]})
 
 	,.usb_dp_io (usb_d_p)
 	,.usb_dn_io (usb_d_n)

@@ -39,10 +39,11 @@ targeting the OrangeCrab r0.2 85F.**
 
 `orangecrab0285.sv` is the top level of a compact RV32 SoC: one `ftpu` hart with private
 instruction and data caches, a Wishbone peripheral interconnect, an interrupt
-controller, a USB console, a SPI master on the microSD slot, a second SPI master on the
-configuration flash, 256 KB of on-chip SRAM, the 512 MiB DDR3L SDRAM of the board
-through a LiteDRAM controller, and a *default device* that acknowledges and reports
-every access to an address no other device maps.
+controller, a USB console and a second serial port over the same USB link, a SPI master
+on the microSD slot, a second SPI master on the configuration flash, 256 KB of on-chip
+SRAM, the 512 MiB DDR3L SDRAM of the board through a LiteDRAM controller, and a
+*default device* that acknowledges and reports every access to an address no other
+device maps.
 
 The program is in the block RAM of the SRAM from the configuration of the FPGA on, so
 the SoC boots straight into application code at `0x1000`; the build writes it into the
@@ -57,7 +58,7 @@ application changes without a new bitstream and can use the DDR3 SDRAM.
 ## Block diagram
 
 <p align="center">
-  <img src=".README.md/block_diagram.svg" alt="OrangeCrab r0.2 85F SoC block diagram: FonTamPU core complex mastering a 32-bit Wishbone bus with irqctrl, serial_usb, sram, sdram_ddr3, sdspi, spiflash and dfltdev slaves; the PLL of the DDR3 controller clocks the SoC; dfltdev, serial_usb, sdspi and spiflash raise interrupt sources 0, 1, 2 and 3 at irqctrl" width="960">
+  <img src=".README.md/block_diagram.svg" alt="OrangeCrab r0.2 85F SoC block diagram: FonTamPU core complex mastering a 32-bit Wishbone bus with irqctrl, serial_usb (two serial ports over one USB link), sram, sdram_ddr3, sdspi, spiflash and dfltdev slaves; the PLL of the DDR3 controller clocks the SoC; dfltdev, serial_usb port 0, sdspi, spiflash and serial_usb port 1 raise interrupt sources 0, 1, 2, 3 and 4 at irqctrl" width="960">
 </p>
 
 <div align="center">
@@ -81,11 +82,11 @@ application changes without a new bitstream and can use the DDR3 SDRAM.
 | **Caches** | 16 KB I-cache + 16 KB D-cache, direct-mapped |
 | **RAM** | 256 KB on-chip block RAM (`SRAM_KBSIZE = 256`) and 512 MiB of DDR3L SDRAM |
 | **DDR3 SDRAM** | Micron MT41K256M16, 512 MiB at `0x00041000`, through LiteDRAM (ECP5DDRPHY at 96 MHz, 192 MT/s); initialized and calibrated by `apps/bootldr` |
-| **Console** | USB serial port (CDC-ACM, full speed) on the USB-C connector of the board, 2 KB RX + 2 KB TX buffers |
+| **Console** | USB serial port (CDC-ACM, full speed) on the USB-C connector of the board, 2 KB RX + 2 KB TX buffers; a second one, port 1, over the same USB link, with buffers of its own |
 | **SD card** | SPI master on the microSD slot, mode 0, 400 kbps at reset, up to 24 Mbps, 2 KB RX + 2 KB TX buffers |
 | **SPI flash** | Second SPI master on the configuration flash, a 16 MiB Winbond W25Q128JV: `cs` high during control words, `miso` sampled on the falling edge, `sclk` through `USRMCLK`, up to 24 Mbps, 2 KB RX + 2 KB TX buffers |
 | **Unmapped access** | Acknowledged by `dfltdev`: reads as `nop`, writes dropped, IRQ source 0 raised, address latched at `0xFFFFFFFC` |
-| **Interrupt sources** | 4 — `dfltdev` (0), `serial_usb` (1), `sdspi` (2), `spiflash` (3) |
+| **Interrupt sources** | 5 — `dfltdev` (0), `serial_usb` port 0 (1), `sdspi` (2), `spiflash` (3), `serial_usb` port 1 (4) |
 | **Reset vector** | `0x00001000` |
 | **Initial `sp`** | `0x00041000` (end of the SRAM); bootldr gives its payload the end of the DDR3 SDRAM, `0x20041000`, in `a1` |
 | **Toolchain** | Yosys · nextpnr-ecp5 · Project Trellis (`ecpbram`, `ecppack`) · dfu-util · `riscv32-unknown-elf` GCC |
@@ -101,7 +102,7 @@ converts them to word indices internally.
 | # | Device | Module | Base | Last | Size | Cached |
 | :-: | :--- | :--- | :--- | :--- | ---: | :-: |
 | 0 | Interrupt controller | `dev/irqctrl.sv` | `0x00000F00` | `0x00000F03` | 4 B (1 word) | no |
-| 1 | USB console | `dev/serial_usb.sv` | `0x00000F80` | `0x00000F87` | 8 B (2 words) | no |
+| 1 | USB console, ports 0 and 1 | `dev/serial_usb.sv` | `0x00000F80` | `0x00000F8F` | 16 B (4 words) | no |
 | 2 | SRAM | `dev/sram.sv` | `0x00001000` | `0x00040FFF` | 256 KB | yes |
 | 3 | DDR3 SDRAM | `rv32-orangecrab0285/dev/sdram_ddr3.v` | `0x00041000` | `0x20040FFF` | 512 MiB | yes |
 | 4 | DDR3 controller registers | `rv32-orangecrab0285/dev/sdram_ddr3.v` | `0x20041000` | `0x20050FFF` | 64 KiB | no |
@@ -129,9 +130,9 @@ converts them to word indices internally.
  0x00000F04        · · · unmapped → dfltdev · · ·
  0x00000F7F
  0x00000F80 ┌────────────────────────────────────┐
-            │   serial_usb · 8 B                 │   0xF80 data · 0xF84 command
- 0x00000F87 └────────────────────────────────────┘
- 0x00000F88        · · · unmapped → dfltdev · · ·
+            │   serial_usb · 16 B                │   0xF80/0xF88 data · 0xF84/0xF8C command
+ 0x00000F8F └────────────────────────────────────┘
+ 0x00000F90        · · · unmapped → dfltdev · · ·
  0x00000FFF
  0x00001000 ┌────────────────────────────────────┐   reset vector = 0x00001000
             │                                    │
@@ -236,14 +237,17 @@ invalid destination; underLineOS exposes it as `_sysreset()`.
 ### USB console — `0x00000F80`
 
 `dev/serial_usb.sv` is a USB full-speed device on the USB-C connector of the board,
-which the host sees as a CDC-ACM serial port (VID:PID `1d50:6149`), ie: `/dev/ttyACM0`
-on Linux. Its registers and commands are those of a UART console, save
-`CMDSETSPEED`:
+with two serial ports here (`SERIAL_PORTCOUNT = 2`): the host sees a composite device
+(VID:PID `1d50:6149`) with a CDC-ACM serial port, and its interface association, per
+port, ie: `/dev/ttyACM0` and `/dev/ttyACM1` on Linux. Port `p` has the registers and
+commands of a UART console, save `CMDSETSPEED`, at `0xF80 + 8·p`:
 
 | Offset | Address | Register | Description |
 | :-: | :--- | :--- | :--- |
-| `+0x0` | `0x00000F80` | Data | Read receives one byte, write transmits one byte |
-| `+0x4` | `0x00000F84` | Command | Write submits a command, read retrieves the result |
+| `+0x0` | `0x00000F80` | Data, port 0 | Read receives one byte, write transmits one byte |
+| `+0x4` | `0x00000F84` | Command, port 0 | Write submits a command, read retrieves the result |
+| `+0x8` | `0x00000F88` | Data, port 1 | As the data register of port 0 |
+| `+0xC` | `0x00000F8C` | Command, port 1 | As the command register of port 0 |
 
 | `cmd` | Name | Purpose |
 | :-: | :--- | :--- |
@@ -252,9 +256,9 @@ on Linux. Its registers and commands are those of a UART console, save
 | `0b10` | `CMDSETINTERRUPT` | `arg = 0` disables; non-zero enables and sets the RX-usage threshold. Returns the buffer size |
 | `0b11` | `CMDSETSPEED` | `arg` is ignored, the transfer rate being the host's. Returns `PHYCLKFREQ`, 48000000 |
 
-Defaults: 2048-byte RX and TX buffers (`BUFSZ = 2048`), **interrupt disabled** — after
-a reset of the device, which neither the button nor `_sysreset()` makes (see
-[Reset behaviour](#reset-behaviour)).
+Defaults, for each port: 2048-byte RX and TX buffers (`BUFSZ = 2048`), **interrupt
+disabled** — after a reset of the device, which neither the button nor `_sysreset()`
+makes (see [Reset behaviour](#reset-behaviour)).
 
 > [!IMPORTANT]
 > Reading the data register while the receive buffer is empty holds `wb_bsy_o` — the
@@ -262,6 +266,12 @@ a reset of the device, which neither the button nor `_sysreset()` makes (see
 > blocks likewise, until the host takes the bytes waiting, which it does only while a
 > program has the port open: a program which writes more than the buffer holds before
 > a terminal opens the port stalls until one does.
+
+Port 0 raises interrupt source 1 and port 1 source 4: the sources of the ports past
+port 0 follow those of the other devices (`IRQ_SERIALX`), so that the SD card and the
+SPI flash keep the sources they have on the main branch. underLineOS's console is port
+0; port 1 is reached through `hwdrvchar.h` at `0xF88`, or carries the gdb stub (see
+[Loading a program](#loading-a-program)).
 
 ### SD card (SPI mode) — `0x00000E00`
 
@@ -460,7 +470,7 @@ Two details worth knowing:
 
 ## Interrupts
 
-The SoC instantiates `IRQSRCCOUNT = 4` sources and `IRQDSTCOUNT = CPU_COUNT = 1`
+The SoC instantiates `IRQSRCCOUNT = 5` sources and `IRQDSTCOUNT = CPU_COUNT = 1`
 destination.
 
 ### Sources
@@ -468,9 +478,10 @@ destination.
 | Index | Source | Constant | Raised when |
 | :-: | :--- | :--- | :--- |
 | 0 | `dfltdev` | `IRQ_DFLTDEV` | Any access to an unmapped address, other than a read of the fault address register |
-| 1 | `serial_usb` | `IRQ_SERIAL` | RX buffer usage reaches the threshold set by `CMDSETINTERRUPT` |
+| 1 | `serial_usb` port 0 | `IRQ_SERIAL` | RX buffer usage of port 0 reaches the threshold set by its `CMDSETINTERRUPT` |
 | 2 | `sdspi` | `IRQ_SDSPI` | RX buffer usage reaches the threshold set by `CMDSETINTERRUPT` |
 | 3 | `spiflash` | `IRQ_SPIFLASH` | RX buffer usage reaches the threshold set by `CMDSETINTERRUPT` |
+| 4 | `serial_usb` port 1 | `IRQ_SERIALX` | RX buffer usage of port 1 reaches the threshold set by its `CMDSETINTERRUPT` |
 
 Source 0 is reserved for the default device by convention on every top in the
 repository, including `rv32-sim/` where it never fires.
@@ -508,11 +519,11 @@ Three behaviours worth coding around:
 - **The USB console and SPI interrupts disarm themselves.** Each is disabled at reset
   (so no spurious interrupt can fire immediately after release) and disabled again each
   time a raised interrupt is acknowledged, so the handler must re-enable it. The USB
-  console being reset neither by the button nor by `_sysreset()`, its interrupt, its
-  threshold and its buffers survive them: an interrupt it had armed before can be raised
-  as soon as software enables source 1 again. On both SPI devices, `CMDSETINTERRUPT 0`
-  also closes the transmission in progress: disable the interrupt within a transaction
-  with a threshold of 2049 instead.
+  ports being reset neither by the button nor by `_sysreset()`, their interrupts, their
+  thresholds and their buffers survive them: an interrupt a port had armed before can be
+  raised as soon as software enables its source, 1 or 4, again. On both SPI devices,
+  `CMDSETINTERRUPT 0` also closes the transmission in progress: disable the interrupt
+  within a transaction with a threshold of 2049 instead.
 - **The fault interrupt is imprecise.** It arrives as an ordinary external
   interrupt, several instructions after the access that caused it, and that access
   has already completed — a load has consumed the word `0x00000013`, a store has
@@ -600,10 +611,11 @@ across a press of the button and `_sysreset()`; it is reset only at the configur
 the FPGA, when its PLL loses its lock, or when the DLL of its PHY locks anew, which also
 resets the DDR3 SDRAM, whose content is then lost.
 
-The USB console is reset neither by the button nor by `_sysreset()`, either of which
-would break its connection to the host: its own power-on reset lasts from the
-configuration of the FPGA until 255 cycles after the reset of the DDR3 controller was
-last high, so that the connection drops only when that controller resets.
+The USB device, both of its ports, is reset neither by the button nor by
+`_sysreset()`, either of which would break its connection to the host: its own power-on
+reset lasts from the configuration of the FPGA until 255 cycles after the reset of the
+DDR3 controller was last high, so that the connection drops only when that controller
+resets.
 
 > [!TIP]
 > If the board appears dead once its bitstream runs, press the button once — that is
@@ -691,8 +703,9 @@ Three things the makefile does beyond the defaults:
 (`orangecrab0285.synth.log`, `orangecrab0285.pnr.log`), the placed and routed
 configuration with the placeholder contents of the SRAM (`orangecrab0285.bak.config`,
 `orangecrab0285.sram.hex`), and the bitstream, `orangecrab0285.dfu`. The logs, the
-configuration and its placeholder are committed, so that `make updsram` works from a
-checkout (see [Loading a program](#loading-a-program)).
+configuration and its placeholder are committed — on this branch, those of the main
+branch, whose USB device has a single port: run `make` once, to place this design,
+before `make updsram` (see [Loading a program](#loading-a-program)).
 
 To program the board, hold its button while plugging it in: foboot, its bootloader, then
 waits for DFU instead of starting the bitstream, and `make prog` writes the bitstream to
@@ -711,9 +724,10 @@ The program in the SRAM is written into the placed and routed configuration by
 `ecpbram`: synthesis reads, through `$readmemh`, a random placeholder,
 `orangecrab0285.sram.hex`, which `ecpbram` replaces in the configuration with the words
 of `SRAM_INITFILE`. Hence **changing the program takes neither synthesis nor
-placement**: `make updsram` takes the committed configuration,
+placement**: `make updsram` takes the configuration in `yosys/`,
 `orangecrab0285.bak.config`, and its placeholder, swaps the program in and packs the
-bitstream again, in seconds:
+bitstream again, in seconds — once `make` has placed this design, the configuration
+committed on this branch being the main branch's, without the second port:
 
 ```sh
 cd rv32-orangecrab0285/yosys
@@ -721,10 +735,16 @@ make updsram SRAM_INITFILE=../../rv32-sim/apps/helloworld/helloworld.32.hex
 make prog
 ```
 
+Port 1 can carry underLineOS's gdb stub, an image linked with
+`-lgdbstub -Wl,--defsym=_gdbstub_dev=0xf88 -Wl,--defsym=_gdbstub_irq=4` — the stub's
+defaults being the device at `0xe80`, which this top does not map, and source 1, the
+console's — and gdb then opening that port, ie: `target remote /dev/ttyACM1`. The USB
+device surviving `_sysreset()`, the link stays up across the soft resets of a gdb
+`reload`; the underLineOS documentation (GDB stub, *Loading a new program*) describes
+the procedure.
+
 The `examples/rv32-orangecrab0285/serial_jtag` branch demonstrates two serial consoles
-tunneled through the JTAG port of the ECP5, and
-`examples/rv32-orangecrab0285/serial_usb_multi_port` a second serial port over the same
-USB link as the console.
+tunneled through the JTAG port of the ECP5.
 
 The build knobs are variables of the makefile: it passes `CPU_COUNT`, `XWORDBITSZ` and
 `SRAM_KBSIZE` to yosys as defines, in place of the `` `ifndef ``-guarded defaults at the
@@ -889,7 +909,7 @@ SD card, whose driver is larger.
 | `orangecrab0285.sv` | SoC top level: build-time defaults, PLL, reset, core complex, interconnect, peripherals |
 | `orangecrab0285.lpf` | Pin, IO type and clock constraints |
 | `yosys/makefile` | The build: synthesis, placement and routing, the program written into the block RAM, the bitstream with its DFU suffix, and its writing through DFU |
-| `yosys/orangecrab0285.bak.config` | The committed placed and routed configuration, with the placeholder contents of the SRAM, which `make updsram` reuses |
+| `yosys/orangecrab0285.bak.config` | The committed placed and routed configuration, with the placeholder contents of the SRAM, which `make updsram` reuses — on this branch the main branch's, without the second port, until `make` replaces it |
 | `yosys/orangecrab0285.sram.hex` | That placeholder |
 | `yosys/orangecrab0285.synth.log`, `yosys/orangecrab0285.pnr.log` | The logs of the committed build |
 | `tools/stitch_dfu.py` | Places data at a flash address of a DFU image, ie: that of `apps/bootldr` at `0x200000` |
@@ -900,9 +920,10 @@ SD card, whose driver is larger.
 | `.README.md/block_diagram.svg` | The block diagram above |
 
 Shared sources come from the repository root: [`cpu/`](../cpu) (core complex),
-[`dev/`](../dev) (Wishbone peripherals, the USB console `serial_usb.sv` and the default
-device included) and [`lib/`](../lib) (PLL, reset, FIFOs, interconnect, SPI master, the
-USB stack `core_usb_cdc/` and `core_usb_fs_phy/`, the Wishbone bridges to the DDR3
+[`dev/`](../dev) (Wishbone peripherals, the USB console `serial_usb.sv`, with its
+`PORTCOUNT` ports, and the default device included) and [`lib/`](../lib) (PLL, reset,
+FIFOs, interconnect, SPI master, the USB stack `core_usb_cdc/`, whose descriptor ROM
+`PORTCOUNT` sizes, and `core_usb_fs_phy/`, the Wishbone bridges to the DDR3
 controller); [`tools/mkBootldrDat.py`](../tools/mkBootldrDat.py) formats the data which
 `apps/bootldr` loads.
 
@@ -940,12 +961,18 @@ controller); [`tools/mkBootldrDat.py`](../tools/mkBootldrDat.py) formats the dat
   Zbc executes as a shift — so an image built for one, like `isatests` (Zba, Zbb, Zbc,
   Zbs), `clmultest` and `clmulbench` (Zbc), or `fpusmoke` and `fputests` (Zfinx), does not
   run correctly here.
-- **The USB console blocks both ways.** A read blocks until a byte is available, and a
+- **The USB ports block both ways.** A read blocks until a byte is available, and a
   write blocks while the transmit buffer is full, until the host takes its bytes, which
-  it does only while a program has the port open.
-- **The USB console survives the button and `_sysreset()`**, its state included: its
-  interrupt setting, and the bytes waiting in its buffers; only a reset of the DDR3
-  controller resets it.
+  it does only while a program has that port open: writing to port 1 while nothing on
+  the host has it open stalls once its transmit buffer is full.
+- **The USB ports survive the button and `_sysreset()`**, their state included: their
+  interrupt settings, and the bytes waiting in their buffers; only a reset of the DDR3
+  controller resets them.
+- **underLineOS's console is port 0 only**: `stdin` and `stdout` use `0xF80`; port 1 is
+  reached through `hwdrvchar.h` at `0xF88`, or as the gdb transport.
+- **`make updsram` needs a `make` first on this branch**: the committed
+  `orangecrab0285.bak.config` is the main branch's placed design, so `make updsram` from
+  a fresh checkout builds a bitstream whose USB device has a single port.
 - **`make clean` deletes the committed build** — `orangecrab0285.bak.config` and
   `orangecrab0285.sram.hex`, which `make updsram` needs, and the logs — along with the
   rest: restore them with git, or rebuild them with `make`.
