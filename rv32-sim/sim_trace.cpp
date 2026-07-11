@@ -91,11 +91,18 @@ int main (int argc, char **argv) {
 	};
 
 	// Reset module sim.
-	// Hold reset for at least 2 cycles: in wb_mux, addrspace[] is loaded
-	// on the first reset cycle and its consumers (addrspace_slvidx_lo/hi)
-	// only read valid values on the next cycle.
+	// Hold reset for at least 4 cycles:
+	//  - wb_mux loads addrspace[] on the first reset cycle; its consumers
+	//    (addrspace_slvidx_lo/hi) read valid values only on the next cycle (>= 2).
+	//  - under randomized/garbage power-up (+verilator+rand+reset), a stale slave
+	//    ack echoed by an ungated device wb_ack_o is replayed one cycle past reset
+	//    through the dcache REGSLVINPUT register and underflows dCacheSub's
+	//    s_wb_ack_pending, permanently wedging refill; absorbing it needs >= 4 edges.
+	// FPGA tops hold reset far longer (RSTDURATION 48/100), so this floor is sim-only.
 	auto rstcycle = [&]() -> void {
 		tb->rst_i = 1;
+		tickclk();
+		tickclk();
 		tickclk();
 		tickclk();
 		tb->rst_i = 0;
