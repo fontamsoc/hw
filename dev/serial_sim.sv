@@ -190,7 +190,7 @@ always_ff @(posedge clk_i) begin
 end
 
 always_ff @(posedge clk_i) begin
-	if (devwr) begin
+	if (!rst_i && devwr) begin
 		$c("({ char c = ", wb_dat_r[8 -1 : 0], "; write(", stdOut, ", &c, 1); });");
 	end
 end
