@@ -83,7 +83,7 @@ always_ff @(posedge clk_i) begin
 	end
 end
 
-// Register used to hold the way index to write next.
+// Register used to hold the way index to write next; undriven and unused when (WAYCNT == 1).
 reg [CLOG2WAYCNT -1 : 0] waywidx;
 generate if (WAYCNT > 1) begin
 // Register used to hold clock cycle count of _we_i high.
@@ -131,7 +131,7 @@ generate for (
 	gen_ways_idx < WAYCNT;
 	gen_ways_idx = gen_ways_idx + 1) begin :gen_ways
 
-wire __we_i = (_we_i && waywidx == gen_ways_idx);
+wire __we_i = (_we_i && (WAYCNT == 1 || waywidx == gen_ways_idx));
 
 bram #(
 	 .SZ (SETCNT)
