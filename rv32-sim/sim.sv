@@ -258,7 +258,7 @@ sram #(
 assign s_wbpi_bsy_w[S_WBPI_DEFAULT] = 0;
 assign s_wbpi_ack_w[S_WBPI_DEFAULT] = 0;
 always @ (posedge wbpi_clk_w) begin
-	if (s_wbpi_stb_w[S_WBPI_DEFAULT]) begin
+	if (!wbpi_rst_w && s_wbpi_stb_w[S_WBPI_DEFAULT]) begin
 		$write("!!! s_wbpi_addr_w[S_WBPI_DEFAULT] == 0x%x\n",
 			{{WBPI_CLOG2WORDBITSZBY8{1'b0}}, s_wbpi_addr_w[S_WBPI_DEFAULT]}<<WBPI_CLOG2WORDBITSZBY8);
 		$fflush(1);
