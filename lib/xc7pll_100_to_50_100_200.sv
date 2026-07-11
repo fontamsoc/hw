@@ -11,20 +11,10 @@ module xc7pll_100_to_50_100_200 (
   output wire locked
 );
 
-  wire [15:0] do_unused;
-  wire        drdy_unused;
-  wire        psdone_unused;
-  wire        locked_int;
-  wire        clkfbout;
-  wire        clkfbout_buf;
-  wire        clkfboutb_unused;
-  wire        clkout3_unused;
-  wire        clkout4_unused;
-  wire        clkout5_unused;
-  wire        clkout6_unused;
-  wire        clkfbstopped_unused;
-  wire        clkinstopped_unused;
-  wire        reset_high;
+  wire locked_int;
+  wire clkfbout;
+  wire clkfbout_buf;
+  wire reset_high;
 
   (* BOX_TYPE = "PRIMITIVE" *)
   BUFG clkf_buf
@@ -32,8 +22,8 @@ module xc7pll_100_to_50_100_200 (
     .I (clkfbout));
 
   (* BOX_TYPE = "PRIMITIVE" *)
-  PLLE2_ADV
-  #(.BANDWIDTH            ("OPTIMIZED"),
+  PLLE2_ADV #(
+    .BANDWIDTH            ("OPTIMIZED"),
     .COMPENSATION         ("ZHOLD"),
     .STARTUP_WAIT         ("FALSE"),
     .DIVCLK_DIVIDE        (1),
@@ -55,9 +45,6 @@ module xc7pll_100_to_50_100_200 (
     .CLKOUT0             (clk_out1),
     .CLKOUT1             (clk_out2),
     .CLKOUT2             (clk_out3),
-    .CLKOUT3             (clkout3_unused),
-    .CLKOUT4             (clkout4_unused),
-    .CLKOUT5             (clkout5_unused),
     // Input clock control
     .CLKFBIN             (clkfbout_buf),
     .CLKIN1              (clk_in1),
@@ -69,8 +56,6 @@ module xc7pll_100_to_50_100_200 (
     .DCLK                (1'b0),
     .DEN                 (1'b0),
     .DI                  (16'h0),
-    .DO                  (do_unused),
-    .DRDY                (drdy_unused),
     .DWE                 (1'b0),
     // Other control and status signals
     .LOCKED              (locked_int),
