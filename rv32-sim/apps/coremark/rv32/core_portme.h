@@ -196,6 +196,7 @@ typedef struct CORE_PORTABLE_S {
 	#endif /* Method for multithreading */
 #endif /* MULTITHREAD>1 */
 	ee_u8	portable_id;
+	double	coremark;		/* CoreMark score, stashed for the CoreMark/MHz report */
 } core_portable;
 
 /* target specific init/fini */

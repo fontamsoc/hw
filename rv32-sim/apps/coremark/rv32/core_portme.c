@@ -161,6 +161,7 @@ void portable_init(core_portable *p, int *argc, char *argv[]) {
 		ee_printf("ERROR! Please define ee_u32 to a 32b unsigned type!\n");
 	}
 	p->portable_id=1;
+	p->coremark=0;
 #if (MULTITHREAD>1)
 #if USE__OS
 	default_num_contexts=ncpu=_ncpu();
@@ -181,5 +182,6 @@ void portable_init(core_portable *p, int *argc, char *argv[]) {
 void portable_fini(core_portable *p)
 {
 	p->portable_id=0;
+	ee_printf("CoreMark/MHz : %f\n", p->coremark / (CLOCKS_PER_SEC()/1000000.0));
 	ee_printf("CoreMark done\n");
 }

@@ -326,7 +326,8 @@ MAIN_RETURN_TYPE main(int argc, char *argv[]) {
 		ee_printf("Correct operation validated. See readme.txt for run and reporting rules.\n");
 #if HAS_FLOAT
 		if (known_id==3) {
-			ee_printf("CoreMark 1.0 : %f / %s %s",default_num_contexts*results[0].iterations/time_in_secs(total_time),COMPILER_VERSION,COMPILER_FLAGS);
+			results[0].port.coremark=default_num_contexts*results[0].iterations/time_in_secs(total_time);
+			ee_printf("CoreMark 1.0 : %f / %s %s",results[0].port.coremark,COMPILER_VERSION,COMPILER_FLAGS);
 #if defined(MEM_LOCATION) && !defined(MEM_LOCATION_UNSPEC)
 			ee_printf(" / %s",MEM_LOCATION);
 #else
