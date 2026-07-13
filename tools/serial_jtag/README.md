@@ -1,14 +1,19 @@
 # serial_jtag console bridge
 
-`openocd_bridge.py` (Python 3, standard library only) bridges a
-terminal to the `serial_jtag` channels (`dev/serial_jtag.sv`) through
-the FPGA JTAG TAP with OpenOCD (>= 0.11), implementing the
-serial_jtag wire protocol. It works with the on-board USB-JTAG of
+Two host tools bridge a terminal to the `serial_jtag` channels
+(`dev/serial_jtag.sv`) through the FPGA JTAG TAP, implementing the
+same wire protocol: `openocd_bridge.py` (Python 3, standard library
+only) through OpenOCD (>= 0.11), and `vivado_bridge.tcl` through
+Vivado's hw_jtag mode. Both work with the on-board USB-JTAG of
 the Arty A7-100T and Nexys A7-100T (single-device chain, xc7a100t;
 each board's top gains the channels on its examples/ branch),
-which is the same cable used to program the bitstream, and also
-supports the orangecrab (ECP5) through an external probe, see the
-orangecrab section below.
+which is the same cable used to program the bitstream; the OpenOCD
+bridge also supports the orangecrab (ECP5) through an external
+probe, see the orangecrab section below.
+
+The OpenOCD bridge is the preferred bridge; the Vivado bridge has
+not been tested on hardware and is kept as a fallback for hosts
+where OpenOCD is not available.
 
 ## Channels
 
@@ -107,6 +112,47 @@ Notes:
   precedes it.
 - Bitstream programming still goes through dfu-util as usual; DFU
   and the JTAG probe do not conflict.
+
+## Vivado bridge
+
+This bridge has not been tested on hardware; the OpenOCD bridge is
+the preferred bridge (see the board sections above) and should be
+used when OpenOCD is available.
+
+```
+stty raw -echo; vivado -mode batch -nolog -nojournal -notrace -source tools/serial_jtag/vivado_bridge.tcl; stty sane
+```
+
+Type `Ctrl-]` to exit. The Vivado startup banner is printed before
+the session starts; bridge status messages go to stderr.
+
+If batch-mode stdin misbehaves on a given Vivado install, set
+`SERIAL_JTAG_PORT` to bridge a local TCP socket instead, and connect
+to it with `nc`:
+
+```
+SERIAL_JTAG_PORT=2323 vivado -mode batch -nolog -nojournal -notrace -source tools/serial_jtag/vivado_bridge.tcl &
+stty raw -echo; nc 127.0.0.1 2323; stty sane
+```
+
+For several channels at once, set `SERIAL_JTAG_USERS` to the USER
+indexes to serve; the bridge then listens one TCP socket per channel
+at consecutive ports starting at `SERIAL_JTAG_PORT` (default 2323)
+and stdin/stdout are unused:
+
+```
+SERIAL_JTAG_USERS=1,2,3,4 vivado -mode batch -nolog -nojournal -notrace -source tools/serial_jtag/vivado_bridge.tcl
+stty raw -echo; nc 127.0.0.1 2324; stty sane   # channel 1 (USER2)
+```
+
+Notes:
+- The bridge needs exclusive access to the JTAG cable: program the
+  bitstream first, then close the Vivado hardware manager session
+  (or any auto-refreshing hw target) before starting the bridge.
+- At startup the bridge checks the device IDCODE (xc7a100t) after a
+  TAP reset, which also validates the scan bit-ordering assumptions.
+- Ctrl-] exits in single-channel mode only; the multi-channel
+  sockets are binary-clean and the bridge runs until killed.
 
 ## Software view
 
