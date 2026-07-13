@@ -11,7 +11,7 @@ READELF := ${PREFIX}-readelf
 CFLAGS += -Werror -fdata-sections -ffunction-sections -Wl,--gc-sections -O3 -g
 #CFLAGS += -specs=nano.specs
 CFLAGS += -Wl,-z,max-page-size=4
-CFLAGS += -march=rv32ima_zfinx_zicsr_zifencei -mabi=ilp32
+CFLAGS += -march=rv32ima_zicsr_zifencei_zfinx
 
 APPNAME ?= fpusmoke
 
