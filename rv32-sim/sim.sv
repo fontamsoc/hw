@@ -215,7 +215,8 @@ irqctrl #(
 );
 
 serial_sim #(
-	.WORDBITSZ (WORDBITSZ)
+	 .WORDBITSZ  (WORDBITSZ)
+	,.POLLCYCLES (1024 /* ≈10 µs of simulated time between polls */ *8)
 ) serial (
 
 	 .rst_i (wbpi_rst_w)
