@@ -24,6 +24,12 @@
 // rst_i
 // 	When high on "clk_write_i" and "clk_read_i" posedges, the fifo reset
 // 	itself empty; it must be low to write data in the fifo.
+// 	Because the gray-index crossings each use a two flip-flop
+// 	synchronizer, "rst_i" must be held for at least four periods of the
+// 	slower of the two clocks: one source posedge to drive the reset
+// 	index out, then two destination posedges to flush both synchronizer
+// 	stages, otherwise stage-two garbage can leak one cycle past release
+// 	and momentarily assert a false "not empty" / "not full".
 //
 // usage_o
 // 	Count of data in the fifo.
@@ -164,38 +170,50 @@ bram #(
 
 assign usage_o = (writeidx - readidx);
 
-reg [(CLOG2DEPTH +1) -1 : 0] _gray_readidx;
-always_ff @(posedge clk_write_i) // Synchronize gray_readidx to clk_write_i.
+// Two flip-flop synchronizer moving gray_readidx into "clk_write_i".
+// The most-underscored name is the settled post-sync value used by the
+// flags; "__gray_readidx" gets its own posedge to resolve any
+// metastability captured by the first stage.
+(* ASYNC_REG = "TRUE" *) reg [(CLOG2DEPTH +1) -1 : 0] _gray_readidx;
+(* ASYNC_REG = "TRUE" *) reg [(CLOG2DEPTH +1) -1 : 0] __gray_readidx;
+always_ff @(posedge clk_write_i) begin // Synchronize gray_readidx to clk_write_i.
 	_gray_readidx <= gray_readidx;
+	__gray_readidx <= _gray_readidx;
+end
 
 wire near_full_o_;
 generate
 if (CLOG2DEPTH < 2) begin
-assign near_full_o_ = (gray_next_writeidx[(CLOG2DEPTH-1)+:2] == ~_gray_readidx[(CLOG2DEPTH-1)+:2]);
+assign near_full_o_ = (gray_next_writeidx[(CLOG2DEPTH-1)+:2] == ~__gray_readidx[(CLOG2DEPTH-1)+:2]);
 end else begin
-assign near_full_o_ = (gray_next_writeidx[(CLOG2DEPTH-1)+:2] == ~_gray_readidx[(CLOG2DEPTH-1)+:2]) &&
-	(gray_next_writeidx[0+:(CLOG2DEPTH-1)] == _gray_readidx[0+:(CLOG2DEPTH-1)]);
+assign near_full_o_ = (gray_next_writeidx[(CLOG2DEPTH-1)+:2] == ~__gray_readidx[(CLOG2DEPTH-1)+:2]) &&
+	(gray_next_writeidx[0+:(CLOG2DEPTH-1)] == __gray_readidx[0+:(CLOG2DEPTH-1)]);
 end
 endgenerate
 
 generate
 if (CLOG2DEPTH < 2) begin
-assign full_o = (gray_writeidx[(CLOG2DEPTH-1)+:2] == ~_gray_readidx[(CLOG2DEPTH-1)+:2]);
+assign full_o = (gray_writeidx[(CLOG2DEPTH-1)+:2] == ~__gray_readidx[(CLOG2DEPTH-1)+:2]);
 end else begin
-assign full_o = (gray_writeidx[(CLOG2DEPTH-1)+:2] == ~_gray_readidx[(CLOG2DEPTH-1)+:2]) &&
-	(gray_writeidx[0+:(CLOG2DEPTH-1)] == _gray_readidx[0+:(CLOG2DEPTH-1)]);
+assign full_o = (gray_writeidx[(CLOG2DEPTH-1)+:2] == ~__gray_readidx[(CLOG2DEPTH-1)+:2]) &&
+	(gray_writeidx[0+:(CLOG2DEPTH-1)] == __gray_readidx[0+:(CLOG2DEPTH-1)]);
 end
 endgenerate
 
 assign near_full_o = (near_full_o_ || full_o);
 
-reg [(CLOG2DEPTH +1) -1 : 0] _gray_writeidx;
-always_ff @(posedge clk_read_i) // Synchronize gray_writeidx to clk_read_i.
+// Two flip-flop synchronizer moving gray_writeidx into "clk_read_i";
+// "__gray_writeidx" is the settled value the empty flags consume.
+(* ASYNC_REG = "TRUE" *) reg [(CLOG2DEPTH +1) -1 : 0] _gray_writeidx;
+(* ASYNC_REG = "TRUE" *) reg [(CLOG2DEPTH +1) -1 : 0] __gray_writeidx;
+always_ff @(posedge clk_read_i) begin // Synchronize gray_writeidx to clk_read_i.
 	_gray_writeidx <= gray_writeidx;
+	__gray_writeidx <= _gray_writeidx;
+end
 
-assign empty_o = (_gray_writeidx == gray_readidx);
+assign empty_o = (__gray_writeidx == gray_readidx);
 
-assign near_empty_o = (_gray_writeidx == gray_next_readidx || empty_o);
+assign near_empty_o = (__gray_writeidx == gray_next_readidx || empty_o);
 
 always_ff @(posedge clk_read_i) begin
 	if (rst_i) begin
