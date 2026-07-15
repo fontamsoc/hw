@@ -170,7 +170,9 @@
         <Step Id="route_design">
           <Option Id="Directive">8</Option>
         </Step>
-        <Step Id="post_route_phys_opt_design" EnableStepBool="1"/>
+        <Step Id="post_route_phys_opt_design" EnableStepBool="1">
+          <Option Id="Directive">1</Option>
+        </Step>
         <Step Id="write_bitstream">
           <Option Id="BinFile">1</Option>
         </Step>
