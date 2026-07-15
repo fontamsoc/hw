@@ -56,6 +56,29 @@ Notes:
   `openocd_xc7.cfg`.
 - `--tap`, `--ir`, `--burst`, `--host`, `--port` have sensible
   defaults matching `openocd_xc7.cfg`; see `--help`.
+- The JTAG clock is the `adapter speed` (in kHz) of `openocd_xc7.cfg`,
+  default 10 MHz. It can be raised to 30 MHz, the ceiling on both
+  counts: the on-board Digilent FT2232H tops out at a 30 MHz MPSSE
+  clock, and the design constrains `jtag_tck` to 30 MHz (`create_clock
+  -period 33.33` in the xdc, e.g. `rv32-artya7100/artya7100.xdc`). The
+  FT2232H divisors are discrete, so the usefully faster steps are
+  15 MHz and 30 MHz; a request for 20 or 25 MHz runs at the nearest
+  achievable, 15 MHz. To run at the maximum, set `adapter speed 30000`
+  in `openocd_xc7.cfg`. Raising throughput is just a matter of this
+  value, as the transfer rate is set entirely by the JTAG host; the
+  full 10-30 MHz range is round-trip tested. `openocd_xc7.cfg` samples
+  TDO on the falling TCK edge (`ftdi tdo_sample_edge falling`) to keep
+  the top of that range reliable: at 30 MHz the TCK-to-TDO round-trip
+  through the FPGA and the FT2232H narrows the rising-edge setup window
+  and misreads TDO intermittently, while the falling edge adds a
+  half-period of margin and is clean throughout; the lower speeds are
+  unaffected. A request above 30000, such as 33000, does not give a
+  faster clock, as the discrete FT2232H divisors select the same one as
+  30000, still 30 MHz. Above 30 MHz is in any case neither available
+  (adapter limit) nor timing-safe (`jtag_tck` constraint). On the
+  orangecrab the external probe is the user's own, hence any equivalent
+  TDO-sampling adjustment for a high clock belongs in its adapter
+  configuration rather than in `openocd_ecp5.cfg`.
 
 ## Orangecrab (ECP5)
 

@@ -183,7 +183,11 @@ always_ff @(posedge tap_tck_i) begin
 		bitcnt_r <= 0;
 		rx_reject_r <= 1'b0;
 	end else if (load_w) begin
-		shift_r <= outframe_w;
+		// The loaded frame's first bit is presented on tap_tdo_o at this
+		// same edge (see the tap_tdo_o assignment), which the host captures
+		// as this frame's leading bit; the shifter therefore holds the frame
+		// pre-advanced by one so the following shifts emit bits 1..9.
+		shift_r <= {1'b0, outframe_w[FRAMEBITSZ-1:1]};
 		bitcnt_r <= 0;
 		rx_reject_r <= rx_reject_w;
 		pend_accept_r <= accept_w;
@@ -195,15 +199,32 @@ always_ff @(posedge tap_tck_i) begin
 	end
 end
 
-// As JTAG requires, tdo transitions on the falling edge of the TAP
-// clock so that the host samples a stable value on the rising edge;
-// the bit loaded here is sampled by the host on the rising edge which
-// is also the next shifting edge.
+// tdo transitions on the falling edge of the TAP clock so the host samples
+// a stable value on the rising edge. JTAG requires each frame's bit 0 to be
+// on tdo for its first shifting edge, but the phy loads on the Capture-DR
+// exit edge, one edge too late for "shift_r[0]" alone; the shifter is loaded
+// pre-advanced by one and bit 0 is presented separately.
+//
+// For every frame after the first, that separate bit 0 is registered on the
+// falling edge preceding the committing edge (commit_w is asserted the cycle
+// before it), and the remaining falling edges emit the pre-advanced shifter's
+// bits 1..9.
+//
+// The first frame of a scan is loaded from Capture-DR, and the BSCANE2
+// "CAPTURE" qualifier can reach this phy up to half a TAP period after the
+// BUFG-delayed tap_tck (CAPTURE is aligned to the raw TCK while this phy runs
+// on the buffered one), too late to register bit 0 on the falling edge that
+// precedes the Capture-DR exit edge -- registering it there instead re-fires
+// on the following falling edge and drops the frame's second bit. Drive bit 0
+// combinationally while CAPTURE is asserted: "outframe_w[0]" is stable across
+// Capture-DR (the transmit fifo is not popped until the exit edge, and the
+// host samples it on that exit edge, its first shifting edge), after which
+// CAPTURE deasserts and the registered shifter drives tdo as usual.
 always_ff @(negedge tap_tck_i) begin
-	tdo_r <= shift_r[0];
+	tdo_r <= (commit_w ? outframe_w[0] : shift_r[0]);
 end
 
-assign tap_tdo_o = tdo_r;
+assign tap_tdo_o = (capture_w ? outframe_w[0] : tdo_r);
 
 endmodule
 
