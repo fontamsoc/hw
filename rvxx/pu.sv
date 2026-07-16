@@ -107,6 +107,12 @@
 // 	timing cone that ends at the cache BRAM enables, at the cost of
 // 	one added cycle of dcache request latency. Takes effect only when
 // 	DCACHESETCNT is non-zero.
+//
+// PUAMOREGWB
+// 	Register the AMO write-back: capture the AMO read response into a
+// 	register and present the memory write one cycle later, so that the
+// 	AMO ALU computes from registers instead of from the live dcache
+// 	response; each amo* instruction takes one more cycle.
 
 // Parameters:
 //

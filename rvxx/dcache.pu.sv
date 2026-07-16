@@ -328,12 +328,37 @@ reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] dCache_m_addr_r;
 reg [(WORDBITSZ/8) -1 : 0]        dCache_m_sel_r;
 reg [WORDBITSZ -1 : 0]            dCache_m_dat_r;
 
+`ifdef PUAMOREGWB
+// Registered AMO write-back: capture the read response on amoUnit_memAck and
+// present the write-back one cycle later, so that the AMO ALU computes from
+// registers instead of from the live response (cutting the response-fifo ->
+// memAck -> AMO-adder -> dCache_m_dat_r cone). dCache_m_isAMOonly keeps
+// __dCache_m_bsy raised through the added cycle, and at most one AMO is in
+// that window, so the delayed trigger cannot collide with another one.
+reg                    amoUnit_memAck_r;
+reg [WORDBITSZ -1 : 0] amoUnit_dat_r;
+always_ff @(posedge clk_i) begin
+	if (rst_i)
+		amoUnit_memAck_r <= 1'b0;
+	else
+		amoUnit_memAck_r <= amoUnit_memAck;
+	if (amoUnit_memAck)
+		amoUnit_dat_r <= dCache_m_dat_o;
+end
+wire [(WORDBITSZ+1) -1 : 0] dCache_m_dat_i_minus_dCache_m_dat_o = (
+	({1'b1, ~amoUnit_dat_r} + {1'b0, dCache_m_dat_r}) + 1'b1);
+wire dCache_m_dat_i_lt_dCache_m_dat_o = (
+	(dCache_m_dat_r[WORDBITSZ-1] ^ amoUnit_dat_r[WORDBITSZ-1]) ?
+		dCache_m_dat_r[WORDBITSZ-1] : dCache_m_dat_i_minus_dCache_m_dat_o[WORDBITSZ]);
+wire dCache_m_dat_i_ltu_dCache_m_dat_o = dCache_m_dat_i_minus_dCache_m_dat_o[WORDBITSZ];
+`else
 wire [(WORDBITSZ+1) -1 : 0] dCache_m_dat_i_minus_dCache_m_dat_o = (
 	({1'b1, ~dCache_m_dat_o} + {1'b0, dCache_m_dat_r}) + 1'b1);
 wire dCache_m_dat_i_lt_dCache_m_dat_o = (
 	(dCache_m_dat_r[WORDBITSZ-1] ^ dCache_m_dat_o[WORDBITSZ-1]) ?
 		dCache_m_dat_r[WORDBITSZ-1] : dCache_m_dat_i_minus_dCache_m_dat_o[WORDBITSZ]);
 wire dCache_m_dat_i_ltu_dCache_m_dat_o = dCache_m_dat_i_minus_dCache_m_dat_o[WORDBITSZ];
+`endif
 
 always_comb begin
 
@@ -347,6 +372,26 @@ always_comb begin
 	if (dCache_m_bsy_r) begin
 		dCache_m_stb_i = 1'b1;
 	end else if (dCache_m_isAMOonly) begin
+`ifdef PUAMOREGWB
+		if (amoUnit_memAck_r)
+			dCache_m_stb_i = 1'b1;
+		dCache_m_lock_i = 1'b0;
+		dCache_m_we_i = 1'b1;
+		dCache_m_dat_i = (
+			(amoUnit_opType == 5'b00000) ? (dCache_m_dat_r + amoUnit_dat_r) :
+			(amoUnit_opType == 5'b00100) ? (dCache_m_dat_r ^ amoUnit_dat_r) :
+			(amoUnit_opType == 5'b01100) ? (dCache_m_dat_r & amoUnit_dat_r) :
+			(amoUnit_opType == 5'b01000) ? (dCache_m_dat_r | amoUnit_dat_r) :
+			(amoUnit_opType == 5'b10000) ? // amomin.w
+				(dCache_m_dat_i_lt_dCache_m_dat_o ? dCache_m_dat_r : amoUnit_dat_r) :
+			(amoUnit_opType == 5'b10100) ? // amomax.w
+				(!dCache_m_dat_i_lt_dCache_m_dat_o ? dCache_m_dat_r : amoUnit_dat_r) :
+			(amoUnit_opType == 5'b11000) ? // amominu.w
+				(dCache_m_dat_i_ltu_dCache_m_dat_o ? dCache_m_dat_r : amoUnit_dat_r) :
+			(amoUnit_opType == 5'b11100) ? // amomaxu.w
+				(!dCache_m_dat_i_ltu_dCache_m_dat_o ? dCache_m_dat_r : amoUnit_dat_r) :
+			dCache_m_dat_r);
+`else
 		if (amoUnit_memAck)
 			dCache_m_stb_i = 1'b1;
 		dCache_m_lock_i = 1'b0;
@@ -365,6 +410,7 @@ always_comb begin
 			(amoUnit_opType == 5'b11100) ? // amomaxu.w
 				(!dCache_m_dat_i_ltu_dCache_m_dat_o ? dCache_m_dat_r : dCache_m_dat_o) :
 			dCache_m_dat_r);
+`endif
 	end else if (iD_isLoadOrLr && iD_insn_valid) begin
 		dCache_m_stb_i = 1'b1;
 		dCache_m_lock_i = iD_isLr;
@@ -398,8 +444,13 @@ always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		dCache_m_isAMOonly <= 1'b0;
 	end else if (dCache_m_isAMOonly) begin
+`ifdef PUAMOREGWB
+		if (amoUnit_memAck_r)
+			dCache_m_isAMOonly <= 1'b0;
+`else
 		if (amoUnit_memAck)
 			dCache_m_isAMOonly <= 1'b0;
+`endif
 	end else if (iD_insn_valid) begin
 		if (iD_isAMOonly) begin
 			amoUnit_opType <= iD_func5;
