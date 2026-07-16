@@ -36,7 +36,25 @@ end end endgenerate
 
 wire ldUnit_rqsts_full;
 
+`ifdef PUDCACHEREGRQST
+// Registered near-full, keeping the (writeidx - readidx) usage comparator off
+// the iD_stalled cone. It lags the sampling edge by one cycle, so up to two
+// pushes can land past the sampled usage (one already issued, one issuing);
+// low means usage was at most (MAXPENDINGACK-2), hence usage never exceeds
+// MAXPENDINGACK -- the fifo can fill but never overflow, which is the same
+// worst-case as the combinational full_o.
+wire ldUnit_rqsts_nearFull;
+reg  ldUnit_rqsts_nearFull_r;
+always_ff @(posedge clk_i) begin
+	if (rst_i)
+		ldUnit_rqsts_nearFull_r <= 1'b0;
+	else
+		ldUnit_rqsts_nearFull_r <= ldUnit_rqsts_nearFull;
+end
+assign iD_ldUnit_bsy = (ldUnit_rqsts_nearFull_r || __dCache_m_bsy);
+`else
 assign iD_ldUnit_bsy = (ldUnit_rqsts_full || __dCache_m_bsy);
+`endif
 
 wire ldUnit_stb = (iD_ldUnit_stb && iD_insn_valid);
 
@@ -59,6 +77,9 @@ fifo_fwft #(
 	,.clk_push_i (clk_i)
 	,.push_i     (ldUnit_stb)
 	,.data_i     ({iD_isAMO, iD_func3[2], iD_rdId, dCache_m_sel_i_, dCache_m_rqst_cnt})
+`ifdef PUDCACHEREGRQST
+	,.near_full_o (ldUnit_rqsts_nearFull)
+`endif
 	,.full_o     (ldUnit_rqsts_full)
 	,.clk_pop_i  (clk_i)
 	,.pop_i      (ldUnit_memAck)

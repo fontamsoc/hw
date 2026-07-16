@@ -86,6 +86,15 @@
 // 	WriteBack arbiter), in addition to the default forwarding done at the
 // 	Execute stage, so a late result (load/MUL/DIV) becomes forwardable the
 // 	same cycle it retires instead of a cycle later.
+//
+// PUDCACHEREGRQST
+// 	Register the dcache request path: a one-entry stage between the
+// 	dCache_m_* request logic and the dcache request skidbuf, plus a
+// 	registered near-full for the ldUnit request fifo. Cuts the
+// 	routing-bound iD_stalled -> iD_insn_valid -> dcache-coherency
+// 	timing cone that ends at the cache BRAM enables, at the cost of
+// 	one added cycle of dcache request latency. Takes effect only when
+// 	DCACHESETCNT is non-zero.
 
 // Parameters:
 //

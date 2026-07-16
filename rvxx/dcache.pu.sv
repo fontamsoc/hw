@@ -37,6 +37,44 @@ wire [WORDBITSZ -1 : 0]            skidBuf_dCache_m_dat_i;
 
 generate if (USE_DCACHE) begin: gen_skidBuf_dCache
 
+`ifdef PUDCACHEREGRQST
+// One-entry registered request stage ahead of skidBuf_dCache; it cuts the
+// routing-bound cone iD_stalled -> iD_insn_valid -> dCache_m_stb_i ->
+// skidbuf-fallthrough -> dCacheSub coherency comparator -> cache BRAM enables,
+// at the cost of one added cycle of request latency.
+reg                                _dCache_m_stb_i;
+reg                                _dCache_m_lock_i;
+reg                                _dCache_m_we_i;
+reg  [(ADDRBITSZ-MSBSZIGN) -1 : 0] _dCache_m_addr_i;
+reg  [(WORDBITSZ/8) -1 : 0]        _dCache_m_sel_i;
+reg  [WORDBITSZ -1 : 0]            _dCache_m_dat_i;
+wire                               _dCache_m_bsy_o;
+// The stage advances when empty, or when skidBuf_dCache accepts the held
+// request; _dCache_m_bsy_o is registered state only (fifo indices and
+// outstanding count), hence no combinational loop through dCache_m_stb_i.
+wire _dCache_m_adv = (!_dCache_m_stb_i || !_dCache_m_bsy_o);
+always_ff @(posedge clk_i) begin
+	if (rst_i)
+		_dCache_m_stb_i <= 1'b0;
+	else if (_dCache_m_adv)
+		_dCache_m_stb_i <= dCache_m_stb_i;
+	// The payload is captured whenever the stage advances (it is meaningless
+	// while _dCache_m_stb_i is low) so that the deep dCache_m_stb_i cone
+	// drives a single flop D-input instead of every payload clock-enable.
+	if (_dCache_m_adv) begin
+		_dCache_m_lock_i <= dCache_m_lock_i;
+		_dCache_m_we_i   <= dCache_m_we_i;
+		_dCache_m_addr_i <= dCache_m_addr_i;
+		_dCache_m_sel_i  <= dCache_m_sel_i;
+		_dCache_m_dat_i  <= dCache_m_dat_i;
+	end
+end
+// Busy to the dCache_m_bsy_r retry logic only while the held request cannot
+// drain; a request parked here was already accounted by dCache_m_rqst_cnt,
+// which counts at presentation, so dCache_m_pending (ie: fence) is unaffected.
+assign dCache_m_bsy_o = (_dCache_m_stb_i && _dCache_m_bsy_o);
+`endif
+
 wb_skidbuf #(
 	 .WORDBITSZ   (WORDBITSZ)
 	,.ADDRLIMIT   (ADDRLIMIT)
@@ -48,6 +86,15 @@ wb_skidbuf #(
 
 	,.clk_i (clk_i)
 
+`ifdef PUDCACHEREGRQST
+	,.m_wb_stb_i  (_dCache_m_stb_i)
+	,.m_wb_lock_i (_dCache_m_lock_i)
+	,.m_wb_we_i   (_dCache_m_we_i)
+	,.m_wb_addr_i (_dCache_m_addr_i)
+	,.m_wb_sel_i  (_dCache_m_sel_i)
+	,.m_wb_dat_i  (_dCache_m_dat_i)
+	,.m_wb_bsy_o  (_dCache_m_bsy_o)
+`else
 	,.m_wb_stb_i  (dCache_m_stb_i)
 	,.m_wb_lock_i (dCache_m_lock_i)
 	,.m_wb_we_i   (dCache_m_we_i)
@@ -55,6 +102,7 @@ wb_skidbuf #(
 	,.m_wb_sel_i  (dCache_m_sel_i)
 	,.m_wb_dat_i  (dCache_m_dat_i)
 	,.m_wb_bsy_o  (dCache_m_bsy_o)
+`endif
 	,.m_wb_ack_o  (dCache_m_ack_o)
 	,.m_wb_dat_o  (dCache_m_dat_o)
 	,.m_wb_bsy_i  (dCache_m_bsy_i)
