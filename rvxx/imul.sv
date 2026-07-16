@@ -58,6 +58,61 @@ output reg [CLOG2GPRCNT -1 : 0] gprid_o;
 
 output reg rdy_o;
 
+`ifdef PUIMULDSPREG
+
+// Fully pipelined DSP multiply: the sign-extension is folded into the operand
+// capture and the MSB/LSB result mux sits after the last product register, so
+// nothing combinational separates a register from the multiplier; synthesis
+// absorbs opa_r/opb_r into the DSP input registers and prod_r/prod_rr into
+// the DSP MREG/PREG. Two more cycles than the unpipelined multiply below.
+reg [(((WORDBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] args_r;
+
+reg signed [WORDBITSZ:0] opa_r; // Feeds only the multiply.
+reg signed [WORDBITSZ:0] opb_r; // Feeds only the multiply.
+wire [(WORDBITSZ*2) -1 : 0] prod_w = (opa_r * opb_r);
+// Free-running product registers (no clock-enable) so that they absorb
+// cleanly into the DSP; seq_r paces when prod_rr is valid.
+reg [(WORDBITSZ*2) -1 : 0] prod_r;
+reg [(WORDBITSZ*2) -1 : 0] prod_rr;
+reg [3 -1 : 0] seq_r;
+
+always_ff @(posedge clk_i) begin
+	prod_r  <= prod_w;
+	prod_rr <= prod_r;
+end
+
+always_ff @(posedge clk_i) begin
+	if (rst_i) begin
+		rdy_o <= 1;
+		seq_r <= 0;
+	end else if (rdy_o) begin
+		if (stb_i) begin
+			args_r <= args_i;
+			// Sign-extension folded into the capture; see arg0_sign/arg1_sign
+			// in the unpipelined variant for the significance of each term.
+			opa_r <= {(args_i[(WORDBITSZ*2)-1] & (args_i[IMULSIGNED] || args_i[IMULLVALSIGND])),
+				args_i[(WORDBITSZ*2)-1:WORDBITSZ]};
+			opb_r <= {(args_i[WORDBITSZ-1] & args_i[IMULSIGNED]),
+				args_i[WORDBITSZ-1:0]};
+			rdy_o <= 0;
+			seq_r <= 3'b001;
+		end
+	end else begin
+		seq_r <= {seq_r[1:0], 1'b0};
+		if (seq_r[2]) begin
+			gprid_o <= args_r[((WORDBITSZ*2)+CLOG2GPRCNT)-1:WORDBITSZ*2];
+			// When args_r[IMULMSBRSLT] == 0, the WORDBITSZ lsb are used as result.
+			// When args_r[IMULMSBRSLT] == 1, the WORDBITSZ msb are used as result.
+			rslt_o <= (args_r[IMULMSBRSLT] ?
+				prod_rr[(WORDBITSZ*2)-1:WORDBITSZ] :
+				prod_rr[WORDBITSZ-1:0]);
+			rdy_o <= 1;
+		end
+	end
+end
+
+`else
+
 reg [(((WORDBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] args_r;
 
 wire [WORDBITSZ -1 : 0] arg0 = args_r[(WORDBITSZ*2)-1:WORDBITSZ];
@@ -87,6 +142,8 @@ always_ff @(posedge clk_i) begin
 		rdy_o <= 1;
 	end
 end
+
+`endif
 
 endmodule
 
