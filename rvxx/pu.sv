@@ -24,6 +24,11 @@
 // 		reciprocal (needs a multiplier) instead of the default radix-4
 // 		digit-recurrence; fewer cycles per division.
 //
+// 	PUIDIVREGRQST
+// 		Register the idiv request through a one-entry stage, keeping
+// 		the issue-stall cone off the idiv instances' capture
+// 		clock-enables; each division starts one cycle later.
+//
 // PURV32ZBA
 // 	"Zba" address-generation bit-manipulation extension
 // 	(sh1add/sh2add/sh3add).
