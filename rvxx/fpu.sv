@@ -432,13 +432,13 @@ wire [24:0] sqrtMint   = pp_uAEU[0] ? {pp_uASig, 1'b0} : {1'b0, pp_uASig};      
 // Seed + 2 NR iters + 1 residual fixup == exact floor(N*2^24/bSig) (validated exhaustively in Python + full TestFloat).
 `include "fpu_recip_seed.vh"
 reg  [27:0] nrR;            // reciprocal estimate y (y*2^27), U1.27
-reg  [27:0] nrDR;           // D*y (~2^27, U1.27)
 reg  [26:0] nrQ;            // floor(N*y*2^2) : [26:2]=Q (25-bit quotient), [1:0]=NR guard/round
 reg  signed [50:0] nrRemS;  // residual N*2^24 - Q*bSig (used by PUFDIVDSP2)
 wire [27:0] divDfx  = {pp_uBSig, 4'd0};                    // D*2^27 = bSig<<4
 wire [24:0] divN    = pp_uDivLt ? {pp_uASig, 1'b0} : {1'b0, pp_uASig}; // normalized dividend, N/bSig in [1,2)
 wire [27:0] divSeed = fdivRecipSeed(pp_uBSig[22:16]);
-// The muxed ~29x29 NR multiplier (nrProd) is shared with fsqrt -- see the FPU_NR block below.
+// The shared ~29x29 NR multiplier (registered column products, nrComb) is shared
+// with fsqrt -- see the FPU_NR block below.
 `ifdef PUFDIVDSP2 // correctly-rounded: residual fixes the last ULP (NR is within +/-1 of true floor)
 wire signed [50:0] divBs = $signed({27'd0, pp_uBSig});
 wire [25:0] divQa = {1'b0, nrQ[26:2]};
@@ -461,17 +461,13 @@ wire        divS    = nrQ[26] ? (nrQ[1:0] != 2'd0) : 1'b0;
 // RG = floor(sqrt(M*2^25)) via seed + 2 rsqrt iters + 1 fixup (validated exhaustively in Python + full TestFloat).
 `include "fpu_rsqrt_seed.vh"
 reg  [27:0] sqR;            // rsqrt estimate r (r*2^27), U1.27
-reg  [27:0] sqR2;           // r^2 * 2^27
-reg  [28:0] sqVr2;          // V*r^2 * 2^27 (~2^27)
 reg  [26:0] sqRG;           // sqrt(V)*2^26 : [26:2]=RG (25-bit root), [1:0]=NR guard/round
-reg  [49:0] sqRGsq;         // RG^2 (residual, used by PUFSQRTDSP2)
 wire [26:0] sqVfx  = {sqrtMint, 2'b0};                       // V*2^25 = M<<2 (27-bit)
 wire [27:0] sqSeed = fsqrtRsqrtSeed({pp_uAEU[0], pp_uASig[22:17]});
-wire [28:0] sqT    = 29'h18000000 - {1'b0, sqVr2};          // (3 - V*r^2)*2^27 = 3*2^27 - V*r^2
+wire [49:0] sqTarget = {sqrtMint, 25'd0};                    // M*2^25 ; RG = floor(sqrt(target))
+reg  signed [51:0] sqRem;   // target - RG^2 (registered residual; used by PUFSQRTDSP2)
 `ifdef PUFSQRTDSP2 // correctly-rounded: residual fixes the last ULP (RG within +/-1 of true floor)
-wire [49:0]        sqTarget = {sqrtMint, 25'd0};            // M*2^25 ; RG = floor(sqrt(target))
 wire [24:0]        sqRGv    = sqRG[26:2];                   // RG (25-bit)
-wire signed [51:0] sqRem    = $signed({2'd0, sqTarget}) - $signed({2'd0, sqRGsq}); // target - RG^2
 wire signed [51:0] sqTwoRGp = $signed({25'd0, sqRGv, 1'b1});// 2*RG + 1
 wire signed [51:0] sqTwoRGm = $signed({25'd0, sqRGv, 1'b1}) - 52'sd2; // 2*RG - 1
 wire [25:0] sqRGc = (sqRem < 0)          ? ({1'b0, sqRGv} - 1'b1)
@@ -491,41 +487,31 @@ wire        sqrtS    = sqRG[26] ? (sqRG[1:0] != 2'd0) : 1'b0;
 `endif // FSQRT_NR
 
 `ifdef FPU_NR
-// One muxed ~29x29 multiplier (-> MULT18X18D group), reused across all NR steps AND shared
-// between fdiv and fsqrt (mutually exclusive ops): operands selected by optype + cntr.
-reg  [28:0] nrMulA, nrMulB; // ### comb-block-reg.
-always_comb begin
-	nrMulA = 29'd0; nrMulB = 29'd0;
-	`ifdef FDIV_NR
-	if (optype == OP_DIV) begin
-		nrMulA = {1'b0, divDfx}; nrMulB = {1'b0, nrR};                            // (default / cntr 3)
-		case (cntr)
-		6'd1: begin nrMulA = {1'b0, divDfx};    nrMulB = {1'b0, divSeed}; end      // D * y0
-		6'd2: begin nrMulA = {1'b0, nrR};       nrMulB = (29'd1 << 28) - {1'b0, nrDR}; end // y0*(2-D*y0)
-		6'd4: begin nrMulA = {1'b0, nrR};       nrMulB = (29'd1 << 28) - {1'b0, nrDR}; end // y1*(2-D*y1)
-		6'd5: begin nrMulA = {4'd0, divN};      nrMulB = {1'b0, nrR}; end          // N * y2
-		6'd6: begin nrMulA = {2'd0, nrQ[26:2]}; nrMulB = {5'd0, pp_uBSig}; end     // Q * bSig (residual)
-		default: ;
-		endcase
-	end
-	`endif
-	`ifdef FSQRT_NR
-	if (optype == OP_SQRT) begin
-		nrMulA = {1'b0, sqR}; nrMulB = {1'b0, sqR};                               // (default: r*r)
-		case (cntr)
-		6'd1: begin nrMulA = {1'b0, sqSeed};     nrMulB = {1'b0, sqSeed}; end      // r0*r0
-		6'd2: begin nrMulA = {2'd0, sqVfx};      nrMulB = {1'b0, sqR2}; end        // V * r^2
-		6'd3: begin nrMulA = {1'b0, sqR};        nrMulB = sqT; end                 // r*(3-V*r^2)
-		6'd5: begin nrMulA = {2'd0, sqVfx};      nrMulB = {1'b0, sqR2}; end        // V * r^2
-		6'd6: begin nrMulA = {1'b0, sqR};        nrMulB = sqT; end                 // r*(3-V*r^2)
-		6'd7: begin nrMulA = {2'd0, sqVfx};      nrMulB = {1'b0, sqR}; end         // V * r  (-> RG)
-		6'd8: begin nrMulA = {4'd0, sqRG[26:2]}; nrMulB = {4'd0, sqRG[26:2]}; end  // RG * RG (residual)
-		default: ; // cntr 4: r1*r1 (the default)
-		endcase
-	end
-	`endif
+// One shared multiplier for all NR steps AND both fdiv/fsqrt (mutually exclusive
+// ops): the operand-load (E) cycles of the schedules in the FSM below load
+// nrOpa_r/nrOpb_r, and the multiply is registered as two column products
+// (29x17 + 29x12 -> two DSP cascades which absorb the free-running
+// nrPlo_r/nrPhi_r as their pipe registers), recombined exactly in the consume
+// cycles; each multiply thus takes an operand-load cycle followed by a pipe cycle.
+reg [28:0] nrOpa_r; // Feeds only the column products.
+reg [28:0] nrOpb_r; // Feeds only the column products.
+// Free-running column-product regs (no clock-enable) so that they absorb
+// cleanly into the DSPs; the cntr schedule paces when nrComb is valid.
+reg [45:0] nrPlo_r;
+reg [40:0] nrPhi_r;
+always_ff @(posedge clk_i) begin
+	nrPlo_r <= (nrOpa_r * nrOpb_r[16:0]);
+	nrPhi_r <= (nrOpa_r * nrOpb_r[28:17]);
 end
-wire [57:0] nrProd = nrMulA * nrMulB;
+// Exact 58bits recombine of the registered columns (== nrOpa_r*nrOpb_r).
+wire [57:0] nrComb = ({12'd0, nrPlo_r} + {nrPhi_r, 17'd0});
+`ifdef FDIV_NR
+wire [26:0] divQw = ((nrComb + 58'h800000) >> 24);        // round(N*y2*4) (+half-ULP bias)
+`endif
+`ifdef FSQRT_NR
+wire [28:0] sqT_w = 29'h18000000 - {1'b0, nrComb[53:25]}; // (3 - V*r^2)*2^27 = 3*2^27 - V*r^2
+wire [26:0] sqRGw = ((nrComb + 58'h2000000) >> 26);       // round(sqrt(V)*2^26) (+half-ULP)
+`endif
 `endif // FPU_NR
 
 // ===== shared round + pack to binary32 (normal / overflow / subnormal) =====
@@ -663,17 +649,17 @@ wire optIter = ((optype == OP_DIV && !divSpecial) || (optype == OP_SQRT && !sqrt
 wire isCvt = (optype == OP_CVTWS || optype == OP_CVTWUS || optype == OP_CVTSW || optype == OP_CVTSWU);
 // fdiv latency: NR variants settle divMant earlier than the recurrence (divMant_valid + 3 pack-tail).
 `ifdef PUFDIVDSP2
-localparam [6:0] DIVLAT = 7'd10;                   // NR correct: divMant valid @cntr 7
+localparam [6:0] DIVLAT = 7'd17;                   // NR correct: divMant valid @cntr 14
 `elsif PUFDIVDSP
-localparam [6:0] DIVLAT = 7'd9;                    // NR faithful: divMant valid @cntr 6
+localparam [6:0] DIVLAT = 7'd15;                   // NR faithful: divMant valid @cntr 12
 `else
 localparam [6:0] DIVLAT = {1'b0, ITERLAST} + 7'd5; // digit-recurrence
 `endif
 // fsqrt latency: NR rsqrt schedule settles sqrtMant earlier than the recurrence (valid + 3 pack-tail).
 `ifdef PUFSQRTDSP2
-localparam [6:0] SQRTLAT = 7'd12;                   // NR correct: sqrtMant valid @cntr 9
+localparam [6:0] SQRTLAT = 7'd21;                   // NR correct: sqrtMant valid @cntr 18
 `elsif PUFSQRTDSP
-localparam [6:0] SQRTLAT = 7'd11;                   // NR faithful: sqrtMant valid @cntr 8
+localparam [6:0] SQRTLAT = 7'd19;                   // NR faithful: sqrtMant valid @cntr 16
 `else
 localparam [6:0] SQRTLAT = {1'b0, ITERLAST} + 7'd5; // digit-recurrence
 `endif
@@ -697,14 +683,17 @@ always_ff @(posedge clk_i) begin
 		if (optIter) begin
 			if (optype == OP_DIV) begin
 				`ifdef FDIV_NR
-				// NR reciprocal schedule: 1 muxed multiply/cycle (see the fdiv NR datapath above).
+				// NR reciprocal schedule: operand-load (E) cycles on odd cntr alternate
+				// with the multiply pipe cycles of the registered column products; each
+				// consume reads nrComb and is fused into the next load.
 				case (cntr)
-				6'd1: begin nrR <= divSeed;      nrDR <= nrProd[54:27]; end // D*y0
-				6'd2:       nrR <= nrProd[54:27];                          // y0*(2-D*y0) = y1
-				6'd3:       nrDR <= nrProd[54:27];                         // D*y1
-				6'd4:       nrR <= nrProd[54:27];                          // y1*(2-D*y1) = y2
-				6'd5:       nrQ <= (nrProd + 58'h800000) >> 24;            // round(N*y2*4) (+half-ULP bias), 27-bit
-				6'd6:       nrRemS <= $signed({2'd0, divN, 24'd0}) - $signed({2'd0, nrProd[48:0]});
+				6'd1:  begin nrR <= divSeed; nrOpa_r <= {1'b0, divDfx}; nrOpb_r <= {1'b0, divSeed}; end // D*y0
+				6'd3:  begin nrOpa_r <= {1'b0, nrR}; nrOpb_r <= ((29'd1 << 28) - {1'b0, nrComb[54:27]}); end // y0*(2-D*y0)
+				6'd5:  begin nrR <= nrComb[54:27]; nrOpa_r <= {1'b0, divDfx}; nrOpb_r <= {1'b0, nrComb[54:27]}; end // D*y1 (y1 kept in nrR)
+				6'd7:  begin nrOpa_r <= {1'b0, nrR}; nrOpb_r <= ((29'd1 << 28) - {1'b0, nrComb[54:27]}); end // y1*(2-D*y1)
+				6'd9:  begin nrOpa_r <= {4'd0, divN}; nrOpb_r <= {1'b0, nrComb[54:27]}; end // N*y2
+				6'd11: begin nrQ <= divQw; nrOpa_r <= {2'd0, divQw[26:2]}; nrOpb_r <= {5'd0, pp_uBSig}; end // Q*bSig (residual)
+				6'd13: nrRemS <= $signed({2'd0, divN, 24'd0}) - $signed({2'd0, nrComb[48:0]});
 				default: ;
 				endcase
 				`else
@@ -713,16 +702,19 @@ always_ff @(posedge clk_i) begin
 				`endif
 			end else begin // OP_SQRT
 				`ifdef FSQRT_NR
-				// NR rsqrt schedule: 1 muxed multiply/cycle (see the fsqrt NR datapath above).
+				// NR rsqrt schedule: operand-load (E) cycles on odd cntr alternate with
+				// the multiply pipe cycles of the registered column products; each
+				// consume reads nrComb and is fused into the next load.
 				case (cntr)
-				6'd1: begin sqR <= sqSeed;          sqR2 <= nrProd >> 27; end // r0 ; r0^2
-				6'd2:       sqVr2 <= nrProd >> 25;                            // V*r0^2
-				6'd3:       sqR   <= nrProd >> 28;                            // r1 = r0*(3-V*r0^2)/2
-				6'd4:       sqR2  <= nrProd >> 27;                            // r1^2
-				6'd5:       sqVr2 <= nrProd >> 25;                            // V*r1^2
-				6'd6:       sqR   <= nrProd >> 28;                            // r2 = r1*(3-V*r1^2)/2
-				6'd7:       sqRG  <= (nrProd + 58'h2000000) >> 26;            // round(sqrt(V)*2^26) (+half-ULP)
-				6'd8:       sqRGsq <= nrProd[49:0];                           // RG^2 (residual)
+				6'd1:  begin sqR <= sqSeed; nrOpa_r <= {1'b0, sqSeed}; nrOpb_r <= {1'b0, sqSeed}; end // r0*r0
+				6'd3:  begin nrOpa_r <= {2'd0, sqVfx}; nrOpb_r <= {1'b0, nrComb[54:27]}; end // V*r0^2
+				6'd5:  begin nrOpa_r <= {1'b0, sqR}; nrOpb_r <= sqT_w; end // r0*(3-V*r0^2)
+				6'd7:  begin sqR <= nrComb[55:28]; nrOpa_r <= {1'b0, nrComb[55:28]}; nrOpb_r <= {1'b0, nrComb[55:28]}; end // r1*r1 (r1 kept in sqR)
+				6'd9:  begin nrOpa_r <= {2'd0, sqVfx}; nrOpb_r <= {1'b0, nrComb[54:27]}; end // V*r1^2
+				6'd11: begin nrOpa_r <= {1'b0, sqR}; nrOpb_r <= sqT_w; end // r1*(3-V*r1^2)
+				6'd13: begin nrOpa_r <= {2'd0, sqVfx}; nrOpb_r <= {1'b0, nrComb[55:28]}; end // V*r2  (-> RG)
+				6'd15: begin sqRG <= sqRGw; nrOpa_r <= {4'd0, sqRGw[26:2]}; nrOpb_r <= {4'd0, sqRGw[26:2]}; end // RG*RG (residual)
+				6'd17: sqRem <= $signed({2'd0, sqTarget}) - $signed({2'd0, nrComb[49:0]});
 				default: ;
 				endcase
 				`else
