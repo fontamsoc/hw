@@ -274,17 +274,35 @@ wire [23:0] bSig  = normalB ? {1'b1, fracB} : (24'(fracB) << (bLz + 6'd1));
 wire signed [11:0] bEU = normalB ? ($signed({4'b0, expB}) - 12'sd127)
                                  : (-12'sd127 - $signed({6'b0, bLz}));
 
+// PIPELINE STAGE U: register the normalized-unpack outputs and the compares and
+// clamped exponent-diffs computed from them, so that the clz64-normalize cone is
+// its own timing stage; every downstream consumer (fadd/fsub align, fmul product,
+// fdiv/fsqrt init and NR operand select, min/max/cmp) reads these registers, which
+// are stable from the second post-stb cycle on, as the operands are held for the
+// whole op, ie: the free-running recapture is idempotent.
+reg  [23:0] pp_uASig, pp_uBSig;      // ### pipeline reg.
+reg  signed [11:0] pp_uAEU, pp_uBEU; // ### pipeline reg.
+reg         pp_uABigger;             // ### pipeline reg.
+reg  [7:0]  pp_uAddDa, pp_uAddDb;    // ### pipeline reg. Clamped exp-diff, both ways.
+reg         pp_uDivLt;               // ### pipeline reg.
+reg         pp_uNumLt;               // ### pipeline reg.
+wire signed [11:0] addDiffA = (aEU - bEU); // >= 0 when aBigger
+wire signed [11:0] addDiffB = (bEU - aEU); // >= 0 when !aBigger
+wire [7:0] addDa_c = (addDiffA > 12'sd27) ? 8'd27 : addDiffA[7:0];
+wire [7:0] addDb_c = (addDiffB > 12'sd27) ? 8'd27 : addDiffB[7:0];
+
 // ===== fmul =====
-// Pipelined: the 24x24 product is registered (pp_mulP) so the multiply is its own stage,
-// off the unpack→normalize→pack combinational chain. Downstream reads pp_mulP.
+// Pipelined: the 24x24 product is computed from the stage-U registers and registered
+// (pp_mulP) so the multiply is its own stage, off the unpack→normalize→pack
+// combinational chain. Downstream reads pp_mulP.
 wire        mulSign = signA ^ signB;
-wire [47:0] mulP    = aSig * bSig;                 // 24x24 product (registered into pp_mulP)
+wire [47:0] mulP    = pp_uASig * pp_uBSig;         // 24x24 product (registered into pp_mulP)
 reg  [47:0] pp_mulP; // ### pipeline reg (clocked below).
 wire        mulTop  = pp_mulP[47];
 wire [23:0] mulMant = mulTop ? pp_mulP[47:24] : pp_mulP[46:23];
 wire        mulG    = mulTop ? pp_mulP[23]    : pp_mulP[22];
 wire        mulS    = mulTop ? (|pp_mulP[22:0]) : (|pp_mulP[21:0]);
-wire signed [11:0] mulEbU = aEU + bEU + (mulTop ? 12'sd1 : 12'sd0) + 12'sd127; // biased
+wire signed [11:0] mulEbU = pp_uAEU + pp_uBEU + (mulTop ? 12'sd1 : 12'sd0) + 12'sd127; // biased
 wire        mulIZ = (isInfA && isZeroB) || (isZeroA && isInfB);
 wire        mulSpecial = isNaNA || isNaNB || isInfA || isInfB || isZeroA || isZeroB;
 reg  [31:0] mulSpecRes; reg [4:0] mulSpecFlg; // ### comb-block-reg.
@@ -297,28 +315,33 @@ end
 
 // ===== fadd / fsub (fsub flips b's sign) =====
 wire effSb = signB ^ (optype == OP_SUB);
-wire aBigger = (aEU > bEU) || ((aEU == bEU) && (aSig >= bSig));
-wire        bigSign = aBigger ? signA : effSb;
-wire signed [11:0] bigEU = aBigger ? aEU : bEU;
-wire [23:0] bigSig = aBigger ? aSig : bSig;
-wire        smlSign = aBigger ? effSb : signA;
-wire [23:0] smlSig = aBigger ? bSig : aSig;
-wire signed [11:0] addExpDiff = aBigger ? (aEU - bEU) : (bEU - aEU); // >= 0
+wire aBigger = (aEU > bEU) || ((aEU == bEU) && (aSig >= bSig)); // registered into pp_uABigger
+// PIPELINE STAGE C: the big/small select + align + add, computed from the stage-U
+// registers; the compare and the clamped exponent-diffs were precomputed in stage U
+// so this stage is select -> funnel/sticky -> add only.
+wire        bigSign = pp_uABigger ? signA : effSb;
+wire signed [11:0] bigEU = pp_uABigger ? pp_uAEU : pp_uBEU;
+wire [23:0] bigSig = pp_uABigger ? pp_uASig : pp_uBSig;
+wire        smlSign = pp_uABigger ? effSb : signA;
+wire [23:0] smlSig = pp_uABigger ? pp_uBSig : pp_uASig;
 // Align with explicit guard/round/sticky (bits [2:0]) so SUBTRACTION borrows correctly
 // when the small operand is fully shifted out (a tiny opposite-sign operand must pull the
 // result just below the large mantissa, not merely set sticky).
 wire        addSame  = (bigSign == smlSign);
 wire [26:0] bigA     = {bigSig, 3'b000};           // mantissa[26:3], G/R/S at [2:0]
 wire [26:0] smlBase  = {smlSig, 3'b000};
-wire [7:0]  addD     = (addExpDiff > 12'sd27) ? 8'd27 : addExpDiff[7:0];
+wire [7:0]  addD     = pp_uABigger ? pp_uAddDa : pp_uAddDb;
 wire [26:0] smlSh    = smlBase >> addD;
 wire        smlLost  = |(smlBase & (((27'd1) << addD) - 27'd1)); // bits shifted off bit0
 wire [26:0] smlAligned = {smlSh[26:1], (smlSh[0] | smlLost)};    // collapse lost bits into sticky
-// PIPELINE: register the align+add result so the unpack+align+add is its own stage,
-// separate from the leading-cancellation clz-normalize + packer-input select.
+// PIPELINE: register the align+add result so the select+align+add is its own stage,
+// separate from the leading-cancellation clz-normalize + packer-input select; the
+// selected sign and exponent ride along in pp_cBigSign/pp_cBigEU.
 wire [27:0] addR28_c = addSame ? ({1'b0, bigA} + {1'b0, smlAligned})
                                : ({1'b0, bigA} - {1'b0, smlAligned});
-reg  [27:0] pp_addR28; // ### pipeline reg (clocked below).
+reg  [27:0] pp_addR28;   // ### pipeline reg (clocked below).
+reg         pp_cBigSign; // ### pipeline reg (stage C -> normalize stage).
+reg  signed [11:0] pp_cBigEU;
 wire [27:0] addR28   = pp_addR28;
 wire        addZero  = (addR28 == 28'd0);
 wire [6:0]  addLz    = clz64({36'd0, addR28}) - 7'd36;
@@ -326,8 +349,8 @@ wire [27:0] addNorm  = addR28 << addLz;            // MSB -> bit27
 wire [23:0] addMant  = addNorm[27:4];
 wire        addG     = addNorm[3];
 wire        addS     = |addNorm[2:0];
-wire signed [11:0] addEbU = bigEU + 12'sd1 - $signed({5'b0, addLz}) + 12'sd127; // biased
-wire        addSign  = bigSign;
+wire signed [11:0] addEbU = pp_cBigEU + 12'sd1 - $signed({5'b0, addLz}) + 12'sd127; // biased
+wire        addSign  = pp_cBigSign;
 wire        addBothZero = isZeroA && isZeroB;
 wire        addSpecial  = isNaNA || isNaNB || isInfA || isInfB || addBothZero || addZero;
 reg  [31:0] addSpecRes; reg [4:0] addSpecFlg; // ### comb-block-reg.
@@ -353,8 +376,8 @@ localparam ITERLAST = 6'd26; // 26 quotient/root bits (24 mantissa + guard + rou
 
 // div: dividend = sigA prescaled so dividend/sigB is in [1,2).
 wire        divSign = signA ^ signB;
-wire        divLt   = (aSig < bSig);
-wire signed [11:0] divEb = (aEU - bEU - (divLt ? 12'sd1 : 12'sd0)) + 12'sd127;
+wire        divLt   = (aSig < bSig); // registered into pp_uDivLt
+wire signed [11:0] divEb = (pp_uAEU - pp_uBEU - (pp_uDivLt ? 12'sd1 : 12'sd0)) + 12'sd127;
 `ifndef FDIV_NR
 wire [23:0] divMant = fQuo[25:2];
 wire        divG    = fQuo[1];
@@ -373,7 +396,7 @@ always_comb begin
 end
 
 // sqrt
-wire signed [11:0] sqrtEb = (aEU >>> 1) + 12'sd127; // floor(aEU/2)
+wire signed [11:0] sqrtEb = (pp_uAEU >>> 1) + 12'sd127; // floor(aEU/2)
 `ifndef FSQRT_NR
 wire [23:0] sqrtMant = fQuo[25:2];
 wire        sqrtG    = fQuo[1];
@@ -389,15 +412,15 @@ always_comb begin
 end
 
 // recurrence-step combinational helpers (one quotient/root bit per cycle).
-wire        divCmp     = (fRem >= {6'd0, bSig});
-wire [29:0] divRemNext = ((divCmp ? (fRem - {6'd0, bSig}) : fRem) << 1);
+wire        divCmp     = (fRem >= {6'd0, pp_uBSig});
+wire [29:0] divRemNext = ((divCmp ? (fRem - {6'd0, pp_uBSig}) : fRem) << 1);
 wire [29:0] sqRem2     = {fRem[27:0], fRad[51:50]};         // (fRem << 2) | next 2 radicand bits
 wire [29:0] sqTrial    = {2'd0, fQuo, 2'b01};               // (root << 2) | 1
 wire        sqCmp      = (sqTrial <= sqRem2);
 wire [29:0] sqRemNext  = (sqCmp ? (sqRem2 - sqTrial) : sqRem2);
-// init values (from the now-valid unpacked operands, on the first post-stb cycle).
-wire [29:0] divInitRem = divLt ? {5'd0, aSig, 1'b0} : {6'd0, aSig}; // dividend = sigA<<1 or sigA
-wire [24:0] sqrtMint   = aEU[0] ? {aSig, 1'b0} : {1'b0, aSig};            // 1.frac or 2*1.frac
+// init values (from the stage-U registers, on the second post-stb cycle).
+wire [29:0] divInitRem = pp_uDivLt ? {5'd0, pp_uASig, 1'b0} : {6'd0, pp_uASig}; // dividend = sigA<<1 or sigA
+wire [24:0] sqrtMint   = pp_uAEU[0] ? {pp_uASig, 1'b0} : {1'b0, pp_uASig};      // 1.frac or 2*1.frac
 
 `ifdef FDIV_NR
 // ===== DSP Newton-Raphson fdiv: reciprocal NR in U1.27 (+ residual) ; multiplies infer MULT18X18D.
@@ -407,12 +430,12 @@ reg  [27:0] nrR;            // reciprocal estimate y (y*2^27), U1.27
 reg  [27:0] nrDR;           // D*y (~2^27, U1.27)
 reg  [26:0] nrQ;            // floor(N*y*2^2) : [26:2]=Q (25-bit quotient), [1:0]=NR guard/round
 reg  signed [50:0] nrRemS;  // residual N*2^24 - Q*bSig (used by PUFDIVDSP2)
-wire [27:0] divDfx  = {bSig, 4'd0};                        // D*2^27 = bSig<<4
-wire [24:0] divN    = divLt ? {aSig, 1'b0} : {1'b0, aSig}; // normalized dividend, N/bSig in [1,2)
-wire [27:0] divSeed = fdivRecipSeed(bSig[22:16]);
+wire [27:0] divDfx  = {pp_uBSig, 4'd0};                    // D*2^27 = bSig<<4
+wire [24:0] divN    = pp_uDivLt ? {pp_uASig, 1'b0} : {1'b0, pp_uASig}; // normalized dividend, N/bSig in [1,2)
+wire [27:0] divSeed = fdivRecipSeed(pp_uBSig[22:16]);
 // The muxed ~29x29 NR multiplier (nrProd) is shared with fsqrt -- see the FPU_NR block below.
 `ifdef PUFDIVDSP2 // correctly-rounded: residual fixes the last ULP (NR is within +/-1 of true floor)
-wire signed [50:0] divBs = $signed({27'd0, bSig});
+wire signed [50:0] divBs = $signed({27'd0, pp_uBSig});
 wire [25:0] divQa = {1'b0, nrQ[26:2]};
 wire [25:0] divQc = (nrRemS < 0) ? (divQa - 1'b1) : (nrRemS >= divBs) ? (divQa + 1'b1) : divQa;
 wire signed [50:0] divRc = (nrRemS < 0) ? (nrRemS + divBs) : (nrRemS >= divBs) ? (nrRemS - divBs) : nrRemS;
@@ -438,7 +461,7 @@ reg  [28:0] sqVr2;          // V*r^2 * 2^27 (~2^27)
 reg  [26:0] sqRG;           // sqrt(V)*2^26 : [26:2]=RG (25-bit root), [1:0]=NR guard/round
 reg  [49:0] sqRGsq;         // RG^2 (residual, used by PUFSQRTDSP2)
 wire [26:0] sqVfx  = {sqrtMint, 2'b0};                       // V*2^25 = M<<2 (27-bit)
-wire [27:0] sqSeed = fsqrtRsqrtSeed({aEU[0], aSig[22:17]});
+wire [27:0] sqSeed = fsqrtRsqrtSeed({pp_uAEU[0], pp_uASig[22:17]});
 wire [28:0] sqT    = 29'h18000000 - {1'b0, sqVr2};          // (3 - V*r^2)*2^27 = 3*2^27 - V*r^2
 `ifdef PUFSQRTDSP2 // correctly-rounded: residual fixes the last ULP (RG within +/-1 of true floor)
 wire [49:0]        sqTarget = {sqrtMint, 25'd0};            // M*2^25 ; RG = floor(sqrt(target))
@@ -470,13 +493,13 @@ always_comb begin
 	nrMulA = 29'd0; nrMulB = 29'd0;
 	`ifdef FDIV_NR
 	if (optype == OP_DIV) begin
-		nrMulA = {1'b0, divDfx}; nrMulB = {1'b0, nrR};                            // (default / cntr 2)
+		nrMulA = {1'b0, divDfx}; nrMulB = {1'b0, nrR};                            // (default / cntr 3)
 		case (cntr)
-		6'd0: begin nrMulA = {1'b0, divDfx};    nrMulB = {1'b0, divSeed}; end      // D * y0
-		6'd1: begin nrMulA = {1'b0, nrR};       nrMulB = (29'd1 << 28) - {1'b0, nrDR}; end // y0*(2-D*y0)
-		6'd3: begin nrMulA = {1'b0, nrR};       nrMulB = (29'd1 << 28) - {1'b0, nrDR}; end // y1*(2-D*y1)
-		6'd4: begin nrMulA = {4'd0, divN};      nrMulB = {1'b0, nrR}; end          // N * y2
-		6'd5: begin nrMulA = {2'd0, nrQ[26:2]}; nrMulB = {5'd0, bSig}; end         // Q * bSig (residual)
+		6'd1: begin nrMulA = {1'b0, divDfx};    nrMulB = {1'b0, divSeed}; end      // D * y0
+		6'd2: begin nrMulA = {1'b0, nrR};       nrMulB = (29'd1 << 28) - {1'b0, nrDR}; end // y0*(2-D*y0)
+		6'd4: begin nrMulA = {1'b0, nrR};       nrMulB = (29'd1 << 28) - {1'b0, nrDR}; end // y1*(2-D*y1)
+		6'd5: begin nrMulA = {4'd0, divN};      nrMulB = {1'b0, nrR}; end          // N * y2
+		6'd6: begin nrMulA = {2'd0, nrQ[26:2]}; nrMulB = {5'd0, pp_uBSig}; end     // Q * bSig (residual)
 		default: ;
 		endcase
 	end
@@ -485,14 +508,14 @@ always_comb begin
 	if (optype == OP_SQRT) begin
 		nrMulA = {1'b0, sqR}; nrMulB = {1'b0, sqR};                               // (default: r*r)
 		case (cntr)
-		6'd0: begin nrMulA = {1'b0, sqSeed};     nrMulB = {1'b0, sqSeed}; end      // r0*r0
-		6'd1: begin nrMulA = {2'd0, sqVfx};      nrMulB = {1'b0, sqR2}; end        // V * r^2
-		6'd2: begin nrMulA = {1'b0, sqR};        nrMulB = sqT; end                 // r*(3-V*r^2)
-		6'd4: begin nrMulA = {2'd0, sqVfx};      nrMulB = {1'b0, sqR2}; end        // V * r^2
-		6'd5: begin nrMulA = {1'b0, sqR};        nrMulB = sqT; end                 // r*(3-V*r^2)
-		6'd6: begin nrMulA = {2'd0, sqVfx};      nrMulB = {1'b0, sqR}; end         // V * r  (-> RG)
-		6'd7: begin nrMulA = {4'd0, sqRG[26:2]}; nrMulB = {4'd0, sqRG[26:2]}; end  // RG * RG (residual)
-		default: ; // cntr 3: r1*r1 (the default)
+		6'd1: begin nrMulA = {1'b0, sqSeed};     nrMulB = {1'b0, sqSeed}; end      // r0*r0
+		6'd2: begin nrMulA = {2'd0, sqVfx};      nrMulB = {1'b0, sqR2}; end        // V * r^2
+		6'd3: begin nrMulA = {1'b0, sqR};        nrMulB = sqT; end                 // r*(3-V*r^2)
+		6'd5: begin nrMulA = {2'd0, sqVfx};      nrMulB = {1'b0, sqR2}; end        // V * r^2
+		6'd6: begin nrMulA = {1'b0, sqR};        nrMulB = sqT; end                 // r*(3-V*r^2)
+		6'd7: begin nrMulA = {2'd0, sqVfx};      nrMulB = {1'b0, sqR}; end         // V * r  (-> RG)
+		6'd8: begin nrMulA = {4'd0, sqRG[26:2]}; nrMulB = {4'd0, sqRG[26:2]}; end  // RG * RG (residual)
+		default: ; // cntr 4: r1*r1 (the default)
 		endcase
 	end
 	`endif
@@ -523,8 +546,12 @@ reg signed [11:0] pp_pkEb;
 reg [23:0] pp_pkM;
 reg        pp_pkG, pp_pkS;
 always_ff @(posedge clk_i) begin
+	pp_uASig <= aSig; pp_uBSig <= bSig; pp_uAEU <= aEU; pp_uBEU <= bEU;
+	pp_uABigger <= aBigger; pp_uAddDa <= addDa_c; pp_uAddDb <= addDb_c;
+	pp_uDivLt <= divLt; pp_uNumLt <= numLt;
 	pp_mulP   <= mulP;
 	pp_addR28 <= addR28_c;
+	pp_cBigSign <= bigSign; pp_cBigEU <= bigEU;
 	pp_pkSign <= pkSign; pp_pkEb <= pkEb; pp_pkM <= pkM; pp_pkG <= pkG; pp_pkS <= pkS;
 	pp_ifAln  <= ifAln; pp_ifExp <= ifExp; pp_ifSign <= ifSign; pp_ifZero <= ifZero;
 	pp_fiMag  <= fiMag_c; pp_fiInexact <= fiInexact_c;
@@ -597,16 +624,16 @@ always_comb begin
 	OP_SGNJ, OP_SGNJN, OP_SGNJX: rsltComb = {signSel, a[30:0]};
 	OP_CLASS: rsltComb = {{(WORDBITSZ-10){1'b0}}, classMask};
 	OP_EQ: begin rsltComb = {{(WORDBITSZ-1){1'b0}},  fpEqNum};                        flagsComb[4] = eitherSNaN; end
-	OP_LT: begin rsltComb = {{(WORDBITSZ-1){1'b0}}, (!eitherNaN && numLt)};           flagsComb[4] = eitherNaN;  end
-	OP_LE: begin rsltComb = {{(WORDBITSZ-1){1'b0}}, (!eitherNaN && (numLt||fpEqNum))};flagsComb[4] = eitherNaN;  end
+	OP_LT: begin rsltComb = {{(WORDBITSZ-1){1'b0}}, (!eitherNaN && pp_uNumLt)};           flagsComb[4] = eitherNaN;  end
+	OP_LE: begin rsltComb = {{(WORDBITSZ-1){1'b0}}, (!eitherNaN && (pp_uNumLt||fpEqNum))};flagsComb[4] = eitherNaN;  end
 	OP_MIN: begin
 		rsltComb = (isNaNA && isNaNB) ? CANON_QNAN : isNaNA ? b : isNaNB ? a
-		       : bothZero ? (signA ? a : b) : (numLt ? a : b);
+		       : bothZero ? (signA ? a : b) : (pp_uNumLt ? a : b);
 		flagsComb[4] = eitherSNaN;
 	end
 	OP_MAX: begin
 		rsltComb = (isNaNA && isNaNB) ? CANON_QNAN : isNaNA ? b : isNaNB ? a
-		       : bothZero ? (signA ? b : a) : (numLt ? b : a);
+		       : bothZero ? (signA ? b : a) : (pp_uNumLt ? b : a);
 		flagsComb[4] = eitherSNaN;
 	end
 	OP_CVTWS, OP_CVTWUS: begin rsltComb = resCvtFI; flagsComb = flgCvtFI; end
@@ -622,28 +649,29 @@ end
 // Only non-special fdiv/fsqrt iterate; every other op (incl special div/sqrt) is short.
 wire optIter = ((optype == OP_DIV && !divSpecial) || (optype == OP_SQRT && !sqrtSpecial));
 // opLat = cycle (counting from stb) by which rsltComb is valid (the pp_* pipeline depth):
-// shallow 2; fcvt 3 (shift reg); fadd/fsub/fmul 4 (front-end reg + 2-stage packer); div/sqrt
-// ITERLAST + 4 (2-stage pack tail). The FSM registers rsltComb -> rslt_o at cntr==opLat-1 and
+// shallow 2; fcvt 3 (2-stage shift+round); fadd/fsub/fmul 5 (stage-U unpack reg +
+// front-end reg + 2-stage packer); div/sqrt ITERLAST + 5 (stage-U reg + 2-stage pack
+// tail). The FSM registers rsltComb -> rslt_o at cntr==opLat-1 and
 // asserts rdy_o there, so the value sampled by the arbiter is REGISTERED (total latency opLat+1).
 wire isCvt = (optype == OP_CVTWS || optype == OP_CVTWUS || optype == OP_CVTSW || optype == OP_CVTSWU);
 // fdiv latency: NR variants settle divMant earlier than the recurrence (divMant_valid + 3 pack-tail).
 `ifdef PUFDIVDSP2
-localparam [6:0] DIVLAT = 7'd9;                    // NR correct: divMant valid @cntr 6
+localparam [6:0] DIVLAT = 7'd10;                   // NR correct: divMant valid @cntr 7
 `elsif PUFDIVDSP
-localparam [6:0] DIVLAT = 7'd8;                    // NR faithful: divMant valid @cntr 5
+localparam [6:0] DIVLAT = 7'd9;                    // NR faithful: divMant valid @cntr 6
 `else
-localparam [6:0] DIVLAT = {1'b0, ITERLAST} + 7'd4; // digit-recurrence
+localparam [6:0] DIVLAT = {1'b0, ITERLAST} + 7'd5; // digit-recurrence
 `endif
 // fsqrt latency: NR rsqrt schedule settles sqrtMant earlier than the recurrence (valid + 3 pack-tail).
 `ifdef PUFSQRTDSP2
-localparam [6:0] SQRTLAT = 7'd11;                   // NR correct: sqrtMant valid @cntr 8
+localparam [6:0] SQRTLAT = 7'd12;                   // NR correct: sqrtMant valid @cntr 9
 `elsif PUFSQRTDSP
-localparam [6:0] SQRTLAT = 7'd10;                   // NR faithful: sqrtMant valid @cntr 7
+localparam [6:0] SQRTLAT = 7'd11;                   // NR faithful: sqrtMant valid @cntr 8
 `else
-localparam [6:0] SQRTLAT = {1'b0, ITERLAST} + 7'd4; // digit-recurrence
+localparam [6:0] SQRTLAT = {1'b0, ITERLAST} + 7'd5; // digit-recurrence
 `endif
 wire [6:0] opLat = optIter           ? (optype == OP_DIV ? DIVLAT : SQRTLAT)
-                 : (optype == OP_MUL || optype == OP_ADD || optype == OP_SUB) ? 7'd4
+                 : (optype == OP_MUL || optype == OP_ADD || optype == OP_SUB) ? 7'd5
                  : isCvt              ? 7'd3
                  :                      7'd2;
 
@@ -657,41 +685,42 @@ always_ff @(posedge clk_i) begin
 			cntr     <= 0;
 		end
 	end else begin
-		// div/sqrt recurrence: cntr 0 = init, 1..ITERLAST = one quotient/root bit each.
+		// div/sqrt recurrence: cntr 1 = init (the stage-U registers become valid during
+		// that cycle), 2..ITERLAST+1 = one quotient/root bit each.
 		if (optIter) begin
 			if (optype == OP_DIV) begin
 				`ifdef FDIV_NR
 				// NR reciprocal schedule: 1 muxed multiply/cycle (see the fdiv NR datapath above).
 				case (cntr)
-				6'd0: begin nrR <= divSeed;      nrDR <= nrProd[54:27]; end // D*y0
-				6'd1:       nrR <= nrProd[54:27];                          // y0*(2-D*y0) = y1
-				6'd2:       nrDR <= nrProd[54:27];                         // D*y1
-				6'd3:       nrR <= nrProd[54:27];                          // y1*(2-D*y1) = y2
-				6'd4:       nrQ <= (nrProd + 58'h800000) >> 24;            // round(N*y2*4) (+half-ULP bias), 27-bit
-				6'd5:       nrRemS <= $signed({2'd0, divN, 24'd0}) - $signed({2'd0, nrProd[48:0]});
+				6'd1: begin nrR <= divSeed;      nrDR <= nrProd[54:27]; end // D*y0
+				6'd2:       nrR <= nrProd[54:27];                          // y0*(2-D*y0) = y1
+				6'd3:       nrDR <= nrProd[54:27];                         // D*y1
+				6'd4:       nrR <= nrProd[54:27];                          // y1*(2-D*y1) = y2
+				6'd5:       nrQ <= (nrProd + 58'h800000) >> 24;            // round(N*y2*4) (+half-ULP bias), 27-bit
+				6'd6:       nrRemS <= $signed({2'd0, divN, 24'd0}) - $signed({2'd0, nrProd[48:0]});
 				default: ;
 				endcase
 				`else
-				if (cntr == 6'd0)          begin fRem <= divInitRem; fQuo <= 26'd0; end
-				else if (cntr <= ITERLAST) begin fRem <= divRemNext;  fQuo <= {fQuo[24:0], divCmp}; end
+				if (cntr == 6'd1)                 begin fRem <= divInitRem; fQuo <= 26'd0; end
+				else if (cntr <= (ITERLAST+6'd1)) begin fRem <= divRemNext;  fQuo <= {fQuo[24:0], divCmp}; end
 				`endif
 			end else begin // OP_SQRT
 				`ifdef FSQRT_NR
 				// NR rsqrt schedule: 1 muxed multiply/cycle (see the fsqrt NR datapath above).
 				case (cntr)
-				6'd0: begin sqR <= sqSeed;          sqR2 <= nrProd >> 27; end // r0 ; r0^2
-				6'd1:       sqVr2 <= nrProd >> 25;                            // V*r0^2
-				6'd2:       sqR   <= nrProd >> 28;                            // r1 = r0*(3-V*r0^2)/2
-				6'd3:       sqR2  <= nrProd >> 27;                            // r1^2
-				6'd4:       sqVr2 <= nrProd >> 25;                            // V*r1^2
-				6'd5:       sqR   <= nrProd >> 28;                            // r2 = r1*(3-V*r1^2)/2
-				6'd6:       sqRG  <= (nrProd + 58'h2000000) >> 26;            // round(sqrt(V)*2^26) (+half-ULP)
-				6'd7:       sqRGsq <= nrProd[49:0];                           // RG^2 (residual)
+				6'd1: begin sqR <= sqSeed;          sqR2 <= nrProd >> 27; end // r0 ; r0^2
+				6'd2:       sqVr2 <= nrProd >> 25;                            // V*r0^2
+				6'd3:       sqR   <= nrProd >> 28;                            // r1 = r0*(3-V*r0^2)/2
+				6'd4:       sqR2  <= nrProd >> 27;                            // r1^2
+				6'd5:       sqVr2 <= nrProd >> 25;                            // V*r1^2
+				6'd6:       sqR   <= nrProd >> 28;                            // r2 = r1*(3-V*r1^2)/2
+				6'd7:       sqRG  <= (nrProd + 58'h2000000) >> 26;            // round(sqrt(V)*2^26) (+half-ULP)
+				6'd8:       sqRGsq <= nrProd[49:0];                           // RG^2 (residual)
 				default: ;
 				endcase
 				`else
-				if (cntr == 6'd0)          begin fRad <= {sqrtMint, 27'd0}; fRem <= 30'd0; fQuo <= 26'd0; end
-				else if (cntr <= ITERLAST) begin fRem <= sqRemNext; fQuo <= {fQuo[24:0], sqCmp}; fRad <= {fRad[49:0], 2'b0}; end
+				if (cntr == 6'd1)                 begin fRad <= {sqrtMint, 27'd0}; fRem <= 30'd0; fQuo <= 26'd0; end
+				else if (cntr <= (ITERLAST+6'd1)) begin fRem <= sqRemNext; fQuo <= {fQuo[24:0], sqCmp}; fRad <= {fRad[49:0], 2'b0}; end
 				`endif
 			end
 		end
