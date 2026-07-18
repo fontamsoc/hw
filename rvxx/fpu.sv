@@ -194,10 +194,12 @@ wire        ifUns  = (optype == OP_CVTSWU);
 wire        ifSign = (~ifUns) & a[31];              // signed-negative input
 wire [31:0] ifMag  = ifSign ? (~a + 32'd1) : a;     // magnitude (unsigned input as-is)
 wire        ifZero = (ifMag == 32'd0);
-wire [5:0]  ifLz   = clz32(ifMag);
+// PIPELINE: register the negated magnitude so the clz+shift cone runs from a
+// register, then register the clz+shift outputs so the round is a separate stage.
+reg  [31:0] pp_ifMag; // ### pipeline reg.
+wire [5:0]  ifLz   = clz32(pp_ifMag);
 wire [7:0]  ifExp  = 8'd127 + (8'd31 - {2'd0, ifLz}); // biased exp = 127 + msbpos
-wire [31:0] ifAln  = ifMag << ifLz;                  // MSB now at bit31 (clz+shift)
-// PIPELINE: register the clz+shift outputs so the round is a separate stage.
+wire [31:0] ifAln  = pp_ifMag << ifLz;               // MSB now at bit31 (clz+shift)
 reg  [31:0] pp_ifAln; reg [7:0] pp_ifExp; reg pp_ifSign, pp_ifZero; // ### pipeline reg.
 wire [23:0] ifSig  = pp_ifAln[31:8];                 // 1.frac (24 bits)
 wire        ifG    = pp_ifAln[7];
@@ -222,15 +224,18 @@ wire [63:0] fiRsh = fiSig64 >> fiRsC;
 wire [31:0] fiRsInt = fiRsh[31:0];
 wire        fiG = (fiRsC == 7'd0) ? 1'b0 : fiSig64[fiRsC - 7'd1];
 wire        fiS = (fiRsC <= 7'd1) ? 1'b0 : (|(fiSig64 & ((64'd1 << (fiRsC - 7'd1)) - 64'd1)));
-wire        fiRup = roundUp(fiRsInt[0], fiG, fiS, signA, rm);
+// PIPELINE: register the right-shift outputs so the round+add is a separate stage
+// from the funnel; the left (exact-integer) leg is shallow and stays combinational.
+reg  [31:0] pp_fiRsInt; reg pp_fiG, pp_fiS; // ### pipeline reg.
+wire        fiRup = roundUp(pp_fiRsInt[0], pp_fiG, pp_fiS, signA, rm);
 // left (exact) case: shift left by (E - 23); E>31(signed)/E>32(unsigned) always overflows,
 // so cap the shift (<=8 for the in-range path) and force a saturating magnitude otherwise.
 wire        fiLsBig = (fiE > 11'sd31);
 wire [3:0]  fiLsC   = fiLsBig ? 4'd0 : (fiE[3:0] - 4'd7); // E-23 for E in [23,31] (low nibble)
 wire [63:0] fiLsh   = fiLsBig ? 64'hFFFFFFFFFFFFFFFF : (fiSig64 << fiLsC);
 // PIPELINE: register the shifted magnitude so the saturate/clamp is a separate stage.
-wire [63:0] fiMag_c     = fiLeft ? fiLsh : ({32'd0, fiRsInt} + {63'd0, fiRup});
-wire        fiInexact_c = fiLeft ? 1'b0 : (fiG | fiS);
+wire [63:0] fiMag_c     = fiLeft ? fiLsh : ({32'd0, pp_fiRsInt} + {63'd0, fiRup});
+wire        fiInexact_c = fiLeft ? 1'b0 : (pp_fiG | pp_fiS);
 reg  [63:0] pp_fiMag; reg pp_fiInexact; // ### pipeline reg.
 wire [63:0] fiMag   = pp_fiMag;
 wire        fiInexact = pp_fiInexact;
@@ -553,7 +558,9 @@ always_ff @(posedge clk_i) begin
 	pp_addR28 <= addR28_c;
 	pp_cBigSign <= bigSign; pp_cBigEU <= bigEU;
 	pp_pkSign <= pkSign; pp_pkEb <= pkEb; pp_pkM <= pkM; pp_pkG <= pkG; pp_pkS <= pkS;
+	pp_ifMag  <= ifMag;
 	pp_ifAln  <= ifAln; pp_ifExp <= ifExp; pp_ifSign <= ifSign; pp_ifZero <= ifZero;
+	pp_fiRsInt <= fiRsInt; pp_fiG <= fiG; pp_fiS <= fiS;
 	pp_fiMag  <= fiMag_c; pp_fiInexact <= fiInexact_c;
 end
 
