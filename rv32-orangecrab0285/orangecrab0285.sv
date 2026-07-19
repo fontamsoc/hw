@@ -10,15 +10,22 @@
 `include "lib/rstctrl.sv"
 
 `define PURV32M
-`define PUIMULDSP
-`define PURV32ZBA
+`define  PUIMULDSP
+//`define  PUIDIVDSP
+//`define   PUIDIVDSPREG
+//`define PURV32ZBA
 //`define PURV32ZBB
-`define PURV32ZBC
-`define PURV32ZBS
+//`define PURV32ZBC
+//`define PURV32ZBS
 //`define PURV32ZFINX
+//`define  PUFDIVDSP
+//`define  PUFDIVDSP2
+//`define  PUFSQRTDSP
+//`define  PUFSQRTDSP2
 `define PUPREDICTJAL
 `define PUPREDICTBRANCH
 `define PUPREDICTRET
+//`define PUDCACHEREGRQST
 `include "rvxx/cpu.sv"
 /* makefile defined *///`define CPU_COUNT 1
 /* makefile defined *///`define XWORDBITSZ 32
