@@ -10,13 +10,16 @@
 `define SIMULATION
 
 `define PURV32M
-`define PUIMULDSP
+`define  PUIMULDSP
+`define  PUIDIVDSP
 `define PURV32ZBA
 `define PURV32ZBB
 `define PURV32ZBC
-`define PUCLMUL1
+`define  PUCLMUL1
 `define PURV32ZBS
 `define PURV32ZFINX
+`define  PUFDIVDSP2
+`define  PUFSQRTDSP2
 `define PUPREDICTJAL
 `define PUPREDICTBRANCH
 `define PUPREDICTRET
