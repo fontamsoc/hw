@@ -34,7 +34,9 @@
 // 	PUIDIVREGRQST
 // 		Register the idiv request through a one-entry stage, keeping
 // 		the issue-stall cone off the idiv instances' capture
-// 		clock-enables; each division starts one cycle later.
+// 		clock-enables; each division starts one cycle later. Under
+// 		PUIDIVDSP+PUIDIVDSPREG it is often unnecessary: the pipelined
+// 		capture leaves only |N|/|D| and the control regs on that cone.
 //
 // PURV32ZBA
 // 	"Zba" address-generation bit-manipulation extension
