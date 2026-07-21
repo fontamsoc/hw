@@ -144,9 +144,25 @@ reg [5:0]  nrS;             // clz(|D|)
 reg signed [33:0] nrRem;    // |N| - Q*|D| (pre-correction)
 
 // clz/normalize/seed computed from the registered |D| instead of from divabsdvsr,
-// which insures the seed cone is out of the stb capture cycle.
-wire [5:0]  nrS_w    = idivClz(nrD);
-wire [31:0] nrDn_w   = (nrD << nrS_w);
+// which insures the seed cone is out of the stb capture cycle. clz and normalize
+// are done as one fused priority-normalize cascade (each stage tests the current
+// high bits and conditionally shifts) instead of idivClz followed by a dependent
+// 32bits shifter: the loop-based idivClz synthesizes as a serial priority chain
+// (measured 7 LUT levels before the shifter even starts), while the cascade lets
+// each shift stage consume its zero flag as soon as it is available.
+wire        nrZ4_w = ~|nrD[31:16];
+wire [31:0] nrV1_w = (nrZ4_w ? {nrD[15:0], 16'b0} : nrD);
+wire        nrZ3_w = ~|nrV1_w[31:24];
+wire [31:0] nrV2_w = (nrZ3_w ? {nrV1_w[23:0], 8'b0} : nrV1_w);
+wire        nrZ2_w = ~|nrV2_w[31:28];
+wire [31:0] nrV3_w = (nrZ2_w ? {nrV2_w[27:0], 4'b0} : nrV2_w);
+wire        nrZ1_w = ~|nrV3_w[31:30];
+wire [31:0] nrV4_w = (nrZ1_w ? {nrV3_w[29:0], 2'b0} : nrV3_w);
+wire        nrZ0_w = ~nrV4_w[31];
+wire [31:0] nrDn_w = (nrZ0_w ? {nrV4_w[30:0], 1'b0} : nrV4_w);
+// {nrZ4_w..nrZ0_w} read as the binary digits of clz(nrD) when nrD != 0; the
+// nrD == 0 override keeps nrS_w bit-identical to idivClz (ie: WORDBITSZ).
+wire [5:0]  nrS_w    = ((nrD == 0) ? 6'd32 : {1'b0, nrZ4_w, nrZ3_w, nrZ2_w, nrZ1_w, nrZ0_w});
 wire [33:0] nrSeed_w = idivRecipSeed(nrDn_w[30:24]);
 
 // Dedicated multiply operand regs; they only feed the column products.
