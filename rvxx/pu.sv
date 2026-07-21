@@ -24,6 +24,13 @@
 // 		reciprocal (needs a multiplier) instead of the default radix-4
 // 		digit-recurrence; fewer cycles per division.
 //
+// 	PUIDIVDSPREG
+// 		Pipeline the PUIDIVDSP multiply (operand and column-product
+// 		registers) so that synthesis absorbs them into the DSP cascade
+// 		pipeline registers; each division takes 16 cycles instead of 8
+// 		but the multiply is no longer a deep combinational cone
+// 		anchoring placement. Requires PUIDIVDSP.
+//
 // 	PUIDIVREGRQST
 // 		Register the idiv request through a one-entry stage, keeping
 // 		the issue-stall cone off the idiv instances' capture

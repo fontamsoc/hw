@@ -127,6 +127,88 @@ endfunction
 // |dividend|.
 wire [WORDBITSZ -1 : 0] divabsdvd =
 	((args_i[IDIVSIGNED] && args_i[(WORDBITSZ*2)-1]) ? -args_i[(WORDBITSZ*2)-1:WORDBITSZ] : args_i[(WORDBITSZ*2)-1:WORDBITSZ]);
+`ifdef PUIDIVDSPREG
+// Pipelined variant: the stb cycle captures only |N| and |D| (same capture depth as
+// the radix-4 core), while the clz/normalize/seed cone runs from the registered |D|
+// in the first compute cycle; the shared ~34x34 multiply is done as two 34x17 column
+// products each registered into its own reg (a 2-DSP cascade each, so that synthesis
+// absorbs the reg into the cascade-final pipeline register, as it already does for
+// the PUIMULDSPREG product reg), and the exact 68bits recombine is done in the cycle
+// consuming it; each multiply thus takes an operand-load cycle followed by a pipe
+// cycle, ie: busy grows 8 -> 16 cycles.
+
+reg [33:0] nrR;             // reciprocal r*2^32 (r=1/dn in (1,2])
+reg [32:0] nrQ;             // approximate quotient
+reg [31:0] nrN, nrD, nrDn;  // |dividend|, |divider|, normalized divider
+reg [5:0]  nrS;             // clz(|D|)
+reg signed [33:0] nrRem;    // |N| - Q*|D| (pre-correction)
+
+// clz/normalize/seed computed from the registered |D| instead of from divabsdvsr,
+// which insures the seed cone is out of the stb capture cycle.
+wire [5:0]  nrS_w    = idivClz(nrD);
+wire [31:0] nrDn_w   = (nrD << nrS_w);
+wire [33:0] nrSeed_w = idivRecipSeed(nrDn_w[30:24]);
+
+// Dedicated multiply operand regs; they only feed the column products.
+reg [33:0] nrOpa_r, nrOpb_r;
+// Free-running column-product regs (no clock-enable) so that they absorb into the
+// DSP cascades; the cntr schedule paces when nrProd_w is valid.
+reg [50:0] nrPplo_r, nrPphi_r;
+always_ff @(posedge clk_i) begin
+	nrPplo_r <= (nrOpa_r * nrOpb_r[16:0]);
+	nrPphi_r <= (nrOpa_r * nrOpb_r[33:17]);
+end
+// Exact 68bits recombine of the registered column products; it is the value of
+// nrOpa_r*nrOpb_r two cycles after the operands were loaded.
+wire [67:0] nrProd_w = ({17'b0, nrPplo_r} + {nrPphi_r, 17'b0});
+
+// single +/-1 residual correction (combinational, from the registered nrRem/nrQ).
+wire signed [33:0] nrD_s  = $signed({2'b0, nrD});
+wire [32:0]        nrQc   = (nrRem < 0)      ? (nrQ - 1'b1)
+                          : (nrRem >= nrD_s) ? (nrQ + 1'b1) : nrQ;
+wire signed [33:0] nrRemC = (nrRem < 0)      ? (nrRem + nrD_s)
+                          : (nrRem >= nrD_s) ? (nrRem - nrD_s) : nrRem;
+
+always_ff @(posedge clk_i) begin
+	if (rst_i) begin
+		rdy_o <= 1;
+	end else if (rdy_o) begin
+		if (stb_i) begin
+			operands <= args_i;
+			nrN  <= divabsdvd;
+			nrD  <= divabsdvsr;
+			rdy_o <= 0;
+			cntr  <= 0;
+		end
+	end else begin
+		// Odd cycles 1,3,5,7,9 as well as cycle 12 are pipe cycles in which
+		// nrPplo_r/nrPphi_r capture the column products of the operands loaded
+		// on the previous cycle.
+		case (cntr)
+		6'd0: begin // clz/normalize/seed from the registered |D|; load Dn * R0.
+			nrS  <= nrS_w;
+			nrDn <= nrDn_w;
+			nrR  <= nrSeed_w;
+			nrOpa_r <= {2'b0, nrDn_w};
+			nrOpb_r <= nrSeed_w;
+		end
+		6'd2:  begin nrOpa_r <= nrR; nrOpb_r <= ({1'b1,33'd0} - nrProd_w[65:32]); end // R0 * (2 - Dn*R0)
+		6'd4:  begin nrR <= nrProd_w[65:32];                                          // R1
+		             nrOpa_r <= {2'b0, nrDn}; nrOpb_r <= nrProd_w[65:32]; end         // Dn * R1
+		6'd6:  begin nrOpa_r <= nrR; nrOpb_r <= ({1'b1,33'd0} - nrProd_w[65:32]); end // R1 * (2 - Dn*R1)
+		6'd8:  begin nrOpa_r <= {2'b0, nrN}; nrOpb_r <= nrProd_w[65:32]; end          // |N| * R2
+		6'd10: nrQ <= (nrProd_w >> (7'd64 - {1'b0, nrS}));                            // (|N|*R2) >> (64 - clz)
+		6'd11: begin nrOpa_r <= {1'b0, nrQ}; nrOpb_r <= {2'b0, nrD}; end              // Q * |D|  (residual)
+		6'd13: nrRem <= $signed({2'b0, nrN}) - $signed({1'b0, nrProd_w[32:0]});       // |N| - Q*|D|
+		6'd14: cumulator <= {nrRemC[WORDBITSZ-1:0], nrQc[WORDBITSZ-1:0]};
+		default: ;
+		endcase
+		if (cntr == 6'd14) rdy_o <= 1;
+		cntr <= cntr + 1'b1;
+	end
+end
+
+`else /* PUIDIVDSPREG */
 wire [5:0]  idivS    = idivClz(divabsdvsr);        // clz(|D|) ; WORDBITSZ if |D|==0
 wire [31:0] idivDn   = (divabsdvsr << idivS);      // normalized divider (MSB at bit 31 if |D|!=0)
 wire [33:0] idivSeed = idivRecipSeed(idivDn[30:24]);
@@ -190,6 +272,7 @@ always_ff @(posedge clk_i) begin
 		cntr <= cntr + 1'b1;
 	end
 end
+`endif /* PUIDIVDSPREG */
 
 `else
 // ===== radix-4 restoring divider (2 quotient bits/cycle, WORDBITSZ/2 cycles). =====
