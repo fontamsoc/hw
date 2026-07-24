@@ -39,10 +39,12 @@ targeting the OrangeCrab r0.2 85F.**
 
 `orangecrab0285.sv` is the top level of a compact RV32 SoC: one `ftpu` hart with private
 instruction and data caches, a Wishbone peripheral interconnect, an interrupt
-controller, a USB console, a SPI master on the microSD slot, a second SPI master on the
-configuration flash, 256 KB of on-chip SRAM, the 512 MiB DDR3L SDRAM of the board
-through a LiteDRAM controller, and a *default device* that acknowledges and reports
-every access to an address no other device maps.
+controller, a USB console, two serial consoles tunneled through the JTAG port of the
+ECP5 (`serial_jtag`, the first of which can carry underLineOS's gdb stub), a SPI master
+on the microSD slot, a second SPI master on the configuration flash, 256 KB of on-chip
+SRAM, the 512 MiB DDR3L SDRAM of the board through a LiteDRAM controller, and a
+*default device* that acknowledges and reports every access to an address no other
+device maps.
 
 The program is in the block RAM of the SRAM from the configuration of the FPGA on, so
 the SoC boots straight into application code at `0x1000`; the build writes it into the
@@ -50,14 +52,16 @@ placed and routed design, which is why changing it takes seconds, not a synthesi
 [Loading a program](#loading-a-program)). That program can be
 [`apps/bootldr`](apps/bootldr), a bootloader which initializes and calibrates the DDR3
 SDRAM, then loads the application from the SPI flash or the SD card, so that the
-application changes without a new bitstream and can use the DDR3 SDRAM.
+application changes without a new bitstream and can use the DDR3 SDRAM. An underLineOS
+image linked with the gdb stub can be replaced from gdb as well, over the first JTAG
+console (see [Loading a program](#loading-a-program)).
 
 ---
 
 ## Block diagram
 
 <p align="center">
-  <img src=".README.md/block_diagram.svg" alt="OrangeCrab r0.2 85F SoC block diagram: FonTamPU core complex mastering a 32-bit Wishbone bus with irqctrl, serial_usb, sram, sdram_ddr3, sdspi, spiflash and dfltdev slaves; the PLL of the DDR3 controller clocks the SoC; dfltdev, serial_usb, sdspi and spiflash raise interrupt sources 0, 1, 2 and 3 at irqctrl" width="960">
+  <img src=".README.md/block_diagram.svg" alt="OrangeCrab r0.2 85F SoC block diagram: FonTamPU core complex mastering a 32-bit Wishbone bus with irqctrl, serial_usb, sram, sdram_ddr3, sdspi, spiflash, two serial_jtag channels and dfltdev slaves; the PLL of the DDR3 controller clocks the SoC; dfltdev, serial_usb, sdspi, spiflash and the serial_jtag channels raise interrupt sources 0, 1, 2, 3 and 4 to 5 at irqctrl; the serial_jtag channels reach an external JTAG probe through the JTAGG primitive of the ECP5" width="960">
 </p>
 
 <div align="center">
@@ -82,10 +86,11 @@ application changes without a new bitstream and can use the DDR3 SDRAM.
 | **RAM** | 256 KB on-chip block RAM (`SRAM_KBSIZE = 256`) and 512 MiB of DDR3L SDRAM |
 | **DDR3 SDRAM** | Micron MT41K256M16, 512 MiB at `0x00041000`, through LiteDRAM (ECP5DDRPHY at 96 MHz, 192 MT/s); initialized and calibrated by `apps/bootldr` |
 | **Console** | USB serial port (CDC-ACM, full speed) on the USB-C connector of the board, 2 KB RX + 2 KB TX buffers |
+| **JTAG consoles** | 2 `serial_jtag` channels through the `ER1` and `ER2` user data registers of the ECP5's `JTAGG`, at `0xE80` and `0xEA0`, 16 B RX + 16 B TX buffers each, reached with an external JTAG probe; channel 0 can carry the gdb stub |
 | **SD card** | SPI master on the microSD slot, mode 0, 400 kbps at reset, up to 24 Mbps, 2 KB RX + 2 KB TX buffers |
 | **SPI flash** | Second SPI master on the configuration flash, a 16 MiB Winbond W25Q128JV: `cs` high during control words, `miso` sampled on the falling edge, `sclk` through `USRMCLK`, up to 24 Mbps, 2 KB RX + 2 KB TX buffers |
 | **Unmapped access** | Acknowledged by `dfltdev`: reads as `nop`, writes dropped, IRQ source 0 raised, address latched at `0xFFFFFFFC` |
-| **Interrupt sources** | 4 — `dfltdev` (0), `serial_usb` (1), `sdspi` (2), `spiflash` (3) |
+| **Interrupt sources** | 6 — `dfltdev` (0), `serial_usb` (1), `sdspi` (2), `spiflash` (3), `serial_jtag` channels 0–1 (4–5) |
 | **Reset vector** | `0x00001000` |
 | **Initial `sp`** | `0x00041000` (end of the SRAM); bootldr gives its payload the end of the DDR3 SDRAM, `0x20041000`, in `a1` |
 | **Toolchain** | Yosys · nextpnr-ecp5 · Project Trellis (`ecpbram`, `ecppack`) · dfu-util · `riscv32-unknown-elf` GCC |
@@ -107,7 +112,9 @@ converts them to word indices internally.
 | 4 | DDR3 controller registers | `rv32-orangecrab0285/dev/sdram_ddr3.v` | `0x20041000` | `0x20050FFF` | 64 KiB | no |
 | 5 | SD card (SPI mode) | `dev/spi.sv` | `0x00000E00` | `0x00000E07` | 8 B (2 words) | no |
 | 6 | SPI flash | `dev/spi.sv` | `0x00000E40` | `0x00000E47` | 8 B (2 words) | no |
-| 7 | Default device | `dev/dfltdev.sv` | *every other address* | — | — | no |
+| 7 | JTAG console, channel 0 | `dev/serial_jtag.sv` | `0x00000E80` | `0x00000E87` | 8 B (2 words) | no |
+| 8 | JTAG console, channel 1 | `dev/serial_jtag.sv` | `0x00000EA0` | `0x00000EA7` | 8 B (2 words) | no |
+| 9 | Default device | `dev/dfltdev.sv` | *every other address* | — | — | no |
 | ↳ | Fault address register | `dev/dfltdev.sv` | `0xFFFFFFFC` | `0xFFFFFFFF` | 4 B (1 word) | no |
 
 ```
@@ -122,6 +129,16 @@ converts them to word indices internally.
             │   spiflash · 8 B                   │   0xE40 data · 0xE44 command
  0x00000E47 └────────────────────────────────────┘
  0x00000E48        · · · unmapped → dfltdev · · ·
+ 0x00000E7F
+ 0x00000E80 ┌────────────────────────────────────┐
+            │   serial_jtag 0 · 8 B              │   0xE80 data · 0xE84 command
+ 0x00000E87 └────────────────────────────────────┘
+ 0x00000E88        · · · unmapped → dfltdev · · ·
+ 0x00000E9F
+ 0x00000EA0 ┌────────────────────────────────────┐
+            │   serial_jtag 1 · 8 B              │   0xEA0 data · 0xEA4 command
+ 0x00000EA7 └────────────────────────────────────┘
+ 0x00000EA8        · · · unmapped → dfltdev · · ·
  0x00000EFF
  0x00000F00 ┌────────────────────────────────────┐
             │   irqctrl · 4 B                    │
@@ -160,7 +177,7 @@ interconnect sizes its address bus from that: only bits `[29:2]` of the byte add
 are carried, with bits `[31:30]` OR-reduced into a single extra "out of range" bit so
 **nothing aliases back into a real device** for any access at or above `0x40000000`.
 
-Slave 7 (`dev/dfltdev.sv`) is the catch-all for every address the table does not
+Slave 9 (`dev/dfltdev.sv`) is the catch-all for every address the table does not
 claim. It never drives `bsy` and acknowledges every access on the following cycle,
 so **an unmapped access always completes**. A read returns the instruction `nop`
 (`0x00000013`) and a write is dropped. Both are faults: the address is latched in
@@ -177,11 +194,11 @@ address or exhausts the table (which selects the default device). Back-to-back
 accesses within one device cost nothing extra; alternating between, say, the USB
 console and the SRAM re-walks the table at every switch. The DDR3 SDRAM and the
 registers of its controller are the entries right after the SRAM; the SPI master of
-the SD card and the SPI flash, although mapped below the others, come last, so that
-adding them left the walk to the interrupt controller, the USB console and the SRAM as
-short as it was. The default-device selection is valid only for the address it was
-walked for: another address presented in that cycle restarts the walk rather than
-being handed the default device.
+the SD card, the SPI flash and the two JTAG consoles, although mapped below the others,
+come last, so that adding them left the walk to the interrupt controller, the USB
+console and the SRAM as short as it was. The default-device selection is valid only for
+the address it was walked for: another address presented in that cycle restarts the
+walk rather than being handed the default device.
 
 > [!NOTE]
 > The core marks everything outside `[0x1000, 0x20041000)`, the SRAM and the DDR3
@@ -418,6 +435,46 @@ when its PLL loses its lock, and when the DLL of its PHY locks anew, which also 
 the system, the delays and bitslips of its PHY, and the DDR3 SDRAM, whose reset it holds
 low: the next accesses complete on it uninitialized, which nothing initializes again.
 
+### JTAG consoles — `0x00000E80`, `0x00000EA0`
+
+Two `dev/serial_jtag.sv` channels, reached from the host through the `ER1` (`0x32`) and
+`ER2` (`0x38`) user data registers of the ECP5's `JTAGG` primitive by the OpenOCD bridge
+of [`tools/serial_jtag/`](../tools/serial_jtag), which serves a channel on its terminal,
+or as a pty with `--pty`, and both channels as one pty each; its README covers the host
+side, the external probe the board needs included. Channel `n` sits at
+`0xE80 + 0x20·n` with the two registers and the command protocol of a UART console:
+
+| Offset | Register | Description |
+| :-: | :--- | :--- |
+| `+0x0` | Data | Read receives one byte, write transmits one byte |
+| `+0x4` | Command | Write submits a command, read retrieves the result |
+
+| `cmd` | Name | Purpose |
+| :-: | :--- | :--- |
+| `0b00` | `CMDDEVRDY` | Make the device accept a new command |
+| `0b01` | `CMDGETBUFFERUSAGE` | `arg = 0` → RX bytes used, `arg = 1` → TX bytes used |
+| `0b10` | `CMDSETINTERRUPT` | `arg = 0` disables; non-zero enables and sets the RX-usage threshold. Returns the buffer size |
+| `0b11` | `CMDSETSPEED` | Ignores `arg` and returns 0: the transfer rate is set by the JTAG host, through its TCK and scan sizing |
+
+The `JTAGG` signals differ from those of the Xilinx `BSCANE2` — a registered `JTDI`, a
+`TDO` passed to its pin combinationally, no capture decode — so the TAP reaches the
+channels through `lib/serial_jtag_jtagg.sv`, an adapter which owns that contract, the
+channels being built with `TAPJTAGG = 1` to match it; its header describes both.
+Buffers are 16 bytes per direction (`BUFSZ = 16`): the transmit fifo is
+first-word-fall-through, which puts it in distributed RAM, whose area at a greater depth
+was found to congest the placement at 48 MHz. The interrupt is **disabled at reset**,
+like the USB console's, and disarms itself when acknowledged. A reset drains the
+receive buffer, discarding stale host bytes, but leaves the transmit buffer alone:
+bytes written before a bridge attached are delivered once one does.
+
+> [!IMPORTANT]
+> Both directions of the data register can hold the bus. A read with the receive buffer
+> empty blocks until a byte arrives, as on the USB console; a write with the transmit
+> buffer full blocks until a JTAG host attaches and drains it — and nothing drains it
+> while no bridge is running, so a program writing more than 15 bytes to a channel
+> nobody reads stalls there. Software that must not block checks `CMDGETBUFFERUSAGE`
+> first.
+
 ### Default device — every unmapped address
 
 `dev/dfltdev.sv` owns every address the table does not claim. It has one register,
@@ -460,7 +517,7 @@ Two details worth knowing:
 
 ## Interrupts
 
-The SoC instantiates `IRQSRCCOUNT = 4` sources and `IRQDSTCOUNT = CPU_COUNT = 1`
+The SoC instantiates `IRQSRCCOUNT = 6` sources and `IRQDSTCOUNT = CPU_COUNT = 1`
 destination.
 
 ### Sources
@@ -471,6 +528,8 @@ destination.
 | 1 | `serial_usb` | `IRQ_SERIAL` | RX buffer usage reaches the threshold set by `CMDSETINTERRUPT` |
 | 2 | `sdspi` | `IRQ_SDSPI` | RX buffer usage reaches the threshold set by `CMDSETINTERRUPT` |
 | 3 | `spiflash` | `IRQ_SPIFLASH` | RX buffer usage reaches the threshold set by `CMDSETINTERRUPT` |
+| 4 | `serial_jtag` channel 0 | `IRQ_SERIAL_JTAG + 0` | RX buffer usage reaches the threshold set by the channel's `CMDSETINTERRUPT` |
+| 5 | `serial_jtag` channel 1 | `IRQ_SERIAL_JTAG + 1` | RX buffer usage reaches the threshold set by the channel's `CMDSETINTERRUPT` |
 
 Source 0 is reserved for the default device by convention on every top in the
 repository, including `rv32-sim/` where it never fires.
@@ -505,14 +564,14 @@ Three behaviours worth coding around:
 - **Acknowledge promptly.** `irqctrl` dispatches source interrupts one at a time for
   all destinations; until the current one is acknowledged with `CMDACKIRQ` it cannot
   dispatch another. Interrupts raised with `CMDINTDST` are held per destination instead.
-- **The USB console and SPI interrupts disarm themselves.** Each is disabled at reset
-  (so no spurious interrupt can fire immediately after release) and disabled again each
-  time a raised interrupt is acknowledged, so the handler must re-enable it. The USB
-  console being reset neither by the button nor by `_sysreset()`, its interrupt, its
-  threshold and its buffers survive them: an interrupt it had armed before can be raised
-  as soon as software enables source 1 again. On both SPI devices, `CMDSETINTERRUPT 0`
-  also closes the transmission in progress: disable the interrupt within a transaction
-  with a threshold of 2049 instead.
+- **The USB console, JTAG console and SPI interrupts disarm themselves.** Each is
+  disabled at reset (so no spurious interrupt can fire immediately after release) and
+  disabled again each time a raised interrupt is acknowledged, so the handler must
+  re-enable it. The USB console being reset neither by the button nor by `_sysreset()`,
+  its interrupt, its threshold and its buffers survive them: an interrupt it had armed
+  before can be raised as soon as software enables source 1 again. On both SPI devices,
+  `CMDSETINTERRUPT 0` also closes the transmission in progress: disable the interrupt
+  within a transaction with a threshold of 2049 instead.
 - **The fault interrupt is imprecise.** It arrives as an ordinary external
   interrupt, several instructions after the access that caused it, and that access
   has already completed — a load has consumed the word `0x00000013`, a store has
@@ -562,12 +621,16 @@ the DDR3 SDRAM being uninitialized at reset.
 The PLL of the DDR3 controller, an `EHXPLLL`, turns the 48 MHz board oscillator into
 the 96 MHz clock of its PHY and a 48 MHz clock for the logic which initializes the PHY;
 a clock divider, `CLKDIVF`, halves the former into the 48 MHz clock of the controller.
-That clock is the clock of the whole SoC — CPU, interconnect, USB, SD card and SPI flash
-PHYs — which runs in that single **48 MHz** domain, so there is no clock-domain crossing
-(`USEMEMCLKDOM` evaluates to 0 for a single hart with a D-cache); the USB PHY requires
-exactly 48 MHz. Once the DLL of the PHY locks, the PHY stops that clock for about 0.5 µs
-while it initializes, the system being reset meanwhile (see
-[Reset behaviour](#reset-behaviour)).
+That clock is the clock of the SoC proper — CPU, interconnect, USB, SD card and SPI
+flash PHYs — which runs in that **48 MHz** domain (`USEMEMCLKDOM` evaluates to 0 for a
+single hart with a D-cache); the USB PHY requires exactly 48 MHz. Once the DLL of the
+PHY locks, the PHY stops that clock for about 0.5 µs while it initializes, the system
+being reset meanwhile (see [Reset behaviour](#reset-behaviour)). The SoC proper has one
+other clock, the TCK of the JTAG port, which the `JTAGG` primitive hands out as `JTCK`
+and `lib/serial_jtag_jtagg.sv` delays through a chain of LUTs before it clocks the two
+`serial_jtag` PHYs: it runs at whatever the probe drives, and the crossing into the
+48 MHz domain happens in `lib/serial_jtag_fifo_phy.sv`, through gray-code asynchronous
+FIFOs and, for the buffer usages, a debounce on the 48 MHz side.
 
 > [!NOTE]
 > `lib/ecppll_48_to_24_48_96.sv` is still instantiated, but none of its outputs is used,
@@ -651,6 +714,9 @@ having 15 address bits, the 16th of the platform, `ddr3l_a[15]`, is left out.
 OrangeCrab r0.2 requires driven high, and low, while its DDR3 SDRAM is used, as
 litex-boards drives them.
 
+The JTAG consoles need no pin constraint: the `JTAGG` primitive taps the dedicated JTAG
+pins of the ECP5, which the board brings out on its JTAG header for an external probe.
+
 Bitstream settings: compressed, the flash read at 38.8 MHz at configuration
 (`ecppack --compress --freq 38.8`).
 
@@ -684,15 +750,18 @@ Three things the makefile does beyond the defaults:
 - **Placement is retried.** nextpnr-ecp5 places with a random seed (`-r`) and fails
   when a clock misses its frequency, 48 MHz for `clk48mhz_i` and the clocks derived
   from it; the makefile then runs it again, up to `RETRY_COUNT` (10) runs in all.
-  `orangecrab0285.pnr.log` keeps the last run.
+  `orangecrab0285.pnr.log` keeps the last run. The JTAG consoles make 48 MHz harder to
+  meet, so more runs may fail before one meets it, or all of them: `make RETRY_COUNT=20`
+  allows more.
 - **The speed grade is 8**, that of the part, where nextpnr-ecp5 would default to 6.
 
 `make` leaves in `yosys/` the logs of synthesis and of placement
 (`orangecrab0285.synth.log`, `orangecrab0285.pnr.log`), the placed and routed
 configuration with the placeholder contents of the SRAM (`orangecrab0285.bak.config`,
 `orangecrab0285.sram.hex`), and the bitstream, `orangecrab0285.dfu`. The logs, the
-configuration and its placeholder are committed, so that `make updsram` works from a
-checkout (see [Loading a program](#loading-a-program)).
+configuration and its placeholder are committed — on this branch, those of the main
+branch, which has no JTAG consoles: run `make` once, to place this design, before
+`make updsram` (see [Loading a program](#loading-a-program)).
 
 To program the board, hold its button while plugging it in: foboot, its bootloader, then
 waits for DFU instead of starting the bitstream, and `make prog` writes the bitstream to
@@ -703,6 +772,21 @@ console is then the USB port itself:
 picocom -q --imap lfcrlf /dev/ttyACM0     # or screen, minicom, ...; no baud rate applies
 ```
 
+The JTAG consoles come up through the OpenOCD bridge of
+[`tools/serial_jtag/`](../tools/serial_jtag), with an external probe wired to the JTAG
+header of the board, whose adapter configuration comes first:
+
+```sh
+openocd -f <your-adapter>.cfg -f tools/serial_jtag/openocd_ecp5.cfg   # terminal 1
+tools/serial_jtag/openocd_bridge.py --tap ecp5.tap --ir 0x32 --pty    # terminal 2: channel 0, pty path on stderr
+tools/serial_jtag/openocd_bridge.py --tap ecp5.tap --ir 0x32,0x38     # or both channels, one pty each
+```
+
+The bridge's README has the rest: the clock of the probe, which few adapter
+configurations set, the wire protocol, and the one rule the `JTAGG` adds: the host must
+shift each scan in one continuous pass, never pausing in the Pause-DR state, which is
+how OpenOCD's `drscan`, used by the bridge, shifts. DFU and the probe do not conflict.
+
 ---
 
 ## Loading a program
@@ -711,9 +795,10 @@ The program in the SRAM is written into the placed and routed configuration by
 `ecpbram`: synthesis reads, through `$readmemh`, a random placeholder,
 `orangecrab0285.sram.hex`, which `ecpbram` replaces in the configuration with the words
 of `SRAM_INITFILE`. Hence **changing the program takes neither synthesis nor
-placement**: `make updsram` takes the committed configuration,
+placement**: `make updsram` takes the configuration in `yosys/`,
 `orangecrab0285.bak.config`, and its placeholder, swaps the program in and packs the
-bitstream again, in seconds:
+bitstream again, in seconds — once `make` has placed this design, the configuration
+committed on this branch being the main branch's, without the JTAG consoles:
 
 ```sh
 cd rv32-orangecrab0285/yosys
@@ -721,10 +806,39 @@ make updsram SRAM_INITFILE=../../rv32-sim/apps/helloworld/helloworld.32.hex
 make prog
 ```
 
-The `examples/rv32-orangecrab0285/serial_jtag` branch demonstrates two serial consoles
-tunneled through the JTAG port of the ECP5, and
-`examples/rv32-orangecrab0285/serial_usb_multi_port` a second serial port over the same
-USB link as the console.
+An underLineOS image linked with `-lgdbstub` can also be replaced from gdb over JTAG
+console 0, without even that. The stub's default device is `0xe80`, channel 0 here, but
+its default interrupt source is 1, the USB console on this top: channel 0 raises source
+4, so link the image with `-lgdbstub -Wl,--defsym=_gdbstub_irq=4` — ie: an application
+of [`rv32-sim/apps/`](../rv32-sim/apps) built with
+`CFLAGS='-lgdbstub -Wl,--defsym=_gdbstub_irq=4' make`, or `XCFLAGS=` in place of
+`CFLAGS=` for CoreMark, whose makefile sets `CFLAGS` itself — then write it in with
+`make updsram` (with the wrong source the stub still attaches, but crawls through a
+50 ms timeout per wait). With the bridge running (see
+[Building the bitstream](#building-the-bitstream)), gdb opens the channel-0 pty:
+
+```sh
+riscv32-unknown-elf-gdb -nx -x tools/underLineOS.gdb \
+    -ex 'file app.elf' -ex 'target remote /dev/pts/N'      # N: the bridge's channel-0 pty
+```
+
+The image boots and runs as usual, and gdb attaches without stopping it, its prompt
+resting on the stub's debug-shell thread, even long after the image finished — with the
+stub linked, a program's exit parks its thread for the debugger instead of halting the
+CPU, so the stub stays reachable and gdb attaches at any time
+(`set var __gdbstub_tp = __gdbstub_next()` adopts the exited thread). To replace the
+image, `delete` the breakpoints (inserted ones would be carried into the loaded image),
+then `reload` (from `tools/underLineOS.gdb`: it sets the stub's reload flag and resumes
+into `_sysreset()`, the software reset request of [Reset behaviour](#reset-behaviour)),
+`Ctrl-C` once the USB console shows `gdbstub: awaiting gdb`, then `file`, `load`,
+`continue`; the loaded image starts by another soft reset. Holding the button for four
+seconds after setting the flag is the manual alternative, and it is the way back when a
+reload flag was left set: the next boot then parks in the loader saying so on the
+console, and `continue` reboots. The underLineOS documentation (GDB stub, *Loading a new
+program*) has the details and the limitations.
+
+The `examples/rv32-orangecrab0285/serial_usb_multi_port` branch demonstrates a second
+serial port over the same USB link as the console.
 
 The build knobs are variables of the makefile: it passes `CPU_COUNT`, `XWORDBITSZ` and
 `SRAM_KBSIZE` to yosys as defines, in place of the `` `ifndef ``-guarded defaults at the
@@ -889,7 +1003,7 @@ SD card, whose driver is larger.
 | `orangecrab0285.sv` | SoC top level: build-time defaults, PLL, reset, core complex, interconnect, peripherals |
 | `orangecrab0285.lpf` | Pin, IO type and clock constraints |
 | `yosys/makefile` | The build: synthesis, placement and routing, the program written into the block RAM, the bitstream with its DFU suffix, and its writing through DFU |
-| `yosys/orangecrab0285.bak.config` | The committed placed and routed configuration, with the placeholder contents of the SRAM, which `make updsram` reuses |
+| `yosys/orangecrab0285.bak.config` | The committed placed and routed configuration, with the placeholder contents of the SRAM, which `make updsram` reuses — on this branch the main branch's, without the JTAG consoles, until `make` replaces it |
 | `yosys/orangecrab0285.sram.hex` | That placeholder |
 | `yosys/orangecrab0285.synth.log`, `yosys/orangecrab0285.pnr.log` | The logs of the committed build |
 | `tools/stitch_dfu.py` | Places data at a flash address of a DFU image, ie: that of `apps/bootldr` at `0x200000` |
@@ -900,11 +1014,14 @@ SD card, whose driver is larger.
 | `.README.md/block_diagram.svg` | The block diagram above |
 
 Shared sources come from the repository root: [`cpu/`](../cpu) (core complex),
-[`dev/`](../dev) (Wishbone peripherals, the USB console `serial_usb.sv` and the default
-device included) and [`lib/`](../lib) (PLL, reset, FIFOs, interconnect, SPI master, the
-USB stack `core_usb_cdc/` and `core_usb_fs_phy/`, the Wishbone bridges to the DDR3
-controller); [`tools/mkBootldrDat.py`](../tools/mkBootldrDat.py) formats the data which
-`apps/bootldr` loads.
+[`dev/`](../dev) (Wishbone peripherals, the USB console `serial_usb.sv`, `serial_jtag.sv`
+and the default device included) and [`lib/`](../lib) (PLL, reset, FIFOs, interconnect,
+SPI master, the USB stack `core_usb_cdc/` and `core_usb_fs_phy/`, the Wishbone bridges to
+the DDR3 controller, and the serial_jtag PHY and its JTAGG adapter: `serial_jtag_phy.sv`,
+`serial_jtag_fifo_phy.sv`, `serial_jtag_jtagg.sv`);
+[`tools/serial_jtag/`](../tools/serial_jtag) holds the OpenOCD bridge `openocd_bridge.py`
+and its `openocd_ecp5.cfg`, and [`tools/mkBootldrDat.py`](../tools/mkBootldrDat.py)
+formats the data which `apps/bootldr` loads.
 
 ---
 
@@ -943,6 +1060,16 @@ controller); [`tools/mkBootldrDat.py`](../tools/mkBootldrDat.py) formats the dat
 - **The USB console blocks both ways.** A read blocks until a byte is available, and a
   write blocks while the transmit buffer is full, until the host takes its bytes, which
   it does only while a program has the port open.
+- **A write to a JTAG channel blocks while its transmit buffer is full**, until a bridge
+  drains it: more than 15 bytes written to a channel no bridge is reading stall the bus
+  until one attaches, and a read blocks until a byte is available. Check
+  `CMDGETBUFFERUSAGE` where that can happen.
+- **The JTAG host must shift each scan in one pass**: passing through the Pause-DR state
+  within a scan corrupts its framing (see `lib/serial_jtag_jtagg.sv`), which the bridge
+  never does.
+- **`make updsram` needs a `make` first on this branch**: the committed
+  `orangecrab0285.bak.config` is the main branch's placed design, so `make updsram` from
+  a fresh checkout builds a bitstream without the JTAG consoles.
 - **The USB console survives the button and `_sysreset()`**, its state included: its
   interrupt setting, and the bytes waiting in its buffers; only a reset of the DDR3
   controller resets it.
