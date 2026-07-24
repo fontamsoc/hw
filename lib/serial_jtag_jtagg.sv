@@ -22,9 +22,14 @@
 // - JTDI is not the raw TDI pin; JTAGG registers it on the raw TCK
 //   rising edge.
 //
-// - The TDO pin is not driven combinationally from JTDO1/JTDO2;
-//   JTAGG registers them on the raw TCK falling edge while the
-//   selected user data-register is shifting.
+// - The one-TAP-state-early cadence which the phasing below engineers
+//   emits each device-to-host bit one shifting edge before the host
+//   samples it, hence the TDO path must be re-registered on a falling
+//   edge; measurement showed the JTAGG passes JTDO1/JTDO2 to the TDO
+//   pin combinationally (unlike some of its documentation), so this
+//   adapter provides that register itself, on the delayed clock's
+//   falling edge, making the pairing independent of the primitive's
+//   undocumented TDO pipeline.
 //
 // The JTAGG decodes and its JTDI register are timed by the raw TCK,
 // while the fabric is clocked by JTCK routed through this module's
@@ -159,7 +164,16 @@ assign tap_capture_o = (jce_i & ~jce_r);
 assign tap_shift_o   = jshift_i;
 assign tap_tdi_o     = jtdi_i;
 
-assign jtdo_o = tap_tdo_i;
+// The falling-edge tdo register described in the header; it samples
+// the phys' outputs before their own falling-edge updates land (a
+// same-clock register pair), retiming the one-edge-early stream onto
+// the host's sampling edges.
+reg [CHANNELCNT -1 : 0] jtdo_r = 0;
+always_ff @(negedge tap_tck_o) begin
+	jtdo_r <= tap_tdo_i;
+end
+
+assign jtdo_o = jtdo_r;
 
 endmodule
 
