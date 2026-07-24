@@ -7,7 +7,7 @@
 // Module implementing a first-word-fall-through fifo.
 // A fifo is useful, not only for buffering data, but also
 // to safely move data between two modules that use different
-// clocks, in order words to move data between two clock domains.
+// clocks, in other words to move data between two clock domains.
 
 // Parameters:
 //
@@ -22,7 +22,7 @@
 // Ports:
 //
 // rst_i
-// 	When high on "clk_push_i" and "clk_pop_i" posedges, the fifo reset
+// 	When high on "clk_push_i" and "clk_pop_i" posedges, the fifo resets
 // 	itself empty; it must be low to push data in the fifo.
 // 	Because the gray-index crossings each use a two flip-flop
 // 	synchronizer, "rst_i" must be held for at least four periods of the

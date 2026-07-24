@@ -43,8 +43,8 @@
 // the capture strobe fires at the Capture-DR entry rising edge (one
 // earlier than the BSCANE2 CAPTURE) and the last frame bit reaches
 // the phy one shifting edge past its commit; the TAPJTAGG=1 phy
-// compensates for both, and the one-state-early cadence through the
-// registered TDO pin then delivers the device-to-host stream on time.
+// compensates for both, and the one-state-early cadence through this
+// adapter's tdo register delivers the device-to-host stream on time.
 //
 // Limitation of the JCE-derived capture strobe: a JTAG host must not
 // pass through the Pause-DR state within a scan, as resuming re-fires

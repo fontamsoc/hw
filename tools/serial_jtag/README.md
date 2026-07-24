@@ -4,7 +4,8 @@
 terminal to the `serial_jtag` channels (`dev/serial_jtag.sv`) through
 the FPGA JTAG TAP with OpenOCD (>= 0.11), implementing the
 serial_jtag wire protocol. It works with the on-board USB-JTAG of
-the Arty A7-100T and Nexys A7-100T (single-device chain, xc7a100t),
+the Arty A7-100T and Nexys A7-100T (single-device chain, xc7a100t;
+of the two, only the Arty top instantiates the channels today),
 which is the same cable used to program the bitstream, and also
 supports the orangecrab (ECP5) through an external probe, see the
 orangecrab section below.
@@ -95,7 +96,7 @@ tools/serial_jtag/openocd_bridge.py --tap ecp5.tap --ir 0x32,0x38   # both chann
 Notes:
 - The JTAG host must shift each scan in one continuous pass, without
   passing through the Pause-DR state mid-scan (a limitation of the
-  JCE1-derived capture strobe, see the orangecrab top); OpenOCD's
+  JCE-derived capture strobe, see lib/serial_jtag_jtagg.sv); OpenOCD's
   drscan does so naturally.
 - Few adapter configurations set an `adapter speed`; when none is
   set, OpenOCD falls back to a very low clock rather than failing.
@@ -131,6 +132,11 @@ first, plus one padding bit (shift 0, ignore the last tdo bit).
 - Frame shifted out (device to host):
   `| rx_ready: 1 bit | tx_valid: 1 bit | tx_byte: 8 bits |`
 
+On the ecp5 the first frame of every scan is status-only (`tx_valid`
+low, its byte deferred to the following frame), hence a scan must be
+at least 2 frames to carry device-to-host data; both bridges always
+scan more.
+
 `rx_ready` reports whether the byte sent in the same frame slot was
 accepted; refused bytes are always a suffix of the bytes sent and
 must be resent, in order, at the beginning of the next scan. A
@@ -140,7 +146,8 @@ lost nor duplicated across scans.
 ## On-board test procedure
 
 1. Build the `impl_1` bitstream (Vivado 2020 project under
-   `rv32-artya7100/vivado2020/` or `rv32-nexysa7100/vivado2020/`)
+   `rv32-artya7100/vivado2020/`; the nexys project applies once its
+   top instantiates the channels)
    with a program which writes a banner to channel 0 then echoes
    channel 0 data-word reads back to writes; the driver code path is
    identical to the console serial peripheral, only the base

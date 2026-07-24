@@ -48,17 +48,17 @@
 // A TAP Test-Logic-Reset only discards the partial frame state.
 //
 // The TAP interface above is the Xilinx BSCANE2's; on the ecp5 the
-// JTAGG primitive registers JTDI and the TDO pin and has no CAPTURE
-// decode, hence its TAP signals must come through the
-// lib/serial_jtag_jtagg.sv adapter (which owns that contract) and the
-// phy must then be instantiated with TAPJTAGG=1: the incoming frame is
-// retapped one bit (the JTAGG-registered JTDI leaves only the never
-// consumed reserved bit not yet arrived at the committing edge), and
-// the capture frame is sent status-only ("tx_valid" low, the first
-// byte deferred to the frame after), as the ecp5 TDO pin register
-// cannot present a data bit 0 in time for the first shifting edge;
-// TAPJTAGGCAPDATA=1 restores a data-carrying capture frame on silicon
-// whose TDO pin register also samples during Capture-DR.
+// JTAGG primitive registers JTDI, passes JTDO combinationally to the
+// TDO pin and has no CAPTURE decode, hence its TAP signals must come
+// through the lib/serial_jtag_jtagg.sv adapter (which owns that
+// contract, including the falling-edge tdo register the pairing needs)
+// and the phy must then be instantiated with TAPJTAGG=1: the incoming
+// frame is retapped one bit (the JTAGG-registered JTDI leaves only the
+// never consumed reserved bit not yet arrived at the committing edge),
+// and the capture frame is sent status-only ("tx_valid" low, the first
+// byte deferred to the frame after); TAPJTAGGCAPDATA=1 restores a
+// data-carrying capture frame through that same adapter register, but
+// stays off by default as the safe variant is the hardware-proven one.
 
 // Ports:
 //
@@ -84,8 +84,8 @@
 // 	TAP data input; BSCANE2 "TDI" output.
 //
 // tap_tdo_o
-// 	TAP data output, updated on "tap_tck_i" negedge as JTAG requires;
-// 	to be connected to the BSCANE2 "TDO" input.
+// 	TAP data output, updated on "tap_tck_i" negedge, except a scan's
+// 	first bit 0 (combinational, see below); to the BSCANE2 "TDO" input.
 //
 // rx_push_o
 // rx_data_o
@@ -127,7 +127,7 @@ localparam FRAMEBITSZ = 10;
 
 // Set when the TAP signals come through the lib/serial_jtag_jtagg.sv
 // ecp5 adapter (see the header); TAPJTAGGCAPDATA additionally restores
-// a data-carrying capture frame (PINFF=2-style silicon only).
+// a data-carrying capture frame (simulation-validated, kept off).
 parameter TAPJTAGG        = 0;
 parameter TAPJTAGGCAPDATA = 0;
 
@@ -266,7 +266,7 @@ always_ff @(negedge tap_tck_i) begin
 end
 
 // Under the JTAGG adapter phasing the capture pulse dies at the load
-// rising edge itself, before the TDO pin register's falling-edge
+// rising edge itself, before the adapter tdo register's falling-edge
 // sample; the capture window is hence a flag registered at that edge
 // (set at the load, cleared one edge later), driving 0 (status-only
 // frame) or the loaded byte's bit 0 (TAPJTAGGCAPDATA, as outframe_w

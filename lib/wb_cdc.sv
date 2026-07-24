@@ -51,6 +51,9 @@ localparam ADDRBITSZ = (WORDBITSZ-CLOG2WORDBITSZBY8);
 // -1 account for the msb oring ignored bits.
 localparam MSBSZIGN = (WORDBITSZ-clog2(ADDRLIMIT)-1);
 
+// With ASYNC set, "rst_i" is forwarded to the fifo_async instances
+// and must satisfy their documented reset-hold contract: held for at
+// least four periods of the slower of the two clocks.
 input wire rst_i;
 
 input wire m_clk_i;
