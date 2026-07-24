@@ -1,12 +1,13 @@
 # serial_jtag console bridge
 
-`openocd_bridge.py` bridges a terminal to the `serial_jtag` channels
-(`dev/serial_jtag.sv`) through the FPGA JTAG TAP with OpenOCD,
-implementing the serial_jtag wire protocol. It works with the
-on-board USB-JTAG of the Arty A7-100T and Nexys A7-100T
-(single-device chain, xc7a100t), which is the same cable used to
-program the bitstream, and also supports the orangecrab (ECP5)
-through an external probe, see the orangecrab section below.
+`openocd_bridge.py` (Python 3, standard library only) bridges a
+terminal to the `serial_jtag` channels (`dev/serial_jtag.sv`) through
+the FPGA JTAG TAP with OpenOCD (>= 0.11), implementing the
+serial_jtag wire protocol. It works with the on-board USB-JTAG of
+the Arty A7-100T and Nexys A7-100T (single-device chain, xc7a100t),
+which is the same cable used to program the bitstream, and also
+supports the orangecrab (ECP5) through an external probe, see the
+orangecrab section below.
 
 ## Channels
 
@@ -27,10 +28,8 @@ Vivado debug core (ILA/VIO) would conflict with them. The ecp5 has
 only the two ER user data-registers, hence the orangecrab has
 channels 0 and 1 only.
 
-## OpenOCD bridge
+## Arty / Nexys A7 (XC7)
 
-`openocd_bridge.py` (Python 3, standard library only) implements the
-serial_jtag wire protocol through OpenOCD (>= 0.11).
 `openocd_xc7.cfg` matches the on-board Digilent USB-JTAG of both
 boards, and its `-expected-id` makes OpenOCD validate the xc7a100t
 IDCODE at startup.
@@ -98,6 +97,12 @@ Notes:
   passing through the Pause-DR state mid-scan (a limitation of the
   JCE1-derived capture strobe, see the orangecrab top); OpenOCD's
   drscan does so naturally.
+- Few adapter configurations set an `adapter speed`; when none is
+  set, OpenOCD falls back to a very low clock rather than failing.
+  Supply the speed for the probe in use (ie: append
+  `-c "adapter speed 10000"` to the openocd command), as
+  `openocd_ecp5.cfg` leaves it to the adapter configuration which
+  precedes it.
 - Bitstream programming still goes through dfu-util as usual; DFU
   and the JTAG probe do not conflict.
 
