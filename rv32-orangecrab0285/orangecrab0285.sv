@@ -41,6 +41,10 @@
 
 `include "dev/serial_usb.sv"
 
+`include "lib/serial_jtag_jtagg.sv"
+
+`include "dev/serial_jtag.sv"
+
 `include "dev/sram.sv"
 /* makefile defined *///`define SRAM_KBSIZE (256/*KB*/)
 /* makefile defined *///`define SRAM_INITFILE "orangecrab0285.sram.hex"
@@ -113,22 +117,28 @@ localparam CPU_COUNT = `CPU_COUNT;
 
 localparam M_WBPI_CPU     = 0;
 localparam M_WBPI_LAST    = M_WBPI_CPU;
-localparam S_WBPI_IRQCTRL = 0;
-localparam S_WBPI_SERIAL  = (S_WBPI_IRQCTRL + 1);
-localparam S_WBPI_SRAM    = (S_WBPI_SERIAL + 1);
-localparam S_WBPI_DEFAULT = (S_WBPI_SRAM + 1);
+localparam S_WBPI_SERIAL_JTAG = 0;
+// Count of serial_jtag channels; the ecp5 JTAGG primitive
+// has two user data-registers, ER1 and ER2.
+localparam SERIAL_JTAG_COUNT  = 2;
+localparam S_WBPI_IRQCTRL     = (S_WBPI_SERIAL_JTAG + SERIAL_JTAG_COUNT);
+localparam S_WBPI_SERIAL      = (S_WBPI_IRQCTRL + 1);
+localparam S_WBPI_SRAM        = (S_WBPI_SERIAL + 1);
+localparam S_WBPI_DEFAULT     = (S_WBPI_SRAM + 1);
 
 localparam WBPI_MDEVCOUNT = (M_WBPI_LAST + 1);
 localparam WBPI_SDEVCOUNT = (S_WBPI_DEFAULT + 1);
 
 localparam [0:(WBPI_SDEVCOUNT*2*32)-1] WBPI_SDEVS = {
-	/* S_WBPI_IRQCTRL */ 32'hf00,  32'(WORDBITSZ/8),
-	/* S_WBPI_SERIAL  */ 32'hf80,  32'(2*(WORDBITSZ/8)),
-	/* S_WBPI_SRAM    */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
-	/* S_WBPI_DEFAULT */ 32'h0,    32'h0};
+	/* S_WBPI_SERIAL_JTAG+0 */ 32'he80,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_SERIAL_JTAG+1 */ 32'hea0,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_IRQCTRL       */ 32'hf00,  32'(WORDBITSZ/8),
+	/* S_WBPI_SERIAL        */ 32'hf80,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_SRAM          */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
+	/* S_WBPI_DEFAULT       */ 32'h0,    32'h0};
 
 localparam WBPI_MAXPENDINGACK     = 32;
-localparam WBPI_DNSIZR            = 4'b0011;
+localparam WBPI_DNSIZR            = 6'b001111;
 localparam WBPI_WORDBITSZ         = `XWORDBITSZ;
 localparam WBPI_CLOG2WORDBITSZBY8 = clog2(WBPI_WORDBITSZ/8);
 localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
@@ -159,9 +169,10 @@ wire wbpi_clk_w = clk48mhz_w;
 // 	input  [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dati_w [WBPI_SDEVCOUNT];
 `include "lib/wbpi_inst.sv"
 
-localparam IRQ_SERIAL = 0;
+localparam IRQ_SERIAL      = 0;
+localparam IRQ_SERIAL_JTAG = (IRQ_SERIAL + 1);
 
-localparam IRQSRCCOUNT = (IRQ_SERIAL +1); // Number of interrupt sources.
+localparam IRQSRCCOUNT = (IRQ_SERIAL_JTAG + SERIAL_JTAG_COUNT); // Number of interrupt sources.
 localparam IRQDSTCOUNT = CPU_COUNT; // Number of interrupt destinations.
 wire [IRQSRCCOUNT -1 : 0] irq_src_stb_w;
 wire [IRQSRCCOUNT -1 : 0] irq_src_rdy_w;
@@ -287,6 +298,106 @@ serial_usb #(
 	,.usb_dp_io (usb_d_p)
 	,.usb_dn_io (usb_d_n)
 );
+
+// JTAG boundary-scan primitive through which the serial_jtag
+// channels are accessed, channel 0 through the ER1 (0x32) user
+// data-register and channel 1 through ER2 (0x38); there is no pin
+// constraint to add, as it taps the dedicated JTAG pins internally
+// (its pad ports TCK/TMS/TDI/TDO are implicit and left unconnected).
+// The JTAGG signals differ from the Xilinx BSCANE2's (registered
+// JTDI, combinational TDO pin, no CAPTURE decode, raw-TCK timing
+// racing the fabric clock) and go through the serial_jtag_jtagg
+// adapter which owns that contract, see its header (including the
+// no-Pause-DR host limitation); the serial_jtag devices are paired
+// with the adapter through their TAPJTAGG parameter.
+wire tap_tck_w;
+wire tap_tdi_w;
+wire [SERIAL_JTAG_COUNT -1 : 0] tap_tdo_w;
+wire jtagg_jrstn_w;
+wire jtagg_jshift_w;
+wire [SERIAL_JTAG_COUNT -1 : 0] jtagg_jce_w;
+wire [SERIAL_JTAG_COUNT -1 : 0] jtagg_jtdo_w;
+
+JTAGG jtagg (
+	 .JTDO1   (jtagg_jtdo_w[0])
+	,.JTDO2   (jtagg_jtdo_w[1])
+	,.JTDI    (tap_tdi_w)
+	,.JTCK    (tap_tck_w)
+	,.JRTI1   ()
+	,.JRTI2   ()
+	,.JSHIFT  (jtagg_jshift_w)
+	,.JUPDATE ()
+	,.JRSTN   (jtagg_jrstn_w)
+	,.JCE1    (jtagg_jce_w[0])
+	,.JCE2    (jtagg_jce_w[1])
+);
+
+wire                            tap_jtagg_tck_w;
+wire                            tap_jtagg_reset_w;
+wire [SERIAL_JTAG_COUNT -1 : 0] tap_jtagg_sel_w;
+wire [SERIAL_JTAG_COUNT -1 : 0] tap_jtagg_capture_w;
+wire                            tap_jtagg_shift_w;
+wire                            tap_jtagg_tdi_w;
+
+serial_jtag_jtagg #(
+	 .CHANNELCNT (SERIAL_JTAG_COUNT)
+) serial_jtag_jtagg (
+	 .jtck_i   (tap_tck_w)
+	,.jtdi_i   (tap_tdi_w)
+	,.jshift_i (jtagg_jshift_w)
+	,.jrstn_i  (jtagg_jrstn_w)
+	,.jce_i    (jtagg_jce_w)
+	,.jtdo_o   (jtagg_jtdo_w)
+
+	,.tap_tck_o     (tap_jtagg_tck_w)
+	,.tap_reset_o   (tap_jtagg_reset_w)
+	,.tap_sel_o     (tap_jtagg_sel_w)
+	,.tap_capture_o (tap_jtagg_capture_w)
+	,.tap_shift_o   (tap_jtagg_shift_w)
+	,.tap_tdi_o     (tap_jtagg_tdi_w)
+	,.tap_tdo_i     (tap_tdo_w)
+);
+
+genvar gen_serial_jtag_idx;
+generate for (
+	gen_serial_jtag_idx = 0;
+	gen_serial_jtag_idx < SERIAL_JTAG_COUNT;
+	gen_serial_jtag_idx = gen_serial_jtag_idx + 1) begin :gen_serial_jtag
+
+serial_jtag #(
+	 .WORDBITSZ (WORDBITSZ)
+	,.BUFSZ     (16
+		/* kept small, unlike on the Xilinx boards, because the
+		   transmit fifo maps to distributed ram whose area was
+		   measured to congest the 48 MHz timing closure */)
+	,.TAPJTAGG  (1)
+) serial_jtag (
+
+	 .rst_i (wbpi_rst_w)
+
+	,.clk_i (wbpi_clk_w)
+
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_SERIAL_JTAG + gen_serial_jtag_idx])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_SERIAL_JTAG + gen_serial_jtag_idx])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_SERIAL_JTAG + gen_serial_jtag_idx])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_SERIAL_JTAG + gen_serial_jtag_idx])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_SERIAL_JTAG + gen_serial_jtag_idx])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_SERIAL_JTAG + gen_serial_jtag_idx])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SERIAL_JTAG + gen_serial_jtag_idx])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SERIAL_JTAG + gen_serial_jtag_idx])
+
+	,.irq_stb_o (irq_src_stb_w[IRQ_SERIAL_JTAG + gen_serial_jtag_idx])
+	,.irq_rdy_i (irq_src_rdy_w[IRQ_SERIAL_JTAG + gen_serial_jtag_idx])
+
+	,.tap_tck_i     (tap_jtagg_tck_w)
+	,.tap_reset_i   (tap_jtagg_reset_w)
+	,.tap_sel_i     (tap_jtagg_sel_w[gen_serial_jtag_idx])
+	,.tap_capture_i (tap_jtagg_capture_w[gen_serial_jtag_idx])
+	,.tap_shift_i   (tap_jtagg_shift_w)
+	,.tap_tdi_i     (tap_jtagg_tdi_w)
+	,.tap_tdo_o     (tap_tdo_w[gen_serial_jtag_idx])
+);
+end endgenerate
 
 sram #(
 	 .WORDBITSZ (WBPI_WORDBITSZ)
