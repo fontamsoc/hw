@@ -97,6 +97,11 @@ module serial_jtag_fifo_phy (
 
 parameter DEPTH = 2;
 
+// Threaded to serial_jtag_phy; see its header (set when the TAP
+// signals come through the lib/serial_jtag_jtagg.sv ecp5 adapter).
+parameter TAPJTAGG        = 0;
+parameter TAPJTAGGCAPDATA = 0;
+
 localparam CLOG2DEPTH = clog2(DEPTH);
 
 input wire rst_i;
@@ -192,7 +197,12 @@ fifo_fwft_async #(
 	,.full_o      (tx_full_o)
 );
 
-serial_jtag_phy phy (
+serial_jtag_phy #(
+
+	 .TAPJTAGG        (TAPJTAGG)
+	,.TAPJTAGGCAPDATA (TAPJTAGGCAPDATA)
+
+) phy (
 
 	 .tap_tck_i     (tap_tck_i)
 	,.tap_reset_i   (tap_reset_i)

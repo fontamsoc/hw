@@ -46,6 +46,19 @@
 // This module has no reset input; its registers rely on FPGA power-on
 // initialization, and each scan reinitializes the framing at capture.
 // A TAP Test-Logic-Reset only discards the partial frame state.
+//
+// The TAP interface above is the Xilinx BSCANE2's; on the ecp5 the
+// JTAGG primitive registers JTDI and the TDO pin and has no CAPTURE
+// decode, hence its TAP signals must come through the
+// lib/serial_jtag_jtagg.sv adapter (which owns that contract) and the
+// phy must then be instantiated with TAPJTAGG=1: the incoming frame is
+// retapped one bit (the JTAGG-registered JTDI leaves only the never
+// consumed reserved bit not yet arrived at the committing edge), and
+// the capture frame is sent status-only ("tx_valid" low, the first
+// byte deferred to the frame after), as the ecp5 TDO pin register
+// cannot present a data bit 0 in time for the first shifting edge;
+// TAPJTAGGCAPDATA=1 restores a data-carrying capture frame on silicon
+// whose TDO pin register also samples during Capture-DR.
 
 // Ports:
 //
@@ -112,6 +125,15 @@ module serial_jtag_phy (
 
 localparam FRAMEBITSZ = 10;
 
+// Set when the TAP signals come through the lib/serial_jtag_jtagg.sv
+// ecp5 adapter (see the header); TAPJTAGGCAPDATA additionally restores
+// a data-carrying capture frame (PINFF=2-style silicon only).
+parameter TAPJTAGG        = 0;
+parameter TAPJTAGGCAPDATA = 0;
+
+// Status-only-capture-frame variant gate.
+localparam TAPJTAGGSAFE = ((TAPJTAGG != 0) && (TAPJTAGGCAPDATA == 0));
+
 input  wire tap_tck_i;
 input  wire tap_reset_i;
 input  wire tap_sel_i;
@@ -138,6 +160,9 @@ reg                     hold_valid_r = 1'b0; // Whether hold_data_r is a byte no
 reg                     pend_accept_r = 1'b0; // "rx_ready" advertised in the frame being shifted out.
 reg                     rx_reject_r = 1'b0; // Set once a valid incoming byte gets refused.
 reg                     tdo_r = 1'b0;
+// TAPJTAGG-only state; unused and pruned otherwise.
+reg                     firstcommit_r = 1'b0; // Between a capture load and the scan's first commit load.
+reg                     capff_r = 1'b0; // Registered capture window for the tdo mux.
 
 wire capture_w = (tap_sel_i && tap_capture_i);
 wire shift_w   = (tap_sel_i && tap_shift_i);
@@ -147,7 +172,13 @@ wire commit_w  = (shift_w && bitcnt_r == (FRAMEBITSZ-1));
 
 // Completed incoming frame as seen at the committing edge; its last
 // bit is on tap_tdi_i while its 9 first bits are in shift_r[9:1].
-wire [FRAMEBITSZ -1 : 0] inframe_w = {tap_tdi_i, shift_r[FRAMEBITSZ-1:1]};
+// Through the JTAGG-registered JTDI every bit reaches this phy one
+// shifting edge later, so at the committing edge "rx_valid" is on
+// tap_tdi_i and the byte in shift_r[9:2]; the only bit not yet
+// arrived is the reserved bit, which is never consumed.
+wire [FRAMEBITSZ -1 : 0] inframe_w = (TAPJTAGG ?
+	{1'b0, tap_tdi_i, shift_r[FRAMEBITSZ-1:2]} :
+	{tap_tdi_i, shift_r[FRAMEBITSZ-1:1]});
 
 assign rx_push_o = (commit_w && inframe_w[8] && pend_accept_r && !rx_reject_r && !rx_full_i);
 assign rx_data_o = inframe_w[7:0];
@@ -167,13 +198,19 @@ wire load_w = (capture_w || commit_w);
 // committing edge is resent instead of poping the transmit fifo;
 // at a committing edge, the byte of the frame which just completed
 // is retired, since the host has sampled all its bits by that edge.
-wire resend_w = (capture_w && hold_valid_r);
+// In the status-only-capture-frame variant the capture load neither
+// resends nor pops; a pending byte resends at the scan's first
+// commit load instead.
+wire resend_w = (TAPJTAGGSAFE ?
+	(commit_w && firstcommit_r && hold_valid_r) :
+	(capture_w && hold_valid_r));
 
-assign tx_pop_o = (load_w && !resend_w && !tx_empty_i);
+assign tx_pop_o = ((TAPJTAGGSAFE ? commit_w : load_w) && !resend_w && !tx_empty_i);
 
 wire [8 -1 : 0]          load_data_w  = (resend_w ? hold_data_r : tx_data_i);
 wire                     load_valid_w = (resend_w || tx_pop_o);
-wire [FRAMEBITSZ -1 : 0] outframe_w   = {accept_w, load_valid_w, load_data_w};
+wire [FRAMEBITSZ -1 : 0] outframe_w   = {accept_w,
+	((TAPJTAGGSAFE && capture_w) ? 9'b0 : {load_valid_w, load_data_w})};
 
 always_ff @(posedge tap_tck_i) begin
 	if (tap_reset_i) begin
@@ -182,6 +219,7 @@ always_ff @(posedge tap_tck_i) begin
 		// survives a TAP reset and gets resent.
 		bitcnt_r <= 0;
 		rx_reject_r <= 1'b0;
+		firstcommit_r <= 1'b0;
 	end else if (load_w) begin
 		// The loaded frame's first bit is presented on tap_tdo_o at this
 		// same edge (see the tap_tdo_o assignment), which the host captures
@@ -191,8 +229,11 @@ always_ff @(posedge tap_tck_i) begin
 		bitcnt_r <= 0;
 		rx_reject_r <= rx_reject_w;
 		pend_accept_r <= accept_w;
-		hold_data_r <= load_data_w;
-		hold_valid_r <= load_valid_w;
+		// The status-only capture load must not clobber a held byte
+		// with the un-popped transmit fifo head.
+		hold_data_r <= ((TAPJTAGGSAFE && capture_w) ? hold_data_r : load_data_w);
+		hold_valid_r <= ((TAPJTAGGSAFE && capture_w) ? hold_valid_r : load_valid_w);
+		firstcommit_r <= capture_w;
 	end else if (shift_w) begin
 		shift_r <= {tap_tdi_i, shift_r[FRAMEBITSZ-1:1]};
 		bitcnt_r <= (bitcnt_r + 1'b1);
@@ -224,7 +265,19 @@ always_ff @(negedge tap_tck_i) begin
 	tdo_r <= (commit_w ? outframe_w[0] : shift_r[0]);
 end
 
-assign tap_tdo_o = (capture_w ? outframe_w[0] : tdo_r);
+// Under the JTAGG adapter phasing the capture pulse dies at the load
+// rising edge itself, before the TDO pin register's falling-edge
+// sample; the capture window is hence a flag registered at that edge
+// (set at the load, cleared one edge later), driving 0 (status-only
+// frame) or the loaded byte's bit 0 (TAPJTAGGCAPDATA, as outframe_w
+// advances to the next fifo byte once the capture pop lands).
+always_ff @(posedge tap_tck_i) begin
+	capff_r <= (tap_reset_i ? 1'b0 : capture_w);
+end
+
+assign tap_tdo_o = (TAPJTAGG ?
+	(capff_r ? (TAPJTAGGCAPDATA ? hold_data_r[0] : 1'b0) : tdo_r) :
+	(capture_w ? outframe_w[0] : tdo_r));
 
 endmodule
 

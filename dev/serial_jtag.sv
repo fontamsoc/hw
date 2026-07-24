@@ -150,6 +150,11 @@ parameter WORDBITSZ = 32;
 
 parameter BUFSZ = 2;
 
+// Threaded to serial_jtag_phy; see its header (set when the TAP
+// signals come through the lib/serial_jtag_jtagg.sv ecp5 adapter).
+parameter TAPJTAGG        = 0;
+parameter TAPJTAGGCAPDATA = 0;
+
 localparam CLOG2BUFSZ = clog2(BUFSZ);
 
 localparam CLOG2WORDBITSZBY8 = clog2(WORDBITSZ/8);
@@ -294,7 +299,9 @@ end
 
 serial_jtag_fifo_phy #(
 
-	 .DEPTH (BUFSZ)
+	 .DEPTH           (BUFSZ)
+	,.TAPJTAGG        (TAPJTAGG)
+	,.TAPJTAGGCAPDATA (TAPJTAGGCAPDATA)
 
 ) phy (
 
