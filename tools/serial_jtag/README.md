@@ -5,7 +5,7 @@ terminal to the `serial_jtag` channels (`dev/serial_jtag.sv`) through
 the FPGA JTAG TAP with OpenOCD (>= 0.11), implementing the
 serial_jtag wire protocol. It works with the on-board USB-JTAG of
 the Arty A7-100T and Nexys A7-100T (single-device chain, xc7a100t;
-of the two, only the Arty top instantiates the channels today),
+each board's top gains the channels on its examples/ branch),
 which is the same cable used to program the bitstream, and also
 supports the orangecrab (ECP5) through an external probe, see the
 orangecrab section below.
@@ -63,10 +63,11 @@ Notes:
   -period 33.33` in the xdc, e.g. `rv32-artya7100/artya7100.xdc`). The
   FT2232H divisors are discrete, so the usefully faster steps are
   15 MHz and 30 MHz; a request for 20 or 25 MHz runs at the nearest
-  achievable, 15 MHz. To run at the maximum, set `adapter speed 30000`
-  in `openocd_xc7.cfg`. Raising throughput is just a matter of this
-  value, as the transfer rate is set entirely by the JTAG host; the
-  full 10-30 MHz range is round-trip tested. `openocd_xc7.cfg` samples
+  achievable step below the request, 15 MHz. To run at the maximum,
+  set `adapter speed 30000` in `openocd_xc7.cfg`. Raising throughput
+  is just a matter of this value, as the transfer rate is set
+  entirely by the JTAG host; the full 10-30 MHz range is round-trip
+  tested. `openocd_xc7.cfg` samples
   TDO on the falling TCK edge (`ftdi tdo_sample_edge falling`) to keep
   the top of that range reliable: at 30 MHz the TCK-to-TDO round-trip
   through the FPGA and the FT2232H narrows the rising-edge setup window
@@ -146,8 +147,7 @@ lost nor duplicated across scans.
 ## On-board test procedure
 
 1. Build the `impl_1` bitstream (Vivado 2020 project under
-   `rv32-artya7100/vivado2020/`; the nexys project applies once its
-   top instantiates the channels)
+   `rv32-artya7100/vivado2020/` or `rv32-nexysa7100/vivado2020/`)
    with a program which writes a banner to channel 0 then echoes
    channel 0 data-word reads back to writes; the driver code path is
    identical to the console serial peripheral, only the base
