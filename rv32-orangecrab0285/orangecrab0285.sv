@@ -7,6 +7,8 @@
 // an error when an undefined net is used.
 `default_nettype none
 
+`include "lib/ecp5pll.sv"
+
 `include "lib/rstctrl.sv"
 
 `define PURV32M
@@ -85,7 +87,20 @@ assign led_green_n = 1'b1;
 assign led_blue_n = 1'b1;
 
 localparam CLKFREQ48MHZ = 48000000;
-wire clk48mhz_w = clk48mhz_i;
+localparam CLKFREQ96MHZ = 96000000;
+wire [3:0] pll_clk_w;
+wire       pll_locked;
+ecp5pll #(
+	 .in_hz   (CLKFREQ48MHZ), .FREQUENCY_PIN_CLKI  ("48")
+	,.out0_hz (CLKFREQ48MHZ), .FREQUENCY_PIN_CLKOP ("48")
+	,.out1_hz (CLKFREQ96MHZ), .FREQUENCY_PIN_CLKOS ("96")
+) pll (
+	 .clk_i  (clk48mhz_i)
+	,.clk_o  (pll_clk_w)
+	,.locked (pll_locked)
+);
+wire clk48mhz_w = pll_clk_w[0];
+wire clk96mhz_w = pll_clk_w[1];
 
 wire rst_w;
 rstctrl #(
