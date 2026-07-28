@@ -63,6 +63,14 @@ Loads, `MUL` and `DIV` produce no value in EX. They leave EX having locked their
 
 `eX_JumpOrBranch_i` is resolved in EX from the decoded control and the dedicated branch comparator (`eX_eq_i`/`eX_brLt_i`/`eX_brLtu_i`), plus JALR, FENCE.I, ERET, prediction-miss and exception conditions. In the same cycle it redirects fetch (`iF_pc`, via `iF_eX_JumpOrBranch_i` and `eX_JumpOrBranchAddr_i`) and flushes the mis-fetched instruction(s) through `_iF_flushed`, which also suppresses their scoreboard lock. Mispredicted branches/JAL/RET and exceptions take the same redirect path.
 
+### Return-address stack
+
+`ras0..ras7` is a shift register with no pointer: a call pushes `iD_pc_plus_INSNBITSzBy8`, a return shifts everything back down, and both are gated on `iD_insn_valid`, so a wrong-path call or return never updates it and no misprediction recovery is needed. A push past 8 entries drops `ras7` on the floor.
+
+A pop of an empty stack leaves `ras7` in place, so it shifts back down and the last entry repeats. **That is deliberate and must stay that way.** It insures every predicted return address is one the pu has already executed from, and therefore mapped and aligned. This design has no instruction-access-fault and there is no bus watchdog, so a speculative fetch of an unmapped address is never acknowledged: in simulation it trips the default-slave trap, and on hardware it wedges the bus for every master. Such a fetch does reach the bus in practice, because a return whose `rs1` is still locked -- the ordinary `lw ra,N(sp)` epilogue -- stalls in ID and delays the redirect that would otherwise cancel the refill. Clearing `ras7` on underflow instead would turn every underflow into exactly that case, as address null is unmapped on every target, the lowest device being at 0xf00.
+
+Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by construction and can never raise the misaligned-fetch exception; only the branch and JAL predictions can.
+
 ## Peculiarities:
 - When CPU reset, the stack pointer register is set to the end of RAM. By convention, RAM starts at 0x1000.
 - Indefinitely halt (setting STATUS.MIE to 0) when an exception occurs and the trap vector address is null.
