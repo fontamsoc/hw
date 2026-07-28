@@ -1458,9 +1458,9 @@ always_ff @(posedge clk_i) begin
 			ras4 <= ras5;
 			ras5 <= ras6;
 			ras6 <= ras7;
-`ifdef SIMULATION
+			// Must stay disabled: duplicating ras7 insure a predicted return
+			// address is one already executed from; furthermore null is unmapped.
 			//ras7 <= {(WORDBITSZ-2){1'b0}};
-`endif
 		end
 	end
 end
