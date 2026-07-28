@@ -115,14 +115,17 @@ end
 
 reg [(((WORDBITSZ*2)+CLOG2GPRCNT)+IMULTYPEBITSZ) -1 : 0] args_r;
 
-wire [WORDBITSZ -1 : 0] arg0 = args_r[(WORDBITSZ*2)-1:WORDBITSZ];
-wire [WORDBITSZ -1 : 0] arg1 = args_r[WORDBITSZ-1:0];
-// When args_r[IMULSIGNED] == 0, an unsigned multiplication was done.
-// When args_r[IMULSIGNED] == 1, a signed multiplication was done.
-// If args_r[IMULLVALSIGND] == 1, the left operand is always treated as signed.
-wire arg0_sign = (arg0[WORDBITSZ-1] & (args_r[IMULSIGNED] || args_r[IMULLVALSIGND]));
-wire arg1_sign = (arg1[WORDBITSZ-1] & args_r[IMULSIGNED]);
-wire [(WORDBITSZ*2) -1 : 0] rslt_o_ = ($signed({arg0_sign, arg0}) * $signed({arg1_sign, arg1}));
+// The sign-extension is folded into the operand capture instead of being
+// derived from args_r afterward, as the pipelined variant above already does.
+// A DSP input port is registered or not as a whole port, so a single computed
+// bit keeps the entire port combinational and synthesis cannot use the DSP
+// input register; the sign bit is that computed bit, and it costs the launch
+// flop, its route to the sign gate, the gate, and the route into the DSP.
+// Capturing the sign-extended operands on the same edge as args_r removes all
+// of it and adds no cycle.
+reg signed [WORDBITSZ:0] opa_r; // Feeds only the multiply.
+reg signed [WORDBITSZ:0] opb_r; // Feeds only the multiply.
+wire [(WORDBITSZ*2) -1 : 0] rslt_o_ = (opa_r * opb_r);
 
 always_ff @(posedge clk_i) begin
 	if (rst_i) begin
@@ -130,6 +133,13 @@ always_ff @(posedge clk_i) begin
 	end else if (rdy_o) begin
 		if (stb_i) begin
 			args_r <= args_i;
+			// When args_i[IMULSIGNED] == 0, an unsigned multiplication is done.
+			// When args_i[IMULSIGNED] == 1, a signed multiplication is done.
+			// If args_i[IMULLVALSIGND] == 1, the left operand is always treated as signed.
+			opa_r <= {(args_i[(WORDBITSZ*2)-1] & (args_i[IMULSIGNED] || args_i[IMULLVALSIGND])),
+				args_i[(WORDBITSZ*2)-1:WORDBITSZ]};
+			opb_r <= {(args_i[WORDBITSZ-1] & args_i[IMULSIGNED]),
+				args_i[WORDBITSZ-1:0]};
 			rdy_o <= 0;
 		end
 	end else begin
