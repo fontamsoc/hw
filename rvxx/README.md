@@ -65,7 +65,7 @@ Loads, `MUL` and `DIV` produce no value in EX. They leave EX having locked their
 
 ### Return-address stack
 
-`ras0..ras7` is a shift register with no pointer: a call pushes `iD_pc_plus_INSNBITSzBy8`, a return shifts everything back down, and both are gated on `iD_insn_valid`, so a wrong-path call or return never updates it and no misprediction recovery is needed. A push past 8 entries drops `ras7` on the floor.
+`ras0..ras7` is a shift register with no pointer: a call — JAL or JALR with `rd` x1 — pushes `iD_pc_plus_INSNBITSzBy8`, a return — JALR with `rd` x0 and `rs1` x1 — shifts everything back down, and both are gated on `iD_insn_valid`, so a wrong-path call or return never updates it and no misprediction recovery is needed. A push past 8 entries drops `ras7` on the floor.
 
 A pop of an empty stack leaves `ras7` in place, so it shifts back down and the last entry repeats. **That is deliberate and must stay that way.** It insures every predicted return address is one the pu has already executed from, and therefore mapped and aligned. This design has no instruction-access-fault and there is no bus watchdog, so a speculative fetch of an unmapped address is never acknowledged: in simulation it trips the default-slave trap, and on hardware it wedges the bus for every master. Such a fetch does reach the bus in practice, because a return whose `rs1` is still locked -- the ordinary `lw ra,N(sp)` epilogue -- stalls in ID and delays the redirect that would otherwise cancel the refill. Clearing `ras7` on underflow instead would turn every underflow into exactly that case, as address null is unmapped on every target, the lowest device being at 0xf00.
 
@@ -100,3 +100,12 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	atomic instruction (e.g. amoswap of 0), as another hart's atomic access reads memory which
 	may hold stale data from the memory's previous use; statically allocated variables are safe,
 	as their memory starts zeroed.
+- The alternate link register x5/t0 is not supported by the return-address stack, which recognizes only
+	x1/ra: a call is JAL or JALR with rd x1, a return is JALR with rd x0 and rs1 x1, hence the
+	return-address-stack hints that the RISC-V spec defines for x5 are not implemented. That is a
+	prediction policy and never an architectural one, as every JALR is resolved in EX and redirected
+	to its exact target; an x5 based call or return merely costs the two issue slots of a fetch
+	redirect instead of being predicted. x5 is ignored by both the push and the pop, hence it never
+	unbalances the stack, and the prediction of surrounding x1 call/return pairs is never degraded.
+	Insure the toolchain is not built with -msave-restore: the millicode routines that it calls are
+	entered by a JALR writing x5 and return through a JALR reading x5, neither of which is predicted.
