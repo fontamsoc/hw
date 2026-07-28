@@ -230,27 +230,27 @@ wire [31:0] idivDn   = (divabsdvsr << idivS);      // normalized divider (MSB at
 wire [33:0] idivSeed = idivRecipSeed(idivDn[30:24]);
 
 reg [33:0] nrR;             // reciprocal r*2^32 (r=1/dn in (1,2])
-reg [33:0] nrDR;            // dn*r*2^32 (~2^32)
 reg [32:0] nrQ;             // approximate quotient
 reg [31:0] nrN, nrD, nrDn;  // |dividend|, |divider|, normalized divider
 reg [5:0]  nrS;             // clz(|D|)
 reg signed [33:0] nrRem;    // |N| - Q*|D| (pre-correction)
 
-// one muxed ~34x34 multiply per cycle (-> MULT18X18D), sequenced over the NR schedule.
-reg [33:0] nrMulA, nrMulB; // ### comb-block-reg.
-always_comb begin
-	nrMulA = {2'b0, nrDn}; nrMulB = nrR;
-	case (cntr)
-	6'd0: begin nrMulA = {2'b0, nrDn}; nrMulB = nrR;                   end // Dn * R0
-	6'd1: begin nrMulA = nrR;          nrMulB = ({1'b1,33'd0} - nrDR); end // R0 * (2 - Dn*R0)
-	6'd2: begin nrMulA = {2'b0, nrDn}; nrMulB = nrR;                   end // Dn * R1
-	6'd3: begin nrMulA = nrR;          nrMulB = ({1'b1,33'd0} - nrDR); end // R1 * (2 - Dn*R1)
-	6'd4: begin nrMulA = {2'b0, nrN};  nrMulB = nrR;                   end // |N| * R2
-	6'd5: begin nrMulA = {1'b0, nrQ};  nrMulB = {2'b0, nrD};           end // Q * |D|  (residual)
-	default: ;
-	endcase
-end
-wire [67:0] nrProd = nrMulA * nrMulB;
+// one ~34x34 multiply per cycle (-> MULT18X18D), sequenced over the NR schedule.
+// The operand select is folded into the operand capture instead of being muxed
+// in front of the multiply, as the pipelined variant above already does. A DSP
+// input port is registered or not as a whole port, so a select sitting in front
+// of the multiply keeps the entire port combinational and synthesis cannot use
+// the DSP input register; here every operand bit came out of that select. The
+// schedule below loads what the next cycle multiplies, with the (2 - Dn*R)
+// subtract and the quotient shift folded into the load, which insures no cycle
+// is added; it also retires nrDR, whose only readers were those two subtracts.
+reg [33:0] nrOpa_r; // Feeds only the multiply.
+reg [33:0] nrOpb_r; // Feeds only the multiply.
+wire [67:0] nrProd = (nrOpa_r * nrOpb_r);
+
+// Quotient from the |N|*R2 product; loaded as the residual multiply operand on
+// the same clockedge as nrQ, so that both are set from the same value.
+wire [32:0] nrQ_w = (nrProd >> (7'd64 - {1'b0, nrS}));
 
 // single +/-1 residual correction (combinational, from the registered nrRem/nrQ).
 wire signed [33:0] nrD_s  = $signed({2'b0, nrD});
@@ -270,17 +270,32 @@ always_ff @(posedge clk_i) begin
 			nrDn <= idivDn;
 			nrS  <= idivS;
 			nrR  <= idivSeed;
+			// Operands of the cycle-0 multiply; they come off the same
+			// clz/normalize/seed cone as nrDn and nrR above, hence the
+			// capture cycle gains no logic depth.
+			nrOpa_r <= {2'b0, idivDn};
+			nrOpb_r <= idivSeed;
 			rdy_o <= 0;
 			cntr  <= 0;
 		end
 	end else begin
+		// Each arm consumes the product of the cycle it runs in and loads the
+		// operands that the next cycle multiplies. Which of the two operand
+		// registers a value is loaded into matters, even though the multiply
+		// is commutative: putting both nrProd[65:32] and (2 - nrProd[65:32])
+		// on the same register makes the mapper rebuild the product recombine
+		// once per arm rather than sharing it, so the two are deliberately
+		// split across the two registers (measured on ecp5 as 891 versus 355
+		// added cells).
 		case (cntr)
-		6'd0: nrDR <= nrProd[65:32];                                          // Dn*R0 >> 32
-		6'd1: nrR  <= nrProd[65:32];                                          // R1
-		6'd2: nrDR <= nrProd[65:32];                                          // Dn*R1 >> 32
-		6'd3: nrR  <= nrProd[65:32];                                          // R2
-		6'd4: nrQ  <= (nrProd >> (7'd64 - {1'b0, nrS}));                      // (|N|*R2) >> (64 - clz)
-		6'd5: nrRem <= $signed({2'b0, nrN}) - $signed({1'b0, nrProd[32:0]});  // |N| - Q*|D|
+		6'd0: begin nrOpa_r <= ({1'b1,33'd0} - nrProd[65:32]); nrOpb_r <= nrR; end // (2 - Dn*R0) * R0
+		6'd1: begin nrR <= nrProd[65:32];                                          // R1
+		            nrOpa_r <= {2'b0, nrDn}; nrOpb_r <= nrProd[65:32]; end         // Dn * R1
+		6'd2: begin nrOpa_r <= ({1'b1,33'd0} - nrProd[65:32]); nrOpb_r <= nrR; end // (2 - Dn*R1) * R1
+		6'd3: begin nrOpa_r <= {2'b0, nrN}; nrOpb_r <= nrProd[65:32]; end          // |N| * R2
+		6'd4: begin nrQ <= nrQ_w;                                                  // (|N|*R2) >> (64 - clz)
+		            nrOpa_r <= {1'b0, nrQ_w}; nrOpb_r <= {2'b0, nrD}; end          // Q * |D|  (residual)
+		6'd5: nrRem <= $signed({2'b0, nrN}) - $signed({1'b0, nrProd[32:0]});       // |N| - Q*|D|
 		6'd6: cumulator <= {nrRemC[WORDBITSZ-1:0], nrQc[WORDBITSZ-1:0]};
 		default: ;
 		endcase
