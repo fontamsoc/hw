@@ -99,6 +99,7 @@ TESTS += x0fwd
 TESTS += mcsr
 TESTS += machine_csr
 TESTS += scsr
+TESTS += csrwrsel
 TESTS += msbreak
 TESTS += ssbreak
 TESTS += mscall

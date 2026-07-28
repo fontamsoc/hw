@@ -114,6 +114,7 @@ _start:
 	TEST(mcsr)
 	TEST(machine_csr)
 	TEST(scsr)
+	TEST(csrwrsel)
 	TEST(msbreak)
 	TEST(ssbreak)
 	TEST(mscall)
