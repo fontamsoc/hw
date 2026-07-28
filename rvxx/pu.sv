@@ -1791,7 +1791,22 @@ end
 // Capture whether a gpr was already locked when it got locked.
 always_ff @(posedge clk_i) begin
 	if (iD_en && gprLock)
-		rdWasLocked <= (!gprRdy[_iF_rdId] && (!rW_we_i || (_iF_rdId != rW_idx_i)));
+		/* The carve-out above assumes that a same-index writeback releases the
+		gpr, but gprUnlock holds that release back whenever the instruction
+		leaving the iDecoded stage owns the same gpr; the gpr then stays locked
+		and rdWasLocked must stay true. Without the second term, admitting a
+		third writer of a gpr on the cycle an older writer retired dropped the
+		lock of a lateResult instruction still in flight, and the exception
+		fix-up below released a gpr it did not own, losing the in-flight result
+		into the trap handler's context. Reusing gprUnlock here would be
+		equivalent, but it is compared against _iF_rdId rather than rW_idx_i,
+		which is the late signal on this flop's cone, and gprUnlock's
+		!excTriggered is left out: excTriggered forces _iF_flushed through
+		iF_eX_JumpOrBranch_i, hence !gprLock, so this is never sampled with
+		excTriggered true. The two comparisons agree wherever the term is
+		consulted, since it only matters when _iF_rdId == rW_idx_i. */
+		rdWasLocked <= ((!gprRdy[_iF_rdId] && (!rW_we_i || (_iF_rdId != rW_idx_i))) ||
+			(!iD_flushed && (iD_rdId == _iF_rdId)));
 	else if (rdWasLocked && rW_we_i && iD_rdId == rW_idx_i)
 		rdWasLocked <= 1'b0;
 end
@@ -1801,6 +1816,87 @@ always_ff @(posedge clk_i) begin
 	if (rW_carryon) begin
 		rW_pc   <= eX_pc;
 		rW_insn <= eX_insn;
+	end
+end
+`endif
+
+`ifdef SIMULATION
+// Report a gpr advertised ready in gprRdy while a late result still owns it.
+// The scoreboard guarantees a single legitimate producer per register, so a gpr
+// locked by a load/AMO/MUL/DIV/clmul/zbb/fpu must stay locked until that result
+// retires; the exception fix-up above leaves the unlock to the lateResult
+// instruction that owns the gpr, keyed on rdWasLocked. A violation here means an
+// interrupted instruction released a gpr it did not own, so the trap handler
+// stops stalling on it, reads a stale value, and the in-flight result lands in
+// the handler's context instead of the interrupted code's.
+// gprLateOwners counts the late results in flight per gpr; the count is used
+// instead of a bit so that a stacked producer cannot mask a leak. x0 is skipped:
+// it is never locked (gprLock needs a non-null rd) although a late result can
+// target it (lw/div/amo* x0), so it is excluded on both the dispatch and the
+// retirement side to keep the count balanced.
+// gprLateOwners counts the late results in flight per gpr; a count rather than a
+// bit, so that a second producer admitted after a premature unlock cannot mask
+// the first one still being in flight.
+integer gprLateOwners [GPRCNT];
+integer gprLateOwnersCmbIdx;
+integer gprLateOwnersSeqIdx;
+integer gprLateOwnersEndIdx;
+integer gprLateOwnersFires;
+reg [GPRCNT -1 : 0] gprLateOwnersBad;   // ### comb-block-reg.
+reg [GPRCNT -1 : 0] gprLateOwnersBad_r; // Delayed, so each episode reports once.
+// iD_lateResultInsn && iD_insn_valid is the union of every late unit's strobe,
+// which are all (iD_<unit>_stb && iD_insn_valid), and every one of them carries
+// iD_rdId as its gprid; sc.w is rightly absent, retiring through the pipeline
+// slot instead. x0 is skipped on both sides to keep the count balanced: it is
+// never locked, yet a late result can target it (lw/div/amo* x0), and an
+// RV32M instruction with a null rd sets iD_lateResultInsn while strobing no
+// unit at all.
+wire gprLateDispatch = (iD_lateResultInsn && iD_insn_valid && |iD_rdId);
+wire gprLateRetire   = (rW_isMulticycle && |rW_idx_i);
+always_comb begin
+	for (gprLateOwnersCmbIdx = 1; gprLateOwnersCmbIdx < GPRCNT; gprLateOwnersCmbIdx = gprLateOwnersCmbIdx + 1)
+		gprLateOwnersBad[gprLateOwnersCmbIdx] = (gprRdy[gprLateOwnersCmbIdx] && gprLateOwners[gprLateOwnersCmbIdx] != 0);
+	gprLateOwnersBad[0] = 1'b0;
+end
+always_ff @(posedge clk_i) begin
+	if (rst_i) begin
+		for (gprLateOwnersSeqIdx = 0; gprLateOwnersSeqIdx < GPRCNT; gprLateOwnersSeqIdx = gprLateOwnersSeqIdx + 1)
+			gprLateOwners[gprLateOwnersSeqIdx] <= 0;
+		gprLateOwnersFires <= 0;
+		gprLateOwnersBad_r <= {GPRCNT{1'b0}};
+	end else begin
+		// The increment and the decrement are applied together rather than as an
+		// if-else: PUFWDALL issues a younger late producer of a gpr on the very
+		// cycle the older one retires, so both can name the same gpr and must
+		// then net to zero.
+		if (gprLateDispatch && !(gprLateRetire && rW_idx_i == iD_rdId))
+			gprLateOwners[iD_rdId] <= gprLateOwners[iD_rdId] + 1;
+		if (gprLateRetire && !(gprLateDispatch && iD_rdId == rW_idx_i))
+			gprLateOwners[rW_idx_i] <= gprLateOwners[rW_idx_i] - 1;
+		// gprRdy and gprLateOwners are both written by non-blocking assignments
+		// on this edge, so the values compared are the pair that was settled
+		// through the cycle just ended; on a legitimate retirement gprRdy rises
+		// and the count drops together, and neither ordering reports.
+		gprLateOwnersBad_r <= gprLateOwnersBad;
+		for (gprLateOwnersSeqIdx = 1; gprLateOwnersSeqIdx < GPRCNT; gprLateOwnersSeqIdx = gprLateOwnersSeqIdx + 1)
+			if (gprLateOwnersBad[gprLateOwnersSeqIdx] && !gprLateOwnersBad_r[gprLateOwnersSeqIdx]) begin
+				gprLateOwnersFires <= gprLateOwnersFires + 1;
+				$display("pu%0d: error: gpr x%0d ready while %0d late result(s) still target it, iD_pc %h rdWasLocked %0d",
+					PUID, gprLateOwnersSeqIdx, gprLateOwners[gprLateOwnersSeqIdx], iD_pc, rdWasLocked);
+			end
+	end
+end
+// A late result that never retires would leave the invariant vacuously true, so
+// report any residue, and the episode count, once the run is winding down.
+// Nothing is printed by a clean run, which keeps every app's output unchanged.
+always_ff @(posedge clk_i) begin
+	if (endSimRq && !wb_pending_acks) begin
+		for (gprLateOwnersEndIdx = 1; gprLateOwnersEndIdx < GPRCNT; gprLateOwnersEndIdx = gprLateOwnersEndIdx + 1)
+			if (gprLateOwners[gprLateOwnersEndIdx] != 0)
+				$display("pu%0d: error: gpr x%0d left with %0d late result(s) in flight",
+					PUID, gprLateOwnersEndIdx, gprLateOwners[gprLateOwnersEndIdx]);
+		if (gprLateOwnersFires != 0)
+			$display("pu%0d: error: %0d scoreboard violation(s)", PUID, gprLateOwnersFires);
 	end
 end
 `endif
