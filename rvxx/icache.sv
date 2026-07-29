@@ -59,8 +59,13 @@ output wire                      hit_o;
 
 output reg rdy_o;
 
+reg hitRdy;
 wire [WAYCNT -1 : 0] hit_o_;
-assign hit_o = ((|hit_o_) && rdy_o);
+// A hit is qualified by rdy_o having been high already, not by it being high now;
+// the cache reset writes its last set on the very edge that raises rdy_o, so a read
+// issued in that cycle would collide with that write if it was reading that same set,
+// and must not be believed. So here qualifying with hitRdy rather than with rdy_o.
+assign hit_o = ((|hit_o_) && hitRdy);
 
 wire _we_i = (we_i && rdy_o);
 
@@ -68,19 +73,18 @@ wire _we_i = (we_i && rdy_o);
 reg [CLOG2SETCNT -1 : 0] rstidx;
 
 always_ff @(posedge clk_i) begin
-	if (rst_i) begin
-		rdy_o <= 0;
-		rstidx <= {CLOG2SETCNT{1'b1}};
-	end else if (invd_i) begin
+	if (rst_i || invd_i) begin
 		// TODO: Invalidate using a date ...
 		rdy_o <= 0;
+		hitRdy <= 0;
 		rstidx <= {CLOG2SETCNT{1'b1}};
 	end else if (!rdy_o) begin
 		if (rstidx)
 			rstidx <= rstidx - 1'b1;
 		else
 			rdy_o <= 1;
-	end
+	end else
+		hitRdy <= 1;
 end
 
 // Register used to hold the way index to write next; undriven and unused when (WAYCNT == 1).
@@ -165,6 +169,8 @@ bram #(
 	,.i1      (dat_i)
 );
 
+wire ___we_i = (__we_i || !rdy_o);
+
 bram #(
 	 .SZ (SETCNT)
 	,.DW (1)
@@ -175,8 +181,8 @@ bram #(
 	,.addr0_i (ridx_i)
 	,.o0      (vldo[gen_ways_idx])
 	,.clk1_i  (clk_i)
-	,.en1_i   (__we_i || !rdy_o)
-	,.we1_i   (__we_i || !rdy_o)
+	,.en1_i   (___we_i)
+	,.we1_i   (___we_i)
 	,.addr1_i (rdy_o ? widx_i : rstidx)
 	,.i1      (rdy_o)
 );
