@@ -169,16 +169,18 @@ always_ff @(posedge clk_i) begin
 	end
 end
 
+// The lock is released by the next accepted access that does not carry it, ie: the
+// store-conditional's store, or the atomic memory operation's write-back. An access
+// carrying it while it is already set holds it, hence an atomic's own retries hold it.
+// Instruction fetches interleave inside an atomic's window and must not release it,
+// which is why memctrl.pu.sv carries the lock through them rather than leaving it null.
 reg wb_lock;
-reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] wb_lock_addr;
 always_ff @(posedge clk_i) begin
 	if (rst_i)
 		wb_lock <= 1'b0;
 	else if (MDEVCOUNT > 1) begin
 		if (_s_wb_stb_o)
-			wb_lock <= (s_wb_lock_o || (wb_lock && (s_wb_addr_o != wb_lock_addr)));
-		if (_s_wb_stb_o && !wb_lock)
-			wb_lock_addr <= s_wb_addr_o;
+			wb_lock <= s_wb_lock_o;
 	end
 end
 

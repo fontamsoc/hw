@@ -39,6 +39,23 @@ always_ff @(posedge clk_i) begin
 		wb_pending_acks <= (wb_rqst_accepted ? (wb_pending_acks + 1'b1) : (wb_pending_acks - 1'b1));
 end
 
+// wb_arbiter.sv releases the bus lock on the next accepted access that does not carry it.
+// An instruction fetch interleaves inside an atomic operation's window, between its
+// load-reserved and store-conditional, or between its read and write-back, so leaving
+// wb_lock_o null for the fetch would release the lock in the middle of that window.
+// wb_lock_r retains what the last accepted access carried, and wb_lock_o defaults to it
+// below, hence a fetch holds the lock instead of releasing it, and only the data-cache
+// branch ever changes it. This mirrors dcache.sv's lock_r, which tracks the same state
+// from the same accesses to give an atomic operation priority over coherency requests.
+reg wb_lock_r;
+
+always_ff @(posedge clk_i) begin
+	if (rst_i)
+		wb_lock_r <= 1'b0;
+	else if (wb_rqst_accepted)
+		wb_lock_r <= wb_lock_o;
+end
+
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] iF_mem_seq;
 reg                                  iF_mem_seq_valid;
 
@@ -99,7 +116,7 @@ end
 always_comb begin
 
 	wb_stb_o = 0;
-	wb_lock_o = 0;
+	wb_lock_o = wb_lock_r;
 	wb_we_o = 0;
 	wb_addr_o = 0;
 	wb_sel_o = 0;
