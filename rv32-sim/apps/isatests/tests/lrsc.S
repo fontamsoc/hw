@@ -38,19 +38,21 @@ TEST_CASE( 3, a4, 0, \
 )
 
 #
-# Disable test case 4 for now. It assumes a <1K reservation granule, when
-# in reality any size granule is valid. After discussion in issue #315,
-# decided to simply disable the test for now.
-# (See https://github.com/riscv/riscv-tests/issues/315)
+# Test case 4 is enabled here, unlike upstream, which disabled it because it
+# assumes a reservation granule under 1K when in reality any size granule is
+# valid. (See https://github.com/riscv/riscv-tests/issues/315.) It is valid on
+# rvxx because the granule is exactly one word: lsu.pu.sv compares the whole
+# reserved address against the store-conditional's, and gates both the store and
+# its result on that, hence a store-conditional 1028 bytes away from the
+# load-reserved must fail. Insure it is disabled again if that is ever widened.
 #
-## make sure that sc with the wrong reservation fails.
-## TODO is this actually mandatory behavior?
-#TEST_CASE( 4, a4, 1, \
-#  la a0, foo; \
-#  la a1, fooTest3; \
-#  lr.w a1, (a1); \
-#  sc.w a4, a1, (a0); \
-#)
+# make sure that sc with the wrong reservation fails.
+TEST_CASE( 4, a4, 1, \
+  la a0, foo; \
+  la a1, fooTest3; \
+  lr.w a1, (a1); \
+  sc.w a4, a1, (a0); \
+)
 
 #define LOG_ITERATIONS 10
 
