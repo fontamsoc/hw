@@ -134,4 +134,8 @@ end
 // path -- the worst, routing-bound scoreboard/AMO/dCache cone.
 assign _amoUnit_lrValid = (amoUnit_lrValid && (amoUnit_LrAddr == iD_rs1));
 
-assign eX_StoreCondOut_i = {{(WORDBITSZ-1){1'b0}}, !amoUnit_lrValid};
+// Qualified by _amoUnit_lrValid, exactly as the store is: dcache.pu.sv gates the
+// store-conditional memory request on _amoUnit_lrValid, so a store-conditional whose
+// address is not the reserved one performs no store, and must accordingly report
+// failure. Reading amoUnit_lrValid here instead would report success for it.
+assign eX_StoreCondOut_i = {{(WORDBITSZ-1){1'b0}}, !_amoUnit_lrValid};
