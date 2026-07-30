@@ -100,6 +100,28 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	atomic instruction (e.g. amoswap of 0), as another hart's atomic access reads memory which
 	may hold stale data from the memory's previous use; statically allocated variables are safe,
 	as their memory starts zeroed.
+- A load-reserved, and the read phase of an atomic memory operation, raise the Wishbone bus lock,
+	which lib/wb_arbiter.sv turns into a grant hold: while it is set the granted hart cannot change
+	and every other hart is held busy, which reaches instruction fetching through memctrl.pu.sv,
+	hence a hart that is not granted executes nothing at all. It is released by the lock owner's
+	next accepted access that does not carry it, ie: the store-conditional's store, or the atomic
+	memory operation's write-back. Instruction fetches interleaved inside that window carry the
+	lock, so that they hold it rather than release it; every other access the hart can make inside
+	that window either carries it too, the data-cache's own write-back and refill, or is suppressed
+	for the duration, the cache-coherency path.
+	Nothing bounds when the releasing access comes, and a store-conditional is allowed to issue no
+	store at all: branched over, which is what gcc emits for a compare-and-swap whose compare
+	fails, its reservation cancelled, or with no store-conditional after the load-reserved. Such an
+	abandoned sequence therefore holds the bus until that hart's next load, store or atomic. A
+	retry loop holding a load-reserved and no other data access, ie: `1: lr.w t0,(a0); bnez t0,1b`,
+	issues none and starves the other harts for as long as it spins; use instead the
+	compare-and-swap shape, whose store-conditional is inside the loop. Note that the starvation is
+	not observed to be one-sided: the holder stops making progress as well rather than running on,
+	so a lock left held wedges the whole machine rather than merely losing a hart.
+	The hold cannot be bounded in hardware as this design stands. A store-conditional's success is
+	decided at decode (`_amoUnit_lrValid`), so breaking the lock early would let one report success
+	after another hart had interposed; bounding it safely needs the store-conditional resolved at
+	the bus instead.
 - The alternate link register x5/t0 is not supported by the return-address stack, which recognizes only
 	x1/ra: a call is JAL or JALR with rd x1, a return is JALR with rd x0 and rs1 x1, hence the
 	return-address-stack hints that the RISC-V spec defines for x5 are not implemented. That is a
