@@ -202,6 +202,36 @@ always_ff @(posedge clk_i) begin
 	end
 end
 
+`ifdef SIMULATION
+// The lock is released by the lock owner's next accepted access that does not carry
+// it, and nothing bounds when that comes: an atomic sequence whose store-conditional
+// is branched over or never reached holds it until that hart's next load, store or
+// atomic, and a retry loop holding a load-reserved and no other data access issues
+// none at all. Every other master is held busy meanwhile, down to its instruction
+// fetching, so it executes nothing; there is no bus watchdog and no cycle limit,
+// hence that presents as a silent run forever. Report it instead.
+// Held length alone is the tell, rather than also testing that another master is
+// requesting: a starved master is held busy before it can even present a request,
+// so that would be missed exactly when it matters.
+localparam LOCKHELDLIMIT = 4096; // Well above any load-reserved to store-conditional window.
+reg [(clog2(LOCKHELDLIMIT) +1) -1 : 0] lockheldcnt;
+always_ff @(posedge clk_i) begin
+	if (rst_i || !wb_lock)
+		lockheldcnt <= 0;
+	else if (lockheldcnt != LOCKHELDLIMIT) begin
+		lockheldcnt <= lockheldcnt + 1'b1;
+		if (lockheldcnt == (LOCKHELDLIMIT - 1)) begin
+			$display("%m: error: bus lock held %0d clockcycles by master %0d, starving the others",
+				LOCKHELDLIMIT, mstridx);
+			// Flushed because what this reports is a run that never ends, hence one
+			// that gets killed rather than reaching $finish, and an unflushed report
+			// is lost exactly when it is the only thing that was going to be printed.
+			$fflush();
+		end
+	end
+end
+`endif
+
 endmodule
 
 `endif /* WB_ARBITER_V */
