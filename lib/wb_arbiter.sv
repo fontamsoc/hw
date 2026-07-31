@@ -103,6 +103,12 @@ wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] _m_wb_addr_i [MDEVCOUNT];
 wire [(WORDBITSZ/8) -1 : 0]        _m_wb_sel_i  [MDEVCOUNT];
 wire [WORDBITSZ -1 : 0]            _m_wb_dat_i  [MDEVCOUNT];
 
+// Masters other than the granted one, asserting their strobe. A master held
+// busy does still present its request, memctrl.pu.sv suppressing its strobe
+// only on its own pending-ack throttle and never on wb_bsy_i, hence this reads
+// as "another master is waiting on the grant".
+wire [MDEVCOUNT -1 : 0] mstroth;
+
 genvar gen_m_wb_idx;
 generate for (
 	gen_m_wb_idx = 0;
@@ -120,6 +126,8 @@ assign _m_wb_dat_i[gen_m_wb_idx] =
 
 assign m_wb_bsy_o[gen_m_wb_idx] = ((mstridx == gen_m_wb_idx) ? (s_wb_bsy_i || pendingAcksFull) : 1'b1);
 
+assign mstroth[gen_m_wb_idx] = ((mstridx == gen_m_wb_idx) ? 1'b0 : m_wb_stb_i[gen_m_wb_idx]);
+
 assign m_wb_ack_o[gen_m_wb_idx] = ((slvidx == gen_m_wb_idx) ? s_wb_ack_i : 1'b0);
 
 assign m_wb_dat_o[((gen_m_wb_idx+1) * WORDBITSZ) -1 : (gen_m_wb_idx * WORDBITSZ)] = s_wb_dat_i;
@@ -127,6 +135,8 @@ assign m_wb_dat_o[((gen_m_wb_idx+1) * WORDBITSZ) -1 : (gen_m_wb_idx * WORDBITSZ)
 end endgenerate
 
 wire _m_wb_stb_i = m_wb_stb_i[mstridx];
+
+wire mstrothrqst = |mstroth;
 
 assign s_wb_stb_o = (pendingAcksFull ? 1'b0 : _m_wb_stb_i);
 assign s_wb_lock_o = m_wb_lock_i[mstridx];
@@ -175,12 +185,52 @@ end
 // Instruction fetches interleave inside an atomic's window and must not release it,
 // which is why memctrl.pu.sv carries the lock through them rather than leaving it null.
 reg wb_lock;
+// What wb_lock takes at this clockedge. The rotation below reads this rather than
+// wb_lock itself, so that it cannot rotate away from the master whose locked access
+// is being accepted right now: that would leave the grant on another master with the
+// lock set, and the write-back which releases it could never issue.
+wire wb_lock_nxt = (_s_wb_stb_o ? s_wb_lock_o : wb_lock);
 always_ff @(posedge clk_i) begin
 	if (rst_i)
 		wb_lock <= 1'b0;
+	else if (MDEVCOUNT > 1)
+		wb_lock <= wb_lock_nxt;
+end
+
+// Nothing else bounds how long one master holds the grant. Rotating only in a
+// clockcycle for which the granted master is not requesting means a master which
+// keeps its strobe asserted keeps the bus, and a master's strobe stays asserted
+// until its access is accepted, which a slave is under no obligation to ever do:
+// the character devices hold wb_bsy_o for as long as their receive buffer is
+// empty, so a read of the data register with no byte pending holds it forever.
+// Every other master is held busy meanwhile, down to its instruction fetching,
+// hence one master waiting on a device would otherwise stop the whole machine.
+// Rotate away from it instead, once it has held the grant this long and another
+// master is waiting. Preempting it loses nothing, the request being re-presented
+// until accepted, and the response carrying the master it belongs to through
+// pendingAcks rather than through mstridx.
+// The limit has a floor as well as a purpose, and it is the bus lock that sets it.
+// Rotation is blocked while the lock is held, so a limit shorter than the interval
+// between a master's accesses hands the grant away in the very clockcycle the lock
+// releases, and the master it hands to takes the lock with its own next access
+// before the first can issue one: the masters then pass the lock back and forth and
+// none of them completes a sequence of atomics. Measured, this starves at a limit of
+// four and is clean at eight, hence the value below sits well clear of it rather
+// than near it.
+localparam GRANTHELDLIMIT = 32;
+reg [(clog2(GRANTHELDLIMIT) +1) -1 : 0] grantheldcnt;
+wire granthelddone = (grantheldcnt == GRANTHELDLIMIT);
+
+wire mstrrotate = (!wb_lock_nxt && (!_m_wb_stb_i || (granthelddone && mstrothrqst)));
+
+always_ff @(posedge clk_i) begin
+	if (rst_i)
+		grantheldcnt <= 0;
 	else if (MDEVCOUNT > 1) begin
-		if (_s_wb_stb_o)
-			wb_lock <= s_wb_lock_o;
+		if (mstrrotate)
+			grantheldcnt <= 0;
+		else if (!granthelddone)
+			grantheldcnt <= grantheldcnt + 1'b1;
 	end
 end
 
@@ -191,7 +241,7 @@ always_ff @(posedge clk_i) begin
 		mstridx <= 0;
 		mstrhi <= (MDEVCOUNT - 1);
 	end else if (MDEVCOUNT > 1) begin
-		if (!(wb_lock || _m_wb_stb_i)) begin
+		if (mstrrotate) begin
 			if (mstridx < mstrhi)
 				mstridx <= mstridx + 1'b1;
 			else begin
@@ -230,6 +280,7 @@ always_ff @(posedge clk_i) begin
 		end
 	end
 end
+
 `endif
 
 endmodule
