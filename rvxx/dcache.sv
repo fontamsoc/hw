@@ -915,7 +915,7 @@ wire                               coherency_bsy_i_; // ### Should be named _coh
 wire                               coherency_near_bsy_i;
 
 skidbuf #(
-	 .WIDTH       (2 + (2*PUIDBITSZ) + (ADDRBITSZ-MSBSZIGN) + (WORDBITSZ/8) + WORDBITSZ)
+	 .WIDTH       (PUIDBITSZ + 1 + (ADDRBITSZ-MSBSZIGN) + (WORDBITSZ/8) + WORDBITSZ + 1)
 	,.DEPTH       (1<<PUIDBITSZ)
 	,.USEFWFTFIFO (1)
 ) skidBuf_coherency (
