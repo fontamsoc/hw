@@ -57,7 +57,7 @@ module sram (
 
 parameter WORDBITSZ = 32;
 
-parameter SIZE = 0;
+parameter SIZE = 2;
 parameter DELAY = 0;
 parameter INITFILE = "";
 
