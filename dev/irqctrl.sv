@@ -118,7 +118,7 @@ module irqctrl (
 
 	,wb_stb_i
 	,wb_we_i
-	,wb_addr_i
+	//,wb_addr_i
 	,wb_sel_i
 	,wb_dat_i
 	,wb_bsy_o
@@ -157,7 +157,7 @@ input wire clk_i;
 
 input  wire                               wb_stb_i;
 input  wire                               wb_we_i;
-input  wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] wb_addr_i;
+//input  wire [(ADDRBITSZ-MSBSZIGN) -1 : 0] wb_addr_i;
 input  wire [(WORDBITSZ/8) -1 : 0]        wb_sel_i;
 input  wire [WORDBITSZ -1 : 0]            wb_dat_i;
 output wire                               wb_bsy_o;

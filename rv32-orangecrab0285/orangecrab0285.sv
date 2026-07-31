@@ -242,7 +242,7 @@ irqctrl #(
 
 	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_IRQCTRL])
 	,.wb_we_i    (s_wbpi_we_w[S_WBPI_IRQCTRL])
-	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_IRQCTRL])
+	//,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_IRQCTRL])
 	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_IRQCTRL])
 	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_IRQCTRL])
 	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_IRQCTRL])
