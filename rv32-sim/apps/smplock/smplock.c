@@ -84,13 +84,17 @@ static void adder_fn (void *arg) {
 // The threads are accordingly never disposed, which costs only their bookkeeping,
 // as this returns from main() right after.
 //
-// The wait is paced, and the pacing loop is deliberately cached-only so that it
-// issues no bus access: wb_arbiter.sv rotates its grant only in a clockcycle for
-// which the granted master is not requesting, so an unpaced spin, which re-misses
-// on every iteration, would hold the grant and starve the hart that it waits on.
+// The wait needs no pacing. It was paced with a cached-only loop against
+// wb_arbiter.sv rotating its grant only in a clockcycle for which the granted
+// master is not requesting, ie: against an unpaced spin holding the grant and
+// starving the hart it waits on. That does not happen here, and it was measured
+// not to: every iteration is an atomic whose write-back releases the bus, and the
+// loop is otherwise served out of the caches, so this hart's strobe drops between
+// iterations and the grant rotates as it always did. Unpaced, against hardware
+// which bounded the hold not at all, this test still passes. The arbiter now
+// bounds it outright in any case.
 static void waitdone (uintptr_t *donep) {
-	while (!_atomic_add(donep, 0))
-		for (volatile uintptr_t d = 0; d < 200; ++d);
+	while (!_atomic_add(donep, 0));
 }
 
 // True if cpu1 got to run at all within POLLS accesses from this hart.
