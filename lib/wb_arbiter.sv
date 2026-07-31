@@ -281,6 +281,42 @@ always_ff @(posedge clk_i) begin
 	end
 end
 
+// The grant itself is bounded above by GRANTHELDLIMIT clockcycles plus the rotation's
+// own walk over the masters which are not requesting, hence a grant held for very much
+// longer than that while another master is waiting can only mean that bound is not
+// doing its job. Outside a lock window, which is deliberately unbounded and which the
+// report above covers instead.
+// Another master requesting IS part of the condition here, unlike above: with a single
+// master active the grant legitimately stays where it is forever, so held length alone
+// would report every run rather than a starved one.
+// That term is derived below from the master strobes rather than read off the
+// mstrothrqst which gates the rotation, and deliberately so: a mistake in mstrothrqst
+// does not present as a wrong report, it removes the bound outright, ie: it is exactly
+// what this exists to catch, and reading it here would take the report down along with
+// the bound it checks. What is checked is likewise the grant moving rather than the
+// rotation asserting, the two differing by the mstrlonxt and mstrhinxt scans, which the
+// bound does not touch and which this therefore covers as well. So no signal of the
+// bound's is read here, and this block reports correctly against an arbiter which has
+// no bound at all.
+localparam GRANTHELDREPORT = 4096; // Two orders above the bound it is checking.
+reg [(clog2(GRANTHELDREPORT) +1) -1 : 0] grantheldreportcnt;
+reg [CLOG2MDEVCOUNT -1 : 0] mstridx_r;
+wire grantheldreportoth = |(m_wb_stb_i & ~(MDEVCOUNT'(1) << mstridx));
+always_ff @(posedge clk_i) begin
+	mstridx_r <= mstridx;
+	if (rst_i || wb_lock || !grantheldreportoth || mstridx != mstridx_r)
+		grantheldreportcnt <= 0;
+	else if (grantheldreportcnt != GRANTHELDREPORT) begin
+		grantheldreportcnt <= grantheldreportcnt + 1'b1;
+		if (grantheldreportcnt == (GRANTHELDREPORT - 1)) begin
+			$display("%m: error: bus grant held %0d clockcycles by master %0d while another is requesting",
+				GRANTHELDREPORT, mstridx);
+			// Flushed for the same reason as above: what this reports is a run
+			// which never ends, hence one which never reaches $finish.
+			$fflush();
+		end
+	end
+end
 `endif
 
 endmodule
