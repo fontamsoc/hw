@@ -100,6 +100,31 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	atomic instruction (e.g. amoswap of 0), as another hart's atomic access reads memory which
 	may hold stale data from the memory's previous use; statically allocated variables are safe,
 	as their memory starts zeroed.
+- Ordinary cached writes do participate, and an atomic memory operation is ordered against the ones
+	its hart already made: dcache.sv holds off the first access of a load-reserved, or of an
+	atomic memory operation's read, until every coherency write this data-cache put on the ring has
+	travelled it and come back. `coherency_write_pending` counts those still in flight, and
+	`m_wb_bsy_o` keeps the hart busy for as long as it is non-null. The acknowledgement that
+	decrements it is the request arriving back at the data-cache that issued it, which is after
+	every other one has seen it, hence a null count means applied everywhere rather than merely
+	sent. The wait is what insures that ordering, as an atomic memory operation does not travel the
+	ring at all: it is forced to miss the cache and resolve in memory, and while it holds the bus
+	lock this data-cache stops accepting ring traffic altogether, hence its effect becomes visible
+	through memory while the writes before it are still visible only through the ring. Without the
+	wait, the ordinary release shape, ie: plain stores to shared data followed by an atomic memory
+	operation that publishes them, would let the hart which acquires afterwards read its own
+	cache-entry, which those writes had not yet reached. The wait costs about one part in ten
+	thousand of a two-hart run, as the count is non-null only just after a burst of writes to
+	shared cache-entries.
+	A coherency write occupies a place on the ring from the clockcycle it is issued until it comes
+	back, so the count can never exceed what the ring holds, and `coherency_write_pending` is sized
+	from that rather than from the hart count: this data-cache's own coherency output register and
+	its skidbuf, plus, for each of the others, its request capture registers, its coherency output
+	register and its skidbuf. That width matters more than it looks, as `m_wb_bsy_o` tests the count
+	for non-null: a count too large for it does not lose precision, it reads null and removes the
+	wait entirely, and nothing an application prints would show that. A simulation-only monitor at
+	the end of `dCacheSub` reports it instead, along with the count exceeding the ring capacity that
+	the width is derived from.
 - A load-reserved, and the read phase of an atomic memory operation, raise the Wishbone bus lock,
 	which lib/wb_arbiter.sv turns into a grant hold: while it is set the granted hart cannot change
 	and every other hart is held busy, which reaches instruction fetching through memctrl.pu.sv,
