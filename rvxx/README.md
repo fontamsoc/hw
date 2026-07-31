@@ -125,6 +125,45 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	wait entirely, and nothing an application prints would show that. A simulation-only monitor at
 	the end of `dCacheSub` reports it instead, along with the count exceeding the ring capacity that
 	the width is derived from.
+- A data-cache stalled on an access the bus has not accepted stops the coherency ring, and that is a
+	way for one hart to stop the others which has nothing to do with arbitration. dcache.sv holds
+	`coherency_bsy_o_` for as long as the data-cache is outside READY and TSTHIT, so a data-cache
+	parked in REFILL or WRITEB on an access no device will accept refuses ring traffic for as long
+	as that lasts, and `m_wb_bsy_o` then holds every other hart's data-cache busy through
+	`coherency_stb_r`. Those harts stall having presented no bus request at all, hence they are not
+	starved of the bus and giving them the bus changes nothing. That is why a hart which stalls a
+	load on a device wedges the whole machine whereas one which stalls an instruction fetch does
+	not, a fetch leaving the data-cache in READY so that the ring keeps flowing. It is also how a
+	grant held for any reason comes to stop the hart holding it: the harts it starves park their own
+	refills, and their data-caches then refuse the ring that the holder needs. Bounding this needs
+	the ring decoupled from the data-cache's state, which this design does not do.
+- lib/wb_arbiter.sv rotates its grant when the granted hart stops requesting, and otherwise once
+	that hart has held it `GRANTHELDLIMIT` clockcycles and another hart is requesting. The second
+	term is what bounds it: a hart holds its strobe asserted until its access is accepted, and a
+	device is under no obligation to ever accept one, dev/serial_*.sv holding wb_bsy_o for as long
+	as its receive buffer is empty so that a read of the data register waits for a byte. Without a
+	bound, a hart reading that register, or fetching from it, held the bus for as long as no byte
+	came, and every other hart is held busy meanwhile, which reaches instruction fetching through
+	memctrl.pu.sv, hence executes nothing at all. rv32-sim/apps/smpfair covers it, and a
+	simulation-only monitor at the end of the arbiter reports a grant held very much past the bound
+	while another hart is waiting.
+	Preempting a hart mid-access loses nothing, as it re-presents the identical request until
+	accepted, and a response carries the hart it belongs to through the arbiter's pendingAcks fifo
+	rather than through the grant. `GRANTHELDLIMIT` has a floor as well as a purpose, though, and it
+	is the bus lock that sets it: rotation is blocked while the lock is held, so a limit shorter than
+	the interval between a hart's accesses hands the grant away in the very clockcycle the lock
+	releases, and the hart it hands to takes the lock with its own next access before the first can
+	issue one. The harts then pass the lock back and forth and none of them completes a sequence of
+	atomics, which at a limit of four is enough for smplock to report cpu1 starved. Rotating on every
+	clockcycle fails differently and worse: the grant then sits on a hart which is not requesting for
+	most clockcycles, the lowest and highest active hart being tracked by scans which lag a grant
+	moving that fast, so the bus idles and nothing finishes. The limit is sized well clear of both.
+	Note also that the rotation reads the bus lock's next value rather than the lock itself, so that
+	it cannot rotate away from the hart whose locked access is being accepted at that very
+	clockedge: that would leave the grant on another hart with the lock set, and the write-back
+	which releases it could never issue. The rotation as it was needed no such guard, never firing
+	on a clockcycle the granted hart was requesting, and an accepted access implies a requesting
+	hart; the quantum term does fire then, hence the guard.
 - A load-reserved, and the read phase of an atomic memory operation, raise the Wishbone bus lock,
 	which lib/wb_arbiter.sv turns into a grant hold: while it is set the granted hart cannot change
 	and every other hart is held busy, which reaches instruction fetching through memctrl.pu.sv,
