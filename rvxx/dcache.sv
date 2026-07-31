@@ -456,7 +456,21 @@ wire coherency_write_req = (state == TSTHIT && m_wb_we_r && !coherency_r &&
 
 wire coherency_write_ack = (_coherency_stb_i && coherency_rqid_i == PUID && coherency_we_i);
 
-reg [(PUIDBITSZ**2) -1 : 0] coherency_write_pending;
+// A coherency write stays pending from the clockcycle it is issued until it has travelled the
+// whole ring and come back, hence there cannot be more of them than the ring can hold: this
+// data-cache's own coherency output register and its skidbuf, plus, for each of the other
+// data-caches, its request capture registers, its coherency output register and its skidbuf.
+// (1<<PUIDBITSZ) is the count of data-caches rounded up to a power of two, ie: never short.
+localparam COHERENCYRINGCNT = (1<<PUIDBITSZ);
+localparam COHERENCYWRITEPENDINGMAX =
+	((COHERENCYRINGCNT*COHERENCYRINGCNT) + (2*COHERENCYRINGCNT) - 1);
+// Note that the width below is not the (clog2(N) +1) used by the other pending counters here,
+// as it does not need that extra bit: clog2() rounds up, so clog2(N) bits hold up to
+// ((2**clog2(N))-1), which falls short of N only when N is an exact power of two, and the
+// maximum above never is; it is (((COHERENCYRINGCNT+1)**2)-2), and COHERENCYRINGCNT is a power
+// of two, hence that square is odd, hence the maximum is odd and greater than one.
+localparam CLOG2COHERENCYWRITEPENDINGMAX = clog2(COHERENCYWRITEPENDINGMAX);
+reg [CLOG2COHERENCYWRITEPENDINGMAX -1 : 0] coherency_write_pending;
 always_ff @(posedge clk_i) begin
 	if (rst_i || !coherency_en_i)
 		coherency_write_pending <= 0;
