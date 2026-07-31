@@ -735,6 +735,51 @@ generate if (WORDBITSZ == 256) begin
 		{8{cache_sel_o_tag_hit[3]}}, {8{cache_sel_o_tag_hit[2]}}, {8{cache_sel_o_tag_hit[1]}}, {8{cache_sel_o_tag_hit[0]}}};
 end endgenerate
 
+`ifdef SIMULATION
+// m_wb_bsy_o above reads coherency_write_pending as a plain non-null test, hence a count that does
+// not fit its width does not merely lose precision, it reads null and releases the barrier while
+// coherency writes are still travelling the ring; the atomic operation then starts early, and
+// another data-cache is left holding a cache-entry that the writes had not yet updated. Nothing
+// about that is visible in a run, hence report it. Also reported is the count exceeding the ring
+// capacity that its width is derived from, which would mean that derivation is wrong, and an
+// acknowledgement arriving with nothing pending, which would mean a request was lost or duplicated.
+// When the ring holds two data-caches, its capacity is exactly the largest value that the width
+// holds, so the first two coincide and report as one.
+// Each is reported once, as the condition that caused it repeats for as long as it lasts.
+// The report is flushed because a barrier released early can leave a hart spinning on a lock
+// release that it never observes, ie: a run that gets killed rather than reaching $finish, and an
+// unflushed report is lost exactly when it is the only thing that was going to be printed.
+reg coherency_write_pending_ovfl_r;
+reg coherency_write_pending_max_r;
+reg coherency_write_pending_undf_r;
+always_ff @(posedge clk_i) begin
+	if (rst_i) begin
+		coherency_write_pending_ovfl_r <= 1'b0;
+		coherency_write_pending_max_r <= 1'b0;
+		coherency_write_pending_undf_r <= 1'b0;
+	end else if (coherency_en_i) begin
+		if (coherency_write_req && !coherency_write_ack) begin
+			if (&coherency_write_pending && !coherency_write_pending_ovfl_r) begin
+				coherency_write_pending_ovfl_r <= 1'b1;
+				$display("dcache%0d: error: coherency write pending count overflowed its width", PUID);
+				$fflush();
+			end else if (coherency_write_pending == COHERENCYWRITEPENDINGMAX &&
+				!coherency_write_pending_max_r) begin
+				coherency_write_pending_max_r <= 1'b1;
+				$display("dcache%0d: error: coherency write pending count exceeded the ring capacity %0d",
+					PUID, COHERENCYWRITEPENDINGMAX);
+				$fflush();
+			end
+		end else if (coherency_write_ack && !coherency_write_req &&
+			!coherency_write_pending && !coherency_write_pending_undf_r) begin
+			coherency_write_pending_undf_r <= 1'b1;
+			$display("dcache%0d: error: coherency write acknowledged with none pending", PUID);
+			$fflush();
+		end
+	end
+end
+`endif
+
 endmodule
 
 module dCache (
