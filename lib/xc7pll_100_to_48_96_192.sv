@@ -4,35 +4,32 @@
 
 module xc7pll_100_to_48_96_192 (
   // Clock in ports
-  input  wire clk_in1,
+  input  wire clk100mhz_i,
   // Clock out ports
-  output wire clk_out1,
-  output wire clk_out2,
-  output wire clk_out3,
+  output wire clk48mhz_o,
+  output wire clk96mhz_o,
+  output wire clk192mhz_o,
   // Status and control signals
-  input  wire reset,
   output wire locked
 );
 
-  wire xc7pll_100_to_48_clk_out2;
+  wire clk48mhz_w;
   xc7pll_100_to_48 pll0 (
-     .reset    (reset)
-    ,.clk_in1  (clk_in1)
-    ,.clk_out2 (xc7pll_100_to_48_clk_out2));
+     .clk100mhz_i (clk100mhz_i)
+    ,.clk48mhz_o  (clk48mhz_w));
 
-  wire xc7pll_48_to_48_96_192_clk_in1;
+  wire _clk48mhz_w;
   (* BOX_TYPE = "PRIMITIVE" *)
   BUFG clkin1_bufg
-   (.O (xc7pll_48_to_48_96_192_clk_in1),
-    .I (xc7pll_100_to_48_clk_out2));
+   (.I (clk48mhz_w),
+    .O (_clk48mhz_w));
 
   xc7pll_48_to_48_96_192 pll1 (
-     .reset    (reset)
-    ,.locked   (locked)
-    ,.clk_in1  (xc7pll_48_to_48_96_192_clk_in1)
-    ,.clk_out1 (clk_out1)
-    ,.clk_out2 (clk_out2)
-    ,.clk_out3 (clk_out3)
+     .locked      (locked)
+    ,.clk48mhz_i  (_clk48mhz_w)
+    ,.clk48mhz_o  (clk48mhz_o)
+    ,.clk96mhz_o  (clk96mhz_o)
+    ,.clk192mhz_o (clk192mhz_o)
 );
 
 endmodule

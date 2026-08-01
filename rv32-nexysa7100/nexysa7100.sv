@@ -81,31 +81,24 @@ output wire [8 -1 : 0] an;
 
 assign an = {8{1'b1}};
 
-localparam CLK1XFREQ = ( 50000000) /*  50 MHz */; // Frequency of clk_1x_w.
-localparam CLK2XFREQ = (100000000) /* 100 MHz */; // Frequency of clk_2x_w.
-localparam CLK4XFREQ = (200000000) /* 200 MHz */; // Frequency of clk_4x_w.
-wire pll_locked;
-wire clk50mhz;
-wire clk100mhz;
-wire clk200mhz;
+localparam CLKFREQ50MHZ  = 50000000;
+localparam CLKFREQ100MHZ = 100000000;
+localparam CLKFREQ200MHZ = 200000000;
+wire pll_locked, clk50mhz_w, clk100mhz_w, clk200mhz_w;
 xc7pll_100_to_50_100_200 pll (
-	 .reset    (1'b0)
-	,.locked   (pll_locked)
-	,.clk_in1  (clk100mhz_i)
-	,.clk_out1 (clk50mhz)
-	,.clk_out2 (clk100mhz)
-	,.clk_out3 (clk200mhz)
+	 .locked      (pll_locked)
+	,.clk100mhz_i (clk100mhz_i)
+	,.clk50mhz_o  (clk50mhz_w)
+	,.clk100mhz_o (clk100mhz_w)
+	,.clk200mhz_o (clk200mhz_w)
 );
-wire clk_1x_w = clk50mhz;
-wire clk_2x_w = clk100mhz;
-wire clk_4x_w = clk200mhz;
 
 (* direct_reset = "true" *) wire rst_w;
 rstctrl #(
-	 .RSTDURATION (CLK2XFREQ/1000000) // 1us
-	,.RSTTHRESH   (4*CLK2XFREQ) // 4s
+	 .RSTDURATION (CLKFREQ100MHZ/1000000) // 1us
+	,.RSTTHRESH   (4*CLKFREQ100MHZ) // 4s
 ) rstctrl (
-	 .clk_i (clk_2x_w)
+	 .clk_i (clk100mhz_w)
 	,.i     (~rst_n)
 	,.o     (rst_w)
 );
@@ -134,9 +127,9 @@ localparam WBPI_WORDBITSZ         = `XWORDBITSZ;
 localparam WBPI_CLOG2WORDBITSZBY8 = clog2(WBPI_WORDBITSZ/8);
 localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
 localparam WBPI_ADDRLIMIT         = ('h1000+(`SRAM_KBSIZE*1024));
-localparam WBPI_CLKFREQ           = CLK2XFREQ;
+localparam WBPI_CLKFREQ           = CLKFREQ100MHZ;
 wire wbpi_rst_w = rst_w;
-wire wbpi_clk_w = clk_2x_w;
+wire wbpi_clk_w = clk100mhz_w;
 // The peripheral interconnect is instantiated in a separate file to keep this file clean.
 // Master devices must use the following signals to plug onto the peripheral interconnect:
 // 	input                                          m_wbpi_stb_w  [WBPI_MDEVCOUNT];
