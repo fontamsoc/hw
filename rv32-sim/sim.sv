@@ -145,8 +145,6 @@ cpu #(
 	,.DCACHEWAYCNT  (DCACHEWAYCNT)
 	,.IMULCNT       (2)
 	,.IDIVCNT       (2)
-	,.CLMULCNT      (1)
-	,.FPUCNT        (1)
 	,.MAXPENDINGACK (WBPI_MAXPENDINGACK)
 	,.PUCNT         (CPU_COUNT)
 ) cpu (
