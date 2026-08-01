@@ -182,6 +182,5 @@ void portable_init(core_portable *p, int *argc, char *argv[]) {
 void portable_fini(core_portable *p)
 {
 	p->portable_id=0;
-	ee_printf("CoreMark/MHz : %f\n", p->coremark / (CLOCKS_PER_SEC()/1000000.0));
-	ee_printf("CoreMark done\n");
+	ee_printf("CoreMark/MHz : %f\n----\n", p->coremark / (CLOCKS_PER_SEC()/1000000.0));
 }
