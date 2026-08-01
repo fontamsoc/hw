@@ -28,6 +28,7 @@
 `define PUPREDICTBRANCH
 `define PUPREDICTRET
 //`define PUDCACHEREGRQST
+`define PUDCACHEREGRESP
 `include "rvxx/cpu.sv"
 /* makefile defined *///`define CPU_COUNT 1
 /* makefile defined *///`define XWORDBITSZ 32

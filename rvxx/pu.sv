@@ -117,6 +117,15 @@
 // 	one added cycle of dcache request latency. Takes effect only when
 // 	DCACHESETCNT is non-zero.
 //
+// PUDCACHEREGRESP
+// 	Register the dcache response path: dCache.REGMSTOUTPUT, a register on
+// 	the master-side response (m_wb_ack_o, m_wb_dat_o) leaving dCacheSub, so
+// 	that the cache tag compare and the way-select mux feeding them no longer
+// 	reach the response consumers combinationally. m_wb_bsy_o is left
+// 	un-registered, so back-pressure is unaffected and only the response is
+// 	delayed, at the cost of one added cycle of dcache response latency.
+// 	Takes effect only when DCACHESETCNT is non-zero.
+//
 // PUAMOREGWB
 // 	Register the AMO write-back: capture the AMO read response into a
 // 	register and present the memory write one cycle later, so that the

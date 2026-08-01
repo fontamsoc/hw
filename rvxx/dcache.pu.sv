@@ -196,10 +196,10 @@ end endgenerate
 generate if (USE_DCACHE) begin: gen_dCache
 
 dCache #(
-	`ifdef SIMULATION
-	 .REGMSTOUTPUT  (0)
-	 `else
+	`ifdef PUDCACHEREGRESP
 	 .REGMSTOUTPUT  (1)
+	 `else
+	 .REGMSTOUTPUT  (0)
 	 `endif
 	,.REGSLVINPUT   (1)
 	,.WORDBITSZ     (XWORDBITSZ)

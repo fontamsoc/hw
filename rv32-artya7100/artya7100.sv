@@ -28,6 +28,7 @@
 `define PUPREDICTBRANCH
 `define PUPREDICTRET
 `define PUDCACHEREGRQST
+`define PUDCACHEREGRESP
 //`define PUAMOREGWB
 `include "rvxx/cpu.sv"
 /* impl_1.sv defined *///`define CPU_COUNT 1
