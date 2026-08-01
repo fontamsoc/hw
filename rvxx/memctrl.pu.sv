@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-// wb_rqst_cnt and wb_rsp_cnt are kept as absolute sequence tags: they demux
+// wb_rqst_cnt and wb_resp_cnt are kept as absolute sequence tags: they demux
 // instruction-fetch responses from dCache responses on the shared bus (iF_mem_seq,
 // iF_mem_ack, dCache_s_ack_i below), which needs the absolute counts, not just their
 // difference. Occupancy is instead tracked by a dedicated up/down register so
-// wb_max_pending reads a registered bit rather than the subtract (wb_rqst_cnt - wb_rsp_cnt).
+// wb_max_pending reads a registered bit rather than the subtract (wb_rqst_cnt - wb_resp_cnt).
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] wb_rqst_cnt;
-reg [(CLOG2MAXPENDINGACK +1) -1 : 0] wb_rsp_cnt;
+reg [(CLOG2MAXPENDINGACK +1) -1 : 0] wb_resp_cnt;
 
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] wb_pending_acks; // Occupancy: accepted requests not yet responded.
 
@@ -27,9 +27,9 @@ end
 
 always_ff @(posedge clk_i) begin
 	if (rst_i)
-		wb_rsp_cnt <= 0;
+		wb_resp_cnt <= 0;
 	else if (wb_resp_received)
-		wb_rsp_cnt <= wb_rsp_cnt + 1'b1;
+		wb_resp_cnt <= wb_resp_cnt + 1'b1;
 end
 
 always_ff @(posedge clk_i) begin
@@ -59,13 +59,13 @@ end
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] iF_mem_seq;
 reg                                  iF_mem_seq_valid;
 
-assign dCache_s_ack_i = (wb_ack_i && (!iF_mem_seq_valid || wb_rsp_cnt != iF_mem_seq));
+assign dCache_s_ack_i = (wb_ack_i && (!iF_mem_seq_valid || wb_resp_cnt != iF_mem_seq));
 
 reg iF_mem_stb;
 reg iF_mem_stb_r;
 reg [(XADDRBITSZ-XMSBSZIGN) -1 : 0] iF_mem_addr;
 wire iF_mem_bsy = ((dCache_s_stb_o && !iF_mem_stb_r) || _wb_bsy_i);
-wire iF_mem_ack = (wb_ack_i && iF_mem_seq_valid && wb_rsp_cnt == iF_mem_seq);
+wire iF_mem_ack = (wb_ack_i && iF_mem_seq_valid && wb_resp_cnt == iF_mem_seq);
 
 assign dCache_s_bsy_i = (iF_mem_stb_r || _wb_bsy_i);
 

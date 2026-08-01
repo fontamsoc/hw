@@ -65,7 +65,7 @@ wire [(CLOG2MAXPENDINGACK +1) -1 : 0] ldUnit_rqsts_seq;
 
 wire ldUnit_rqsts_empty;
 
-wire ldUnit_memAck_ = (!ldUnit_rqsts_empty && (ldUnit_rqsts_seq == dCache_m_rsp_cnt));
+wire ldUnit_memAck_ = (!ldUnit_rqsts_empty && (ldUnit_rqsts_seq == dCache_m_resp_cnt));
 
 wire ldUnit_memAck = (dCache_m_ack_o && ldUnit_memAck_);
 
@@ -90,7 +90,7 @@ fifo_fwft #(
 // Hold a completed load's response (buffered in the dCache response skidbuf) while
 // the pipeline is taking the WriteBack slot, so the pipeline keeps priority; the
 // load retires (ldUnit_memAck fires) the cycle the pipeline yields. Only the load
-// at the head of the response stream (seq == rsp_cnt) is held, so store responses
+// at the head of the response stream (seq == resp_cnt) is held, so store responses
 // (and loads behind a not-yet-arrived one) are not blocked.
 assign dCache_m_bsy_i = (rW_pipeWrites && ldUnit_memAck_);
 

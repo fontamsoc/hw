@@ -128,20 +128,20 @@ fifo #(
 );
 end endgenerate
 
-wire rsp_empty_w;
+wire resp_empty_w;
 
 always_ff @(posedge m_clk_i) begin
 	if (rst_i)
 		m_wb_ack_o <= 0;
 	else
-		m_wb_ack_o <= !rsp_empty_w;
+		m_wb_ack_o <= !resp_empty_w;
 end
 
 generate if (ASYNC) begin
 fifo_async #(
 	 .WIDTH (WORDBITSZ)
 	,.DEPTH (MAXPENDINGACK)
-) rsp (
+) resp (
 
 	 .rst_i (rst_i)
 
@@ -152,13 +152,13 @@ fifo_async #(
 	,.clk_read_i (m_clk_i)
 	,.read_i     (1'b1)
 	,.data_o     (m_wb_dat_o)
-	,.empty_o    (rsp_empty_w)
+	,.empty_o    (resp_empty_w)
 );
 end else begin
 fifo #(
 	 .WIDTH (WORDBITSZ)
 	,.DEPTH (MAXPENDINGACK)
-) rsp (
+) resp (
 
 	 .rst_i (rst_i)
 
@@ -169,7 +169,7 @@ fifo #(
 	,.clk_read_i (m_clk_i)
 	,.read_i     (1'b1)
 	,.data_o     (m_wb_dat_o)
-	,.empty_o    (rsp_empty_w)
+	,.empty_o    (resp_empty_w)
 );
 end endgenerate
 

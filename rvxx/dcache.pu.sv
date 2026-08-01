@@ -286,9 +286,9 @@ reg [(WORDBITSZ/8) -1 : 0] dCache_m_sel_i_; // ### comb-block-reg.
 reg [WORDBITSZ -1 : 0]     dCache_m_dat_i_; // ### comb-block-reg.
 
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_rqst_cnt;
-reg [(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_rsp_cnt;
+reg [(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_resp_cnt;
 
-wire [(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_pending_acks = (dCache_m_rqst_cnt - dCache_m_rsp_cnt);
+wire [(CLOG2MAXPENDINGACK +1) -1 : 0] dCache_m_pending_acks = (dCache_m_rqst_cnt - dCache_m_resp_cnt);
 
 wire dCache_m_max_pending = dCache_m_pending_acks[CLOG2MAXPENDINGACK];
 
@@ -306,9 +306,9 @@ end
 
 always_ff @(posedge clk_i) begin
 	if (rst_i)
-		dCache_m_rsp_cnt <= 0;
+		dCache_m_resp_cnt <= 0;
 	else if (dCache_m_ack_o)
-		dCache_m_rsp_cnt <= dCache_m_rsp_cnt + 1'b1;
+		dCache_m_resp_cnt <= dCache_m_resp_cnt + 1'b1;
 end
 
 assign dCache_m_pending = ((|dCache_m_pending_acks) || dCache_m_bsy_r);
