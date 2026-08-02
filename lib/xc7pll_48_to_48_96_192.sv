@@ -7,6 +7,7 @@ module xc7pll_48_to_48_96_192 (
   output wire clk96mhz_o,
   output wire clk192mhz_o,
   // Status and control signals
+  input  wire rst_i,
   output wire locked
 );
 
@@ -57,6 +58,6 @@ module xc7pll_48_to_48_96_192 (
     // Other control and status signals
     .LOCKED              (locked),
     .PWRDWN              (1'b0),
-    .RST                 (1'b0));
+    .RST                 (rst_i));
 
 endmodule
