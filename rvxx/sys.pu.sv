@@ -27,7 +27,7 @@ always_ff @(posedge clk_i) begin
 	end
 end
 
-wire [16 -1 : 0] csrInMidelegMask = 'b0000100010001000; // Non-null bits get modified.
+wire [16 -1 : 0] csrInMidelegMask = 'b0000100010000000; // Non-null bits get modified.
 always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		csrMideleg <= 0;
@@ -43,8 +43,8 @@ always_ff @(posedge clk_i) begin
 end
 
 wire [16 -1 : 0] csrInMipMask = // Non-null bits get modified.
-	csrCurPrivIsS ? 16'b0000001000100010 : // SEIP STIP SSIP.
-	                16'b0000101010101010 ; // All above plus MEIP MTIP MSIP.
+	csrCurPrivIsS ? 16'b0000001000100000 : // SEIP STIP.
+	                16'b0000101010100000 ; // All above plus MEIP MTIP.
 reg [16 -1 : 0] csrMip__;
 always_ff @(posedge clk_i) begin
 	if (rst_i) begin
@@ -71,17 +71,13 @@ wire [16 -1 : 0] csrMip_ = {
 	(csrMip__[7/*MTIP*/] || irqMtimer) && !csrMideleg[7/*MTI*/],
 	1'b0,
 	(csrMip__[5/*STIP*/] || irqStimer) && csrMideleg[7/*MTI*/],
-	1'b0,
-	csrMip__[3/*MSIP*/] && !csrMideleg[3/*MSI*/],
-	1'b0,
-	csrMip__[1/*SSIP*/] && csrMideleg[3/*MSI*/],
-	1'b0};
+	5'd0};
 always_ff @(posedge clk_i)
 	csrMip <= csrMip_;
 
 wire [16 -1 : 0] csrInMieMask = // Non-null bits get modified.
-	csrCurPrivIsS ? 16'b0000001000100010 : // SEIE STIE SSIE.
-	                16'b0000101010101010 ; // All above plus MEIE MTIE MSIE.
+	csrCurPrivIsS ? 16'b0000001000100000 : // SEIE STIE.
+	                16'b0000101010100000 ; // All above plus MEIE MTIE.
 always_ff @(posedge clk_i) begin
 	if (rst_i) begin // If (PUID != 0) reset csrMie.MEIE to 1.
 		csrMie <= ((PUID != 0) ? 16'b0000100000000000 : 16'd0);
@@ -301,11 +297,7 @@ always_ff @(posedge clk_i) begin
 		csrMip_[7/*MTIP*/] && csrMie[7/*MTIE*/] && (csrCurPrivIsM ? csrMstatus[3/*MIE*/] : 1'b1),
 		1'b0,
 		csrMip_[5/*STIP*/] && csrMie[5/*STIE*/] && (csrCurPrivIsS ? csrMstatus[1/*SIE*/] : csrCurPrivIsU),
-		1'b0,
-		csrMip_[3/*MSIP*/] && csrMie[3/*MSIE*/] && (csrCurPrivIsM ? csrMstatus[3/*MIE*/] : 1'b1),
-		1'b0,
-		csrMip_[1/*SSIP*/] && csrMie[1/*SSIE*/] && (csrCurPrivIsS ? csrMstatus[1/*SIE*/] : csrCurPrivIsU),
-		1'b0};
+		5'd0};
 end
 
 reg [17 -1 : 0] excCause; // ### comb-block-reg.
@@ -314,7 +306,7 @@ reg [WORDBITSZ -1 : 0] excTval; // ### comb-block-reg.
 reg [WORDBITSZ -1 : 0] excTval2; // ### comb-block-reg.
 reg [2 -1 : 0] excNxtPriv; // ### comb-block-reg.
 // Interrupt handling is done in following decreasing
-// priority order: MEI, SEI, MSI, SSI, MTI, STI.
+// priority order: MEI, SEI, MTI, STI.
 always_comb begin
 	excCause = 17'd0;
 	excEpc = (eX_JumpOrBranch ? iF_pc : iD_pc);
@@ -330,12 +322,6 @@ always_comb begin
 		excNxtPriv = 2'b11;
 	end else if (excIrq[9/*SEI*/] && !rW_multicyclePending) begin
 		excCause = {1'b1, 16'd9};
-		excNxtPriv = 2'b01;
-	end else if (excIrq[3/*MSI*/] && !rW_multicyclePending) begin
-		excCause = {1'b1, 16'd3};
-		excNxtPriv = 2'b11;
-	end else if (excIrq[1/*SSI*/] && !rW_multicyclePending) begin
-		excCause = {1'b1, 16'd1};
 		excNxtPriv = 2'b01;
 	end else if (excIrq[7/*MTI*/] && !rW_multicyclePending) begin
 		excCause = {1'b1, 16'd7};
@@ -681,13 +667,13 @@ generate if (WORDBITSZ == 32) begin
 always_comb begin
 	unique case (iD_Iimm[11:0])
 	12'h100: eX_csrOut_i = (csrMstatus & 'b00000000000011000000000100110010);
-	12'h104: eX_csrOut_i = (csrMie & 16'b0000001000100010);
+	12'h104: eX_csrOut_i = (csrMie & 16'b0000001000100000);
 	12'h105: eX_csrOut_i = csrStvec;
 	12'h140: eX_csrOut_i = csrSscratch;
 	12'h141: eX_csrOut_i = csrSepc;
 	12'h142: eX_csrOut_i = csrScause;
 	12'h143: eX_csrOut_i = csrStval;
-	12'h144: eX_csrOut_i = (csrMip & 16'b0000001000100010);
+	12'h144: eX_csrOut_i = (csrMip & 16'b0000001000100000);
 	12'h14b: eX_csrOut_i = csrStval2;
 	12'h14d: eX_csrOut_i = csrStimecmp;
 	12'h15d: eX_csrOut_i = csrStimecmp[64-1:WORDBITSZ];
@@ -726,13 +712,13 @@ generate if (WORDBITSZ == 64) begin
 always_comb begin
 	unique case (iD_Iimm[11:0])
 	12'h100: eX_csrOut_i = (csrMstatus & 'b00000000000011000000000100110010);
-	12'h104: eX_csrOut_i = (csrMie & 16'b0000001000100010);
+	12'h104: eX_csrOut_i = (csrMie & 16'b0000001000100000);
 	12'h105: eX_csrOut_i = csrStvec;
 	12'h140: eX_csrOut_i = csrSscratch;
 	12'h141: eX_csrOut_i = csrSepc;
 	12'h142: eX_csrOut_i = csrScause;
 	12'h143: eX_csrOut_i = csrStval;
-	12'h144: eX_csrOut_i = (csrMip & 16'b0000001000100010);
+	12'h144: eX_csrOut_i = (csrMip & 16'b0000001000100000);
 	12'h14b: eX_csrOut_i = csrStval2;
 	12'h14d: eX_csrOut_i = csrStimecmp;
 	12'h300: eX_csrOut_i = csrMstatus;
