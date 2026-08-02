@@ -76,17 +76,26 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 - Indefinitely halt (setting STATUS.MIE to 0) when an exception occurs and the trap vector address is null.
 - There is no support for vectored interrupt.
 - There is no difference between between mret sret; they are both eret.
-- There is no external source for "Machine Software Interrupt", which are often used for IPIs.
-	Delivery of machine-level interprocessor interrupts is done through external interrupts (MEI).
+- Machine and Supervisor Software Interrupts are not implemented. MIE.MSIE MIE.SSIE MIP.MSIP
+	MIP.SSIP and MIDELEG.MSI read null and ignore writes, and no arm of the interrupt priority
+	order produces them, hence neither interrupt cause 3 nor interrupt cause 1 is ever reported in
+	MCAUSE nor in SCAUSE, MCAUSE 3 being left to the synchronous Breakpoint alone. There never was
+	an external source for them, which are often used for IPIs, and they were the only pending bits
+	with no hardware source behind them, hence a hart writing its own MIP was the only way either
+	could be raised, and nothing does: underLineOS dispatches the machine timer and the machine
+	external interrupt only. Delivery of machine-level interprocessor interrupts is done through
+	external interrupts (MEI), dev/irqctrl.sv command CMDINTDST targeting the destination hart. wfi
+	never woke on one either, its wake condition having always listed the external and the timer
+	interrupts only.
 - There is support for Second Trap Value Register CSRs csrMtval2 csrStval2.
 - csrMtimecmp csrMtimecmph are not memory mapped and use 12'h34d 12'h35d CSRs.
 - csrTime and csrCycle get their value from the same register, which is compared against csrMtimecmp for timer interrupt.
-- MEI MSI MTI trigger only if their corresponding bit in MIDELEG is 0.
-- SEI SSI STI trigger only if MEI MSI MTI corresponding bit in MIDELEG is 1.
-- SEI SSI STI are never delivered to Machine Privilege, hence MCAUSE only report Machine interrupts and exceptions.
-- MEI MSI MTI can never be delivered to Supervisor Privilege, hence SCAUSE only report Supervisor interrupts and exceptions.
-- Simultaneous interrupts are taken in the decreasing priority order MEI, SEI, MSI, SSI, MTI, STI;
-	a delegated SEI/SSI is therefore taken ahead of a pending MSI/MTI, unlike the spec
+- MEI MTI trigger only if their corresponding bit in MIDELEG is 0.
+- SEI STI trigger only if MEI MTI corresponding bit in MIDELEG is 1.
+- SEI STI are never delivered to Machine Privilege, hence MCAUSE only report Machine interrupts and exceptions.
+- MEI MTI can never be delivered to Supervisor Privilege, hence SCAUSE only report Supervisor interrupts and exceptions.
+- Simultaneous interrupts are taken in the decreasing priority order MEI, SEI, MTI, STI;
+	a delegated SEI is therefore taken ahead of a pending MTI, unlike the spec
 	which takes Machine-destined interrupts before Supervisor-destined ones.
 - A pending enabled interrupt is taken on the first clock cycle for which no multi-cycle
 	result is pending retirement; it does not need those conditions to line-up with a
