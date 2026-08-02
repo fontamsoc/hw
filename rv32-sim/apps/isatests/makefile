@@ -110,16 +110,17 @@ TESTS += ma_addr
 # Disabled: the decoder accepts slli encodings with shamt[5] set instead of
 # trapping illegal-instruction.
 #TESTS += shamt
-# Disabled: needs sfence.vma (not decoded; traps illegal-instruction) and the
-# mstatus.TVM/TSR virtualization controls.
+# Disabled: needs sfence.vma (not decoded; traps illegal-instruction), the
+# mstatus.TVM/TSR virtualization controls, and a writable mip.SSIP along with
+# software-interrupt delegation in mideleg, none of which are implemented.
 #TESTS += illegal
 TESTS += lh_misaligned
 TESTS += lw_misaligned
 TESTS += sh_misaligned
 TESTS += sw_misaligned
 TESTS += zicntr
-# rv32si/wfi is not included: wfi only wakes on external/timer interrupts
-# (sys.pu.sv halted_o mask lacks the software-interrupt bits), so the upstream
+# rv32si/wfi is not included: this design implements no software interrupt,
+# mip/mie MSIP SSIP MSIE SSIE reading null and ignoring writes, so the upstream
 # test, which relies on a pending SSIP, would hang.
 # rv64mi/instret_overflow is not included: minstret reads as hardwired zero,
 # so the test would pass vacuously.
