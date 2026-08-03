@@ -204,3 +204,4 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	unbalances the stack, and the prediction of surrounding x1 call/return pairs is never degraded.
 	Insure the toolchain is not built with -msave-restore: the millicode routines that it calls are
 	entered by a JALR writing x5 and return through a JALR reading x5, neither of which is predicted.
+- Load and store encodings whose func3 is 3'b011 or 3'b111 issue a memory operation with sel == 0 instead of trapping.
