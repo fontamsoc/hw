@@ -17,7 +17,7 @@ APPNAME := tailchain
 .PHONY: all
 all: ${APPNAME}.bin
 
-${APPNAME}.bin: ${APPNAME}.c
+${APPNAME}.bin: ${APPNAME}.c hwdrvirqctrl.h
 	${CC} ${CFLAGS} -I ./ -o ${APPNAME}.elf $<
 	${OBJCOPY} -O binary ${APPNAME}.elf $@
 	chmod -x ${APPNAME}.elf $@
