@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// 20260420 (c) William Fonkou Tambe
+// 20260802 (c) William Fonkou Tambe
 
 // Interrupt controller peripheral.
 // It dispatches an interrupt to a destination for which
@@ -12,8 +12,10 @@
 // where the field "cmd" values are CMDDEVRDY(2'b00), CMDACKIRQ(2'b01),
 // CMDINTDST(2'b10) and CMDENAIRQ(2'b11). The result of a previously
 // sent command is retrieved from the controller reading from it and
-// has the following format | resp: (WORDBITSZ-2) bits | cmd: 2 bit |,
-// where the fields "cmd" and "resp" are the command and its result.
+// has the following format
+// | resp: (WORDBITSZ-3) bits | rsvd: 1 bit | cmd: 2 bit |, where the fields
+// "cmd" and "resp" are the command and its result, while the field "rsvd"
+// is reserved and null.
 // Two memory operations, a write followed by a read are needed to send
 // a command to the controller and retrieve its result.
 // The controller has accepted a command only if "cmd" in its result
@@ -30,8 +32,10 @@
 // 	if there are no pending interrupts for the destination "idx", or -1
 // 	for an interrupt triggered by CMDINTDST.
 // 	CMDINTDST: Triggers an interrupt targeting a specific destination;
-// 	the field "arg" is the index of the interrupt destination to target,
-// 	while "resp" in the result gets set to the interrupt destination index
+// 	field "arg" is expected to have following format
+// 	| idx: (WORDBITSZ-3) bits | rsvd: 1 bit | where "idx" is the interrupt
+// 	destination index to target, "rsvd" is reserved and ignored.
+// 	"resp" in the result gets set to the interrupt destination index
 // 	if valid, -2 if not ready due to an interrupt pending ack, or -1 if invalid.
 // 	CMDENAIRQ: Enable/Disable an interrupt source; field "arg" is expected
 // 	to have following format | idx: (WORDBITSZ-3) bits | en: 1 bit |
@@ -59,11 +63,11 @@
 //
 // IRQDSTCOUNT
 // 	Number of interrupt destinations.
-// 	It must be non-null and less than ((1<<(WORDBITSZ-3))-2).
+// 	It must be non-null and less than ((1<<(WORDBITSZ-4))-2).
 //
 // IRQSRCCOUNT
 // 	Number of interrupt sources.
-// 	It must be non-null and less than ((1<<(WORDBITSZ-3))-2).
+// 	It must be non-null and less than ((1<<(WORDBITSZ-4))-2).
 
 // Ports:
 //
@@ -208,7 +212,7 @@ wire cmdenairq = (prevcmddone && wb_dat_r[1:0] == CMDENAIRQ);
 reg [WORDBITSZ -1 : 0] irqdstdat;
 wire irqdstseek = (
 	irqdstdat[1:0] == CMDINTDST &&
-	dstidx != irqdstdat[(CLOG2IRQDSTCOUNT +2) -1 : 2]);
+	dstidx != irqdstdat[(CLOG2IRQDSTCOUNT +3) -1 : 3]);
 
 reg irqpending; /* set to 1 when an interrupt request is waiting to be acknowledged */
 
@@ -273,25 +277,27 @@ always_ff @(posedge clk_i) begin
 		if (wb_dat_r[WORDBITSZ -1 : 3] < IRQSRCCOUNT) begin
 			irqsrcen[wb_dat_r[(CLOG2IRQSRCCOUNT +3) -1 : 3]] <= wb_dat_r[2];
 			wb_dat_o <= {
-				{((WORDBITSZ-2)-CLOG2IRQSRCCOUNT){1'b0}},
+				{((WORDBITSZ-3)-CLOG2IRQSRCCOUNT){1'b0}},
 				wb_dat_r[(CLOG2IRQSRCCOUNT +3) -1 : 3],
+				1'b0,
 				wb_dat_r[1:0]};
 		end else
-			wb_dat_o <= {{(WORDBITSZ-2){1'b1}}, wb_dat_r[1:0]};
+			wb_dat_o <= {{(WORDBITSZ-3){1'b1}}, 1'b0, wb_dat_r[1:0]};
 	end else if (cmdintdst) begin
-		if (wb_dat_r[WORDBITSZ -1 : 2] < IRQDSTCOUNT) begin
+		if (wb_dat_r[WORDBITSZ -1 : 3] < IRQDSTCOUNT) begin
 			if (irqpending) begin
-				wb_dat_o <= {{(WORDBITSZ-3){1'b1}}, 1'b0, wb_dat_r[1:0]};
+				wb_dat_o <= {{(WORDBITSZ-4){1'b1}}, 1'b0, 1'b0, wb_dat_r[1:0]};
 			end else begin
 				wb_dat_o <= {
-					{((WORDBITSZ-2)-CLOG2IRQDSTCOUNT){1'b0}},
-					wb_dat_r[(CLOG2IRQDSTCOUNT +2) -1 : 2],
+					{((WORDBITSZ-3)-CLOG2IRQDSTCOUNT){1'b0}},
+					wb_dat_r[(CLOG2IRQDSTCOUNT +3) -1 : 3],
+					1'b0,
 					wb_dat_r[1:0]};
 				irqpending <= 1'b1;
 				irqdstdat <= wb_dat_r;
 			end
 		end else
-			wb_dat_o <= {{(WORDBITSZ-2){1'b1}}, wb_dat_r[1:0]};
+			wb_dat_o <= {{(WORDBITSZ-3){1'b1}}, 1'b0, wb_dat_r[1:0]};
 	end else if (irqdstseek) begin
 		// Keep incrementing dstidx until the targeted interrupt destination is indexed.
 		dstidx <= nextdstidx;
@@ -302,8 +308,8 @@ always_ff @(posedge clk_i) begin
 			if (irqpending && !irqpending_abort_dstidx &&
 				wb_dat_r[WORDBITSZ -1 : 3] == dstidx) begin
 				wb_dat_o <= ((irqdstdat[1:0] == CMDINTDST) ?
-					{{(WORDBITSZ-2){1'b1}}, wb_dat_r[1:0]} :
-					{{((WORDBITSZ-2)-CLOG2IRQSRCCOUNT){1'b0}}, srcidx, wb_dat_r[1:0]});
+					{{(WORDBITSZ-3){1'b1}}, 1'b0, wb_dat_r[1:0]} :
+					{{((WORDBITSZ-3)-CLOG2IRQSRCCOUNT){1'b0}}, srcidx, 1'b0, wb_dat_r[1:0]});
 				irqpending <= 1'b0;
 				irqdstdat <= {WORDBITSZ{1'b0}};
 				// The destination with the lowest index is always preferred.
@@ -314,7 +320,7 @@ always_ff @(posedge clk_i) begin
 				// this also responds to an acknowledgement which lost against
 				// irqpending_abort_dstidx, which would otherwise leave the ready
 				// result in place and get read back as interrupt source 0.
-				wb_dat_o <= {{(WORDBITSZ-3){1'b1}}, 1'b0, wb_dat_r[1:0]};
+				wb_dat_o <= {{(WORDBITSZ-4){1'b1}}, 1'b0, 1'b0, wb_dat_r[1:0]};
 			end
 			if (wb_dat_r[WORDBITSZ -1 : 3] < IRQDSTCOUNT)
 				irqdsten[wb_dat_r[(CLOG2IRQDSTCOUNT +3) -1 : 3]] <= wb_dat_r[2];
