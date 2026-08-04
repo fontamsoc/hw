@@ -9228,7 +9228,7 @@ __irq_ack():
 	uintptr_t ret = hwdrvirqctrl_ack(_cpuid(), en);
     4be8:	f14025f3          	csrr	a1,mhartid
 hwdrvirqctrl_ack():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:54 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:58 (discriminator 1)
 
 static inline uintptr_t hwdrvirqctrl_ack (uintptr_t idx, uintptr_t en) {
 	uintptr_t irqsrc;
@@ -9236,25 +9236,25 @@ static inline uintptr_t hwdrvirqctrl_ack (uintptr_t idx, uintptr_t en) {
 		irqsrc = ((idx<<3) | ((en&1)<<2) | 0b01);
 		irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     4bec:	000016b7          	lui	a3,0x1
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:53
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:57
 		irqsrc = ((idx<<3) | ((en&1)<<2) | 0b01);
     4bf0:	00359593          	slli	a1,a1,0x3
     4bf4:	0055e593          	ori	a1,a1,5
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:54 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:58 (discriminator 1)
 		irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     4bf8:	f0068693          	addi	a3,a3,-256 # f00 <_tls_errno+0xea0>
     4bfc:	0eb6a72f          	amoswap.w.aqrl	a4,a1,(a3)
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:55
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:59
 	} while (irqsrc & 0b11);
     4c00:	00377713          	andi	a4,a4,3
     4c04:	fe071ce3          	bnez	a4,4bfc <__trap_irq+0x60>
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:57 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:61 (discriminator 1)
 	irqsrc = 0;
 	irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     4c08:	0ee6a5af          	amoswap.w.aqrl	a1,a4,(a3)
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:58
-	return ((intptr_t)irqsrc >> 2);
-    4c0c:	4025d593          	srai	a1,a1,0x2
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:62
+	return ((intptr_t)irqsrc >> 3);
+    4c0c:	4035d593          	srai	a1,a1,0x3
 __irq_ack():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:251 (discriminator 1)
 	_xchg(&irqctrl_lock, 0);
@@ -9605,22 +9605,22 @@ __irq_ack():
 	uintptr_t ret = hwdrvirqctrl_ack(_cpuid(), en);
     4e98:	f1402673          	csrr	a2,mhartid
 hwdrvirqctrl_ack():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:54 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:58 (discriminator 1)
 		irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     4e9c:	000016b7          	lui	a3,0x1
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:53
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:57
 		irqsrc = ((idx<<3) | ((en&1)<<2) | 0b01);
     4ea0:	00361613          	slli	a2,a2,0x3
     4ea4:	00566613          	ori	a2,a2,5
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:54 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:58 (discriminator 1)
 		irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     4ea8:	f0068693          	addi	a3,a3,-256 # f00 <_tls_errno+0xea0>
     4eac:	0ec6a7af          	amoswap.w.aqrl	a5,a2,(a3)
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:55
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:59
 	} while (irqsrc & 0b11);
     4eb0:	0037f793          	andi	a5,a5,3
     4eb4:	fe079ce3          	bnez	a5,4eac <__init_multithreading+0x100>
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:57 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:61 (discriminator 1)
 	irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     4eb8:	0ef6a62f          	amoswap.w.aqrl	a2,a5,(a3)
 __irq_ack():
@@ -9633,12 +9633,12 @@ __init_multithreading():
 	__ncpu += 1;
     4ec4:	ec81a783          	lw	a5,-312(gp) # 6f18 <__ncpu>
 hwdrvirqctrl_int():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:65 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69 (discriminator 1)
 
 static inline uintptr_t hwdrvirqctrl_int (uintptr_t idx) {
 	uintptr_t irqdst;
 	do {
-		irqdst = ((idx<<2) | 0b10);
+		irqdst = ((idx<<3) | 0b10);
 		irqdst = _xchg(IRQCTRLADDR, irqdst);
     4ec8:	000016b7          	lui	a3,0x1
     4ecc:	f0068693          	addi	a3,a3,-256 # f00 <_tls_errno+0xea0>
@@ -9646,7 +9646,7 @@ __init_multithreading():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:680
     4ed0:	00178793          	addi	a5,a5,1
     4ed4:	ecf1a423          	sw	a5,-312(gp) # 6f18 <__ncpu>
-    4ed8:	00400e13          	li	t3,4
+    4ed8:	00800e13          	li	t3,8
 __irq_ipi():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:238 (discriminator 2)
 		while (_xchg(&irqctrl_lock, 1));
@@ -9660,13 +9660,13 @@ __init_multithreading():
     4ee4:	fff00f13          	li	t5,-1
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:683
 		if (i >= NCPU) // Harts for which (mhartid >= NCPU) park in _start(). TODO: To be removed once percpu support is complete.
-    4ee8:	04000f93          	li	t6,64
+    4ee8:	08000f93          	li	t6,128
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:685
 		uintptr_t ncpu = __ncpu;
     4eec:	ec81a883          	lw	a7,-312(gp) # 6f18 <__ncpu>
 hwdrvirqctrl_int():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:64
-		irqdst = ((idx<<2) | 0b10);
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:68
+		irqdst = ((idx<<3) | 0b10);
     4ef0:	002e6613          	ori	a2,t3,2
 __irq_ipi():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:238 (discriminator 2)
@@ -9676,20 +9676,20 @@ __irq_ipi():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:238 (discriminator 4)
     4efc:	fe079ce3          	bnez	a5,4ef4 <__init_multithreading+0x148>
 hwdrvirqctrl_int():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:65 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69 (discriminator 1)
 		irqdst = _xchg(IRQCTRLADDR, irqdst);
     4f00:	0ec6a7af          	amoswap.w.aqrl	a5,a2,(a3)
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:66
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:70
 	} while (irqdst & 0b11);
     4f04:	0037f793          	andi	a5,a5,3
     4f08:	fe079ce3          	bnez	a5,4f00 <__init_multithreading+0x154>
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:68 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:72 (discriminator 1)
 	irqdst = 0;
 	irqdst = _xchg(IRQCTRLADDR, irqdst);
     4f0c:	0ef6a52f          	amoswap.w.aqrl	a0,a5,(a3)
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69
-	return ((intptr_t)irqdst >> 2);
-    4f10:	40255513          	srai	a0,a0,0x2
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:73
+	return ((intptr_t)irqdst >> 3);
+    4f10:	40355513          	srai	a0,a0,0x3
 __irq_ipi():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:240 (discriminator 1)
 		_xchg(&irqctrl_lock, 0);
@@ -9708,7 +9708,7 @@ __init_multithreading():
     4f28:	ff178ee3          	beq	a5,a7,4f24 <__init_multithreading+0x178>
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:683
 		if (i >= NCPU) // Harts for which (mhartid >= NCPU) park in _start(). TODO: To be removed once percpu support is complete.
-    4f2c:	004e0e13          	addi	t3,t3,4
+    4f2c:	008e0e13          	addi	t3,t3,8
     4f30:	fbfe1ee3          	bne	t3,t6,4eec <__init_multithreading+0x140>
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:696 (discriminator 2)
 	for (uintptr_t i = 0; i < __ncpu; ++i)
@@ -10012,22 +10012,22 @@ __irq_ack():
 	uintptr_t ret = hwdrvirqctrl_ack(_cpuid(), en);
     5198:	f1402673          	csrr	a2,mhartid
 hwdrvirqctrl_ack():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:54 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:58 (discriminator 1)
 		irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     519c:	00001737          	lui	a4,0x1
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:53
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:57
 		irqsrc = ((idx<<3) | ((en&1)<<2) | 0b01);
     51a0:	00361613          	slli	a2,a2,0x3
     51a4:	00566613          	ori	a2,a2,5
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:54 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:58 (discriminator 1)
 		irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     51a8:	f0070713          	addi	a4,a4,-256 # f00 <_tls_errno+0xea0>
     51ac:	0ec727af          	amoswap.w.aqrl	a5,a2,(a4)
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:55
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:59
 	} while (irqsrc & 0b11);
     51b0:	0037f793          	andi	a5,a5,3
     51b4:	fe079ce3          	bnez	a5,51ac <__init_secondary_cpu+0x24>
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:57 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:61 (discriminator 1)
 	irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     51b8:	0ef7262f          	amoswap.w.aqrl	a2,a5,(a4)
 __irq_ack():
@@ -10216,16 +10216,16 @@ _thread_schedoncpu():
     52f8:	f1402773          	csrr	a4,mhartid
     52fc:	0ae78463          	beq	a5,a4,53a4 <_thread_schedoncpu+0x1dc>
 hwdrvirqctrl_int():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:64
-		irqdst = ((idx<<2) | 0b10);
-    5300:	00279793          	slli	a5,a5,0x2
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:65 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:68
+		irqdst = ((idx<<3) | 0b10);
+    5300:	00379793          	slli	a5,a5,0x3
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69 (discriminator 1)
 		irqdst = _xchg(IRQCTRLADDR, irqdst);
     5304:	00001737          	lui	a4,0x1
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:64
-		irqdst = ((idx<<2) | 0b10);
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:68
+		irqdst = ((idx<<3) | 0b10);
     5308:	0027e613          	ori	a2,a5,2
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:65 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69 (discriminator 1)
 		irqdst = _xchg(IRQCTRLADDR, irqdst);
     530c:	f0070713          	addi	a4,a4,-256 # f00 <_tls_errno+0xea0>
 __irq_ipi():
@@ -10242,13 +10242,13 @@ __irq_ipi():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:238 (discriminator 4)
     5320:	fe079ce3          	bnez	a5,5318 <_thread_schedoncpu+0x150>
 hwdrvirqctrl_int():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:65 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69 (discriminator 1)
     5324:	0ec727af          	amoswap.w.aqrl	a5,a2,(a4)
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:66
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:70
 	} while (irqdst & 0b11);
     5328:	0037f793          	andi	a5,a5,3
     532c:	fe079ce3          	bnez	a5,5324 <_thread_schedoncpu+0x15c>
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:68 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:72 (discriminator 1)
 	irqdst = _xchg(IRQCTRLADDR, irqdst);
     5330:	0ef7252f          	amoswap.w.aqrl	a0,a5,(a4)
 __irq_ipi():
@@ -10257,9 +10257,9 @@ __irq_ipi():
     5334:	ecc18e13          	addi	t3,gp,-308 # 6f1c <irqctrl_lock>
     5338:	0efe27af          	amoswap.w.aqrl	a5,a5,(t3)
 hwdrvirqctrl_int():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69
-	return ((intptr_t)irqdst >> 2);
-    533c:	40255793          	srai	a5,a0,0x2
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:73
+	return ((intptr_t)irqdst >> 3);
+    533c:	40355793          	srai	a5,a0,0x3
 __irq_ipi():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:241
 	} while (ret == -2);

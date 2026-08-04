@@ -10,7 +10,7 @@ ELF Header:
   Version:                           0x1
   Entry point address:               0x1000
   Start of program headers:          52 (bytes into file)
-  Start of section headers:          528440 (bytes into file)
+  Start of section headers:          528516 (bytes into file)
   Flags:                             0x0
   Size of this header:               52 (bytes)
   Size of program headers:           32 (bytes)
@@ -36,17 +36,17 @@ Section Headers:
   [12] .comment          PROGBITS        00000000 00f5c4 00001b 01  MS  0   0  1
   [13] .riscv.attributes RISCV_ATTRIBUTE 00000000 00f5df 00005b 00      0   0  1
   [14] .debug_aranges    PROGBITS        00000000 00f640 000e20 00      0   0  8
-  [15] .debug_info       PROGBITS        00000000 010460 01d093 00      0   0  1
-  [16] .debug_abbrev     PROGBITS        00000000 02d4f3 008102 00      0   0  1
-  [17] .debug_line       PROGBITS        00000000 0355f5 023430 00      0   0  1
-  [18] .debug_frame      PROGBITS        00000000 058a28 0022e0 00      0   0  4
-  [19] .debug_str        PROGBITS        00000000 05ad08 0026c1 01  MS  0   0  1
-  [20] .debug_line_str   PROGBITS        00000000 05d3c9 002747 01  MS  0   0  1
-  [21] .debug_loclists   PROGBITS        00000000 05fb10 01bafd 00      0   0  1
-  [22] .debug_rnglists   PROGBITS        00000000 07b60d 00291a 00      0   0  1
-  [23] .symtab           SYMTAB          00000000 07df28 002030 10     24 326  4
-  [24] .strtab           STRTAB          00000000 07ff58 000fcf 00      0   0  1
-  [25] .shstrtab         STRTAB          00000000 080f27 00010f 00      0   0  1
+  [15] .debug_info       PROGBITS        00000000 010460 01d0c1 00      0   0  1
+  [16] .debug_abbrev     PROGBITS        00000000 02d521 008100 00      0   0  1
+  [17] .debug_line       PROGBITS        00000000 035621 023453 00      0   0  1
+  [18] .debug_frame      PROGBITS        00000000 058a74 0022e0 00      0   0  4
+  [19] .debug_str        PROGBITS        00000000 05ad54 0026c1 01  MS  0   0  1
+  [20] .debug_line_str   PROGBITS        00000000 05d415 002747 01  MS  0   0  1
+  [21] .debug_loclists   PROGBITS        00000000 05fb5c 01bafd 00      0   0  1
+  [22] .debug_rnglists   PROGBITS        00000000 07b659 00291a 00      0   0  1
+  [23] .symtab           SYMTAB          00000000 07df74 002030 10     24 326  4
+  [24] .strtab           STRTAB          00000000 07ffa4 000fcf 00      0   0  1
+  [25] .shstrtab         STRTAB          00000000 080f73 00010f 00      0   0  1
 Key to Flags:
   W (write), A (alloc), X (execute), M (merge), S (strings), I (info),
   L (link order), O (extra OS processing required), G (group), T (TLS),

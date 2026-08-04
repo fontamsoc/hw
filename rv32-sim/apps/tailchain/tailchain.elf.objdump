@@ -316,7 +316,7 @@ _start():
 000011b0 <main>:
     11b0:	0000f537          	lui	a0,0xf
 main():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:188
 		_thread_dispose(thrds[i]);
 	CHECK(test2_ticks == TEST2_TICKS, "test2: timer ticks were lost");
 	printf("test2: %u ipis across %u ticks\n", (unsigned)ipis, (unsigned)TEST2_TICKS);
@@ -324,10 +324,10 @@ main():
 
 void main (void) {
     11b4:	fc010113          	addi	sp,sp,-64
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:210
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:189
 	printf("Starting ...\n");
     11b8:	42050513          	addi	a0,a0,1056 # f420 <__clzsi2+0xb8>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:209
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:188
 void main (void) {
     11bc:	02112e23          	sw	ra,60(sp)
     11c0:	02812c23          	sw	s0,56(sp)
@@ -338,73 +338,77 @@ void main (void) {
     11d4:	03512223          	sw	s5,36(sp)
     11d8:	03612023          	sw	s6,32(sp)
     11dc:	01712e23          	sw	s7,28(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:210
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:189
 	printf("Starting ...\n");
     11e0:	450010ef          	jal	2630 <puts>
 test0():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:93
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:72
 	printf("test0: blind acknowledge ...\n");
     11e4:	0000f537          	lui	a0,0xf
     11e8:	43050513          	addi	a0,a0,1072 # f430 <__clzsi2+0xc8>
     11ec:	444010ef          	jal	2630 <puts>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:94
-	CHECK(irqctrl_ack(_cpuid(), 1) == -2, "test0: blind ack did not report none-pending");
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:73
+	CHECK(hwdrvirqctrl_ack(_cpuid(), 1) == -2, "test0: blind ack did not report none-pending");
     11f0:	f1402773          	csrr	a4,mhartid
-irqctrl_ack():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:81 (discriminator 1)
+hwdrvirqctrl_ack():
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/hwdrvirqctrl.h:58 (discriminator 1)
+
+static inline uintptr_t hwdrvirqctrl_ack (uintptr_t idx, uintptr_t en) {
+	uintptr_t irqsrc;
+	do {
+		irqsrc = ((idx<<3) | ((en&1)<<2) | 0b01);
 		irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     11f4:	000017b7          	lui	a5,0x1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:80
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/hwdrvirqctrl.h:57
 		irqsrc = ((idx<<3) | ((en&1)<<2) | 0b01);
     11f8:	00371713          	slli	a4,a4,0x3
     11fc:	00576713          	ori	a4,a4,5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:81 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/hwdrvirqctrl.h:58 (discriminator 1)
 		irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     1200:	f0078793          	addi	a5,a5,-256 # f00 <_tls_sig_func+0xe8c>
     1204:	0ee7a42f          	amoswap.w.aqrl	s0,a4,(a5)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:82
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/hwdrvirqctrl.h:59
 	} while (irqsrc & 0b11);
     1208:	00347413          	andi	s0,s0,3
     120c:	fe041ce3          	bnez	s0,1204 <main+0x54>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:84 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/hwdrvirqctrl.h:61 (discriminator 1)
+	irqsrc = 0;
 	irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     1210:	0e87a72f          	amoswap.w.aqrl	a4,s0,(a5)
 test0():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:94 (discriminator 1)
-	CHECK(irqctrl_ack(_cpuid(), 1) == -2, "test0: blind ack did not report none-pending");
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:73 (discriminator 1)
     1214:	ffe00693          	li	a3,-2
-irqctrl_ack():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:85
-	return ((intptr_t)irqsrc >> 2);
-    1218:	40275793          	srai	a5,a4,0x2
+hwdrvirqctrl_ack():
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/hwdrvirqctrl.h:62
+	return ((intptr_t)irqsrc >> 3);
+    1218:	40375793          	srai	a5,a4,0x3
 test0():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:94 (discriminator 1)
-	CHECK(irqctrl_ack(_cpuid(), 1) == -2, "test0: blind ack did not report none-pending");
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:73 (discriminator 1)
     121c:	02d78263          	beq	a5,a3,1240 <main+0x90>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:94 (discriminator 3)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:73 (discriminator 3)
     1220:	00100793          	li	a5,1
     1224:	85418713          	addi	a4,gp,-1964 # 10508 <failcnt>
     1228:	06f727af          	amoadd.w.aqrl	a5,a5,(a4)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:94
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:73
     122c:	0000f5b7          	lui	a1,0xf
     1230:	0000f537          	lui	a0,0xf
     1234:	45058593          	addi	a1,a1,1104 # f450 <__clzsi2+0xe8>
     1238:	48050513          	addi	a0,a0,1152 # f480 <__clzsi2+0x118>
     123c:	208010ef          	jal	2444 <printf>
 main():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:212
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:191
 	test0();
 	_irq_register(&test1_ipi);
     1240:	00010937          	lui	s2,0x10
     1244:	ee090513          	addi	a0,s2,-288 # fee0 <test1_ipi>
     1248:	5040a0ef          	jal	b74c <_irq_register>
 test1():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:152
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:131
 	printf("test1: single-entry chain ...\n");
     124c:	0000f537          	lui	a0,0xf
     1250:	48c50513          	addi	a0,a0,1164 # f48c <__clzsi2+0x124>
     1254:	3dc010ef          	jal	2630 <puts>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:153
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:132
 	_timer_arm(&test1_cb0, _clkcycles() + _USECS(500));
     1258:	681090ef          	jal	b0d8 <_clkcycles>
     125c:	00050993          	mv	s3,a0
@@ -413,13 +417,13 @@ test1():
     1268:	000f47b7          	lui	a5,0xf4
     126c:	23f78793          	addi	a5,a5,575 # f423f <__BSS_END__+0xe1637>
     1270:	38a7f263          	bgeu	a5,a0,15f4 <main+0x444>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:153 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:132 (discriminator 2)
     1274:	000f4637          	lui	a2,0xf4
     1278:	24060613          	addi	a2,a2,576 # f4240 <__BSS_END__+0xe1638>
     127c:	00000693          	li	a3,0
     1280:	00000593          	li	a1,0
     1284:	2cd000ef          	jal	1d50 <__udivdi3>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:153
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:132
     1288:	1f400793          	li	a5,500
     128c:	02f53733          	mulhu	a4,a0,a5
     1290:	02f507b3          	mul	a5,a0,a5
@@ -430,7 +434,7 @@ test1():
     12a4:	00c98633          	add	a2,s3,a2
     12a8:	ec850513          	addi	a0,a0,-312 # fec8 <test1_cb0>
     12ac:	641090ef          	jal	b0ec <_timer_arm>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:156
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:135
 	_date_t giveup = (_clkcycles() + _MSECS(50));
     12b0:	629090ef          	jal	b0d8 <_clkcycles>
     12b4:	00050993          	mv	s3,a0
@@ -438,12 +442,12 @@ test1():
     12bc:	cc002573          	csrr	a0,0xcc0
     12c0:	3e700793          	li	a5,999
     12c4:	30a7f663          	bgeu	a5,a0,15d0 <main+0x420>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:156 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:135 (discriminator 2)
     12c8:	3e800613          	li	a2,1000
     12cc:	00000693          	li	a3,0
     12d0:	00000593          	li	a1,0
     12d4:	27d000ef          	jal	1d50 <__udivdi3>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:156
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:135
     12d8:	03200713          	li	a4,50
     12dc:	02e537b3          	mulhu	a5,a0,a4
     12e0:	02e50b33          	mul	s6,a0,a4
@@ -451,78 +455,78 @@ test1():
     12e8:	00fa0a33          	add	s4,s4,a5
     12ec:	013b39b3          	sltu	s3,s6,s3
     12f0:	014989b3          	add	s3,s3,s4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:157 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:136 (discriminator 1)
 	while ((test1_seq < 3) && (_clkcycles() < giveup));
     12f4:	00200a93          	li	s5,2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:157
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:136
     12f8:	00c0006f          	j	1304 <main+0x154>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:157 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:136 (discriminator 2)
     12fc:	5dd090ef          	jal	b0d8 <_clkcycles>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:157 (discriminator 3)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:136 (discriminator 3)
     1300:	3535f863          	bgeu	a1,s3,1650 <main+0x4a0>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:157
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:136
     1304:	8501a783          	lw	a5,-1968(gp) # 10504 <test1_seq>
     1308:	fefafae3          	bgeu	s5,a5,12fc <main+0x14c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:158
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:137
 	CHECK(test1_seq == 3, "test1: callbacks did not all run");
     130c:	8501a703          	lw	a4,-1968(gp) # 10504 <test1_seq>
     1310:	00300793          	li	a5,3
     1314:	02f70263          	beq	a4,a5,1338 <main+0x188>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:158 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:137 (discriminator 2)
     1318:	00100793          	li	a5,1
     131c:	85418713          	addi	a4,gp,-1964 # 10508 <failcnt>
     1320:	06f727af          	amoadd.w.aqrl	a5,a5,(a4)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:158
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:137
     1324:	0000f5b7          	lui	a1,0xf
     1328:	0000f537          	lui	a0,0xf
     132c:	4ac58593          	addi	a1,a1,1196 # f4ac <__clzsi2+0x144>
     1330:	48050513          	addi	a0,a0,1152 # f480 <__clzsi2+0x118>
     1334:	110010ef          	jal	2444 <printf>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:159
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:138
 	CHECK(test1_seq_cb0 == 1, "test1: cb0 ran out of order");
     1338:	84c1a703          	lw	a4,-1972(gp) # 10500 <test1_seq_cb0>
     133c:	00100793          	li	a5,1
     1340:	02f70063          	beq	a4,a5,1360 <main+0x1b0>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:159 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:138 (discriminator 2)
     1344:	85418713          	addi	a4,gp,-1964 # 10508 <failcnt>
     1348:	06f727af          	amoadd.w.aqrl	a5,a5,(a4)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:159
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:138
     134c:	0000f5b7          	lui	a1,0xf
     1350:	0000f537          	lui	a0,0xf
     1354:	4d058593          	addi	a1,a1,1232 # f4d0 <__clzsi2+0x168>
     1358:	48050513          	addi	a0,a0,1152 # f480 <__clzsi2+0x118>
     135c:	0e8010ef          	jal	2444 <printf>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:160
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:139
 	CHECK(test1_seq_ipi == 2, "test1: ipi ran out of order");
     1360:	8481a703          	lw	a4,-1976(gp) # 104fc <test1_seq_ipi>
     1364:	00200793          	li	a5,2
     1368:	02f70263          	beq	a4,a5,138c <main+0x1dc>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:160 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:139 (discriminator 2)
     136c:	00100793          	li	a5,1
     1370:	85418713          	addi	a4,gp,-1964 # 10508 <failcnt>
     1374:	06f727af          	amoadd.w.aqrl	a5,a5,(a4)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:160
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:139
     1378:	0000f5b7          	lui	a1,0xf
     137c:	0000f537          	lui	a0,0xf
     1380:	4ec58593          	addi	a1,a1,1260 # f4ec <__clzsi2+0x184>
     1384:	48050513          	addi	a0,a0,1152 # f480 <__clzsi2+0x118>
     1388:	0bc010ef          	jal	2444 <printf>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:161
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:140
 	CHECK(test1_seq_cb1 == 3, "test1: cb1 ran out of order");
     138c:	8441a703          	lw	a4,-1980(gp) # 104f8 <test1_seq_cb1>
     1390:	00300793          	li	a5,3
     1394:	02f70263          	beq	a4,a5,13b8 <main+0x208>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:161 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:140 (discriminator 2)
     1398:	00100793          	li	a5,1
     139c:	85418713          	addi	a4,gp,-1964 # 10508 <failcnt>
     13a0:	06f727af          	amoadd.w.aqrl	a5,a5,(a4)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:161
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:140
     13a4:	0000f5b7          	lui	a1,0xf
     13a8:	0000f537          	lui	a0,0xf
     13ac:	50858593          	addi	a1,a1,1288 # f508 <__clzsi2+0x1a0>
     13b0:	48050513          	addi	a0,a0,1152 # f480 <__clzsi2+0x118>
     13b4:	090010ef          	jal	2444 <printf>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:162
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:141
 	printf("test1: self-ipi to ipi(): %u cycles\n", (unsigned)(test1_c1 - test1_c0));
     13b8:	83c1a783          	lw	a5,-1988(gp) # 104f0 <test1_c0>
     13bc:	8341a583          	lw	a1,-1996(gp) # 104e8 <test1_c1>
@@ -530,7 +534,7 @@ test1():
     13c4:	52450513          	addi	a0,a0,1316 # f524 <__clzsi2+0x1bc>
     13c8:	40f585b3          	sub	a1,a1,a5
     13cc:	078010ef          	jal	2444 <printf>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:163
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:142
 	printf("test1: ipi() to cb1(): %u cycles\n", (unsigned)(test1_c2 - test1_c1));
     13d0:	8341a783          	lw	a5,-1996(gp) # 104e8 <test1_c1>
     13d4:	82c1a583          	lw	a1,-2004(gp) # 104e0 <test1_c2>
@@ -539,200 +543,202 @@ test1():
     13e0:	40f585b3          	sub	a1,a1,a5
     13e4:	060010ef          	jal	2444 <printf>
 main():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:214
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:193
 	test1();
 	if (TEST2_ENABLE && (_ncpu() >= 2))
     13e8:	6dc0a0ef          	jal	bac4 <_ncpu>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:214 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:193 (discriminator 1)
     13ec:	00100b93          	li	s7,1
     13f0:	24abf863          	bgeu	s7,a0,1640 <main+0x490>
 test2():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:189
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:168
 	printf("test2: ipi-storm chaining ...\n");
     13f4:	0000f537          	lui	a0,0xf
     13f8:	57050513          	addi	a0,a0,1392 # f570 <__clzsi2+0x208>
     13fc:	00002ab7          	lui	s5,0x2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:194
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:173
 		thrds[i] = _thread_create(0, THREADS_STACKSZ, test2_fn, (void *)i);
     1400:	00001a37          	lui	s4,0x1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:189
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:168
 	printf("test2: ipi-storm chaining ...\n");
     1404:	22c010ef          	jal	2630 <puts>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:193 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:172 (discriminator 2)
 	for (uintptr_t i = 0; i < 2; ++i) {
     1408:	00810b13          	addi	s6,sp,8
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:194
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:173
 		thrds[i] = _thread_create(0, THREADS_STACKSZ, test2_fn, (void *)i);
     140c:	a58a8a93          	addi	s5,s5,-1448 # 1a58 <test2_fn>
     1410:	800a0a13          	addi	s4,s4,-2048 # 800 <_tls_sig_func+0x78c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:193
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:172
 	for (uintptr_t i = 0; i < 2; ++i) {
     1414:	00000993          	li	s3,0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:194
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:173
 		thrds[i] = _thread_create(0, THREADS_STACKSZ, test2_fn, (void *)i);
     1418:	00098693          	mv	a3,s3
     141c:	000a8613          	mv	a2,s5
     1420:	000a0593          	mv	a1,s4
     1424:	00000513          	li	a0,0
     1428:	2c10a0ef          	jal	bee8 <_thread_create>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:195
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:174
 		_thread_schedoncpu(thrds[i], 1, true);
     142c:	00100613          	li	a2,1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:194 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:173 (discriminator 1)
 		thrds[i] = _thread_create(0, THREADS_STACKSZ, test2_fn, (void *)i);
     1430:	00ab2023          	sw	a0,0(s6)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:195
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:174
 		_thread_schedoncpu(thrds[i], 1, true);
     1434:	00060593          	mv	a1,a2
     1438:	4150a0ef          	jal	c04c <_thread_schedoncpu>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:193 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:172 (discriminator 2)
 	for (uintptr_t i = 0; i < 2; ++i) {
     143c:	004b0b13          	addi	s6,s6,4
     1440:	15799a63          	bne	s3,s7,1594 <main+0x3e4>
     1444:	0000fe37          	lui	t3,0xf
-irqctrl_int():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:71 (discriminator 1)
+hwdrvirqctrl_int():
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/hwdrvirqctrl.h:69 (discriminator 1)
+
+static inline uintptr_t hwdrvirqctrl_int (uintptr_t idx) {
+	uintptr_t irqdst;
+	do {
+		irqdst = ((idx<<3) | 0b10);
 		irqdst = _xchg(IRQCTRLADDR, irqdst);
     1448:	00001737          	lui	a4,0x1
 rawstr():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:61
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:64
 		*(volatile char *)SERIAL0_ADDR = c;
     144c:	00001337          	lui	t1,0x1
-irqctrl_int():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:71 (discriminator 1)
-		irqdst = _xchg(IRQCTRLADDR, irqdst);
+hwdrvirqctrl_int():
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/hwdrvirqctrl.h:69 (discriminator 1)
     1450:	f0070713          	addi	a4,a4,-256 # f00 <_tls_sig_func+0xe8c>
     1454:	41ee0e13          	addi	t3,t3,1054 # f41e <__clzsi2+0xb6>
 rawstr():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:61
-		*(volatile char *)SERIAL0_ADDR = c;
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:64
     1458:	f8030313          	addi	t1,t1,-128 # f80 <_tls_sig_func+0xf0c>
-irqctrl_int():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:71 (discriminator 1)
-		irqdst = _xchg(IRQCTRLADDR, irqdst);
-    145c:	00600693          	li	a3,6
+hwdrvirqctrl_int():
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/hwdrvirqctrl.h:69 (discriminator 1)
+    145c:	00a00693          	li	a3,10
 send_ipi():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:104 (discriminator 2)
-	while ((ret = irqctrl_int(cpu)) == -2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:83 (discriminator 2)
+	while ((ret = hwdrvirqctrl_int(cpu)) == -2)
     1460:	ffe00813          	li	a6,-2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:105
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:84
 		for (volatile uintptr_t i = 0; i < 100; ++i);
     1464:	06300613          	li	a2,99
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:106
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:85
 	if (ret != cpu) {
     1468:	00100e93          	li	t4,1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:107 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:86 (discriminator 1)
 		_atomic_inc(&failcnt);
     146c:	0000ff37          	lui	t5,0xf
 test2():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:201 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:180 (discriminator 2)
 		for (volatile uintptr_t i = 0; i < 2000; ++i);
     1470:	7cf00893          	li	a7,1999
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:198
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:177
 	while (!_is_thread_terminated(thrds[0]) || !_is_thread_terminated(thrds[1])) {
     1474:	00812503          	lw	a0,8(sp)
     1478:	04852783          	lw	a5,72(a0)
     147c:	08078a63          	beqz	a5,1510 <main+0x360>
-irqctrl_int():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:71 (discriminator 1)
-		irqdst = _xchg(IRQCTRLADDR, irqdst);
+hwdrvirqctrl_int():
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/hwdrvirqctrl.h:69 (discriminator 1)
     1480:	0ed727af          	amoswap.w.aqrl	a5,a3,(a4)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:72
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/hwdrvirqctrl.h:70
 	} while (irqdst & 0b11);
     1484:	0037f793          	andi	a5,a5,3
     1488:	fe079ce3          	bnez	a5,1480 <main+0x2d0>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:74 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/hwdrvirqctrl.h:72 (discriminator 1)
+	irqdst = 0;
 	irqdst = _xchg(IRQCTRLADDR, irqdst);
     148c:	0ef727af          	amoswap.w.aqrl	a5,a5,(a4)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:75
-	return ((intptr_t)irqdst >> 2);
-    1490:	4027d793          	srai	a5,a5,0x2
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/hwdrvirqctrl.h:73
+	return ((intptr_t)irqdst >> 3);
+    1490:	4037d793          	srai	a5,a5,0x3
 send_ipi():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:104 (discriminator 2)
-	while ((ret = irqctrl_int(cpu)) == -2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:83 (discriminator 2)
+	while ((ret = hwdrvirqctrl_int(cpu)) == -2)
     1494:	03079463          	bne	a5,a6,14bc <main+0x30c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:105
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:84
 		for (volatile uintptr_t i = 0; i < 100; ++i);
     1498:	00012223          	sw	zero,4(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:105 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:84 (discriminator 2)
     149c:	00412783          	lw	a5,4(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:105
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:84
     14a0:	fef660e3          	bltu	a2,a5,1480 <main+0x2d0>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:105 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:84 (discriminator 1)
     14a4:	00412783          	lw	a5,4(sp)
     14a8:	00178793          	addi	a5,a5,1
     14ac:	00f12223          	sw	a5,4(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:105 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:84 (discriminator 2)
     14b0:	00412783          	lw	a5,4(sp)
     14b4:	fef678e3          	bgeu	a2,a5,14a4 <main+0x2f4>
     14b8:	fc9ff06f          	j	1480 <main+0x2d0>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:106
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:85
 	if (ret != cpu) {
     14bc:	03d78263          	beq	a5,t4,14e0 <main+0x330>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:107 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:86 (discriminator 1)
 		_atomic_inc(&failcnt);
     14c0:	85418793          	addi	a5,gp,-1964 # 10508 <failcnt>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:107
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:86
     14c4:	07d7a7af          	amoadd.w.aqrl	a5,t4,(a5)
 rawstr():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:60
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:63
 	for (char c; (c = *s); ++s)
     14c8:	04600593          	li	a1,70
 send_ipi():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:107 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:86 (discriminator 1)
 		_atomic_inc(&failcnt);
     14cc:	3f8f0793          	addi	a5,t5,1016 # f3f8 <__clzsi2+0x90>
 rawstr():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:61
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:64
 		*(volatile char *)SERIAL0_ADDR = c;
     14d0:	00b30023          	sb	a1,0(t1)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:60 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:63 (discriminator 1)
 	for (char c; (c = *s); ++s)
     14d4:	00178793          	addi	a5,a5,1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:60
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:63
     14d8:	0007c583          	lbu	a1,0(a5)
     14dc:	ffc79ae3          	bne	a5,t3,14d0 <main+0x320>
 test2():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:201
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:180
 		for (volatile uintptr_t i = 0; i < 2000; ++i);
     14e0:	00012023          	sw	zero,0(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:201 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:180 (discriminator 2)
     14e4:	00012783          	lw	a5,0(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:200
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:179
 		++ipis;
     14e8:	00140413          	addi	s0,s0,1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:201 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:180 (discriminator 2)
 		for (volatile uintptr_t i = 0; i < 2000; ++i);
     14ec:	f8f8e4e3          	bltu	a7,a5,1474 <main+0x2c4>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:201 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:180 (discriminator 1)
     14f0:	00012783          	lw	a5,0(sp)
     14f4:	00178793          	addi	a5,a5,1
     14f8:	00f12023          	sw	a5,0(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:201 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:180 (discriminator 2)
     14fc:	00012783          	lw	a5,0(sp)
     1500:	fef8f8e3          	bgeu	a7,a5,14f0 <main+0x340>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:198
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:177
 	while (!_is_thread_terminated(thrds[0]) || !_is_thread_terminated(thrds[1])) {
     1504:	00812503          	lw	a0,8(sp)
     1508:	04852783          	lw	a5,72(a0)
     150c:	f6079ae3          	bnez	a5,1480 <main+0x2d0>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:198 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:177 (discriminator 2)
     1510:	00c12983          	lw	s3,12(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:198
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:177
     1514:	0489a783          	lw	a5,72(s3)
     1518:	f60794e3          	bnez	a5,1480 <main+0x2d0>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:204 (discriminator 32768)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:183 (discriminator 32768)
 		_thread_dispose(thrds[i]);
     151c:	4a40b0ef          	jal	c9c0 <_thread_dispose>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:204 (discriminator 65536)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:183 (discriminator 65536)
     1520:	00098513          	mv	a0,s3
     1524:	49c0b0ef          	jal	c9c0 <_thread_dispose>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:205
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:184
 	CHECK(test2_ticks == TEST2_TICKS, "test2: timer ticks were lost");
     1528:	8201a703          	lw	a4,-2016(gp) # 104d4 <test2_ticks>
     152c:	01400793          	li	a5,20
     1530:	0ef71663          	bne	a4,a5,161c <main+0x46c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:206
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:185
 	printf("test2: %u ipis across %u ticks\n", (unsigned)ipis, (unsigned)TEST2_TICKS);
     1534:	0000f537          	lui	a0,0xf
     1538:	00040593          	mv	a1,s0
@@ -740,24 +746,24 @@ test2():
     1540:	01400613          	li	a2,20
     1544:	701000ef          	jal	2444 <printf>
 main():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:218
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:197
 		test2();
 	else
 		printf("test2: skipped\n");
 	_irq_unregister(&test1_ipi);
     1548:	ee090513          	addi	a0,s2,-288
     154c:	2bc0a0ef          	jal	b808 <_irq_unregister>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:221 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:200 (discriminator 1)
 	// Atomic read; failcnt is atomically incremented, and per the hw
 	// atomics coherency contract, it must only be accessed atomically.
 	uintptr_t fails = _atomic_add(&failcnt, 0);
     1550:	00000593          	li	a1,0
     1554:	85418793          	addi	a5,gp,-1964 # 10508 <failcnt>
     1558:	06b7a5af          	amoadd.w.aqrl	a1,a1,(a5)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:222
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:201
 	if (fails)
     155c:	04058063          	beqz	a1,159c <main+0x3ec>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:226
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:205
 		printf("FAILED: %u failures\n", (unsigned)fails);
 	else
 		printf("PASS\n");
@@ -771,24 +777,24 @@ main():
     1578:	02412a83          	lw	s5,36(sp)
     157c:	02012b03          	lw	s6,32(sp)
     1580:	01c12b83          	lw	s7,28(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:223
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:202
 		printf("FAILED: %u failures\n", (unsigned)fails);
     1584:	0000f537          	lui	a0,0xf
     1588:	5e050513          	addi	a0,a0,1504 # f5e0 <__clzsi2+0x278>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:226
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:205
 }
     158c:	04010113          	addi	sp,sp,64
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:223
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:202
 		printf("FAILED: %u failures\n", (unsigned)fails);
     1590:	6b50006f          	j	2444 <printf>
 test2():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:193 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:172 (discriminator 2)
 	for (uintptr_t i = 0; i < 2; ++i) {
     1594:	00100993          	li	s3,1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:193
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:172
     1598:	e81ff06f          	j	1418 <main+0x268>
 main():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:226
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:205
 }
     159c:	03812403          	lw	s0,56(sp)
     15a0:	03c12083          	lw	ra,60(sp)
@@ -799,30 +805,30 @@ main():
     15b4:	02412a83          	lw	s5,36(sp)
     15b8:	02012b03          	lw	s6,32(sp)
     15bc:	01c12b83          	lw	s7,28(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:225
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:204
 		printf("PASS\n");
     15c0:	0000f537          	lui	a0,0xf
     15c4:	5f850513          	addi	a0,a0,1528 # f5f8 <__clzsi2+0x290>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:226
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:205
 }
     15c8:	04010113          	addi	sp,sp,64
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:225
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:204
 		printf("PASS\n");
     15cc:	0640106f          	j	2630 <puts>
 test1():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:156 (discriminator 3)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:135 (discriminator 3)
 	_date_t giveup = (_clkcycles() + _MSECS(50));
     15d0:	03200793          	li	a5,50
     15d4:	02f535b3          	mulhu	a1,a0,a5
     15d8:	3e800613          	li	a2,1000
     15dc:	00000693          	li	a3,0
     15e0:	02f50533          	mul	a0,a0,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:156
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:135
     15e4:	76c000ef          	jal	1d50 <__udivdi3>
     15e8:	00050b13          	mv	s6,a0
     15ec:	00058793          	mv	a5,a1
     15f0:	cf5ff06f          	j	12e4 <main+0x134>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:153
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:132
 	_timer_arm(&test1_cb0, _clkcycles() + _USECS(500));
     15f4:	1f400793          	li	a5,500
     15f8:	02f535b3          	mulhu	a1,a0,a5
@@ -835,12 +841,12 @@ test1():
     1614:	00058713          	mv	a4,a1
     1618:	c7dff06f          	j	1294 <main+0xe4>
 test2():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:205 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:184 (discriminator 2)
 	CHECK(test2_ticks == TEST2_TICKS, "test2: timer ticks were lost");
     161c:	00100793          	li	a5,1
     1620:	85418713          	addi	a4,gp,-1964 # 10508 <failcnt>
     1624:	06f727af          	amoadd.w.aqrl	a5,a5,(a4)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:205
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:184
     1628:	0000f5b7          	lui	a1,0xf
     162c:	0000f537          	lui	a0,0xf
     1630:	59058593          	addi	a1,a1,1424 # f590 <__clzsi2+0x228>
@@ -848,14 +854,14 @@ test2():
     1638:	60d000ef          	jal	2444 <printf>
     163c:	ef9ff06f          	j	1534 <main+0x384>
 main():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:217
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:196
 		printf("test2: skipped\n");
     1640:	0000f537          	lui	a0,0xf
     1644:	5d050513          	addi	a0,a0,1488 # f5d0 <__clzsi2+0x268>
     1648:	7e9000ef          	jal	2630 <puts>
     164c:	efdff06f          	j	1548 <main+0x398>
 test1():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:157 (discriminator 3)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:136 (discriminator 3)
 	while ((test1_seq < 3) && (_clkcycles() < giveup));
     1650:	cab99ee3          	bne	s3,a1,130c <main+0x15c>
     1654:	cb6568e3          	bltu	a0,s6,1304 <main+0x154>
@@ -1592,46 +1598,46 @@ frame_dummy():
 
 000019fc <test1_cb1_fn>:
 test1_cb1_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:120
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:99
 static void test1_cb1_fn (_timer_t *t) {
     19fc:	ff010113          	addi	sp,sp,-16
     1a00:	00112623          	sw	ra,12(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:121
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:100
 	test1_c2 = _clkcycles();
     1a04:	6d4090ef          	jal	b0d8 <_clkcycles>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:122
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:101
 	test1_seq_cb1 = ++test1_seq;
     1a08:	8501a703          	lw	a4,-1968(gp) # 10504 <test1_seq>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:121
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:100
 	test1_c2 = _clkcycles();
     1a0c:	00058893          	mv	a7,a1
     1a10:	00050813          	mv	a6,a0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:122
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:101
 	test1_seq_cb1 = ++test1_seq;
     1a14:	00170713          	addi	a4,a4,1
     1a18:	84e1a823          	sw	a4,-1968(gp) # 10504 <test1_seq>
     1a1c:	84e1a223          	sw	a4,-1980(gp) # 104f8 <test1_seq_cb1>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:121 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:100 (discriminator 1)
 	test1_c2 = _clkcycles();
     1a20:	8301a623          	sw	a6,-2004(gp) # 104e0 <test1_c2>
     1a24:	8311a823          	sw	a7,-2000(gp) # 104e4 <test1_c2+0x4>
 rawstr():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:61 (discriminator 32768)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:64 (discriminator 32768)
 		*(volatile char *)SERIAL0_ADDR = c;
     1a28:	000017b7          	lui	a5,0x1
     1a2c:	06300713          	li	a4,99
     1a30:	f8e78023          	sb	a4,-128(a5) # f80 <_tls_sig_func+0xf0c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:61 (discriminator 65536)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:64 (discriminator 65536)
     1a34:	06200713          	li	a4,98
     1a38:	f8e78023          	sb	a4,-128(a5)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:61 (discriminator 98304)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:64 (discriminator 98304)
     1a3c:	03100713          	li	a4,49
     1a40:	f8e78023          	sb	a4,-128(a5)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:61
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:64
     1a44:	00a00713          	li	a4,10
     1a48:	f8e78023          	sb	a4,-128(a5)
 test1_cb1_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:124
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:103
 }
     1a4c:	00c12083          	lw	ra,12(sp)
     1a50:	01010113          	addi	sp,sp,16
@@ -1639,15 +1645,15 @@ test1_cb1_fn():
 
 00001a58 <test2_fn>:
 test2_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:183
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:162
 	if (arg)
     1a58:	0a050a63          	beqz	a0,1b0c <test2_fn+0xb4>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:182
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:161
 static void test2_fn (void *arg) {
     1a5c:	fe010113          	addi	sp,sp,-32
     1a60:	00812c23          	sw	s0,24(sp)
     1a64:	00112e23          	sw	ra,28(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:184
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:163
 		_timer_arm(&test2_tick, _clkcycles() + _USECS(100));
     1a68:	670090ef          	jal	b0d8 <_clkcycles>
     1a6c:	00050793          	mv	a5,a0
@@ -1657,14 +1663,14 @@ static void test2_fn (void *arg) {
     1a7c:	23f70713          	addi	a4,a4,575 # f423f <__BSS_END__+0xe1637>
     1a80:	00f12623          	sw	a5,12(sp)
     1a84:	06a76063          	bltu	a4,a0,1ae4 <test2_fn+0x8c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:184 (discriminator 3)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:163 (discriminator 3)
     1a88:	06400713          	li	a4,100
     1a8c:	02e535b3          	mulhu	a1,a0,a4
     1a90:	000f4637          	lui	a2,0xf4
     1a94:	24060613          	addi	a2,a2,576 # f4240 <__BSS_END__+0xe1638>
     1a98:	00000693          	li	a3,0
     1a9c:	02e50533          	mul	a0,a0,a4
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:184
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:163
     1aa0:	2b0000ef          	jal	1d50 <__udivdi3>
     1aa4:	00c12783          	lw	a5,12(sp)
     1aa8:	00058713          	mv	a4,a1
@@ -1675,140 +1681,140 @@ static void test2_fn (void *arg) {
     1abc:	00c78633          	add	a2,a5,a2
     1ac0:	eb050513          	addi	a0,a0,-336 # feb0 <test2_tick>
     1ac4:	628090ef          	jal	b0ec <_timer_arm>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:185 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:164 (discriminator 1)
 	while (test2_ticks < TEST2_TICKS);
     1ac8:	01300713          	li	a4,19
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:185
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:164
     1acc:	8201a783          	lw	a5,-2016(gp) # 104d4 <test2_ticks>
     1ad0:	fef77ee3          	bgeu	a4,a5,1acc <test2_fn+0x74>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:186
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:165
 }
     1ad4:	01c12083          	lw	ra,28(sp)
     1ad8:	01812403          	lw	s0,24(sp)
     1adc:	02010113          	addi	sp,sp,32
     1ae0:	00008067          	ret
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:184 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:163 (discriminator 2)
 		_timer_arm(&test2_tick, _clkcycles() + _USECS(100));
     1ae4:	000f4637          	lui	a2,0xf4
     1ae8:	00000693          	li	a3,0
     1aec:	24060613          	addi	a2,a2,576 # f4240 <__BSS_END__+0xe1638>
     1af0:	00000593          	li	a1,0
     1af4:	25c000ef          	jal	1d50 <__udivdi3>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:184
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:163
     1af8:	06400693          	li	a3,100
     1afc:	02d53733          	mulhu	a4,a0,a3
     1b00:	00c12783          	lw	a5,12(sp)
     1b04:	02d50533          	mul	a0,a0,a3
     1b08:	fa5ff06f          	j	1aac <test2_fn+0x54>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:185 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:164 (discriminator 1)
 	while (test2_ticks < TEST2_TICKS);
     1b0c:	01300713          	li	a4,19
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:185
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:164
     1b10:	8201a783          	lw	a5,-2016(gp) # 104d4 <test2_ticks>
     1b14:	fef77ee3          	bgeu	a4,a5,1b10 <test2_fn+0xb8>
     1b18:	00008067          	ret
 
 00001b1c <test1_ipi_fn>:
 test1_ipi_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:130
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:109
 	if (!test1_ipi_expected)
     1b1c:	8241a703          	lw	a4,-2012(gp) # 104d8 <test1_ipi_expected>
     1b20:	00071463          	bnez	a4,1b28 <test1_ipi_fn+0xc>
     1b24:	00008067          	ret
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:127
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:106
 static void test1_ipi_fn (_irq_t *i) {
     1b28:	ff010113          	addi	sp,sp,-16
     1b2c:	00112623          	sw	ra,12(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:132
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:111
 	test1_ipi_expected = 0;
     1b30:	8201a223          	sw	zero,-2012(gp) # 104d8 <test1_ipi_expected>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:133
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:112
 	test1_c1 = _clkcycles();
     1b34:	5a4090ef          	jal	b0d8 <_clkcycles>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:134
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:113
 	test1_seq_ipi = ++test1_seq;
     1b38:	8501a703          	lw	a4,-1968(gp) # 10504 <test1_seq>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:133
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:112
 	test1_c1 = _clkcycles();
     1b3c:	00058893          	mv	a7,a1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:134
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:113
 	test1_seq_ipi = ++test1_seq;
     1b40:	00170713          	addi	a4,a4,1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:133
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:112
 	test1_c1 = _clkcycles();
     1b44:	00050813          	mv	a6,a0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:134
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:113
 	test1_seq_ipi = ++test1_seq;
     1b48:	84e1a823          	sw	a4,-1968(gp) # 10504 <test1_seq>
     1b4c:	84e1a423          	sw	a4,-1976(gp) # 104fc <test1_seq_ipi>
 rawstr():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:61 (discriminator 32768)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:64 (discriminator 32768)
 		*(volatile char *)SERIAL0_ADDR = c;
     1b50:	000017b7          	lui	a5,0x1
 test1_ipi_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:133 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:112 (discriminator 1)
 	test1_c1 = _clkcycles();
     1b54:	8301aa23          	sw	a6,-1996(gp) # 104e8 <test1_c1>
     1b58:	8311ac23          	sw	a7,-1992(gp) # 104ec <test1_c1+0x4>
 rawstr():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:61 (discriminator 32768)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:64 (discriminator 32768)
 		*(volatile char *)SERIAL0_ADDR = c;
     1b5c:	06900713          	li	a4,105
     1b60:	f8e78023          	sb	a4,-128(a5) # f80 <_tls_sig_func+0xf0c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:61 (discriminator 65536)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:64 (discriminator 65536)
     1b64:	07000693          	li	a3,112
     1b68:	f8d78023          	sb	a3,-128(a5)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:61 (discriminator 98304)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:64 (discriminator 98304)
     1b6c:	f8e78023          	sb	a4,-128(a5)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:61
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:64
     1b70:	00a00713          	li	a4,10
     1b74:	f8e78023          	sb	a4,-128(a5)
 test1_ipi_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:137
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:116
 	_timer_arm(&test1_cb1, _clkcycles());
     1b78:	560090ef          	jal	b0d8 <_clkcycles>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:138
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:117
 }
     1b7c:	00c12083          	lw	ra,12(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:137 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:116 (discriminator 1)
 	_timer_arm(&test1_cb1, _clkcycles());
     1b80:	00058613          	mv	a2,a1
     1b84:	00050593          	mv	a1,a0
     1b88:	00010537          	lui	a0,0x10
     1b8c:	ef050513          	addi	a0,a0,-272 # fef0 <test1_cb1>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:138
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:117
 }
     1b90:	01010113          	addi	sp,sp,16
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:137 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:116 (discriminator 1)
 	_timer_arm(&test1_cb1, _clkcycles());
     1b94:	5580906f          	j	b0ec <_timer_arm>
 
 00001b98 <test2_tick_fn>:
 test2_tick_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:175
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:154
 	uintptr_t ticks = (test2_ticks + 1);
     1b98:	8201a783          	lw	a5,-2016(gp) # 104d4 <test2_ticks>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:177
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:156
 	if (ticks < TEST2_TICKS)
     1b9c:	01300693          	li	a3,19
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:175
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:154
 	uintptr_t ticks = (test2_ticks + 1);
     1ba0:	00178793          	addi	a5,a5,1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:176
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:155
 	test2_ticks = ticks;
     1ba4:	82f1a023          	sw	a5,-2016(gp) # 104d4 <test2_ticks>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:177
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:156
 	if (ticks < TEST2_TICKS)
     1ba8:	00f6f463          	bgeu	a3,a5,1bb0 <test2_tick_fn+0x18>
     1bac:	00008067          	ret
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:174
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:153
 static void test2_tick_fn (_timer_t *t) {
     1bb0:	fe010113          	addi	sp,sp,-32
     1bb4:	00812c23          	sw	s0,24(sp)
     1bb8:	00912a23          	sw	s1,20(sp)
     1bbc:	00112e23          	sw	ra,28(sp)
     1bc0:	00050493          	mv	s1,a0
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:178
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:157
 		_timer_arm(t, _clkcycles() + _USECS(100));
     1bc4:	514090ef          	jal	b0d8 <_clkcycles>
     1bc8:	00050713          	mv	a4,a0
@@ -1818,47 +1824,47 @@ static void test2_tick_fn (_timer_t *t) {
     1bd8:	23f78793          	addi	a5,a5,575 # f423f <__BSS_END__+0xe1637>
     1bdc:	00e12623          	sw	a4,12(sp)
     1be0:	04a7ea63          	bltu	a5,a0,1c34 <test2_tick_fn+0x9c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:178 (discriminator 3)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:157 (discriminator 3)
     1be4:	06400793          	li	a5,100
     1be8:	02f535b3          	mulhu	a1,a0,a5
     1bec:	000f4637          	lui	a2,0xf4
     1bf0:	00000693          	li	a3,0
     1bf4:	24060613          	addi	a2,a2,576 # f4240 <__BSS_END__+0xe1638>
     1bf8:	02f50533          	mul	a0,a0,a5
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:178
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:157
     1bfc:	154000ef          	jal	1d50 <__udivdi3>
     1c00:	00c12703          	lw	a4,12(sp)
     1c04:	00050793          	mv	a5,a0
     1c08:	00058693          	mv	a3,a1
     1c0c:	00d40633          	add	a2,s0,a3
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:179
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:158
 }
     1c10:	01812403          	lw	s0,24(sp)
     1c14:	01c12083          	lw	ra,28(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:178 (discriminator 4)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:157 (discriminator 4)
 		_timer_arm(t, _clkcycles() + _USECS(100));
     1c18:	00f705b3          	add	a1,a4,a5
     1c1c:	00048513          	mv	a0,s1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:179
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:158
 }
     1c20:	01412483          	lw	s1,20(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:178 (discriminator 4)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:157 (discriminator 4)
 		_timer_arm(t, _clkcycles() + _USECS(100));
     1c24:	00e5b733          	sltu	a4,a1,a4
     1c28:	00c70633          	add	a2,a4,a2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:179
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:158
 }
     1c2c:	02010113          	addi	sp,sp,32
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:178 (discriminator 4)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:157 (discriminator 4)
 		_timer_arm(t, _clkcycles() + _USECS(100));
     1c30:	4bc0906f          	j	b0ec <_timer_arm>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:178 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:157 (discriminator 2)
     1c34:	000f4637          	lui	a2,0xf4
     1c38:	00000693          	li	a3,0
     1c3c:	24060613          	addi	a2,a2,576 # f4240 <__BSS_END__+0xe1638>
     1c40:	00000593          	li	a1,0
     1c44:	10c000ef          	jal	1d50 <__udivdi3>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:178
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:157
     1c48:	06400793          	li	a5,100
     1c4c:	02f536b3          	mulhu	a3,a0,a5
     1c50:	00c12703          	lw	a4,12(sp)
@@ -1867,141 +1873,139 @@ static void test2_tick_fn (_timer_t *t) {
 
 00001c5c <test1_cb0_fn>:
 test1_cb0_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:142
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:121
 	test1_seq_cb0 = ++test1_seq;
     1c5c:	8501a703          	lw	a4,-1968(gp) # 10504 <test1_seq>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:141
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:120
 static void test1_cb0_fn (_timer_t *t) {
     1c60:	fe010113          	addi	sp,sp,-32
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:142
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:121
 	test1_seq_cb0 = ++test1_seq;
     1c64:	00170713          	addi	a4,a4,1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:141
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:120
 static void test1_cb0_fn (_timer_t *t) {
     1c68:	00812c23          	sw	s0,24(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:142
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:121
 	test1_seq_cb0 = ++test1_seq;
     1c6c:	84e1a823          	sw	a4,-1968(gp) # 10504 <test1_seq>
     1c70:	84e1a623          	sw	a4,-1972(gp) # 10500 <test1_seq_cb0>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:141
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:120
 static void test1_cb0_fn (_timer_t *t) {
     1c74:	00112e23          	sw	ra,28(sp)
 rawstr():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:61 (discriminator 32768)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:64 (discriminator 32768)
 		*(volatile char *)SERIAL0_ADDR = c;
     1c78:	000017b7          	lui	a5,0x1
     1c7c:	06300413          	li	s0,99
     1c80:	f8878023          	sb	s0,-128(a5) # f80 <_tls_sig_func+0xf0c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:61 (discriminator 65536)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:64 (discriminator 65536)
     1c84:	06200713          	li	a4,98
     1c88:	f8e78023          	sb	a4,-128(a5)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:61 (discriminator 98304)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:64 (discriminator 98304)
     1c8c:	03000713          	li	a4,48
     1c90:	f8e78023          	sb	a4,-128(a5)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:61
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:64
     1c94:	00a00713          	li	a4,10
     1c98:	f8e78023          	sb	a4,-128(a5)
 test1_cb0_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:144
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:123
 	test1_ipi_expected = 1;
     1c9c:	00100713          	li	a4,1
     1ca0:	82e1a223          	sw	a4,-2012(gp) # 104d8 <test1_ipi_expected>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:145
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:124
 	test1_c0 = _clkcycles();
     1ca4:	434090ef          	jal	b0d8 <_clkcycles>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:145 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:124 (discriminator 1)
     1ca8:	82a1ae23          	sw	a0,-1988(gp) # 104f0 <test1_c0>
     1cac:	84b1a023          	sw	a1,-1984(gp) # 104f4 <test1_c0+0x4>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:147
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:126
 	send_ipi(_cpuid());
     1cb0:	f14025f3          	csrr	a1,mhartid
-irqctrl_int():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:71 (discriminator 1)
+hwdrvirqctrl_int():
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/hwdrvirqctrl.h:69 (discriminator 1)
 		irqdst = _xchg(IRQCTRLADDR, irqdst);
     1cb4:	00001737          	lui	a4,0x1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:70
-		irqdst = ((idx<<2) | 0b10);
-    1cb8:	00259693          	slli	a3,a1,0x2
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/hwdrvirqctrl.h:68
+		irqdst = ((idx<<3) | 0b10);
+    1cb8:	00359693          	slli	a3,a1,0x3
     1cbc:	0026e693          	ori	a3,a3,2
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:71 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/hwdrvirqctrl.h:69 (discriminator 1)
 		irqdst = _xchg(IRQCTRLADDR, irqdst);
     1cc0:	f0070713          	addi	a4,a4,-256 # f00 <_tls_sig_func+0xe8c>
 send_ipi():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:104 (discriminator 2)
-	while ((ret = irqctrl_int(cpu)) == -2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:83 (discriminator 2)
+	while ((ret = hwdrvirqctrl_int(cpu)) == -2)
     1cc4:	ffe00613          	li	a2,-2
-irqctrl_int():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:71 (discriminator 1)
-		irqdst = _xchg(IRQCTRLADDR, irqdst);
+hwdrvirqctrl_int():
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/hwdrvirqctrl.h:69 (discriminator 1)
     1cc8:	0ed727af          	amoswap.w.aqrl	a5,a3,(a4)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:72
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/hwdrvirqctrl.h:70
 	} while (irqdst & 0b11);
     1ccc:	0037f793          	andi	a5,a5,3
     1cd0:	fe079ce3          	bnez	a5,1cc8 <test1_cb0_fn+0x6c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:74 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/hwdrvirqctrl.h:72 (discriminator 1)
 	irqdst = _xchg(IRQCTRLADDR, irqdst);
     1cd4:	0ef727af          	amoswap.w.aqrl	a5,a5,(a4)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:75
-	return ((intptr_t)irqdst >> 2);
-    1cd8:	4027d793          	srai	a5,a5,0x2
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/hwdrvirqctrl.h:73
+	return ((intptr_t)irqdst >> 3);
+    1cd8:	4037d793          	srai	a5,a5,0x3
 send_ipi():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:104 (discriminator 2)
-	while ((ret = irqctrl_int(cpu)) == -2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:83 (discriminator 2)
     1cdc:	02c79463          	bne	a5,a2,1d04 <test1_cb0_fn+0xa8>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:105
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:84
 		for (volatile uintptr_t i = 0; i < 100; ++i);
     1ce0:	00012623          	sw	zero,12(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:105 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:84 (discriminator 2)
     1ce4:	00c12783          	lw	a5,12(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:105
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:84
     1ce8:	fef460e3          	bltu	s0,a5,1cc8 <test1_cb0_fn+0x6c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:105 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:84 (discriminator 1)
     1cec:	00c12783          	lw	a5,12(sp)
     1cf0:	00178793          	addi	a5,a5,1
     1cf4:	00f12623          	sw	a5,12(sp)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:105 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:84 (discriminator 2)
     1cf8:	00c12783          	lw	a5,12(sp)
     1cfc:	fef478e3          	bgeu	s0,a5,1cec <test1_cb0_fn+0x90>
     1d00:	fc9ff06f          	j	1cc8 <test1_cb0_fn+0x6c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:106
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:85
 	if (ret != cpu) {
     1d04:	02f58e63          	beq	a1,a5,1d40 <test1_cb0_fn+0xe4>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:107 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:86 (discriminator 1)
 		_atomic_inc(&failcnt);
     1d08:	00100793          	li	a5,1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:107
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:86
     1d0c:	85418713          	addi	a4,gp,-1964 # 10508 <failcnt>
     1d10:	06f727af          	amoadd.w.aqrl	a5,a5,(a4)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:107 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:86 (discriminator 1)
     1d14:	0000f7b7          	lui	a5,0xf
     1d18:	0000f637          	lui	a2,0xf
 rawstr():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:61
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:64
 		*(volatile char *)SERIAL0_ADDR = c;
     1d1c:	000016b7          	lui	a3,0x1
 send_ipi():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:107 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:86 (discriminator 1)
 		_atomic_inc(&failcnt);
     1d20:	3f878793          	addi	a5,a5,1016 # f3f8 <__clzsi2+0x90>
     1d24:	41e60613          	addi	a2,a2,1054 # f41e <__clzsi2+0xb6>
 rawstr():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:61
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:64
 		*(volatile char *)SERIAL0_ADDR = c;
     1d28:	f8068693          	addi	a3,a3,-128 # f80 <_tls_sig_func+0xf0c>
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:60 (discriminator 2)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:63 (discriminator 2)
 	for (char c; (c = *s); ++s)
     1d2c:	04600713          	li	a4,70
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:61
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:64
 		*(volatile char *)SERIAL0_ADDR = c;
     1d30:	00e68023          	sb	a4,0(a3)
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:60 (discriminator 1)
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:63 (discriminator 1)
 	for (char c; (c = *s); ++s)
     1d34:	00178793          	addi	a5,a5,1
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:60
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:63
     1d38:	0007c703          	lbu	a4,0(a5)
     1d3c:	fec79ae3          	bne	a5,a2,1d30 <test1_cb0_fn+0xd4>
 test1_cb0_fn():
-/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:148
+/home/wtambe/Documents/pu32/fontamsoc-hw/rv32-sim/apps/tailchain/tailchain.c:127
 }
     1d40:	01c12083          	lw	ra,28(sp)
     1d44:	01812403          	lw	s0,24(sp)
@@ -23740,7 +23744,7 @@ __irq_ack():
 	uintptr_t ret = hwdrvirqctrl_ack(_cpuid(), en);
     b900:	f14025f3          	csrr	a1,mhartid
 hwdrvirqctrl_ack():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:54 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:58 (discriminator 1)
 
 static inline uintptr_t hwdrvirqctrl_ack (uintptr_t idx, uintptr_t en) {
 	uintptr_t irqsrc;
@@ -23748,25 +23752,25 @@ static inline uintptr_t hwdrvirqctrl_ack (uintptr_t idx, uintptr_t en) {
 		irqsrc = ((idx<<3) | ((en&1)<<2) | 0b01);
 		irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     b904:	000016b7          	lui	a3,0x1
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:53
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:57
 		irqsrc = ((idx<<3) | ((en&1)<<2) | 0b01);
     b908:	00359593          	slli	a1,a1,0x3
     b90c:	0055e593          	ori	a1,a1,5
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:54 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:58 (discriminator 1)
 		irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     b910:	f0068693          	addi	a3,a3,-256 # f00 <_tls_sig_func+0xe8c>
     b914:	0eb6a72f          	amoswap.w.aqrl	a4,a1,(a3)
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:55
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:59
 	} while (irqsrc & 0b11);
     b918:	00377713          	andi	a4,a4,3
     b91c:	fe071ce3          	bnez	a4,b914 <__trap_irq+0x60>
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:57 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:61 (discriminator 1)
 	irqsrc = 0;
 	irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     b920:	0ee6a5af          	amoswap.w.aqrl	a1,a4,(a3)
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:58
-	return ((intptr_t)irqsrc >> 2);
-    b924:	4025d593          	srai	a1,a1,0x2
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:62
+	return ((intptr_t)irqsrc >> 3);
+    b924:	4035d593          	srai	a1,a1,0x3
 __irq_ack():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:251 (discriminator 1)
 	_xchg(&irqctrl_lock, 0);
@@ -24124,22 +24128,22 @@ __irq_ack():
 	uintptr_t ret = hwdrvirqctrl_ack(_cpuid(), en);
     bbb8:	f1402673          	csrr	a2,mhartid
 hwdrvirqctrl_ack():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:54 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:58 (discriminator 1)
 		irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     bbbc:	000016b7          	lui	a3,0x1
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:53
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:57
 		irqsrc = ((idx<<3) | ((en&1)<<2) | 0b01);
     bbc0:	00361613          	slli	a2,a2,0x3
     bbc4:	00566613          	ori	a2,a2,5
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:54 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:58 (discriminator 1)
 		irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     bbc8:	f0068693          	addi	a3,a3,-256 # f00 <_tls_sig_func+0xe8c>
     bbcc:	0ec6a7af          	amoswap.w.aqrl	a5,a2,(a3)
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:55
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:59
 	} while (irqsrc & 0b11);
     bbd0:	0037f793          	andi	a5,a5,3
     bbd4:	fe079ce3          	bnez	a5,bbcc <__init_multithreading+0x100>
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:57 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:61 (discriminator 1)
 	irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     bbd8:	0ef6a62f          	amoswap.w.aqrl	a2,a5,(a3)
 __irq_ack():
@@ -24152,12 +24156,12 @@ __init_multithreading():
 	__ncpu += 1;
     bbe4:	f041a783          	lw	a5,-252(gp) # 10bb8 <__ncpu>
 hwdrvirqctrl_int():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:65 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69 (discriminator 1)
 
 static inline uintptr_t hwdrvirqctrl_int (uintptr_t idx) {
 	uintptr_t irqdst;
 	do {
-		irqdst = ((idx<<2) | 0b10);
+		irqdst = ((idx<<3) | 0b10);
 		irqdst = _xchg(IRQCTRLADDR, irqdst);
     bbe8:	000016b7          	lui	a3,0x1
     bbec:	f0068693          	addi	a3,a3,-256 # f00 <_tls_sig_func+0xe8c>
@@ -24165,7 +24169,7 @@ __init_multithreading():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:680
     bbf0:	00178793          	addi	a5,a5,1
     bbf4:	f0f1a223          	sw	a5,-252(gp) # 10bb8 <__ncpu>
-    bbf8:	00400e13          	li	t3,4
+    bbf8:	00800e13          	li	t3,8
 __irq_ipi():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:238 (discriminator 2)
 		while (_xchg(&irqctrl_lock, 1));
@@ -24179,13 +24183,13 @@ __init_multithreading():
     bc04:	fff00f13          	li	t5,-1
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:683
 		if (i >= NCPU) // Harts for which (mhartid >= NCPU) park in _start(). TODO: To be removed once percpu support is complete.
-    bc08:	04000f93          	li	t6,64
+    bc08:	08000f93          	li	t6,128
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:685
 		uintptr_t ncpu = __ncpu;
     bc0c:	f041a883          	lw	a7,-252(gp) # 10bb8 <__ncpu>
 hwdrvirqctrl_int():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:64
-		irqdst = ((idx<<2) | 0b10);
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:68
+		irqdst = ((idx<<3) | 0b10);
     bc10:	002e6613          	ori	a2,t3,2
 __irq_ipi():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:238 (discriminator 2)
@@ -24195,20 +24199,20 @@ __irq_ipi():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:238 (discriminator 4)
     bc1c:	fe079ce3          	bnez	a5,bc14 <__init_multithreading+0x148>
 hwdrvirqctrl_int():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:65 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69 (discriminator 1)
 		irqdst = _xchg(IRQCTRLADDR, irqdst);
     bc20:	0ec6a7af          	amoswap.w.aqrl	a5,a2,(a3)
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:66
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:70
 	} while (irqdst & 0b11);
     bc24:	0037f793          	andi	a5,a5,3
     bc28:	fe079ce3          	bnez	a5,bc20 <__init_multithreading+0x154>
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:68 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:72 (discriminator 1)
 	irqdst = 0;
 	irqdst = _xchg(IRQCTRLADDR, irqdst);
     bc2c:	0ef6a52f          	amoswap.w.aqrl	a0,a5,(a3)
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69
-	return ((intptr_t)irqdst >> 2);
-    bc30:	40255513          	srai	a0,a0,0x2
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:73
+	return ((intptr_t)irqdst >> 3);
+    bc30:	40355513          	srai	a0,a0,0x3
 __irq_ipi():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:240 (discriminator 1)
 		_xchg(&irqctrl_lock, 0);
@@ -24227,7 +24231,7 @@ __init_multithreading():
     bc48:	ff178ee3          	beq	a5,a7,bc44 <__init_multithreading+0x178>
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:683
 		if (i >= NCPU) // Harts for which (mhartid >= NCPU) park in _start(). TODO: To be removed once percpu support is complete.
-    bc4c:	004e0e13          	addi	t3,t3,4
+    bc4c:	008e0e13          	addi	t3,t3,8
     bc50:	fbfe1ee3          	bne	t3,t6,bc0c <__init_multithreading+0x140>
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:696 (discriminator 2)
 	for (uintptr_t i = 0; i < __ncpu; ++i)
@@ -24531,22 +24535,22 @@ __irq_ack():
 	uintptr_t ret = hwdrvirqctrl_ack(_cpuid(), en);
     beb8:	f1402673          	csrr	a2,mhartid
 hwdrvirqctrl_ack():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:54 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:58 (discriminator 1)
 		irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     bebc:	00001737          	lui	a4,0x1
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:53
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:57
 		irqsrc = ((idx<<3) | ((en&1)<<2) | 0b01);
     bec0:	00361613          	slli	a2,a2,0x3
     bec4:	00566613          	ori	a2,a2,5
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:54 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:58 (discriminator 1)
 		irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     bec8:	f0070713          	addi	a4,a4,-256 # f00 <_tls_sig_func+0xe8c>
     becc:	0ec727af          	amoswap.w.aqrl	a5,a2,(a4)
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:55
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:59
 	} while (irqsrc & 0b11);
     bed0:	0037f793          	andi	a5,a5,3
     bed4:	fe079ce3          	bnez	a5,becc <__init_secondary_cpu+0x24>
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:57 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:61 (discriminator 1)
 	irqsrc = _xchg(IRQCTRLADDR, irqsrc);
     bed8:	0ef7262f          	amoswap.w.aqrl	a2,a5,(a4)
 __irq_ack():
@@ -24914,16 +24918,16 @@ _thread_schedoncpu():
     c17c:	f1402773          	csrr	a4,mhartid
     c180:	0ae78463          	beq	a5,a4,c228 <_thread_schedoncpu+0x1dc>
 hwdrvirqctrl_int():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:64
-		irqdst = ((idx<<2) | 0b10);
-    c184:	00279793          	slli	a5,a5,0x2
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:65 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:68
+		irqdst = ((idx<<3) | 0b10);
+    c184:	00379793          	slli	a5,a5,0x3
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69 (discriminator 1)
 		irqdst = _xchg(IRQCTRLADDR, irqdst);
     c188:	00001737          	lui	a4,0x1
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:64
-		irqdst = ((idx<<2) | 0b10);
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:68
+		irqdst = ((idx<<3) | 0b10);
     c18c:	0027e613          	ori	a2,a5,2
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:65 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69 (discriminator 1)
 		irqdst = _xchg(IRQCTRLADDR, irqdst);
     c190:	f0070713          	addi	a4,a4,-256 # f00 <_tls_sig_func+0xe8c>
 __irq_ipi():
@@ -24940,13 +24944,13 @@ __irq_ipi():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:238 (discriminator 4)
     c1a4:	fe079ce3          	bnez	a5,c19c <_thread_schedoncpu+0x150>
 hwdrvirqctrl_int():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:65 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69 (discriminator 1)
     c1a8:	0ec727af          	amoswap.w.aqrl	a5,a2,(a4)
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:66
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:70
 	} while (irqdst & 0b11);
     c1ac:	0037f793          	andi	a5,a5,3
     c1b0:	fe079ce3          	bnez	a5,c1a8 <_thread_schedoncpu+0x15c>
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:68 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:72 (discriminator 1)
 	irqdst = _xchg(IRQCTRLADDR, irqdst);
     c1b4:	0ef7252f          	amoswap.w.aqrl	a0,a5,(a4)
 __irq_ipi():
@@ -24955,9 +24959,9 @@ __irq_ipi():
     c1b8:	f0818e13          	addi	t3,gp,-248 # 10bbc <irqctrl_lock>
     c1bc:	0efe27af          	amoswap.w.aqrl	a5,a5,(t3)
 hwdrvirqctrl_int():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69
-	return ((intptr_t)irqdst >> 2);
-    c1c0:	40255793          	srai	a5,a0,0x2
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:73
+	return ((intptr_t)irqdst >> 3);
+    c1c0:	40355793          	srai	a5,a0,0x3
 __irq_ipi():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:241
 	} while (ret == -2);
@@ -25701,16 +25705,16 @@ _thread_stop():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:865
     c758:	04e51863          	bne	a0,a4,c7a8 <_thread_stop+0x148>
 hwdrvirqctrl_int():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:64
-		irqdst = ((idx<<2) | 0b10);
-    c75c:	00279793          	slli	a5,a5,0x2
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:65 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:68
+		irqdst = ((idx<<3) | 0b10);
+    c75c:	00379793          	slli	a5,a5,0x3
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69 (discriminator 1)
 		irqdst = _xchg(IRQCTRLADDR, irqdst);
     c760:	00001737          	lui	a4,0x1
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:64
-		irqdst = ((idx<<2) | 0b10);
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:68
+		irqdst = ((idx<<3) | 0b10);
     c764:	0027e613          	ori	a2,a5,2
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:65 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69 (discriminator 1)
 		irqdst = _xchg(IRQCTRLADDR, irqdst);
     c768:	f0070713          	addi	a4,a4,-256 # f00 <_tls_sig_func+0xe8c>
 __irq_ipi():
@@ -25727,13 +25731,13 @@ __irq_ipi():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:238 (discriminator 4)
     c77c:	fe079ce3          	bnez	a5,c774 <_thread_stop+0x114>
 hwdrvirqctrl_int():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:65 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69 (discriminator 1)
     c780:	0ec727af          	amoswap.w.aqrl	a5,a2,(a4)
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:66
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:70
 	} while (irqdst & 0b11);
     c784:	0037f793          	andi	a5,a5,3
     c788:	fe079ce3          	bnez	a5,c780 <_thread_stop+0x120>
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:68 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:72 (discriminator 1)
 	irqdst = _xchg(IRQCTRLADDR, irqdst);
     c78c:	0ef7282f          	amoswap.w.aqrl	a6,a5,(a4)
 __irq_ipi():
@@ -25742,9 +25746,9 @@ __irq_ipi():
     c790:	f0818e13          	addi	t3,gp,-248 # 10bbc <irqctrl_lock>
     c794:	0efe27af          	amoswap.w.aqrl	a5,a5,(t3)
 hwdrvirqctrl_int():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69
-	return ((intptr_t)irqdst >> 2);
-    c798:	40285793          	srai	a5,a6,0x2
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:73
+	return ((intptr_t)irqdst >> 3);
+    c798:	40385793          	srai	a5,a6,0x3
 __irq_ipi():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:241
 	} while (ret == -2);
@@ -25888,16 +25892,16 @@ _thread_preempt():
     c870:	f14027f3          	csrr	a5,mhartid
     c874:	06f50263          	beq	a0,a5,c8d8 <_thread_exit+0xb8>
 hwdrvirqctrl_int():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:64
-		irqdst = ((idx<<2) | 0b10);
-    c878:	00251613          	slli	a2,a0,0x2
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:65 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:68
+		irqdst = ((idx<<3) | 0b10);
+    c878:	00351613          	slli	a2,a0,0x3
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69 (discriminator 1)
 		irqdst = _xchg(IRQCTRLADDR, irqdst);
     c87c:	00001737          	lui	a4,0x1
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:64
-		irqdst = ((idx<<2) | 0b10);
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:68
+		irqdst = ((idx<<3) | 0b10);
     c880:	00266613          	ori	a2,a2,2
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:65 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69 (discriminator 1)
 		irqdst = _xchg(IRQCTRLADDR, irqdst);
     c884:	f0070713          	addi	a4,a4,-256 # f00 <_tls_sig_func+0xe8c>
 __irq_ipi():
@@ -25914,13 +25918,13 @@ __irq_ipi():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:238 (discriminator 4)
     c898:	fe079ce3          	bnez	a5,c890 <_thread_exit+0x70>
 hwdrvirqctrl_int():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:65 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69 (discriminator 1)
     c89c:	0ec727af          	amoswap.w.aqrl	a5,a2,(a4)
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:66
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:70
 	} while (irqdst & 0b11);
     c8a0:	0037f793          	andi	a5,a5,3
     c8a4:	fe079ce3          	bnez	a5,c89c <_thread_exit+0x7c>
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:68 (discriminator 1)
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:72 (discriminator 1)
 	irqdst = _xchg(IRQCTRLADDR, irqdst);
     c8a8:	0ef7252f          	amoswap.w.aqrl	a0,a5,(a4)
 __irq_ipi():
@@ -25929,9 +25933,9 @@ __irq_ipi():
     c8ac:	f0818893          	addi	a7,gp,-248 # 10bbc <irqctrl_lock>
     c8b0:	0ef8a7af          	amoswap.w.aqrl	a5,a5,(a7)
 hwdrvirqctrl_int():
-/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:69
-	return ((intptr_t)irqdst >> 2);
-    c8b4:	40255793          	srai	a5,a0,0x2
+/home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/machine/hwdrvirqctrl.h:73
+	return ((intptr_t)irqdst >> 3);
+    c8b4:	40355793          	srai	a5,a0,0x3
 __irq_ipi():
 /home/wtambe/Documents/rvpu-build/../rvpu/sw/riscv-gnu-toolchain/newlib/libgloss/riscv/_os.c:241
 	} while (ret == -2);
