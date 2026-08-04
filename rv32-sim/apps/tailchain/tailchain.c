@@ -32,7 +32,7 @@
 // hardware bug: the threads spinloop on `while (test2_ticks < TEST2_TICKS);`,
 // a two-instruction load loop, whose held load result used to assert
 // rW_multicyclePending in lockstep with a self-blanking excIrq pulse
-// (rvxx/sys.pu.sv) which alternated every other cycle while an interrupt
+// (cpu/sys.pu.sv) which alternated every other cycle while an interrupt
 // was pending; when the loop period aligned, `excIrq[x] && !rW_multicyclePending`
 // was false on every cycle and the CPU never took the trap: it was observed
 // spinning with mstatus.mie set, mie 0x880 and mip 0x880 indefinitely,

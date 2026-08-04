@@ -82,7 +82,7 @@
         <Option Name="TopModule" Val="nexysa7100"/>
         <Option Name="TopAutoSet" Val="TRUE"/>
         <Option Name="VerilogDir" Val="$PPRDIR/../../"/>
-        <Option Name="VerilogDir" Val="$PPRDIR/../../rvxx"/>
+        <Option Name="VerilogDir" Val="$PPRDIR/../../cpu"/>
       </Config>
     </FileSet>
     <FileSet Name="constrs_1" Type="Constrs" RelSrcDir="$PSRCDIR/constrs_1">

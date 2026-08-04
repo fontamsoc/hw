@@ -30,7 +30,7 @@
 `define PUDCACHEREGRQST
 `define PUDCACHEREGRESP
 //`define PUAMOREGWB
-`include "rvxx/cpu.sv"
+`include "cpu/ccx.sv"
 /* impl_1.sv defined *///`define CPU_COUNT 1
 /* impl_1.sv defined *///`define XWORDBITSZ 32
 
@@ -175,7 +175,7 @@ localparam DCACHEWAYCNT = 1;
 wire [((WBPI_WORDBITSZ-WBPI_MSBSZIGN)*CPU_COUNT) -1 : 0] cpu_dcache_addr_w;
 wire [CPU_COUNT -1 : 0]                                  cpu_dcache_miss_w;
 
-cpu #(
+ccx #(
 	 .WORDBITSZ     (WORDBITSZ)
 	,.XWORDBITSZ    (WBPI_WORDBITSZ)
 	,.ADDRLIMIT     (WBPI_ADDRLIMIT)

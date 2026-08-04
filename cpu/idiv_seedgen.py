@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Generates the reciprocal seed case-ROM embedded (via include) in rvxx/idiv.sv for the DSP
+# Generates the reciprocal seed case-ROM embedded (via include) in cpu/idiv.sv for the DSP
 # Newton-Raphson integer divider (PUIDIVDSP). Run: python3 idiv_seedgen.py > idiv_recip_seed.vh
 #
 # The divider |D| is normalized so its MSB sits at bit 31: Dn = |D| << clz(|D|), Dn in [2^31, 2^32).

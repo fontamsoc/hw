@@ -4,7 +4,7 @@
 // Parameters:
 //
 // PUCNT
-// 	Number of PU making up the cpu.
+// 	Number of PU making up the ccx.
 
 // Ports:
 //
@@ -19,7 +19,7 @@
 `include "lib/wb_arbiter.sv"
 `include "lib/wb_cdc.sv"
 
-module cpu (
+module ccx (
 
 	 rst_i
 

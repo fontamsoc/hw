@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Generates the Newton-Raphson seed-table case-ROMs embedded in rvxx/fpu.sv for the DSP
+# Generates the Newton-Raphson seed-table case-ROMs embedded in cpu/fpu.sv for the DSP
 # fdiv/fsqrt (PUFDIVDSP*/PUFSQRTDSP*). Run: python3 fpu_seedgen.py  -> prints Verilog.
 #
 # Format: seeds are U1.27 fixed-point (value*2^27), value in (0.5,1].

@@ -6,7 +6,7 @@
 //
 // lib/wb_arbiter.sv rotates its grant, and the granted master is the only one
 // not held busy (m_wb_bsy_o), which reaches instruction fetching through
-// rvxx/memctrl.pu.sv, so a hart that is not granted executes nothing at all.
+// cpu/memctrl.pu.sv, so a hart that is not granted executes nothing at all.
 // No bus lock is involved here, ie: wb_lock is null throughout.
 //
 // A slave is allowed to hold wb_bsy_o for as long as it likes, and the character
@@ -19,7 +19,7 @@
 // What stalls below is an instruction fetch, ie: cpu1 jumps into the character
 // device's address space, and that is deliberate rather than incidental. A
 // stalled DATA access parks the data-cache outside READY and TSTHIT, which
-// rvxx/dcache.sv holds the coherency ring busy for, and the ring then stops the
+// cpu/dcache.sv holds the coherency ring busy for, and the ring then stops the
 // other harts' data-caches without their ever presenting a bus request at all,
 // ie: a wedge that has nothing to do with arbitration and that no arbitration
 // bound can lift. A stalled fetch leaves the data-cache in READY, so the ring
@@ -76,7 +76,7 @@ void main (void) {
 
 	if (_ncpu() < 2) {
 		// Nothing to starve: lib/wb_arbiter.sv is instantiated only for
-		// more than one hart, and rvxx/cpu.sv bypasses it otherwise.
+		// more than one hart, and cpu/ccx.sv bypasses it otherwise.
 		printf("smpfair: single hart, skipped\n");
 		printf("PASS\n");
 		return;
@@ -92,7 +92,7 @@ void main (void) {
 		for (volatile uintptr_t d = 0; d < 200; ++d);
 
 	// Accessed only through atomics, per the atomics coherency contract in
-	// rvxx/README.md: atomic memory operations bypass the data-cache and the
+	// cpu/README.md: atomic memory operations bypass the data-cache and the
 	// coherency protocol, so a plain load can observe a stale value. That also
 	// makes every iteration below a bus access, which is the point, as a hart
 	// running out of its caches would not need the grant at all.

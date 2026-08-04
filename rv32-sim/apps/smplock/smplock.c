@@ -4,10 +4,10 @@
 // Test that a hart running an atomic sequence cannot starve the other harts.
 //
 // A load-reserved, and the read phase of an atomic memory operation, raise the
-// Wishbone bus lock (rvxx/dcache.pu.sv). lib/wb_arbiter.sv turns that lock into
+// Wishbone bus lock (cpu/dcache.pu.sv). lib/wb_arbiter.sv turns that lock into
 // a grant hold: while it is set the granted master cannot change and every other
 // master is held busy, which reaches instruction fetching through
-// rvxx/memctrl.pu.sv, so a hart that is not granted executes nothing at all. The
+// cpu/memctrl.pu.sv, so a hart that is not granted executes nothing at all. The
 // lock is released by the next accepted access that does not carry it, ie: the
 // store-conditional's store, or the atomic memory operation's write-back.
 //
@@ -20,7 +20,7 @@
 // pinned on cpu1 keeps advancing while cpu0 exercises an atomic sequence.
 //
 // The counter is accessed only through atomics, per the atomics coherency
-// contract in rvxx/README.md: atomic memory operations bypass the data-cache and
+// contract in cpu/README.md: atomic memory operations bypass the data-cache and
 // the coherency protocol, so a plain load can observe a stale value. That also
 // makes cpu0's polling itself a bus access, which is the point: on hardware whose
 // lock release is too narrow, those accesses do not release the lock either.
@@ -157,7 +157,7 @@ void main (void) {
 
 	if (_ncpu() < 2) {
 		// Nothing to starve: lib/wb_arbiter.sv is instantiated only for
-		// more than one hart, and rvxx/cpu.sv bypasses it otherwise.
+		// more than one hart, and cpu/ccx.sv bypasses it otherwise.
 		printf("smplock: single hart, skipped\n");
 		printf("PASS\n");
 		return;

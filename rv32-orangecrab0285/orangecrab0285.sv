@@ -29,7 +29,7 @@
 `define PUPREDICTRET
 //`define PUDCACHEREGRQST
 `define PUDCACHEREGRESP
-`include "rvxx/cpu.sv"
+`include "cpu/ccx.sv"
 /* makefile defined *///`define CPU_COUNT 1
 /* makefile defined *///`define XWORDBITSZ 32
 
@@ -181,7 +181,7 @@ localparam DCACHEWAYCNT = 1;
 wire [((WBPI_WORDBITSZ-WBPI_MSBSZIGN)*CPU_COUNT) -1 : 0] cpu_dcache_addr_w;
 wire [CPU_COUNT -1 : 0]                                  cpu_dcache_miss_w;
 
-cpu #(
+ccx #(
 	 .WORDBITSZ     (WORDBITSZ)
 	,.XWORDBITSZ    (WBPI_WORDBITSZ)
 	,.ADDRLIMIT     (WBPI_ADDRLIMIT)

@@ -588,7 +588,7 @@ wire iF_isZbb =
 	(iF_isALUimm && iF_func7 == 7'b0110000 &&  iF_func3 == 3'b101)                                              || // rori
 	(iF_isALUimm && iF_func3 == 3'b101 && iF_Iimm[11:0] == 12'h698)                                             || // rev8
 	(iF_isALUimm && iF_func3 == 3'b101 && iF_Iimm[11:0] == 12'h287);                                               // orc.b
-// Multi-cycle Zbb unit (rvxx/zbb.sv): a 5-bit optype selects the op; the result retires via
+// Multi-cycle Zbb unit (cpu/zbb.sv): a 5-bit optype selects the op; the result retires via
 // the WriteBack arbiter (lateResultInsn), so the deep Zbb logic stays off the EX Fmax cone.
 // The optype is decoded at iD in zbb.pu.sv from the already-registered iD_func3/iD_func7/
 // iD_Iimm fields (mirrors clmul's iD_func3-sliced type field), so no pipeline reg for it.
