@@ -1,4 +1,8 @@
-# RISC-V Processing Unit
+# FonTamPU (ftpu)
+
+FonTamPU, abbreviated `ftpu`, is the RISC-V Processing Unit implemented in this directory.
+`ccx.sv` is its Core Complex top module: `PUCNT` instances of `pu.sv` plus `lib/wb_arbiter.sv`
+and `lib/wb_cdc.sv`, presented to a target as SystemVerilog `module ccx`.
 
 Single-issue in-order 4 stages pipeline with branch-JAL-RET-prediction (BHT: 4096 entries, RAS: 8 entries).
 The stages are IF (Fetch) ID (Decode) EX (Execute) WB (WriteBack).
@@ -72,7 +76,7 @@ A pop of an empty stack leaves `ras7` in place, so it shifts back down and the l
 Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by construction and can never raise the misaligned-fetch exception; only the branch and JAL predictions can.
 
 ## Peculiarities:
-- When CPU reset, the stack pointer register is set to the end of RAM. By convention, RAM starts at 0x1000.
+- When the ftpu is reset, the stack pointer register is set to the end of RAM. By convention, RAM starts at 0x1000.
 - Indefinitely halt (setting STATUS.MIE to 0) when an exception occurs and the trap vector address is null.
 - There is no support for vectored interrupt.
 - There is no difference between between mret sret; they are both eret.
