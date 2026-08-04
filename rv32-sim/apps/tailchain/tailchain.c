@@ -28,7 +28,7 @@
 // IPI dispatches tail-chaining around the scheduler preemption path.
 // All timer ticks must be accounted for.
 //
-// Test2 also regression-tests a since-fixed rvxx interrupt-starvation
+// Test2 also regression-tests a since-fixed ftpu interrupt-starvation
 // hardware bug: the threads spinloop on `while (test2_ticks < TEST2_TICKS);`,
 // a two-instruction load loop, whose held load result used to assert
 // rW_multicyclePending in lockstep with a self-blanking excIrq pulse

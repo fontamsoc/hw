@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// Zfinx conformance runner: executes Berkeley TestFloat-3e vectors on the rvxx FPU
+// Zfinx conformance runner: executes Berkeley TestFloat-3e vectors on the ftpu FPU
 // and checks BOTH the result and the 5 fflags bits. Rounding mode is set per-vector
 // via frm (dynamic-rm op forms), which also exercises the fcsr drain hazard each time.
 

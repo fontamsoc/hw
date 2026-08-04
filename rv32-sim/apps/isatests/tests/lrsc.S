@@ -41,7 +41,7 @@ TEST_CASE( 3, a4, 0, \
 # Test case 4 is enabled here, unlike upstream, which disabled it because it
 # assumes a reservation granule under 1K when in reality any size granule is
 # valid. (See https://github.com/riscv/riscv-tests/issues/315.) It is valid on
-# rvxx because the granule is exactly one word: lsu.pu.sv compares the whole
+# ftpu because the granule is exactly one word: lsu.pu.sv compares the whole
 # reserved address against the store-conditional's, and gates both the store and
 # its result on that, hence a store-conditional 1028 bytes away from the
 # load-reserved must fail. Insure it is disabled again if that is ever widened.
