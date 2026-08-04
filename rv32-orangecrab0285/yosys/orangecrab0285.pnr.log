@@ -1,14 +1,14 @@
-Info: Generated random seed: 16941074455008691981
+Info: Generated random seed: 10308439526679982684
 Info: constraining clock net 'clk48mhz_i' to 48.00 MHz
 
 Info: Logic utilisation before packing:
-Info:     Total LUT4s:      9803/83640    11%
-Info:         logic LUTs:   7531/83640     9%
-Info:         carry LUTs:   1660/83640     1%
+Info:     Total LUT4s:      9615/83640    11%
+Info:         logic LUTs:   7373/83640     8%
+Info:         carry LUTs:   1630/83640     1%
 Info:           RAM LUTs:    408/10455     3%
 Info:          RAMW LUTs:    204/20910     0%
 
-Info:      Total DFFs:      3211/83640     3%
+Info:      Total DFFs:      3203/83640     3%
 
 Info: Packing IOs..
 Info: $usb_d_p$iobuf_i: usb_d_p_$_TBUF__Y.Y
@@ -26,16 +26,15 @@ Info: Packing carries...
 Info: Packing LUTs...
 Info: Packing LUT5-7s...
 Info: Packing FFs...
-Info:     2096 FFs paired with LUTs.
+Info:     2128 FFs paired with LUTs.
 Info: Generating derived timing constraints...
-Info:     Input frequency of PLL 'pll.pll_inst' is constrained to 48.0 MHz
+Info:     Input frequency of PLL 'pll.pll_i' is constrained to 48.0 MHz
 Info:     Derived frequency constraint of 48.0 MHz for net clk48mhz_w
 Info:     Derived frequency constraint of 96.0 MHz for net clk96mhz_w
-Info:     Derived frequency constraint of 576.0 MHz for net pll_clk_w[2]
-Info:     Derived frequency constraint of 576.0 MHz for net pll_clk_w[3]
+Info:     Derived frequency constraint of 24.0 MHz for net clk24mhz_w
 Info: Promoting globals...
 Info:     promoting clock net clk48mhz_w to global network
-Info: Checksum: 0x0bdb3627
+Info: Checksum: 0x45c16d99
 
 Info: Device utilisation:
 Info: 	          TRELLIS_IO:       8/    365     2%
@@ -63,417 +62,455 @@ Info: 	             DQSBUFM:       0/     14     0%
 Info: 	     TRELLIS_ECLKBUF:       0/      8     0%
 Info: 	        ECLKBRIDGECS:       0/      2     0%
 Info: 	                DCSC:       0/      2     0%
-Info: 	          TRELLIS_FF:    3211/  83640     3%
-Info: 	        TRELLIS_COMB:   10119/  83640    12%
+Info: 	          TRELLIS_FF:    3203/  83640     3%
+Info: 	        TRELLIS_COMB:    9929/  83640    11%
 Info: 	        TRELLIS_RAMW:     102/  10455     0%
 
 Info: Placed 9 cells based on constraints.
-Info: Creating initial analytic placement for 7565 cells, random placement wirelen = 938560.
-Info:     at initial placer iter 0, wirelen = 2650
-Info:     at initial placer iter 1, wirelen = 2626
-Info:     at initial placer iter 2, wirelen = 2524
-Info:     at initial placer iter 3, wirelen = 2540
-Info: Running main analytical placer, max placement attempts per cell = 23140404.
-Info:     at iteration #1, type ALL: wirelen solved = 2608, spread = 179104, legal = 169195; time = 0.72s
-Info:     at iteration #2, type ALL: wirelen solved = 10012, spread = 153901, legal = 156251; time = 0.80s
-Info:     at iteration #3, type ALL: wirelen solved = 18177, spread = 124484, legal = 131216; time = 0.77s
-Info:     at iteration #4, type ALL: wirelen solved = 23631, spread = 118866, legal = 128062; time = 0.65s
-Info:     at iteration #5, type ALL: wirelen solved = 30689, spread = 112209, legal = 121264; time = 0.65s
-Info:     at iteration #6, type ALL: wirelen solved = 34518, spread = 107438, legal = 113845; time = 0.65s
-Info:     at iteration #7, type ALL: wirelen solved = 37195, spread = 102199, legal = 108159; time = 0.75s
-Info:     at iteration #8, type ALL: wirelen solved = 39671, spread = 99236, legal = 105837; time = 0.73s
-Info:     at iteration #9, type ALL: wirelen solved = 41254, spread = 95784, legal = 101090; time = 0.76s
-Info:     at iteration #10, type ALL: wirelen solved = 42025, spread = 93023, legal = 99553; time = 0.73s
-Info:     at iteration #11, type ALL: wirelen solved = 43783, spread = 91207, legal = 97824; time = 0.73s
-Info:     at iteration #12, type ALL: wirelen solved = 45096, spread = 89557, legal = 93783; time = 0.74s
-Info:     at iteration #13, type ALL: wirelen solved = 46836, spread = 85818, legal = 89171; time = 0.76s
-Info:     at iteration #14, type ALL: wirelen solved = 46033, spread = 84215, legal = 88240; time = 0.78s
-Info:     at iteration #15, type ALL: wirelen solved = 47568, spread = 82753, legal = 86496; time = 0.77s
-Info:     at iteration #16, type ALL: wirelen solved = 47794, spread = 82431, legal = 86405; time = 0.79s
-Info:     at iteration #17, type ALL: wirelen solved = 49051, spread = 81862, legal = 85372; time = 0.78s
-Info:     at iteration #18, type ALL: wirelen solved = 50717, spread = 81854, legal = 86448; time = 0.76s
-Info:     at iteration #19, type ALL: wirelen solved = 50555, spread = 85454, legal = 87816; time = 0.78s
-Info:     at iteration #20, type ALL: wirelen solved = 52836, spread = 81433, legal = 85023; time = 0.78s
-Info:     at iteration #21, type ALL: wirelen solved = 53190, spread = 84147, legal = 86208; time = 0.77s
-Info:     at iteration #22, type ALL: wirelen solved = 55447, spread = 81701, legal = 83644; time = 0.76s
-Info:     at iteration #23, type ALL: wirelen solved = 55352, spread = 81201, legal = 84302; time = 0.79s
-Info:     at iteration #24, type ALL: wirelen solved = 55634, spread = 79407, legal = 83478; time = 0.79s
-Info:     at iteration #25, type ALL: wirelen solved = 56351, spread = 79732, legal = 82798; time = 0.77s
-Info:     at iteration #26, type ALL: wirelen solved = 56429, spread = 79928, legal = 84652; time = 0.79s
-Info:     at iteration #27, type ALL: wirelen solved = 56500, spread = 79426, legal = 84133; time = 0.78s
-Info:     at iteration #28, type ALL: wirelen solved = 57859, spread = 78981, legal = 83627; time = 0.76s
-Info:     at iteration #29, type ALL: wirelen solved = 58724, spread = 80502, legal = 85553; time = 0.76s
-Info:     at iteration #30, type ALL: wirelen solved = 58626, spread = 80013, legal = 85249; time = 0.78s
-Info: HeAP Placer Time: 25.83s
-Info:   of which solving equations: 5.23s
-Info:   of which spreading cells: 0.93s
-Info:   of which strict legalisation: 17.01s
+Info: Creating initial analytic placement for 7532 cells, random placement wirelen = 943997.
+Info:     at initial placer iter 0, wirelen = 2937
+Info:     at initial placer iter 1, wirelen = 2566
+Info:     at initial placer iter 2, wirelen = 2593
+Info:     at initial placer iter 3, wirelen = 2457
+Info: Running main analytical placer, max placement attempts per cell = 22471808.
+Info:     at iteration #1, type ALL: wirelen solved = 2514, spread = 175903, legal = 164502; time = 0.78s
+Info:     at iteration #2, type ALL: wirelen solved = 10800, spread = 145301, legal = 149038; time = 0.69s
+Info:     at iteration #3, type ALL: wirelen solved = 17487, spread = 118667, legal = 123270; time = 0.65s
+Info:     at iteration #4, type ALL: wirelen solved = 25395, spread = 106477, legal = 111286; time = 0.67s
+Info:     at iteration #5, type ALL: wirelen solved = 28315, spread = 101742, legal = 108518; time = 0.63s
+Info:     at iteration #6, type ALL: wirelen solved = 31675, spread = 95084, legal = 100636; time = 0.77s
+Info:     at iteration #7, type ALL: wirelen solved = 35313, spread = 91659, legal = 97573; time = 0.75s
+Info:     at iteration #8, type ALL: wirelen solved = 35876, spread = 89564, legal = 95149; time = 0.73s
+Info:     at iteration #9, type ALL: wirelen solved = 37119, spread = 87670, legal = 91569; time = 0.73s
+Info:     at iteration #10, type ALL: wirelen solved = 38993, spread = 84237, legal = 88219; time = 0.64s
+Info:     at iteration #11, type ALL: wirelen solved = 39233, spread = 83090, legal = 87636; time = 0.77s
+Info:     at iteration #12, type ALL: wirelen solved = 41143, spread = 81721, legal = 86639; time = 0.76s
+Info:     at iteration #13, type ALL: wirelen solved = 41494, spread = 81342, legal = 86868; time = 0.79s
+Info:     at iteration #14, type ALL: wirelen solved = 43178, spread = 80902, legal = 85909; time = 0.79s
+Info:     at iteration #15, type ALL: wirelen solved = 44443, spread = 84067, legal = 88576; time = 0.76s
+Info:     at iteration #16, type ALL: wirelen solved = 45831, spread = 80190, legal = 86434; time = 0.76s
+Info:     at iteration #17, type ALL: wirelen solved = 46933, spread = 80910, legal = 85917; time = 0.76s
+Info:     at iteration #18, type ALL: wirelen solved = 49018, spread = 83615, legal = 89373; time = 0.78s
+Info:     at iteration #19, type ALL: wirelen solved = 51769, spread = 81095, legal = 86241; time = 0.76s
+Info: HeAP Placer Time: 16.19s
+Info:   of which solving equations: 3.52s
+Info:   of which spreading cells: 0.57s
+Info:   of which strict legalisation: 10.44s
 
 Info: Running simulated annealing placer for refinement.
-Info:   at iteration #1: temp = 0.000000, timing cost = 4082, wirelen = 82798
-Info:   at iteration #5: temp = 0.000000, timing cost = 3169, wirelen = 75098
-Info:   at iteration #10: temp = 0.000000, timing cost = 3398, wirelen = 73346
-Info:   at iteration #15: temp = 0.000000, timing cost = 3454, wirelen = 72870
-Info:   at iteration #20: temp = 0.000000, timing cost = 3459, wirelen = 72760
-Info:   at iteration #25: temp = 0.000000, timing cost = 3347, wirelen = 72707
-Info:   at iteration #27: temp = 0.000000, timing cost = 3484, wirelen = 72687 
-Info: SA placement time 28.49s
+Info:   at iteration #1: temp = 0.000000, timing cost = 2871, wirelen = 85909
+Info:   at iteration #5: temp = 0.000000, timing cost = 3850, wirelen = 73878
+Info:   at iteration #10: temp = 0.000000, timing cost = 2846, wirelen = 70688
+Info:   at iteration #15: temp = 0.000000, timing cost = 3037, wirelen = 69264
+Info:   at iteration #20: temp = 0.000000, timing cost = 2957, wirelen = 68819
+Info:   at iteration #25: temp = 0.000000, timing cost = 2614, wirelen = 68742
+Info:   at iteration #27: temp = 0.000000, timing cost = 2742, wirelen = 68714 
+Info: SA placement time 30.09s
 
-Info: Max frequency for clock '$glbnet$clk48mhz_w': 39.46 MHz (FAIL at 48.00 MHz)
+Info: Max frequency for clock '$glbnet$clk48mhz_w': 39.83 MHz (FAIL at 48.00 MHz)
 
-Info: Max delay <async>                    -> posedge $glbnet$clk48mhz_w: 16.79 ns
-Info: Max delay posedge $glbnet$clk48mhz_w -> <async>                   : 10.84 ns
+Info: Max delay <async>                    -> posedge $glbnet$clk48mhz_w: 15.35 ns
+Info: Max delay posedge $glbnet$clk48mhz_w -> <async>                   : 9.00 ns
 
 Info: Slack histogram:
-Info:  legend: * represents 19 endpoint(s)
-Info:          + represents [1,19) endpoint(s)
-Info: [ -4507,  -3278) |****+
-Info: [ -3278,  -2049) |*********************+
-Info: [ -2049,   -820) |*******************************+
-Info: [  -820,    409) |***********************************+
-Info: [   409,   1638) |**************************************************+
-Info: [  1638,   2867) |*****************************+
-Info: [  2867,   4096) |********************************+
-Info: [  4096,   5325) |*************************************+
-Info: [  5325,   6554) |************************+
-Info: [  6554,   7783) |*****************************+
-Info: [  7783,   9012) |********************************+
-Info: [  9012,  10241) |***********************************+
-Info: [ 10241,  11470) |******************************************************+
-Info: [ 11470,  12699) |*****************************************+
-Info: [ 12699,  13928) |***********************************+
-Info: [ 13928,  15157) |**************************************************+
-Info: [ 15157,  16386) |************************************************************ 
-Info: [ 16386,  17615) |*****************************************************+
-Info: [ 17615,  18844) |*********************************************************+
-Info: [ 18844,  20073) |************************+
-Info: Checksum: 0x0027fe34
+Info:  legend: * represents 26 endpoint(s)
+Info:          + represents [1,26) endpoint(s)
+Info: [ -4272,  -3054) |+
+Info: [ -3054,  -1836) |**********+
+Info: [ -1836,   -618) |************+
+Info: [  -618,    600) |****************************+
+Info: [   600,   1818) |*********************************+
+Info: [  1818,   3036) |************************+
+Info: [  3036,   4254) |************************+
+Info: [  4254,   5472) |*********************+
+Info: [  5472,   6690) |*********************+
+Info: [  6690,   7908) |******************************+
+Info: [  7908,   9126) |****************************+
+Info: [  9126,  10344) |*******************************+
+Info: [ 10344,  11562) |****************************************+
+Info: [ 11562,  12780) |***********************************+
+Info: [ 12780,  13998) |**************************+
+Info: [ 13998,  15216) |**************************************+
+Info: [ 15216,  16434) |**************************************+
+Info: [ 16434,  17652) |*************************************+
+Info: [ 17652,  18870) |************************************************************ 
+Info: [ 18870,  20088) |***************+
+Info: Checksum: 0xe89c05c6
 Info: Routing globals...
 Info:     routing clock net $glbnet$clk48mhz_w using global 0
 
 Info: Routing..
 Info: Setting up routing queue.
-Info: Routing 46774 arcs.
+Info: Routing 46065 arcs.
 Info:            |   (re-)routed arcs  |   delta    | remaining|       time spent     |
 Info:    IterCnt |  w/ripup   wo/ripup |  w/r  wo/r |      arcs| batch(sec) total(sec)|
-Info:       1000 |       71        928 |   71   928 |     45888|       0.91       0.91|
-Info:       2000 |      163       1836 |   92   908 |     45135|       0.38       1.29|
-Info:       3000 |      272       2727 |  109   891 |     44322|       0.34       1.64|
-Info:       4000 |      472       3527 |  200   800 |     43759|       0.45       2.09|
-Info:       5000 |      625       4374 |  153   847 |     43072|       0.30       2.38|
-Info:       6000 |      778       5221 |  153   847 |     42381|       0.30       2.69|
-Info:       7000 |      944       6055 |  166   834 |     41772|       0.33       3.02|
-Info:       8000 |     1099       6900 |  155   845 |     41256|       0.26       3.28|
-Info:       9000 |     1325       7674 |  226   774 |     40765|       0.29       3.57|
-Info:      10000 |     1523       8476 |  198   802 |     40113|       0.27       3.84|
-Info:      11000 |     1695       9304 |  172   828 |     39618|       0.27       4.11|
-Info:      12000 |     1899      10100 |  204   796 |     38988|       0.26       4.37|
-Info:      13000 |     2130      10869 |  231   769 |     38459|       0.29       4.66|
-Info:      14000 |     2320      11679 |  190   810 |     38011|       0.28       4.94|
-Info:      15000 |     2515      12484 |  195   805 |     37353|       0.24       5.18|
-Info:      16000 |     2675      13324 |  160   840 |     36706|       0.24       5.42|
-Info:      17000 |     2823      14176 |  148   852 |     35983|       0.25       5.67|
-Info:      18000 |     2988      15011 |  165   835 |     35388|       0.25       5.93|
-Info:      19000 |     3169      15830 |  181   819 |     34726|       0.26       6.19|
-Info:      20000 |     3385      16614 |  216   784 |     34137|       0.30       6.49|
-Info:      21000 |     3584      17415 |  199   801 |     33635|       0.30       6.79|
-Info:      22000 |     3832      18167 |  248   752 |     33090|       0.31       7.09|
-Info:      23000 |     4040      18959 |  208   792 |     32452|       0.32       7.41|
-Info:      24000 |     4263      19736 |  223   777 |     31933|       0.30       7.71|
-Info:      25000 |     4492      20507 |  229   771 |     31500|       0.30       8.01|
-Info:      26000 |     4762      21237 |  270   730 |     31126|       0.29       8.30|
-Info:      27000 |     4988      22011 |  226   774 |     30523|       0.29       8.59|
-Info:      28000 |     5196      22803 |  208   792 |     29933|       0.29       8.88|
-Info:      29000 |     5441      23558 |  245   755 |     29396|       0.34       9.22|
-Info:      30000 |     5694      24305 |  253   747 |     28843|       0.30       9.53|
-Info:      31000 |     5973      25026 |  279   721 |     28363|       0.36       9.88|
-Info:      32000 |     6266      25733 |  293   707 |     27860|       0.35      10.23|
-Info:      33000 |     6593      26406 |  327   673 |     27360|       0.35      10.59|
-Info:      34000 |     6911      27088 |  318   682 |     26884|       0.35      10.94|
-Info:      35000 |     7166      27833 |  255   745 |     26418|       0.32      11.26|
-Info:      36000 |     7447      28552 |  281   719 |     25992|       0.36      11.61|
-Info:      37000 |     7713      29286 |  266   734 |     25491|       0.41      12.02|
-Info:      38000 |     8024      29975 |  311   689 |     25072|       0.43      12.45|
-Info:      39000 |     8345      30654 |  321   679 |     24587|       0.33      12.79|
-Info:      40000 |     8614      31385 |  269   731 |     24172|       0.34      13.13|
-Info:      41000 |     8896      32097 |  282   712 |     23565|       0.31      13.44|
-Info:      42000 |     9170      32823 |  274   726 |     23423|       0.42      13.86|
-Info:      43000 |     9512      33461 |  342   638 |     23051|       0.39      14.25|
-Info:      44000 |     9834      34113 |  322   652 |     22553|       0.40      14.65|
-Info:      45000 |    10148      34785 |  314   672 |     22148|       0.45      15.11|
-Info:      46000 |    10400      35507 |  252   722 |     21673|       0.31      15.42|
-Info:      47000 |    10719      36173 |  319   666 |     21084|       0.32      15.74|
-Info:      48000 |    11007      36844 |  288   671 |     20411|       0.23      15.97|
-Info:      49000 |    11275      37531 |  268   687 |     19817|       0.31      16.28|
-Info:      50000 |    11593      38162 |  318   631 |     19413|       0.40      16.69|
-Info:      51000 |    11876      38828 |  283   666 |     18886|       0.27      16.96|
-Info:      52000 |    12220      39445 |  344   617 |     18508|       0.53      17.49|
-Info:      53000 |    12567      40073 |  347   628 |     18376|       0.60      18.10|
-Info:      54000 |    12844      40775 |  277   702 |     18126|       0.46      18.56|
-Info:      55000 |    13134      41461 |  290   686 |     17674|       0.36      18.91|
-Info:      56000 |    13391      42138 |  257   677 |     17033|       0.25      19.17|
-Info:      57000 |    13660      42776 |  269   638 |     16393|       0.31      19.48|
-Info:      58000 |    13881      43519 |  221   743 |     15689|       0.30      19.78|
-Info:      59000 |    14205      44168 |  324   649 |     15180|       0.42      20.20|
-Info:      60000 |    14429      44897 |  224   729 |     14579|       0.37      20.56|
-Info:      61000 |    14720      45551 |  291   654 |     13946|       0.54      21.10|
-Info:      62000 |    14954      46221 |  234   670 |     13304|       0.35      21.45|
-Info:      63000 |    15206      46936 |  252   715 |     12684|       0.32      21.77|
-Info:      64000 |    15418      47601 |  212   665 |     11965|       0.30      22.07|
-Info:      65000 |    15647      48306 |  229   705 |     11341|       0.37      22.44|
-Info:      66000 |    15928      49002 |  281   696 |     11072|       0.44      22.88|
-Info:      67000 |    16197      49634 |  269   632 |     10535|       0.36      23.24|
-Info:      68000 |    16407      50391 |  210   757 |      9994|       0.34      23.58|
-Info:      69000 |    16605      51153 |  198   762 |      9401|       0.39      23.97|
-Info:      70000 |    16856      51868 |  251   715 |      8762|       0.31      24.27|
-Info:      71000 |    17048      52518 |  192   650 |      8035|       0.27      24.54|
-Info:      72000 |    17214      53274 |  166   756 |      7304|       0.33      24.87|
-Info:      73000 |    17466      53970 |  252   696 |      6672|       0.36      25.23|
-Info:      74000 |    17648      54744 |  182   774 |      5925|       0.30      25.54|
-Info:      75000 |    17837      55494 |  189   750 |      5222|       0.30      25.84|
-Info:      76000 |    18059      56247 |  222   753 |      4580|       0.39      26.23|
-Info:      77000 |    18175      57089 |  116   842 |      3810|       0.26      26.49|
-Info:      78000 |    18283      57908 |  108   819 |      2951|       0.27      26.76|
-Info:      79000 |    18393      58796 |  110   888 |      2089|       0.21      26.97|
-Info:      80000 |    18627      59562 |  234   766 |      1473|       0.33      27.30|
-Info:      81000 |    19015      60174 |  388   612 |      1250|       0.49      27.79|
-Info:      82000 |    19080      60873 |   65   699 |       342|       0.27      28.05|
-Info:      82346 |    19085      61119 |    5   246 |         0|       0.13      28.18|
+Info:       1000 |       56        943 |   56   943 |     45256|       1.03       1.03|
+Info:       2000 |      125       1874 |   69   931 |     44473|       0.50       1.53|
+Info:       3000 |      227       2772 |  102   898 |     43754|       0.44       1.96|
+Info:       4000 |      369       3630 |  142   858 |     42982|       0.30       2.26|
+Info:       5000 |      525       4474 |  156   844 |     42290|       0.29       2.55|
+Info:       6000 |      662       5337 |  137   863 |     41540|       0.33       2.87|
+Info:       7000 |      822       6177 |  160   840 |     40973|       0.35       3.23|
+Info:       8000 |      974       7025 |  152   848 |     40310|       0.35       3.57|
+Info:       9000 |     1138       7861 |  164   836 |     39576|       0.25       3.82|
+Info:      10000 |     1259       8740 |  121   879 |     38827|       0.27       4.09|
+Info:      11000 |     1433       9566 |  174   826 |     38169|       0.27       4.36|
+Info:      12000 |     1559      10440 |  126   874 |     37362|       0.28       4.64|
+Info:      13000 |     1724      11275 |  165   835 |     36737|       0.31       4.95|
+Info:      14000 |     1920      12079 |  196   804 |     36176|       0.29       5.24|
+Info:      15000 |     2121      12878 |  201   799 |     35579|       0.27       5.51|
+Info:      16000 |     2278      13721 |  157   843 |     34863|       0.30       5.81|
+Info:      17000 |     2466      14533 |  188   812 |     34219|       0.27       6.07|
+Info:      18000 |     2626      15373 |  160   840 |     33523|       0.25       6.32|
+Info:      19000 |     2759      16240 |  133   867 |     32809|       0.25       6.57|
+Info:      20000 |     2928      17071 |  169   831 |     32071|       0.25       6.82|
+Info:      21000 |     3175      17824 |  247   753 |     31396|       0.31       7.13|
+Info:      22000 |     3441      18558 |  266   734 |     30854|       0.31       7.44|
+Info:      23000 |     3696      19303 |  255   745 |     30266|       0.27       7.71|
+Info:      24000 |     3925      20074 |  229   771 |     29825|       0.28       7.99|
+Info:      25000 |     4102      20897 |  177   823 |     29137|       0.23       8.22|
+Info:      26000 |     4334      21665 |  232   768 |     28439|       0.23       8.45|
+Info:      27000 |     4552      22447 |  218   782 |     27975|       0.27       8.72|
+Info:      28000 |     4836      23163 |  284   716 |     27382|       0.27       8.99|
+Info:      29000 |     5080      23919 |  244   756 |     26789|       0.25       9.24|
+Info:      30000 |     5331      24668 |  251   749 |     26219|       0.29       9.52|
+Info:      31000 |     5682      25317 |  351   649 |     25733|       0.27       9.80|
+Info:      32000 |     5929      26070 |  247   753 |     25406|       0.38      10.17|
+Info:      33000 |     6153      26846 |  224   776 |     24723|       0.32      10.49|
+Info:      34000 |     6461      27538 |  308   692 |     24122|       0.25      10.74|
+Info:      35000 |     6724      28263 |  263   725 |     23560|       0.29      11.03|
+Info:      36000 |     7128      28853 |  404   590 |     23190|       0.30      11.33|
+Info:      37000 |     7458      29500 |  330   647 |     22688|       0.29      11.62|
+Info:      38000 |     7765      30146 |  307   646 |     22129|       0.37      11.99|
+Info:      39000 |     8010      30877 |  245   731 |     21764|       0.26      12.25|
+Info:      40000 |     8318      31537 |  308   660 |     21178|       0.28      12.54|
+Info:      41000 |     8619      32205 |  301   668 |     20632|       0.33      12.87|
+Info:      42000 |     8870      32904 |  251   699 |     20025|       0.29      13.16|
+Info:      43000 |     9161      33548 |  291   644 |     19480|       0.27      13.43|
+Info:      44000 |     9466      34188 |  305   640 |     18965|       0.32      13.75|
+Info:      45000 |     9774      34834 |  308   646 |     18383|       0.29      14.04|
+Info:      46000 |    10078      35493 |  304   659 |     17836|       0.35      14.39|
+Info:      47000 |    10330      36160 |  252   667 |     17176|       0.24      14.63|
+Info:      48000 |    10549      36862 |  219   702 |     16458|       0.21      14.84|
+Info:      49000 |    10769      37607 |  220   745 |     15946|       0.32      15.15|
+Info:      50000 |    11051      38283 |  282   676 |     15324|       0.28      15.43|
+Info:      51000 |    11312      38981 |  261   698 |     14679|       0.35      15.78|
+Info:      52000 |    11564      39698 |  252   717 |     14140|       0.38      16.16|
+Info:      53000 |    11830      40395 |  266   697 |     13563|       0.43      16.59|
+Info:      54000 |    12065      41129 |  235   734 |     13053|       0.39      16.98|
+Info:      55000 |    12198      41841 |  133   712 |     12220|       0.23      17.21|
+Info:      56000 |    12398      42571 |  200   730 |     11447|       0.29      17.50|
+Info:      57000 |    12642      43307 |  244   736 |     10763|       0.34      17.83|
+Info:      58000 |    12854      44057 |  212   750 |     10379|       0.30      18.13|
+Info:      59000 |    13122      44771 |  268   714 |      9932|       0.37      18.50|
+Info:      60000 |    13316      45490 |  194   719 |      9340|       0.28      18.79|
+Info:      61000 |    13490      46244 |  174   754 |      8606|       0.31      19.10|
+Info:      62000 |    13731      46902 |  241   658 |      8023|       0.36      19.45|
+Info:      63000 |    13942      47605 |  211   703 |      7302|       0.29      19.75|
+Info:      64000 |    14163      48355 |  221   750 |      6738|       0.35      20.10|
+Info:      65000 |    14331      49147 |  168   792 |      6022|       0.29      20.39|
+Info:      66000 |    14522      49935 |  191   788 |      5334|       0.34      20.72|
+Info:      67000 |    14709      50691 |  187   756 |      4584|       0.31      21.03|
+Info:      68000 |    14841      51506 |  132   815 |      3756|       0.29      21.32|
+Info:      69000 |    14962      52337 |  121   831 |      2957|       0.21      21.53|
+Info:      70000 |    15079      53206 |  117   869 |      2121|       0.20      21.72|
+Info:      71000 |    15297      53988 |  218   782 |      1356|       0.24      21.96|
+Info:      72000 |    15391      54704 |   94   716 |       511|       0.22      22.18|
+Info:      72551 |    15422      55077 |   31   373 |         0|       0.15      22.34|
 Info: Routing complete.
-Info: Router1 time 28.18s
-Info: Checksum: 0x928c0c26
+Info: Router1 time 22.34s
+Info: Checksum: 0x3e070735
 
 Info: Critical path report for clock '$glbnet$clk48mhz_w' (posedge -> posedge):
 Info:       type curr  total name
-Info:   clk-to-q  0.52  0.52 Source cpu.genpu[0].pu.iD_Iimm_TRELLIS_FF_Q_7.Q
-Info:    routing  1.90  2.42 Net cpu.genpu[0].pu.csrMideleg_TRELLIS_FF_Q_CE_LUT4_Z_C_LUT4_D_Z_PFUMX_Z_C0_LUT4_Z_D_LUT4_D_C[0] (76,72) -> (75,57)
-Info:                          Sink cpu.genpu[0].pu.eX_rdId_isTrue_PFUMX_C0_1_ALUT_LUT4_Z.A
+Info:   clk-to-q  0.52  0.52 Source cpu.genpu[0].pu.iD_Iimm_TRELLIS_FF_Q_10.Q
+Info:    routing  1.48  2.01 Net cpu.genpu[0].pu.dCache_m_addr_i_LUT4_Z_12_C_CCU2C_S0_S1_CCU2C_S0_S1[0] (83,66) -> (82,74)
+Info:                          Sink cpu.genpu[0].pu.csrMip_LUT4_A_1_Z_LUT4_Z_B_LUT4_Z.D
 Info:                          Defined in:
-Info:                               ../..//rvxx/./pu.sv:818.24-818.31
-Info:      logic  0.24  2.66 Source cpu.genpu[0].pu.eX_rdId_isTrue_PFUMX_C0_1_ALUT_LUT4_Z.F
-Info:    routing  0.00  2.66 Net cpu.genpu[0].pu.eX_rdId_isTrue_PFUMX_C0_1_ALUT (75,57) -> (75,57)
-Info:                          Sink cpu.genpu[0].pu.eX_rdId_isTrue_PFUMX_C0_1_BLUT_LUT4_Z.F1
+Info:                               ../..//cpu/./pu.sv:827.24-827.31
+Info:      logic  0.24  2.24 Source cpu.genpu[0].pu.csrMip_LUT4_A_1_Z_LUT4_Z_B_LUT4_Z.F
+Info:    routing  0.22  2.47 Net cpu.genpu[0].pu.csrMip_LUT4_A_1_Z_LUT4_Z_B[2] (82,74) -> (82,74)
+Info:                          Sink cpu.genpu[0].pu.iD_rs2Rdy_LUT4_Z_D_LUT4_D_C_LUT4_Z.D
+Info:                          Defined in:
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:108.23-108.24
+Info:      logic  0.24  2.70 Source cpu.genpu[0].pu.iD_rs2Rdy_LUT4_Z_D_LUT4_D_C_LUT4_Z.F
+Info:    routing  1.37  4.07 Net cpu.genpu[0].pu.iD_rs2Rdy_LUT4_Z_D_LUT4_D_C[0] (82,74) -> (81,63)
+Info:                          Sink cpu.genpu[0].pu.iD_rs2Rdy_LUT4_Z_D_LUT4_Z_C_LUT4_C_1_D_LUT4_Z.D
+Info:                          Defined in:
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:108.23-108.24
+Info:      logic  0.24  4.31 Source cpu.genpu[0].pu.iD_rs2Rdy_LUT4_Z_D_LUT4_Z_C_LUT4_C_1_D_LUT4_Z.F
+Info:    routing  0.62  4.93 Net cpu.genpu[0].pu.iD_rs2Rdy_LUT4_Z_D_LUT4_Z_C_LUT4_C_1_D[3] (81,63) -> (81,63)
+Info:                          Sink cpu.genpu[0].pu.iD_rs2Rdy_LUT4_Z_D_LUT4_Z_C_LUT4_C_1.D
+Info:                          Defined in:
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:108.23-108.24
+Info:      logic  0.40  5.33 Source cpu.genpu[0].pu.iD_rs2Rdy_LUT4_Z_D_LUT4_Z_C_LUT4_C_1.OFX
+Info:    routing  2.11  7.45 Net cpu.genpu[0].pu.dCache_m_dat_i_LUT4_Z_10_C_LUT4_Z_C_LUT4_Z_D[0] (81,63) -> (100,71)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_S0_LUT4_D_Z_LUT4_Z_1_D_LUT4_Z_D_LUT4_D_Z_LUT4_Z_1_D_PFUMX_Z_C0_LUT4_Z_B_LUT4_B_Z_LUT4_Z_2.D
+Info:                          Defined in:
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:108.23-108.24
+Info:      logic  0.24  7.68 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_S0_LUT4_D_Z_LUT4_Z_1_D_LUT4_Z_D_LUT4_D_Z_LUT4_Z_1_D_PFUMX_Z_C0_LUT4_Z_B_LUT4_B_Z_LUT4_Z_2.F
+Info:    routing  1.78  9.46 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_B0_CCU2C_B0_S0_CCU2C_S1_S0_CCU2C_S0_CIN_CCU2C_COUT_S1_LUT4_D_1_Z[3] (100,71) -> (87,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT$CCU2_COMB1.B
+Info:                          Defined in:
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:108.23-108.24
+Info:      logic  0.45  9.91 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT$CCU2_COMB1.FCO
+Info:    routing  0.00  9.91 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN (87,74) -> (87,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0$CCU2_COMB0.FCI
+Info:                          Defined in:
+Info:                               ../..//cpu/./pu.sv:1270.20-1270.65
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
+Info:      logic  0.07  9.98 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0$CCU2_COMB0.FCO
+Info:    routing  0.00  9.98 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0$CCU2_FCI_INT (87,74) -> (87,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0$CCU2_COMB1.FCI
+Info:      logic  0.00  9.98 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0$CCU2_COMB1.FCO
+Info:    routing  0.00  9.98 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT (87,74) -> (87,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN$CCU2_COMB0.FCI
+Info:                          Defined in:
+Info:                               ../..//cpu/./pu.sv:1270.20-1270.65
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
+Info:      logic  0.07  10.05 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN$CCU2_COMB0.FCO
+Info:    routing  0.00  10.05 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN$CCU2_FCI_INT (87,74) -> (87,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN$CCU2_COMB1.FCI
+Info:      logic  0.00  10.05 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN$CCU2_COMB1.FCO
+Info:    routing  0.00  10.05 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT (87,74) -> (88,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB0.FCI
+Info:                          Defined in:
+Info:                               ../..//cpu/./pu.sv:1270.20-1270.65
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
+Info:      logic  0.07  10.12 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB0.FCO
+Info:    routing  0.00  10.12 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_FCI_INT (88,74) -> (88,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB1.FCI
+Info:      logic  0.00  10.12 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB1.FCO
+Info:    routing  0.00  10.12 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT (88,74) -> (88,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB0.FCI
+Info:                          Defined in:
+Info:                               ../..//cpu/./pu.sv:1270.20-1270.65
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
+Info:      logic  0.07  10.19 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB0.FCO
+Info:    routing  0.00  10.19 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_FCI_INT (88,74) -> (88,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB1.FCI
+Info:      logic  0.00  10.19 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB1.FCO
+Info:    routing  0.00  10.19 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT (88,74) -> (88,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB0.FCI
+Info:                          Defined in:
+Info:                               ../..//cpu/./pu.sv:1270.20-1270.65
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
+Info:      logic  0.07  10.26 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB0.FCO
+Info:    routing  0.00  10.26 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_FCI_INT (88,74) -> (88,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB1.FCI
+Info:      logic  0.00  10.26 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB1.FCO
+Info:    routing  0.00  10.26 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT (88,74) -> (88,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB0.FCI
+Info:                          Defined in:
+Info:                               ../..//cpu/./pu.sv:1270.20-1270.65
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
+Info:      logic  0.07  10.33 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB0.FCO
+Info:    routing  0.00  10.33 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_FCI_INT (88,74) -> (88,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB1.FCI
+Info:      logic  0.00  10.33 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB1.FCO
+Info:    routing  0.00  10.33 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT (88,74) -> (89,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB0.FCI
+Info:                          Defined in:
+Info:                               ../..//cpu/./pu.sv:1270.20-1270.65
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
+Info:      logic  0.07  10.40 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB0.FCO
+Info:    routing  0.00  10.40 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_FCI_INT (89,74) -> (89,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB1.FCI
+Info:      logic  0.00  10.40 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB1.FCO
+Info:    routing  0.00  10.40 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT (89,74) -> (89,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB0.FCI
+Info:                          Defined in:
+Info:                               ../..//cpu/./pu.sv:1270.20-1270.65
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
+Info:      logic  0.07  10.47 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB0.FCO
+Info:    routing  0.00  10.47 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_FCI_INT (89,74) -> (89,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB1.FCI
+Info:      logic  0.00  10.47 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN$CCU2_COMB1.FCO
+Info:    routing  0.00  10.47 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT (89,74) -> (89,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_B0_CCU2C_B0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_B0_CCU2C_B0$CCU2_COMB0.FCI
+Info:                          Defined in:
+Info:                               ../..//cpu/./pu.sv:1270.20-1270.65
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
+Info:      logic  0.07  10.55 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_B0_CCU2C_B0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_B0_CCU2C_B0$CCU2_COMB0.FCO
+Info:    routing  0.00  10.55 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_B0_CCU2C_B0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_B0_CCU2C_B0$CCU2_FCI_INT (89,74) -> (89,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_B0_CCU2C_B0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_B0_CCU2C_B0$CCU2_COMB1.FCI
+Info:      logic  0.00  10.55 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_B0_CCU2C_B0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_B0_CCU2C_B0$CCU2_COMB1.FCO
+Info:    routing  0.00  10.55 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_B0_CCU2C_B0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_B0_CCU2C_B0_COUT (89,74) -> (89,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_B0_CCU2C_B0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_B0_CCU2C_B0$CCU2_COMB0.FCI
+Info:                          Defined in:
+Info:                               ../..//cpu/./pu.sv:1270.20-1270.65
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
+Info:      logic  0.07  10.62 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_B0_CCU2C_B0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_B0_CCU2C_B0$CCU2_COMB0.FCO
+Info:    routing  0.00  10.62 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_B0_CCU2C_B0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_B0_CCU2C_B0$CCU2_FCI_INT (89,74) -> (89,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_B0_CCU2C_B0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_B0_CCU2C_B0$CCU2_COMB1.FCI
+Info:      logic  0.00  10.62 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_COUT_CCU2C_CIN_COUT_CCU2C_CIN_B0_CCU2C_B0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_B0_CCU2C_B0$CCU2_COMB1.FCO
+Info:    routing  0.00  10.62 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN (89,74) -> (90,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT$CCU2_COMB0.FCI
+Info:                          Defined in:
+Info:                               ../..//cpu/./pu.sv:1270.20-1270.65
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
+Info:      logic  0.07  10.69 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT$CCU2_COMB0.FCO
+Info:    routing  0.00  10.69 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT$CCU2_FCI_INT (90,74) -> (90,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT$CCU2_COMB1.FCI
+Info:      logic  0.00  10.69 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT$CCU2_COMB1.FCO
+Info:    routing  0.00  10.69 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN (90,74) -> (90,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT$CCU2_COMB0.FCI
+Info:                          Defined in:
+Info:                               ../..//cpu/./pu.sv:1270.20-1270.65
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
+Info:      logic  0.07  10.76 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT$CCU2_COMB0.FCO
+Info:    routing  0.00  10.76 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT$CCU2_FCI_INT (90,74) -> (90,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT$CCU2_COMB1.FCI
+Info:      logic  0.00  10.76 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT$CCU2_COMB1.FCO
+Info:    routing  0.00  10.76 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT_CIN (90,74) -> (90,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT$CCU2_COMB0.FCI
+Info:                          Defined in:
+Info:                               ../..//cpu/./pu.sv:1270.20-1270.65
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
+Info:      logic  0.07  10.83 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT$CCU2_COMB0.FCO
+Info:    routing  0.00  10.83 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT$CCU2_FCI_INT (90,74) -> (90,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT$CCU2_COMB1.FCI
+Info:      logic  0.00  10.83 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT_CIN_CCU2C_COUT$CCU2_COMB1.FCO
+Info:    routing  0.00  10.83 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT_CIN (90,74) -> (90,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT$CCU2_COMB0.FCI
+Info:                          Defined in:
+Info:                               ../..//cpu/./pu.sv:1270.20-1270.65
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
+Info:      logic  0.07  10.90 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT$CCU2_COMB0.FCO
+Info:    routing  0.00  10.90 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT$CCU2_FCI_INT (90,74) -> (90,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT$CCU2_COMB1.FCI
+Info:      logic  0.00  10.90 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_CIN_CCU2C_COUT$CCU2_COMB1.FCO
+Info:    routing  0.00  10.90 Net $nextpnr_CCU2C_31$CIN (90,74) -> (91,74)
+Info:                          Sink $nextpnr_CCU2C_31$CCU2_COMB0.FCI
+Info:      logic  0.44  11.34 Source $nextpnr_CCU2C_31$CCU2_COMB0.F
+Info:    routing  0.83  12.17 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_B0[2] (91,74) -> (91,74)
+Info:                          Sink $nextpnr_CCU2C_31$CCU2_COMB1.A
+Info:                          Defined in:
+Info:                               ../..//cpu/./pu.sv:1270.20-1270.65
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
+Info:      logic  0.45  12.62 Source $nextpnr_CCU2C_31$CCU2_COMB1.FCO
+Info:    routing  0.00  12.62 Net $nextpnr_CCU2C_31$COUT (91,74) -> (91,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT$CCU2_COMB0.FCI
+Info:      logic  0.07  12.69 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT$CCU2_COMB0.FCO
+Info:    routing  0.00  12.69 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT$CCU2_FCI_INT (91,74) -> (91,74)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT$CCU2_COMB1.FCI
+Info:      logic  0.40  13.09 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT$CCU2_COMB1.F
+Info:    routing  1.23  14.32 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_S1[2] (91,74) -> (87,76)
+Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_S1_LUT4_C.C
+Info:                          Defined in:
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:108.23-108.24
+Info:      logic  0.24  14.55 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_S1_LUT4_C.F
+Info:    routing  0.71  15.27 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S0_CIN_CCU2C_COUT_S0_CCU2C_COUT_S1_LUT4_C_Z[2] (87,76) -> (87,75)
+Info:                          Sink cpu.genpu[0].pu.iD_isJALRnotRet_LUT4_D_Z_PFUMX_Z_1_ALUT_LUT4_Z.C
+Info:                          Defined in:
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:108.23-108.24
+Info:      logic  0.24  15.50 Source cpu.genpu[0].pu.iD_isJALRnotRet_LUT4_D_Z_PFUMX_Z_1_ALUT_LUT4_Z.F
+Info:    routing  0.00  15.50 Net cpu.genpu[0].pu.iD_isJALRnotRet_LUT4_D_Z_PFUMX_Z_1_ALUT (87,75) -> (87,75)
+Info:                          Sink cpu.genpu[0].pu.iD_isJALRnotRet_LUT4_D_Z_PFUMX_Z_1_BLUT_LUT4_Z.F1
 Info:                          Defined in:
 Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:133.22-133.24
-Info:      logic  0.17  2.83 Source cpu.genpu[0].pu.eX_rdId_isTrue_PFUMX_C0_1_BLUT_LUT4_Z.OFX
-Info:    routing  0.38  3.20 Net cpu.genpu[0].pu.eX_rdId_isTrue_PFUMX_C0_1_Z[3] (75,57) -> (75,57)
-Info:                          Sink cpu.genpu[0].pu.iD_rW_rdId_isTrue_PFUMX_C0_1_Z_LUT4_A_Z_PFUMX_Z_C0_LUT4_Z.D
+Info:      logic  0.17  15.67 Source cpu.genpu[0].pu.iD_isJALRnotRet_LUT4_D_Z_PFUMX_Z_1_BLUT_LUT4_Z.OFX
+Info:    routing  1.39  17.06 Net cpu.genpu[0].pu.iD_isJALRnotRet_LUT4_D_Z[4] (87,75) -> (100,74)
+Info:                          Sink cpu.genpu[0].pu.rdWasLocked_LUT4_A_D_PFUMX_C0_Z_L6MUX21_Z_D1_PFUMX_Z_BLUT_LUT4_Z.M
 Info:                          Defined in:
 Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:108.23-108.24
-Info:      logic  0.24  3.44 Source cpu.genpu[0].pu.iD_rW_rdId_isTrue_PFUMX_C0_1_Z_LUT4_A_Z_PFUMX_Z_C0_LUT4_Z.F
-Info:    routing  1.01  4.45 Net cpu.genpu[0].pu.iD_rW_rdId_isTrue_PFUMX_C0_1_Z_LUT4_A_Z_PFUMX_Z_C0[4] (75,57) -> (77,60)
-Info:                          Sink cpu.genpu[0].pu.iD_rW_rdId_isTrue_PFUMX_C0_1_Z_LUT4_A_Z_PFUMX_Z_BLUT_LUT4_Z.M
+Info:      logic  0.26  17.31 Source cpu.genpu[0].pu.rdWasLocked_LUT4_A_D_PFUMX_C0_Z_L6MUX21_Z_D1_PFUMX_Z_BLUT_LUT4_Z.OFX
+Info:    routing  0.00  17.31 Net cpu.genpu[0].pu.rdWasLocked_LUT4_A_D_PFUMX_C0_Z_L6MUX21_Z_D1 (100,74) -> (100,74)
+Info:                          Sink cpu.genpu[0].pu.rdWasLocked_LUT4_A_D_PFUMX_C0_Z_L6MUX21_Z_D1_PFUMX_Z_ALUT_LUT4_Z.FXB
 Info:                          Defined in:
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:108.23-108.24
-Info:      logic  0.26  4.71 Source cpu.genpu[0].pu.iD_rW_rdId_isTrue_PFUMX_C0_1_Z_LUT4_A_Z_PFUMX_Z_BLUT_LUT4_Z.OFX
-Info:    routing  0.65  5.36 Net cpu.genpu[0].pu.dCache_m_dat_i_L6MUX21_Z_15_SD_LUT4_Z_D_PFUMX_Z_BLUT_LUT4_Z_D[4] (77,60) -> (77,62)
-Info:                          Sink cpu.genpu[0].pu.dCache_m_dat_i_L6MUX21_Z_4_SD_LUT4_Z_B_PFUMX_Z_BLUT_LUT4_Z.M
-Info:                          Defined in:
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:108.23-108.24
-Info:      logic  0.26  5.61 Source cpu.genpu[0].pu.dCache_m_dat_i_L6MUX21_Z_4_SD_LUT4_Z_B_PFUMX_Z_BLUT_LUT4_Z.OFX
-Info:    routing  2.03  7.64 Net cpu.genpu[0].pu.dCache_m_dat_i_L6MUX21_Z_4_SD_LUT4_Z_B[2] (77,62) -> (95,65)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_S1_LUT4_D_Z_LUT4_D_1_Z_LUT4_Z.D
-Info:                          Defined in:
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:108.23-108.24
-Info:      logic  0.24  7.88 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_S1_LUT4_D_Z_LUT4_D_1_Z_LUT4_Z.F
-Info:    routing  1.73  9.61 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_COUT_CCU2C_CIN_S1_LUT4_D_Z_LUT4_D_1_Z[1] (95,65) -> (81,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_CIN_CCU2C_COUT$CCU2_COMB1.B
-Info:                          Defined in:
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:108.23-108.24
-Info:      logic  0.45  10.05 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_CIN_CCU2C_COUT$CCU2_COMB1.FCO
-Info:    routing  0.00  10.05 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_CIN (81,64) -> (81,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1$CCU2_COMB0.FCI
-Info:                          Defined in:
-Info:                               ../..//rvxx/./pu.sv:1249.41-1249.68
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
-Info:      logic  0.07  10.12 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1$CCU2_COMB0.FCO
-Info:    routing  0.00  10.12 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1$CCU2_FCI_INT (81,64) -> (81,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1$CCU2_COMB1.FCI
-Info:      logic  0.00  10.12 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1$CCU2_COMB1.FCO
-Info:    routing  0.00  10.12 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_COUT (81,64) -> (81,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0$CCU2_COMB0.FCI
-Info:                          Defined in:
-Info:                               ../..//rvxx/./pu.sv:1249.41-1249.68
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
-Info:      logic  0.07  10.19 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0$CCU2_COMB0.FCO
-Info:    routing  0.00  10.19 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0$CCU2_FCI_INT (81,64) -> (81,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0$CCU2_COMB1.FCI
-Info:      logic  0.00  10.19 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0$CCU2_COMB1.FCO
-Info:    routing  0.00  10.19 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0_COUT (81,64) -> (82,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0_S1_CCU2C_S0$CCU2_COMB0.FCI
-Info:                          Defined in:
-Info:                               ../..//rvxx/./pu.sv:1249.41-1249.68
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
-Info:      logic  0.07  10.27 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0_S1_CCU2C_S0$CCU2_COMB0.FCO
-Info:    routing  0.00  10.27 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0_S1_CCU2C_S0$CCU2_FCI_INT (82,64) -> (82,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0_S1_CCU2C_S0$CCU2_COMB1.FCI
-Info:      logic  0.00  10.27 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0_S1_CCU2C_S0$CCU2_COMB1.FCO
-Info:    routing  0.00  10.27 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0_S1_CCU2C_S0_COUT (82,64) -> (82,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0$CCU2_COMB0.FCI
-Info:                          Defined in:
-Info:                               ../..//rvxx/./pu.sv:1249.41-1249.68
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
-Info:      logic  0.07  10.34 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0$CCU2_COMB0.FCO
-Info:    routing  0.00  10.34 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0$CCU2_FCI_INT (82,64) -> (82,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0$CCU2_COMB1.FCI
-Info:      logic  0.00  10.34 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0$CCU2_COMB1.FCO
-Info:    routing  0.00  10.34 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_COUT (82,64) -> (82,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0$CCU2_COMB0.FCI
-Info:                          Defined in:
-Info:                               ../..//rvxx/./pu.sv:1249.41-1249.68
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
-Info:      logic  0.07  10.41 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0$CCU2_COMB0.FCO
-Info:    routing  0.00  10.41 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0$CCU2_FCI_INT (82,64) -> (82,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0$CCU2_COMB1.FCI
-Info:      logic  0.00  10.41 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0$CCU2_COMB1.FCO
-Info:    routing  0.00  10.41 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S1_S0_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_S1_CCU2C_S0_COUT (82,64) -> (82,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_COMB0.FCI
-Info:                          Defined in:
-Info:                               ../..//rvxx/./pu.sv:1249.41-1249.68
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
-Info:      logic  0.07  10.48 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_COMB0.FCO
-Info:    routing  0.00  10.48 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_FCI_INT (82,64) -> (82,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_COMB1.FCI
-Info:      logic  0.00  10.48 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_COMB1.FCO
-Info:    routing  0.00  10.48 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_COUT (82,64) -> (83,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_COMB0.FCI
-Info:                          Defined in:
-Info:                               ../..//rvxx/./pu.sv:1249.41-1249.68
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
-Info:      logic  0.07  10.55 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_COMB0.FCO
-Info:    routing  0.00  10.55 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_FCI_INT (83,64) -> (83,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_COMB1.FCI
-Info:      logic  0.00  10.55 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_COMB1.FCO
-Info:    routing  0.00  10.55 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_COUT (83,64) -> (83,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_COMB0.FCI
-Info:                          Defined in:
-Info:                               ../..//rvxx/./pu.sv:1249.41-1249.68
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
-Info:      logic  0.07  10.62 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_COMB0.FCO
-Info:    routing  0.00  10.62 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_FCI_INT (83,64) -> (83,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_COMB1.FCI
-Info:      logic  0.00  10.62 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_COMB1.FCO
-Info:    routing  0.00  10.62 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_COUT (83,64) -> (83,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_COMB0.FCI
-Info:                          Defined in:
-Info:                               ../..//rvxx/./pu.sv:1249.41-1249.68
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
-Info:      logic  0.07  10.69 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_COMB0.FCO
-Info:    routing  0.00  10.69 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_FCI_INT (83,64) -> (83,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_COMB1.FCI
-Info:      logic  0.00  10.69 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_COMB1.FCO
-Info:    routing  0.00  10.69 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_COUT (83,64) -> (83,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_COMB0.FCI
-Info:                          Defined in:
-Info:                               ../..//rvxx/./pu.sv:1249.41-1249.68
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/arith_map_ccu2c.v:74.7-80.4
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/ccu2c_sim.vh:9.9-9.13
-Info:      logic  0.44  11.14 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1$CCU2_COMB0.F
-Info:    routing  1.42  12.55 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_COUT_CCU2C_CIN_S1_LUT4_D_Z_LUT4_Z_D_LUT4_D_Z_LUT4_Z_D_CCU2C_S0_CIN_CCU2C_COUT_S0[2] (83,64) -> (79,66)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_LUT4_C.D
-Info:                          Defined in:
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:108.23-108.24
-Info:      logic  0.24  12.79 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_CCU2C_S1_S0_CCU2C_S1_S0_CCU2C_S1_S0_LUT4_C.F
-Info:    routing  0.81  13.60 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_LUT4_C_Z[0] (79,66) -> (79,66)
-Info:                          Sink cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_LUT4_C_Z_LUT4_A.A
-Info:                          Defined in:
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:108.23-108.24
-Info:      logic  0.24  13.84 Source cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_LUT4_C_Z_LUT4_A.F
-Info:    routing  0.80  14.64 Net cpu.genpu[0].pu.iD_isALUreg_LUT4_D_Z_CCU2C_S1_S0_LUT4_D_Z_LUT4_Z_1_C_LUT4_C_Z_LUT4_Z_D_CCU2C_S1_COUT_CCU2C_CIN_B1_CCU2C_B1_S0_LUT4_C_Z_LUT4_A_Z[5] (79,66) -> (78,64)
-Info:                          Sink cpu.genpu[0].pu.iD_isJALRnotRet_LUT4_D_Z_L6MUX21_Z_1_D1_PFUMX_Z_ALUT_LUT4_Z.M
-Info:                          Defined in:
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:108.23-108.24
-Info:      logic  0.26  14.90 Source cpu.genpu[0].pu.iD_isJALRnotRet_LUT4_D_Z_L6MUX21_Z_1_D1_PFUMX_Z_ALUT_LUT4_Z.OFX
-Info:    routing  2.10  17.00 Net cpu.genpu[0].pu.iD_isJALRnotRet_LUT4_D_Z[5] (78,64) -> (96,55)
-Info:                          Sink cpu.genpu[0].pu.ldUnit_rqsts.fifobuf.gen_no_rw_check.u.0.2_DO_LUT4_B_Z_LUT4_D_Z_PFUMX_ALUT_Z_LUT4_C_Z_CCU2C_B1_S1_CCU2C_S0_COUT_CCU2C_CIN_S1_L6MUX21_Z_D1_PFUMX_Z_ALUT_LUT4_Z.M
-Info:                          Defined in:
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:108.23-108.24
-Info:      logic  0.26  17.25 Source cpu.genpu[0].pu.ldUnit_rqsts.fifobuf.gen_no_rw_check.u.0.2_DO_LUT4_B_Z_LUT4_D_Z_PFUMX_ALUT_Z_LUT4_C_Z_CCU2C_B1_S1_CCU2C_S0_COUT_CCU2C_CIN_S1_L6MUX21_Z_D1_PFUMX_Z_ALUT_LUT4_Z.OFX
-Info:    routing  1.13  18.39 Net cpu.genpu[0].pu.rdWasLocked_LUT4_B_1_Z[2] (96,55) -> (94,57)
+Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:141.38-141.40
+Info:      logic  0.24  17.55 Source cpu.genpu[0].pu.rdWasLocked_LUT4_A_D_PFUMX_C0_Z_L6MUX21_Z_D1_PFUMX_Z_ALUT_LUT4_Z.OFX
+Info:    routing  1.07  18.62 Net cpu.genpu[0].pu.rdWasLocked_LUT4_A_D_PFUMX_C0_Z[4] (100,74) -> (103,69)
 Info:                          Sink cpu.genpu[0].pu.rdWasLocked_TRELLIS_FF_Q_LSR_LUT4_Z.D
 Info:                          Defined in:
 Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:108.23-108.24
-Info:      logic  0.24  18.62 Source cpu.genpu[0].pu.rdWasLocked_TRELLIS_FF_Q_LSR_LUT4_Z.F
-Info:    routing  0.32  18.95 Net cpu.genpu[0].pu.rdWasLocked_TRELLIS_FF_Q_LSR (94,57) -> (94,57)
+Info:      logic  0.24  18.85 Source cpu.genpu[0].pu.rdWasLocked_TRELLIS_FF_Q_LSR_LUT4_Z.F
+Info:    routing  0.33  19.18 Net cpu.genpu[0].pu.rdWasLocked_TRELLIS_FF_Q_LSR (103,69) -> (103,69)
 Info:                          Sink cpu.genpu[0].pu.rdWasLocked_TRELLIS_FF_Q.LSR
-Info:      setup  0.42  19.37 Source cpu.genpu[0].pu.rdWasLocked_TRELLIS_FF_Q.LSR
-Info: 5.08 ns logic, 14.29 ns routing
+Info:      setup  0.42  19.61 Source cpu.genpu[0].pu.rdWasLocked_TRELLIS_FF_Q.LSR
+Info: 6.47 ns logic, 13.14 ns routing
 
 Info: Critical path report for cross-domain path '<async>' -> 'posedge $glbnet$clk48mhz_w':
 Info:       type curr  total name
 Info:     source  0.00  0.00 Source usr_btn_n$tr_io.O
-Info:    routing  7.41  7.41 Net usr_btn_n$TRELLIS_IO_IN (0,83) -> (91,41)
+Info:    routing  7.13  7.13 Net usr_btn_n$TRELLIS_IO_IN (0,83) -> (97,47)
 Info:                          Sink usr_btn_n_LUT4_D.D
 Info:                          Defined in:
-Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:108.23-108.24
-Info:      logic  0.24  7.65 Source usr_btn_n_LUT4_D.F
-Info:    routing  1.35  9.00 Net usr_btn_n_LUT4_D_Z[0] (91,41) -> (101,40)
-Info:                          Sink usr_btn_n_LUT4_C_D_LUT4_Z.C
+Info:                               ../orangecrab0285.sv:72.12-72.21
+Info:      logic  0.24  7.37 Source usr_btn_n_LUT4_D.F
+Info:    routing  0.98  8.35 Net usr_btn_n_LUT4_D_Z[0] (97,47) -> (101,47)
+Info:                          Sink rstctrl.rstduration_TRELLIS_FF_Q_DI_CCU2C_S0_COUT_CCU2C_CIN_A0_LUT4_Z_D_LUT4_C_Z_LUT4_D_Z_LUT4_Z.C
 Info:                          Defined in:
 Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:108.23-108.24
-Info:      logic  0.24  9.24 Source usr_btn_n_LUT4_C_D_LUT4_Z.F
-Info:    routing  1.32  10.56 Net usr_btn_n_LUT4_C_D[1] (101,40) -> (91,41)
-Info:                          Sink usr_btn_n_LUT4_C.D
+Info:      logic  0.24  8.59 Source rstctrl.rstduration_TRELLIS_FF_Q_DI_CCU2C_S0_COUT_CCU2C_CIN_A0_LUT4_Z_D_LUT4_C_Z_LUT4_D_Z_LUT4_Z.F
+Info:    routing  0.68  9.27 Net rstctrl.rstduration_TRELLIS_FF_Q_DI_CCU2C_S0_COUT_CCU2C_CIN_A0_LUT4_Z_D_LUT4_C_Z_LUT4_D_Z[2] (101,47) -> (100,47)
+Info:                          Sink rstctrl.rstduration_TRELLIS_FF_Q_CE_LUT4_Z.D
 Info:                          Defined in:
 Info:                               /opt/oss-cad-suite/lib/../share/yosys/lattice/cells_map_trellis.v:108.23-108.24
-Info:      logic  0.24  10.79 Source usr_btn_n_LUT4_C.F
-Info:    routing  0.41  11.20 Net rstctrl.i_r_TRELLIS_FF_Q_CE (91,41) -> (91,41)
-Info:                          Sink rstctrl.i_r_TRELLIS_FF_Q.CE
-Info:      setup  0.00  11.20 Source rstctrl.i_r_TRELLIS_FF_Q.CE
-Info: 0.71 ns logic, 10.49 ns routing
+Info:      logic  0.24  9.51 Source rstctrl.rstduration_TRELLIS_FF_Q_CE_LUT4_Z.F
+Info:    routing  0.49  9.99 Net rstctrl.rstduration_TRELLIS_FF_Q_CE (100,47) -> (98,47)
+Info:                          Sink rstctrl.rstduration_TRELLIS_FF_Q_2.CE
+Info:      setup  0.00  9.99 Source rstctrl.rstduration_TRELLIS_FF_Q_2.CE
+Info: 0.71 ns logic, 9.29 ns routing
 
 Info: Critical path report for cross-domain path 'posedge $glbnet$clk48mhz_w' -> '<async>':
 Info:       type curr  total name
 Info:   clk-to-q  0.52  0.52 Source serial.phy.phy.usb_fs_phy0.rx_en_q_TRELLIS_FF_Q.Q
-Info:    routing  4.27  4.80 Net serial.phy.phy.usb_pads_tx_oen_w (58,75) -> (121,86)
+Info:    routing  3.63  4.16 Net serial.phy.phy.usb_pads_tx_oen_w (68,85) -> (121,87)
 Info:                          Sink serial.phy.phy.usb_fs_phy0.rx_en_q_LUT4_D.D
 Info:                          Defined in:
 Info:                               ../..//lib/core_usb_fs_phy/src_v/usb_transceiver.sv:43.18-43.34
-Info:      logic  0.24  5.03 Source serial.phy.phy.usb_fs_phy0.rx_en_q_LUT4_D.F
-Info:    routing  1.64  6.67 Net usb_d_p_$_TBUF__Y_E (121,86) -> (124,89)
-Info:                          Sink usb_d_n$tr_io$invert_T.A
-Info:      logic  0.24  6.91 Source usb_d_n$tr_io$invert_T.F
-Info:    routing  0.86  7.77 Net usb_d_n$tr_io$invert_T$conn$Z (124,89) -> (126,89)
-Info:                          Sink usb_d_n$tr_io.T
-Info: 1.00 ns logic, 6.77 ns routing
+Info:      logic  0.24  4.39 Source serial.phy.phy.usb_fs_phy0.rx_en_q_LUT4_D.F
+Info:    routing  1.15  5.54 Net usb_d_p_$_TBUF__Y_E (121,87) -> (124,91)
+Info:                          Sink usb_d_p$tr_io$invert_T.A
+Info:      logic  0.24  5.78 Source usb_d_p$tr_io$invert_T.F
+Info:    routing  1.22  7.00 Net usb_d_p$tr_io$invert_T$conn$Z (124,91) -> (126,92)
+Info:                          Sink usb_d_p$tr_io.T
+Info: 1.00 ns logic, 6.00 ns routing
 
-Info: Max frequency for clock '$glbnet$clk48mhz_w': 51.63 MHz (PASS at 48.00 MHz)
+Info: Max frequency for clock '$glbnet$clk48mhz_w': 51.00 MHz (PASS at 48.00 MHz)
 
-Info: Max delay <async>                    -> posedge $glbnet$clk48mhz_w: 11.20 ns
-Info: Max delay posedge $glbnet$clk48mhz_w -> <async>                   : 7.77 ns
+Info: Max delay <async>                    -> posedge $glbnet$clk48mhz_w: 9.99 ns
+Info: Max delay posedge $glbnet$clk48mhz_w -> <async>                   : 7.00 ns
 
 Info: Slack histogram:
-Info:  legend: * represents 20 endpoint(s)
-Info:          + represents [1,20) endpoint(s)
-Info: [  1463,   2385) |**+
-Info: [  2385,   3307) |****************+
-Info: [  3307,   4229) |**************************************+
-Info: [  4229,   5151) |*******************************************+
-Info: [  5151,   6073) |*****************************************************+
-Info: [  6073,   6995) |******************************+
-Info: [  6995,   7917) |*********************************+
-Info: [  7917,   8839) |******************************+
-Info: [  8839,   9761) |**************************+
-Info: [  9761,  10683) |*****************************+
-Info: [ 10683,  11605) |****************************+
-Info: [ 11605,  12527) |**************************+
-Info: [ 12527,  13449) |*********************+
-Info: [ 13449,  14371) |*********************************************+
-Info: [ 14371,  15293) |**********************************************+
-Info: [ 15293,  16215) |**********************************************+
-Info: [ 16215,  17137) |************************************************************ 
-Info: [ 17137,  18059) |*************************************************+
-Info: [ 18059,  18981) |***********************************************************+
-Info: [ 18981,  19903) |***********************+
+Info:  legend: * represents 22 endpoint(s)
+Info:          + represents [1,22) endpoint(s)
+Info: [  1224,   2158) |*****+
+Info: [  2158,   3092) |*********************+
+Info: [  3092,   4026) |******************+
+Info: [  4026,   4960) |**********************************+
+Info: [  4960,   5894) |********************************************+
+Info: [  5894,   6828) |*******************************+
+Info: [  6828,   7762) |************************+
+Info: [  7762,   8696) |***********************+
+Info: [  8696,   9630) |******************************+
+Info: [  9630,  10564) |**********************+
+Info: [ 10564,  11498) |*********************************+
+Info: [ 11498,  12432) |******************************+
+Info: [ 12432,  13366) |*********************+
+Info: [ 13366,  14300) |***********************************+
+Info: [ 14300,  15234) |******************************************************+
+Info: [ 15234,  16168) |*************************************+
+Info: [ 16168,  17102) |***************************************************+
+Info: [ 17102,  18036) |********************************************+
+Info: [ 18036,  18970) |************************************************************ 
+Info: [ 18970,  19904) |***************************+
 Info: Using pin H15 as VREF for bank 6
 
 Info: Program finished normally.
