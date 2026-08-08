@@ -9,15 +9,15 @@
 // 	imul and idiv units.
 //
 // 	PUIMULDSP
-// 		Multiply in the imul unit using DSP hardware multipliers
-// 		(the "*" operator) instead of the iterative radix-4 shift-add.
+// 		Multiply in the imul unit using DSP hardware multipliers (the
+// 		"*" operator) instead of the iterative radix-4 shift-add; new
+// 		multiplies are accepted while results queue for WriteBack.
 //
 // 	PUIMULDSPREG
-// 		Fully pipeline the PUIMULDSP multiply (operand, product and
-// 		post-product registers) so that synthesis absorbs them into
-// 		the DSP input/MREG/PREG pipeline registers; the multiply takes
-// 		two more cycles but is no longer a deep combinational cone
-// 		anchoring placement. Requires PUIMULDSP.
+// 		Fully pipeline the PUIMULDSP multiply itself (operand, product,
+// 		post-product registers absorbed into the DSP input/MREG/PREG);
+// 		two more cycles per multiply, a deeper valid/tag pipe and fifo.
+// 		Requires PUIMULDSP; neither DSP arm supports PUIMULCLK.
 //
 // 	PUIDIVDSP
 // 		Divide in the idiv unit using a multiply-based Newton-Raphson
