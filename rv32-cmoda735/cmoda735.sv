@@ -11,7 +11,7 @@
 `define SRAM_KBSIZE 128
 `endif
 `ifndef SRAM_INITFILE
-`define SRAM_INITFILE "../../../../rv32-sim/apps/coremark/rv32/coremark.32.hex"
+`define SRAM_INITFILE "../../../../rv32-cmoda735/apps/ledbtn/ledbtn.32.hex"
 `endif
 
 `default_nettype none
@@ -46,6 +46,8 @@
 `include "lib/wb_arbiter.sv"
 `include "lib/wb_mux.sv"
 `include "lib/wb_dnsizr.sv"
+
+`include "dev/ledbtn.sv"
 
 `include "dev/irqctrl.sv"
 
@@ -91,9 +93,6 @@ output wire uart_tx;
 output wire led_red_n;
 output wire led_green_n;
 output wire led_blue_n;
-assign led_red_n = 1'b1;
-assign led_green_n = 1'b1;
-assign led_blue_n = 1'b1;
 
 localparam CLKFREQ48MHZ  = 48000000;
 localparam CLKFREQ96MHZ  = 96000000;
@@ -107,6 +106,7 @@ xc7pll_12_to_48_96_192 pll (
 	,.clk192mhz_o (clk192mhz_w)
 );
 
+wire btn_w;
 // rst_i comes from the button btn0 which is active-high; after power-on,
 // the soc is held in reset until btn0 get pressed once; thereafter,
 // resetting the soc requires holding btn0 pressed for at least RSTTHRESH.
@@ -118,13 +118,17 @@ rstctrl #(
 	 .clk_i (clk96mhz_w)
 	,.i     (rst_i)
 	,.o     (rst_w)
+	,.pt_o  (btn_w)
 );
 
 localparam CPU_COUNT = `CPU_COUNT;
 
 localparam M_WBPI_CPU     = 0;
 localparam M_WBPI_LAST    = M_WBPI_CPU;
-localparam S_WBPI_SERIAL_JTAG = 0;
+localparam S_WBPI_LEDBTN0     = 0;
+localparam S_WBPI_LEDBTN1     = (S_WBPI_LEDBTN0 + 1);
+localparam S_WBPI_LEDBTN2     = (S_WBPI_LEDBTN1 + 1);
+localparam S_WBPI_SERIAL_JTAG = (S_WBPI_LEDBTN2 + 1);
 // Count of serial_jtag channels; the xc7 supports one BSCANE2
 // per USER1-4 instruction.
 localparam SERIAL_JTAG_COUNT  = 4;
@@ -137,6 +141,9 @@ localparam WBPI_MDEVCOUNT = (M_WBPI_LAST + 1);
 localparam WBPI_SDEVCOUNT = (S_WBPI_DEFAULT + 1);
 
 localparam [0:(WBPI_SDEVCOUNT*2*32)-1] WBPI_SDEVS = {
+	/* S_WBPI_LEDBTN0       */ 32'hd80,  32'(WORDBITSZ/8),
+	/* S_WBPI_LEDBTN1       */ 32'hda0,  32'(WORDBITSZ/8),
+	/* S_WBPI_LEDBTN2       */ 32'hdc0,  32'(WORDBITSZ/8),
 	/* S_WBPI_SERIAL_JTAG+0 */ 32'he80,  32'(2*(WORDBITSZ/8)),
 	/* S_WBPI_SERIAL_JTAG+1 */ 32'hea0,  32'(2*(WORDBITSZ/8)),
 	/* S_WBPI_SERIAL_JTAG+2 */ 32'hec0,  32'(2*(WORDBITSZ/8)),
@@ -147,7 +154,7 @@ localparam [0:(WBPI_SDEVCOUNT*2*32)-1] WBPI_SDEVS = {
 	/* S_WBPI_DEFAULT       */ 32'h0,    32'h0};
 
 localparam WBPI_MAXPENDINGACK     = 32;
-localparam WBPI_DNSIZR            = 8'b00111111;
+localparam WBPI_DNSIZR            = 11'b00111111111;
 localparam WBPI_WORDBITSZ         = `XWORDBITSZ;
 localparam WBPI_CLOG2WORDBITSZBY8 = clog2(WBPI_WORDBITSZ/8);
 localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
@@ -242,6 +249,72 @@ ccx #(
 	,.rstaddr2_i ('h1000)
 
 	,.spval_i ('h1000+(`SRAM_KBSIZE*1024))
+);
+
+wire led_red_w;
+assign led_red_n = ~led_red_w;
+
+ledbtn ledbtn0 (
+
+	 .rst_i (wbpi_rst_w)
+
+	,.clk_i (wbpi_clk_w)
+
+	,.btn_i (btn_w)
+	,.led_o (led_red_w)
+
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_LEDBTN0])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_LEDBTN0])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_LEDBTN0])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_LEDBTN0])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_LEDBTN0])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_LEDBTN0])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_LEDBTN0])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_LEDBTN0])
+);
+
+wire led_green_w;
+assign led_green_n = ~led_green_w;
+
+ledbtn ledbtn1 (
+
+	 .rst_i (wbpi_rst_w)
+
+	,.clk_i (wbpi_clk_w)
+
+	,.btn_i (btn_w)
+	,.led_o (led_green_w)
+
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_LEDBTN1])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_LEDBTN1])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_LEDBTN1])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_LEDBTN1])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_LEDBTN1])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_LEDBTN1])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_LEDBTN1])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_LEDBTN1])
+);
+
+wire led_blue_w;
+assign led_blue_n = ~led_blue_w;
+
+ledbtn ledbtn2 (
+
+	 .rst_i (wbpi_rst_w)
+
+	,.clk_i (wbpi_clk_w)
+
+	,.btn_i (btn_w)
+	,.led_o (led_blue_w)
+
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_LEDBTN2])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_LEDBTN2])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_LEDBTN2])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_LEDBTN2])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_LEDBTN2])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_LEDBTN2])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_LEDBTN2])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_LEDBTN2])
 );
 
 irqctrl #(
