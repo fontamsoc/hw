@@ -48,8 +48,8 @@
 // 	multi-cycle zbb unit (2-cycle, register-isolated).
 //
 // PURV32ZBC
-// 	"Zbc" carry-less multiply extension (clmul/clmulh/clmulr), computed by
-// 	the multi-cycle clmul unit (a 2-cycle, register-isolated XOR-tree).
+// 	"Zbc" carry-less multiply extension (clmul/clmulh/clmulr), computed by the
+// 	2-cycle register-isolated clmul unit, which pipelines its acceptance.
 //
 // 	PUCLMUL1
 // 		Compute clmul in a single EX-stage cycle instead of through
