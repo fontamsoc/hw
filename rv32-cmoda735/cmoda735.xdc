@@ -155,3 +155,22 @@ set_property CONFIG_VOLTAGE 3.3 [current_design]
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design];
 set_property BITSTREAM.CONFIG.CONFIGRATE 33 [current_design];
 set_property CONFIG_MODE SPIx4 [current_design];
+
+## BSCANE2 JTAG TAP clock used by the serial_jtag peripheral.
+## 33.33ns (30 MHz) is the ceiling of the on-board FTDI JTAG clock.
+## The clock domain crossing to the system clocks is done with
+## gray-code asynchronous fifos, hence the domains are declared
+## asynchronous instead of being timed against each other.
+create_clock -name jtag_tck -period 33.33 [get_pins {gen_serial_jtag[0].bscane2/TCK}];
+set_clock_groups -asynchronous -group [get_clocks jtag_tck] -group [get_clocks -include_generated_clocks clk12mhz_i];
+
+## The serial_jtag buffers are 64 bytes per direction, too shallow to
+## be worth a block ram: a 64x8 fifo would occupy a whole RAMB18 at an
+## eighth of its depth, while in distributed ram it costs a single LUT6
+## per bit at any depth up to 64. The transmit fifo is first-word-fall-
+## through, hence its asynchronous read already forces distributed ram,
+## and at this depth the receive fifo is implied into distributed ram
+## as well; the constraints below pin both there, so that raising the
+## buffer size cannot silently hand the receive fifo a block ram.
+set_property RAM_STYLE distributed [get_cells -hierarchical -filter {NAME =~ *serial_jtag*/phy/rx/fifobuf/gen_no_rw_check.u*}];
+set_property RAM_STYLE distributed [get_cells -hierarchical -filter {NAME =~ *serial_jtag*/phy/tx/fifobuf/gen_no_rw_check.u*}];
