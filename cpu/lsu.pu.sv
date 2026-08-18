@@ -139,3 +139,40 @@ assign _amoUnit_lrValid = (amoUnit_lrValid && (amoUnit_LrAddr == iD_rs1));
 // address is not the reserved one performs no store, and must accordingly report
 // failure. Reading amoUnit_lrValid here instead would report success for it.
 assign eX_StoreCondOut_i = {{(WORDBITSZ-1){1'b0}}, !_amoUnit_lrValid};
+
+`ifdef SIMULATION
+// iD_ldUnit_bsy's ldUnit_rqsts_full term is subsumed by __dCache_m_bsy: the fifo
+// depth is MAXPENDINGACK and each entry is an outstanding request, while
+// dCache_m_rqst_cnt counts at presentation (the same cycle ldUnit_stb pushes) and
+// dCache_m_resp_cnt counts every ack (of which pops are a subset), so
+// ldUnit_rqsts.usage_o never exceeds dCache_m_pending_acks, ie: a full fifo implies
+// dCache_m_max_pending. Should dCache_m_rqst_cnt ever stop counting at presentation,
+// that implication would silently break, and were the full_o term then dropped from
+// iD_ldUnit_bsy, fifo_fwft's "we = (push_i && !full_o)" would drop a load request,
+// losing its writeback and its ldUnit_rqsts_seq slot forever -- a wedge, not a wrong
+// result. Report the occupancy invariant itself (live on every run) and the drop
+// (the consequence). Each is edge-reported so a stuck condition prints once, and a
+// clean run prints nothing, keeping every app's output unchanged; flushed, as the
+// machine can wedge right after either report.
+reg ldUnit_rqstsAbovePending_r;
+reg ldUnit_rqstsDropped_r;
+always_ff @(posedge clk_i) begin
+	if (rst_i) begin
+		ldUnit_rqstsAbovePending_r <= 1'b0;
+		ldUnit_rqstsDropped_r <= 1'b0;
+	end else begin
+		ldUnit_rqstsAbovePending_r <= (ldUnit_rqsts.usage_o > dCache_m_pending_acks);
+		ldUnit_rqstsDropped_r <= (ldUnit_stb && ldUnit_rqsts_full);
+		if ((ldUnit_rqsts.usage_o > dCache_m_pending_acks) && !ldUnit_rqstsAbovePending_r) begin
+			$display("pu%0d: error: ldUnit_rqsts usage %0d above %0d pending acks, iD_pc %h",
+				PUID, ldUnit_rqsts.usage_o, dCache_m_pending_acks, iD_pc);
+			$fflush();
+		end
+		if ((ldUnit_stb && ldUnit_rqsts_full) && !ldUnit_rqstsDropped_r) begin
+			$display("pu%0d: error: ldUnit_rqsts overflow, load request dropped, iD_pc %h",
+				PUID, iD_pc);
+			$fflush();
+		end
+	end
+end
+`endif
