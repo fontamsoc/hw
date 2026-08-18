@@ -719,7 +719,7 @@ wire iF_use_rdId = (iF_rdId && // iF_rdId is null when iF_isMiscMem true.
 `ifdef PUPREDICTBRANCH
 localparam BPTSETCNT = 4096;
 localparam CLOG2BPTSETCNT = clog2(BPTSETCNT);
-reg [2 -1 : 0] bpt [BPTSETCNT]; // Branch Prediction Table.
+(* no_rw_check, ramstyle = "no_rw_check", syn_ramstyle = "no_rw_check" *) reg [2 -1 : 0] bpt [BPTSETCNT]; // Branch Prediction Table.
 `ifdef PUPREDICTGSHARE
 // Gshare: index the BHT by (PC ^ global-history) to capture inter-branch correlation.
 // ghr is a NON-speculative global history register, updated only at branch resolution
