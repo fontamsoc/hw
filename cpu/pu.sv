@@ -102,6 +102,19 @@
 // 		Number of global-history bits folded into the branch-prediction
 // 		table index; defaults to the full index width.
 //
+// PUEARLYREDIRECTFETCH
+// 	Issue the i-cache and branch-prediction-table reads from the branch
+// 	target in the very clockcycle a branch misprediction resolves, instead
+// 	of from the stale pc being flushed, and exempt that read from the flush
+// 	it would otherwise take; a mispredicted branch whose target is cached
+// 	then costs one issue slot instead of two. Only the branch cause is
+// 	fetched early, and only through its two already-registered candidate
+// 	targets, ie: the late gpr compare reaches the read-address mux select
+// 	and never the read address itself. jalr/ret/fence.i/eret and exceptions
+// 	keep the two-clockcycle redirect. Requires no other feature; with
+// 	PUPREDICTBRANCH off the candidate select folds to the taken target,
+// 	which is then the only mispredicting case.
+//
 // PUFWDALL
 // 	Also forward operands at the WriteBack stage (combinationally from the
 // 	WriteBack arbiter), in addition to the default forwarding done at the
@@ -453,6 +466,10 @@ wire iF_en = (iF_carryon && !halted_o);
 
 wire                    iF_eX_JumpOrBranch_i;
 wire [WORDBITSZ -1 : 0] iF_eX_JumpOrBranchAddr_i;
+`ifdef PUEARLYREDIRECTFETCH
+wire                    iF_eX_earlyFetch_i;
+wire [WORDBITSZ -1 : 0] iF_eX_earlyFetchAddr_i;
+`endif
 
 assign iCache_nxtway_w = iF_eX_JumpOrBranch_i;
 
@@ -490,18 +507,79 @@ wire [WORDBITSZ -1 : 0] _ras7 = {ras7, 2'b00};
 reg  [WORDBITSZ -1 : 0] iF_pc;
 wire [WORDBITSZ -1 : 0] iF_pc_i;
 
+`ifdef PUEARLYREDIRECTFETCH
+// The i-cache read is issued from the branch target in the clockcycle a branch
+// misprediction resolves, so that the target lands in the fetch stage one
+// clockcycle earlier; iF_pc itself is left alone, as it already captures that
+// same address through iF_eX_JumpOrBranchAddr_i below. The tag must be muxed
+// along with the index and not left on iF_pc_i: rtag_r registers rtag_w on
+// every read, so comparing the target set's stored tags against the flushed
+// pc's tag can report a hit for a line that is not the one that was read, ie:
+// return a wrong instruction rather than merely miss.
+assign iCache_ridx_w = (iF_eX_earlyFetch_i ?
+	iF_eX_earlyFetchAddr_i[CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8-1:CLOG2XWORDBITSZBY8] :
+	iF_pc_i[CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8-1:CLOG2XWORDBITSZBY8]);
+assign iCache_rtag_w = (iF_eX_earlyFetch_i ?
+	iF_eX_earlyFetchAddr_i[WORDBITSZ-1:CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8] :
+	iF_pc_i[WORDBITSZ-1:CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8]);
+`else
 assign iCache_ridx_w = iF_pc_i[CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8-1:CLOG2XWORDBITSZBY8];
 assign iCache_rtag_w = iF_pc_i[WORDBITSZ-1:CLOG2ICACHESETCNT+CLOG2XWORDBITSZBY8];
+`endif
 
 always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		iF_flushed_ <= 1;
 		iF_pc <= rstaddr_i;
 	end else if (iF_en || excTriggered) begin
+		`ifdef PUEARLYREDIRECTFETCH
+		// The read issued this clockcycle went to the branch target itself,
+		// hence the instruction it returns is on the redirected path and
+		// must not be flushed. !excTriggered is required and is not made
+		// redundant by iF_eX_earlyFetch_i's own qualification: an exception
+		// taken in this same clockcycle wins the redirect priority mux and
+		// sends iF_pc to the trap vector while the read went to the branch
+		// target, and believing that read would execute the branch target's
+		// instruction as the trap handler's first instruction.
+		iF_flushed_ <= (iF_eX_JumpOrBranch_i && !(iF_eX_earlyFetch_i && !excTriggered));
+		`else
 		iF_flushed_ <= iF_eX_JumpOrBranch_i;
+		`endif
 		iF_pc <= iF_eX_JumpOrBranch_i ? iF_eX_JumpOrBranchAddr_i : iF_pc_i;
 	end
 end
+
+`ifdef PUEARLYREDIRECTFETCH
+`ifdef SIMULATION
+// The early fetch rests on one identity: whenever the read address was overridden
+// and the fetch it produces is not flushed, the address read is the address iF_pc
+// captured, ie: the anti-prediction of the registered candidates is the address
+// the redirect priority mux picked. Check it rather than trust it -- a violation
+// pairs a fetched instruction with a different pc, which executes a wrong
+// instruction rather than merely mispredicting, and every way of getting the
+// early-fetch gate wrong lands on this one compare. The arming term is
+// deliberately not qualified by iF_eX_JumpOrBranch_i, so an override firing
+// without a redirect is caught too. The compare is made in the clockcycle the
+// capture gate next fires, hence it reads the iF_pc settled by the capture being
+// checked; reported once per event and flushed, as a wrong instruction can wedge
+// the machine. A clean run prints nothing.
+reg                    earlyFetchChk;
+reg [WORDBITSZ -1 : 0] earlyFetchChkAddr;
+always_ff @(posedge clk_i) begin
+	if (rst_i)
+		earlyFetchChk <= 1'b0;
+	else if (iF_en || excTriggered) begin
+		if (earlyFetchChk && (iF_pc != earlyFetchChkAddr)) begin
+			$display("pu%0d: error: early fetch read %h while iF_pc captured %h",
+				PUID, earlyFetchChkAddr, iF_pc);
+			$fflush();
+		end
+		earlyFetchChk <= (iF_eX_earlyFetch_i && !excTriggered);
+		earlyFetchChkAddr <= iF_eX_earlyFetchAddr_i;
+	end
+end
+`endif
+`endif
 
 wire [INSNBITSZ -1 : 0] iF_insn;
 generate if (XWORDBITSZ > INSNBITSZ) begin :gen_iF_insn
@@ -735,11 +813,26 @@ localparam GHRSZ = CLOG2BPTSETCNT;
 `endif
 reg [GHRSZ -1 : 0] ghr;
 `endif
+`ifdef PUEARLYREDIRECTFETCH
+// Muxed before the history XOR, so that iF_bptWrIdx below still captures the
+// post-XOR index of the read it describes; on the fpga tops this slice is the
+// i-cache read index and the mux is shared with it, ie: it costs nothing, and
+// omitting it would leave the instruction after a misprediction predicted from
+// the flushed pc's entry instead of its own.
+wire [CLOG2BPTSETCNT -1 : 0] iF_bptIdx = ((iF_eX_earlyFetch_i ?
+		iF_eX_earlyFetchAddr_i[CLOG2INSNBITSZBY8+:CLOG2BPTSETCNT] :
+		iF_pc_i[CLOG2INSNBITSZBY8+:CLOG2BPTSETCNT])
+`ifdef PUPREDICTGSHARE
+	^ ghr
+`endif
+	);
+`else
 wire [CLOG2BPTSETCNT -1 : 0] iF_bptIdx = (iF_pc_i[CLOG2INSNBITSZBY8+:CLOG2BPTSETCNT]
 `ifdef PUPREDICTGSHARE
 	^ ghr
 `endif
 	);
+`endif
 reg [2 -1 : 0] iF_predictBranch;
 always_ff @(posedge clk_i) begin
 	if (iF_en)
@@ -1496,6 +1589,16 @@ wire eX_JumpOrBranch_i = (excTriggered || ((
 
 assign iF_eX_JumpOrBranch_i = eX_JumpOrBranch_i;
 
+`ifdef PUEARLYREDIRECTFETCH
+// A branch misprediction is the only redirect cause fetched early. iD_insn_valid_
+// is required and is not implied by the two terms before it: without it, a
+// mispredicting branch held at the iDecoded stage steers the read to its target
+// while no redirect fires, and iF_pc then pairs the target's instruction with the
+// sequential pc, ie: executes the target under the wrong address.
+wire eX_earlyFetch_i = ((iD_isBranch && _eX_takeBranch_i) && iD_insn_valid_);
+assign iF_eX_earlyFetch_i = eX_earlyFetch_i;
+`endif
+
 wire [WORDBITSZ -1 : 0] excTvec;
 wire [WORDBITSZ -1 : 0] eX_JumpOrBranchAddr_i = (
 	excTriggered ? excTvec :
@@ -1508,6 +1611,19 @@ wire [WORDBITSZ -1 : 0] eX_JumpOrBranchAddr_i = (
 	/* iD_isFencei */ iD_pc_plus_INSNBITSzBy8);
 
 assign iF_eX_JumpOrBranchAddr_i = eX_JumpOrBranchAddr_i;
+
+`ifdef PUEARLYREDIRECTFETCH
+// The anti-prediction of the two registered candidates, which is what
+// eX_JumpOrBranchAddr_i above reduces to whenever eX_earlyFetch_i is true, since
+// a misprediction means eX_takeBranch_i == !eX_predictBranch_i[1]. Selecting on
+// the registered prediction rather than on eX_takeBranch_i keeps the gpr compare
+// off the read address itself, leaving it only on the mux select. With
+// PUPREDICTBRANCH off, eX_predictBranch_i is null and this folds to the taken
+// target, which is then the only case eX_earlyFetch_i can be true for.
+wire [WORDBITSZ -1 : 0] eX_earlyFetchAddr_i = (
+	eX_predictBranch_i[1] ? iD_pc_plus_INSNBITSzBy8 : iD_pc_plus_iD_Bimm);
+assign iF_eX_earlyFetchAddr_i = eX_earlyFetchAddr_i;
+`endif
 
 assign dCache_invd_w = (iD_isFence  && iD_insn_valid);
 assign iCache_invd_w = (iD_isFencei && iD_insn_valid);
