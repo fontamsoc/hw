@@ -23,6 +23,7 @@
 `define PUPREDICTJAL
 `define PUPREDICTBRANCH
 `define PUPREDICTRET
+`define PUEARLYREDIRECTFETCH
 `define PUFWDALL
 `include "cpu/ccx.sv"
 /* makefile defined *///`define CPU_COUNT 1
