@@ -57,7 +57,6 @@ always_ff @(posedge clk_i) begin
 end
 
 reg [(CLOG2MAXPENDINGACK +1) -1 : 0] iF_mem_seq;
-reg                                  iF_mem_seq_valid;
 
 assign dCache_s_ack_i = (wb_ack_i && (!iF_mem_seq_valid || wb_resp_cnt != iF_mem_seq));
 

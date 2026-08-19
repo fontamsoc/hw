@@ -446,6 +446,7 @@ input wire [WORDBITSZ -1 : 0] rstaddr_i;
 input wire [WORDBITSZ -1 : 0] spval_i;
 
 wire _wb_bsy_i;
+reg  iF_mem_seq_valid; /* set in memctrl.pu.sv */
 
 wire excTriggered;
 
@@ -473,7 +474,26 @@ wire [WORDBITSZ -1 : 0] iF_eX_earlyFetchAddr_i;
 
 assign iCache_nxtway_w = iF_eX_JumpOrBranch_i;
 
-assign iCache_re_w = iF_en;
+// The re-read of a missing pc is withheld while its refill is in flight. Its
+// verdict is already known to be a miss, and the brams hold their outputs
+// while re_i is low, so nothing downstream sees a difference; but the re-read
+// issued in the clockcycle the response returns collides, on the same edge and
+// the same set, with the write of the fill, and the brams are marked
+// no_rw_check, ie: licensed to resolve such a collision however they please in
+// hardware, each of the three independently, a new tag beside an old word
+// being a wrong instruction. Withholding the re-read removes that collision
+// structurally instead of relying on that resolution, and insures the probe
+// following the fill reads from a settled array. Only the flushed-and-frozen
+// re-read is withheld: while a stale refill is in flight the fetch stage can
+// be consuming hits, or be one clockcycle past a redirect, ie: iF_flushed_,
+// and those reads are fresh addresses whose held verdicts would be believed
+// for the wrong pc, so they proceed as always; their one-in-SETCNT chance of
+// landing on the fill write's set in its one clockcycle is unchanged from
+// before this term existed. An early redirect fetch against a missing pc
+// while a refill is in flight is withheld with the re-read and falls back to
+// an ordinary redirect, which is harmless, as the held verdict is the miss
+// that armed the refill.
+assign iCache_re_w = (iF_en && !(iF_mem_seq_valid && iF_flushed && !iF_flushed_));
 
 `ifdef PUPREDICTRET
 reg [(WORDBITSZ-2) -1 : 0] ras0;
