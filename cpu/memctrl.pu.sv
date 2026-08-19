@@ -135,3 +135,114 @@ always_comb begin
 		wb_sel_o = {(XWORDBITSZ/8){1'b1}};
 	end
 end
+
+`ifdef PUICACHEFILLBYPASS
+// iF_mem_ack is the one clockcycle the refilled word is live on wb_dat_i, and the
+// same edge writes it into the i-cache. Capture it beside that write and hold the
+// capture until the fetch stage takes it, so that a decode stalled in the clockcycle
+// the word arrives costs no more than it costs an ordinary hit, whose block ram
+// outputs hold while the read enable is low. The capture is qualified as follow.
+// The address compared: the response carries the address the request was made for,
+// and iF_pc moves on its own, so the two can differ -- a redirect taken while a
+// refill is in flight retargets the fetch, and a refill armed on an i-cache verdict
+// left over from a swallowed redirect asks for a line that is already cached, whose
+// read then hits and advances iF_pc past it. Re-probing is what makes both harmless
+// today; a forced hit would hand the fetch stage an instruction from an address it
+// has already left. Both are registers, so the compare is made in the clockcycle
+// before the fetch stage needs it and never reaches the read address.
+// iCache_rdy_w: a refill armed before a fence.i can be responded to during the
+// invalidate walk, where iCache drops the fill and the miss controller re-requests
+// once the walk ends. Without this term the word read from memory before the walk
+// would be handed over as the instruction after the fence.i, and the address
+// compare does not cover it, the redirect target and the in-flight address being
+// the very same word whenever the instruction after the fence.i is what missed.
+// !iF_eX_JumpOrBranch_i covers the redirect taken in this very clockcycle, iF_pc
+// moving on the same edge the capture would be validated on. It also covers
+// excTriggered, which eX_JumpOrBranch_i carries, and fence.i, which always
+// redirects in the clockcycle it invalidates, so neither is written again here.
+// iF_en clears the capture: while it is valid the fetch stage is not flushed,
+// hence iF_en is iD_en and is also iCache_re_w, ie: the one term means the
+// instruction was taken, the read for the next pc was issued, and iF_mem_wait
+// above was cleared.
+// !iCache_hit_w: the response can land while the fetch stage is consuming a hit
+// of the very word being refilled -- a stale refill of a cached line ridden into
+// mid-word, which XWORDBITSZ wider than INSNBITSZ makes ordinary -- and the set
+// outranks the clear below, so a capture taken in a consuming clockcycle would
+// survive its own consume and stand at the next pc, ie: the wrong instruction.
+// The fetch stage already has the word whenever it hits, so nothing is lost.
+// The state machine is left reading iCache_hit_w raw: iF_bypass_vld is set by the
+// same arm that sets iF_mem_wait and cleared by what clears it, so the branches
+// below the wait one are unreachable while the capture is valid, and this feature
+// adds nothing at all to the bus request cone.
+always_ff @(posedge clk_i) begin
+	if (rst_i)
+		iF_bypass_vld <= 1'b0;
+	else if (iF_mem_ack && iCache_rdy_w && !iF_eX_JumpOrBranch_i && !iCache_hit_w &&
+		iF_mem_addr == { // MSB oring of ignored bits.
+			|iF_pc[WORDBITSZ-1:(WORDBITSZ-MSBSZIGN-1)],
+			iF_pc[(WORDBITSZ-MSBSZIGN-1)-1:CLOG2XWORDBITSZBY8]})
+		iF_bypass_vld <= 1'b1;
+	else if (iF_en || iF_eX_JumpOrBranch_i)
+		iF_bypass_vld <= 1'b0;
+end
+
+always_ff @(posedge clk_i) begin
+	if (iF_mem_ack)
+		iF_bypass_dat <= wb_dat_i;
+end
+
+`ifdef SIMULATION
+// The fill bypass rests on three properties, and each is checked at its consumer
+// rather than trusted, as follow.
+// The word is handed over for the address it was requested for. The capture above
+// compares the two in the clockcycle the response returns, but the capture is then
+// held until the fetch stage takes it, and it is that hold -- not the compare --
+// which rests on iF_pc being unable to move while the capture is valid. Checked
+// here at the consume, which is where a moved iF_pc pairs the word with an address
+// it does not belong to, ie: executes a wrong instruction rather than merely
+// mispredicting. Every way of getting the hold wrong lands on this one compare.
+// The state machine never sees the forced hit. iF_bypass_vld implies iF_mem_wait,
+// hence the branches below the wait one are unreachable while the capture is valid,
+// which is what lets the miss branch above keep reading iCache_hit_w raw and keeps
+// this feature out of the bus request cone entirely. Checked rather than argued,
+// as the whole placement of the feature rests on it.
+// The clockcycle bypassed is a miss. The read the fetch stage would need in the
+// response clockcycle is withheld, so the bram outputs hold the verdict of the
+// missing pc, which is a miss by construction. A hit here means the clockcycle
+// this feature removes is not the clockcycle it was measured on.
+// Each is reported once and flushed, as the first two hand the pipeline a wrong
+// instruction rather than merely slowing it. A clean run prints nothing.
+reg iF_bypass_pcrpt;
+reg iF_bypass_waitrpt;
+reg iF_bypass_hitrpt;
+always_ff @(posedge clk_i) begin
+	if (rst_i) begin
+		iF_bypass_pcrpt <= 1'b0;
+		iF_bypass_waitrpt <= 1'b0;
+		iF_bypass_hitrpt <= 1'b0;
+	end else begin
+		if (iF_bypass_vld && iF_en && !iF_bypass_pcrpt &&
+			iF_mem_addr != { // MSB oring of ignored bits.
+				|iF_pc[WORDBITSZ-1:(WORDBITSZ-MSBSZIGN-1)],
+				iF_pc[(WORDBITSZ-MSBSZIGN-1)-1:CLOG2XWORDBITSZBY8]}) begin
+			$display("pu%0d: error: fill bypass of %h consumed at pc %h",
+				PUID, iF_mem_addr, iF_pc);
+			$fflush();
+			iF_bypass_pcrpt <= 1'b1;
+		end
+		if (iF_bypass_vld && !iF_mem_wait && !iF_bypass_waitrpt) begin
+			$display("pu%0d: error: fill bypass valid while the fetch miss controller is not waiting",
+				PUID);
+			$fflush();
+			iF_bypass_waitrpt <= 1'b1;
+		end
+		if (iF_bypass_vld && iCache_hit_w && !iF_bypass_hitrpt) begin
+			$display("pu%0d: error: fill bypass valid on an i-cache hit at pc %h",
+				PUID, iF_pc);
+			$fflush();
+			iF_bypass_hitrpt <= 1'b1;
+		end
+	end
+end
+`endif
+`endif

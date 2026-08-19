@@ -15,6 +15,10 @@ wire [ICACHETAGBITSZ -1 : 0]    iCache_rtag_w;
 wire [XWORDBITSZ -1 : 0]        iCache_dato_w;
 wire                            iCache_hit_w;
 wire                            iCache_rdy_w;
+`ifdef PUICACHEFILLBYPASS
+reg                             iF_bypass_vld;   /* set in memctrl.pu.sv */
+reg [XWORDBITSZ -1 : 0]         iF_bypass_dat;   /* set in memctrl.pu.sv */
+`endif
 
 iCache #(
 	 .WAYCNT   (ICACHEWAYCNT)

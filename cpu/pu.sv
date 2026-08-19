@@ -115,6 +115,24 @@
 // 	PUPREDICTBRANCH off the candidate select folds to the taken target,
 // 	which is then the only mispredicting case.
 //
+// PUICACHEFILLBYPASS
+// 	Hand the fetch stage the refilled word directly, in the clockcycle
+// 	after the response returns, instead of making it read the i-cache
+// 	again to find what was just written there. The refill write lands on
+// 	the same edge as the read the fetch stage would need, and the block
+// 	rams are marked no_rw_check, so that read is withheld and the fetch
+// 	stage re-probes: a clockcycle every refill pays. The word is captured
+// 	beside the fill and presented in place of the i-cache read for the one
+// 	clockcycle the fetch stage consumes it, with the hit forced for that
+// 	clockcycle only, so an i-cache miss costs three lost issue slots
+// 	instead of four. The capture is qualified by the address it was
+// 	requested for still being the address being fetched, and is held until
+// 	consumed, so a stalled decode costs no more than it costs an ordinary
+// 	hit. The refilled word reaches the instruction word combinationally,
+// 	ie: a mux ahead of the predecode, which is what this costs. Requires
+// 	no other feature and composes with PUEARLYREDIRECTFETCH, which retimes
+// 	a different clockcycle.
+//
 // PUFWDALL
 // 	Also forward operands at the WriteBack stage (combinationally from the
 // 	WriteBack arbiter), in addition to the default forwarding done at the
@@ -455,7 +473,11 @@ wire excTriggered;
 `include "./icache.pu.sv"
 
 reg iF_flushed_;
+`ifdef PUICACHEFILLBYPASS
+wire iF_flushed = (iF_flushed_ || !(iCache_hit_w || iF_bypass_vld));
+`else
 wire iF_flushed = (iF_flushed_ || !iCache_hit_w);
+`endif
 
 wire iF_iD_flushed;
 wire iF_iD_stalled;
@@ -601,11 +623,24 @@ end
 `endif
 `endif
 
+// The captured refill word stands in for the i-cache read for the one
+// clockcycle the fetch stage consumes it; iF_bypass_vld is null in every other
+// clockcycle, hence the wider word is selected here rather than after the
+// extraction below, so that one mux serves both word widths.
 wire [INSNBITSZ -1 : 0] iF_insn;
 generate if (XWORDBITSZ > INSNBITSZ) begin :gen_iF_insn
+`ifdef PUICACHEFILLBYPASS
+assign iF_insn = ((iF_bypass_vld ? iF_bypass_dat : iCache_dato_w) >>
+	(INSNBITSZ*iF_pc[CLOG2XWORDBITSZBY8-1:CLOG2INSNBITSZBY8]));
+`else
 assign iF_insn = (iCache_dato_w >> (INSNBITSZ*iF_pc[CLOG2XWORDBITSZBY8-1:CLOG2INSNBITSZBY8]));
+`endif
 end else begin
+`ifdef PUICACHEFILLBYPASS
+assign iF_insn = (iF_bypass_vld ? iF_bypass_dat : iCache_dato_w);
+`else
 assign iF_insn = iCache_dato_w;
+`endif
 end endgenerate
 
 wire [CLOG2GPRCNT -1 : 0] iF_rdId  = iF_insn[11:7];
