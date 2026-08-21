@@ -1,6 +1,22 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
+`ifndef CLKFREQ
+`define CLKFREQ 1000000
+`endif
+`ifndef CPU_COUNT
+`define CPU_COUNT 1
+`endif
+`ifndef XWORDBITSZ
+`define XWORDBITSZ 32
+`endif
+`ifndef SRAM_KBSIZE
+`define SRAM_KBSIZE 256
+`endif
+`ifndef SRAM_INITFILE
+`define SRAM_INITFILE "apps/coremark/rv32/coremark.32.hex"
+`endif
+
 `default_nettype none
 
 `define SIMULATION
@@ -23,8 +39,6 @@
 `define PUICACHEFILLBYPASS
 `define PUFWDALL
 `include "cpu/ccx.sv"
-/* makefile defined *///`define CPU_COUNT 1
-/* makefile defined *///`define XWORDBITSZ 32
 
 `include "lib/wb_arbiter.sv"
 `include "lib/wb_mux.sv"
@@ -35,10 +49,6 @@
 `include "dev/serial_sim.sv"
 
 `include "dev/sram.sv"
-/* makefile defined *///`define SRAM_INITFILE "apps/helloworld/helloworld.hex"
-/* makefile defined *///`define SRAM_KBSIZE (256/*KB*/)
-
-/* makefile defined *///`define CLKFREQ (100000000/* 100 MHz */)
 
 module sim (
 	 rst_i
