@@ -1,6 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
+`ifndef CPU_COUNT
+`define CPU_COUNT 1
+`endif
+`ifndef XWORDBITSZ
+`define XWORDBITSZ 32
+`endif
+`ifndef SRAM_KBSIZE
+`define SRAM_KBSIZE 256
+`endif
+`ifndef SRAM_INITFILE
+`define SRAM_INITFILE "../../rv32-sim/apps/coremark/rv32/coremark.32.hex"
+`endif
+
 `default_nettype none
 
 `include "lib/ecppll_48_to_24_48_96.sv"
@@ -28,8 +41,6 @@
 //`define PUDCACHEREGRQST
 `define PUDCACHEREGRESP
 `include "cpu/ccx.sv"
-/* makefile defined *///`define CPU_COUNT 1
-/* makefile defined *///`define XWORDBITSZ 32
 
 `include "lib/wb_arbiter.sv"
 `include "lib/wb_mux.sv"
@@ -40,8 +51,6 @@
 `include "dev/serial_usb.sv"
 
 `include "dev/sram.sv"
-/* makefile defined *///`define SRAM_KBSIZE (256/*KB*/)
-/* makefile defined *///`define SRAM_INITFILE "orangecrab0285.sram.hex"
 
 module orangecrab0285 (
 
