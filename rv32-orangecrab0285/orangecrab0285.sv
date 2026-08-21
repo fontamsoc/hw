@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-// This directive prevent verilog from
-// automatically declaring undefined net.
-// The correct and sane behavior is to throw
-// an error when an undefined net is used.
 `default_nettype none
 
 `include "lib/ecppll_48_to_24_48_96.sv"
