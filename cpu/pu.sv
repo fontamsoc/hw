@@ -783,14 +783,14 @@ wire iF_isZfinx = (iF_isZfinxSgnj || iF_isZfinxMnmx || iF_isZfinxCmp || iF_isZfi
 // optype encode -- MUST match the localparams in fpu.sv.
 reg [5 -1 : 0] iF_opFpu_optype; // ### comb-block-reg.
 always_comb begin
-	     if (iF_isZfinxSgnj)  iF_opFpu_optype = {3'd0, iF_func3[1:0]};                                  // 0=J,1=JN,2=JX
-	else if (iF_isZfinxMnmx)  iF_opFpu_optype = iF_func3[0] ? 5'd4 : 5'd3;                              // 3=MIN,4=MAX
-	else if (iF_isZfinxCmp)   iF_opFpu_optype = (iF_func3==3'b010) ? 5'd5 : (iF_func3==3'b001) ? 5'd6 : 5'd7; // 5=EQ,6=LT,7=LE
-	else if (iF_isZfinxClass) iF_opFpu_optype = 5'd8;                                                   // 8=CLASS
-	else if (iF_isZfinxSqrt)  iF_opFpu_optype = 5'd17;                                                  // 17=SQRT
-	else if (iF_isZfinxArith) iF_opFpu_optype = (iF_fpFunct5==5'b00000) ? 5'd13 : (iF_fpFunct5==5'b00001) ? 5'd14 : (iF_fpFunct5==5'b00010) ? 5'd15 : 5'd16; // ADD/SUB/MUL/DIV
-	else if (iF_fpFunct5 == 5'b11000) iF_opFpu_optype = iF_rs2Id[0] ? 5'd10 : 5'd9;                     // 10=CVTWUS,9=CVTWS
-	else                              iF_opFpu_optype = iF_rs2Id[0] ? 5'd12 : 5'd11;                    // 12=CVTSWU,11=CVTSW
+	unique if (iF_isZfinxSgnj)  iF_opFpu_optype = {3'd0, iF_func3[1:0]};                                // 0=J,1=JN,2=JX
+	else   if (iF_isZfinxMnmx)  iF_opFpu_optype = iF_func3[0] ? 5'd4 : 5'd3;                            // 3=MIN,4=MAX
+	else   if (iF_isZfinxCmp)   iF_opFpu_optype = (iF_func3==3'b010) ? 5'd5 : (iF_func3==3'b001) ? 5'd6 : 5'd7; // 5=EQ,6=LT,7=LE
+	else   if (iF_isZfinxClass) iF_opFpu_optype = 5'd8;                                                 // 8=CLASS
+	else   if (iF_isZfinxSqrt)  iF_opFpu_optype = 5'd17;                                                // 17=SQRT
+	else   if (iF_isZfinxArith) iF_opFpu_optype = (iF_fpFunct5==5'b00000) ? 5'd13 : (iF_fpFunct5==5'b00001) ? 5'd14 : (iF_fpFunct5==5'b00010) ? 5'd15 : 5'd16; // ADD/SUB/MUL/DIV
+	else   if (iF_fpFunct5 == 5'b11000) iF_opFpu_optype = iF_rs2Id[0] ? 5'd10 : 5'd9;                   // 10=CVTWUS,9=CVTWS
+	else                                iF_opFpu_optype = iF_rs2Id[0] ? 5'd12 : 5'd11;                  // 12=CVTSWU,11=CVTSW
 end
 
 // Binary ops need rs1+rs2; unary need rs1 only. Folded into the operand-need classes
