@@ -586,7 +586,7 @@ wire [24:0] pkNormMr   = {1'b0, pp2_pkM} + {24'd0, roundUp(pp2_pkM[0], pp2_pkG, 
 wire        pkIsTiny   = (pp2_pkEb < 12'sd0) || ((pp2_pkEb == 12'sd0) && !pkNormMr[24]);
 reg  [31:0] pkRes; reg [4:0] pkFlg; // ### comb-block-reg.
 always_comb begin
-	if (pp2_pkEb >= 12'sd255) begin                     // overflow before rounding
+	unique if   (pp2_pkEb >= 12'sd255) begin            // overflow before rounding
 		pkRes = pkOvfRes; pkFlg = 5'b00101;             // OF | NX
 	end else if (pp2_pkEb <= 12'sd0) begin              // subnormal / underflow
 		pkRes = {pp2_pkSign, 7'd0, pkSubMr[23:0]};      // exp = pkSubMr[23] (1 if rounded up to smallest normal)
@@ -613,7 +613,7 @@ reg [5 -1 : 0]         flagsComb; // ### comb-block-reg.
 always_comb begin
 	rsltComb  = {WORDBITSZ{1'b0}};
 	flagsComb = 5'b0;
-	case (optype)
+	unique case (optype)
 	OP_SGNJ, OP_SGNJN, OP_SGNJX: rsltComb = {signSel, a[30:0]};
 	OP_CLASS: rsltComb = {{(WORDBITSZ-10){1'b0}}, classMask};
 	OP_EQ: begin rsltComb = {{(WORDBITSZ-1){1'b0}},  fpEqNum};                        flagsComb[4] = eitherSNaN; end
