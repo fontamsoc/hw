@@ -1,6 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
+`ifndef CPU_COUNT
+`define CPU_COUNT 1
+`endif
+`ifndef XWORDBITSZ
+`define XWORDBITSZ 32
+`endif
+`ifndef SRAM_KBSIZE
+`define SRAM_KBSIZE 256
+`endif
+`ifndef SRAM_INITFILE
+`define SRAM_INITFILE "../../../../rv32-sim/apps/coremark/rv32/coremark.32.hex"
+`endif
+
 `default_nettype none
 
 `include "lib/xc7pll_100_to_50_100_200.sv"
@@ -29,8 +42,6 @@
 `define PUDCACHEREGRESP
 //`define PUAMOREGWB
 `include "cpu/ccx.sv"
-/* impl_1.sv defined *///`define CPU_COUNT 1
-/* impl_1.sv defined *///`define XWORDBITSZ 32
 
 `include "lib/wb_arbiter.sv"
 `include "lib/wb_mux.sv"
@@ -41,8 +52,6 @@
 `include "dev/serial_uart.sv"
 
 `include "dev/sram.sv"
-/* impl_1.sv defined *///`define SRAM_KBSIZE (256/*KB*/)
-/* impl_1.sv defined *///`define SRAM_INITFILE "nexysa7100.sram.hex"
 
 module nexysa7100 (
 
