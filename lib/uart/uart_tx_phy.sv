@@ -132,7 +132,7 @@ always_ff @(posedge clk_i) begin
 			// "stb_i" becomes high to begin transmitting.
 
 			// If bitcnt is true, stop bits are sent for the amount in bitcnt.
-			if (bitcnt) begin
+			unique if   (bitcnt) begin // stb_i is gated by rdy_o at every instantiation (uart_tx.sv, uart_fifo_phy.sv), insuring exclusivity.
 				bitcnt <= bitcnt - 1'b1;
 				tx_o <= 1; // Stop bit.
 			end else if (stb_i) begin
