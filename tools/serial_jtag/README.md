@@ -4,11 +4,11 @@
 terminal to the `serial_jtag` channels (`dev/serial_jtag.sv`) through
 the FPGA JTAG TAP with OpenOCD (>= 0.11), implementing the
 serial_jtag wire protocol. It works with the on-board USB-JTAG of
-the Arty A7-100T and Nexys A7-100T (single-device chain, xc7a100t;
-each board's top gains the channels on its examples/ branch),
-which is the same cable used to program the bitstream, and also
-supports the orangecrab (ECP5) through an external probe, see the
-orangecrab section below.
+the Arty A7-100T, Nexys A7-100T and Cmod A7-35T (single-device
+chain, xc7a100t or xc7a35t; each board's top gains the channels on
+its examples/ branch), which is the same cable used to program the
+bitstream, and also supports the orangecrab (ECP5) through an
+external probe, see the orangecrab section below.
 
 ## Channels
 
@@ -29,11 +29,12 @@ Vivado debug core (ILA/VIO) would conflict with them. The ecp5 has
 only the two ER user data-registers, hence the orangecrab has
 channels 0 and 1 only.
 
-## Arty / Nexys A7 (XC7)
+## Arty / Nexys / Cmod A7 (XC7)
 
-`openocd_xc7.cfg` matches the on-board Digilent USB-JTAG of both
-boards, and its `-expected-id` makes OpenOCD validate the xc7a100t
-IDCODE at startup.
+`openocd_xc7.cfg` matches the on-board Digilent USB-JTAG of the
+three boards, and its `-expected-id` makes OpenOCD validate the
+FPGA IDCODE at startup: xc7a100t for the Arty/Nexys, adjusted to
+the xc7a35t on the cmoda735 examples branch.
 
 ```
 openocd -f tools/serial_jtag/openocd_xc7.cfg  # terminal 1
@@ -147,7 +148,8 @@ lost nor duplicated across scans.
 ## On-board test procedure
 
 1. Build the `impl_1` bitstream (Vivado 2020 project under
-   `rv32-artya7100/vivado2020/` or `rv32-nexysa7100/vivado2020/`)
+   `rv32-artya7100/vivado2020/`, `rv32-nexysa7100/vivado2020/` or
+   `rv32-cmoda735/vivado2020/`)
    with a program which writes a banner to channel 0 then echoes
    channel 0 data-word reads back to writes; the driver code path is
    identical to the console serial peripheral, only the base
