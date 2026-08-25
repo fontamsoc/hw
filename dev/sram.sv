@@ -79,23 +79,18 @@ input  wire [(WORDBITSZ/8) -1 : 0]        wb_sel_i;
 input  wire [WORDBITSZ -1 : 0]            wb_dat_i;
 output wire                               wb_bsy_o;
 output reg                                wb_ack_o;
-output reg  [WORDBITSZ -1 : 0]            wb_dat_o;
+output wire [WORDBITSZ -1 : 0]            wb_dat_o;
 
 localparam CLOG2DELAY = clog2(DELAY);
-
 
 // Register which when non-null set the output "wb_bsy_o"
 // high, implementing a delay when accessing memory, which
 // is useful for testing devices issuing memory accesses.
 reg [(CLOG2DELAY +1) -1 : 0] cntr;
 
-assign wb_bsy_o = (|cntr);
+assign wb_bsy_o = |cntr;
 
-// The element type is per-byte packed, per the tool byte-enabled ram
-// template, so that the per-byte writes below infer block-ram.
-(* no_rw_check, ramstyle = "no_rw_check", syn_ramstyle = "no_rw_check" *)
-reg [(WORDBITSZ/8) -1 : 0][8 -1 : 0] ram [SIZE];
-
+reg [WORDBITSZ -1 : 0] ram [SIZE];
 
 initial begin
 	if (INITFILE != "") begin
@@ -106,63 +101,58 @@ initial begin
 	end
 end
 
-wire _wb_stb_i = (wb_stb_i && !wb_bsy_o);
+reg                               wb_stb_r;
+reg                               wb_we_r;
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] wb_addr_r;
+reg [(WORDBITSZ/8) -1 : 0]        wb_sel_r;
+reg [WORDBITSZ -1 : 0]            wb_dat_r;
 
-// The per-byte writes are unrolled with constant lane indices and the
-// read is unguarded in the same always block, per the tool
-// byte-enabled ram template; a for-loop write index or an enable on
-// the read makes some tools implement ram in logic instead of
-// block-ram. The unguarded read is harmless: wb_dat_o is sampled in
-// the clockcycle wb_ack_o is high, and a master holds its request
-// while wb_bsy_o is high.
-generate if (WORDBITSZ == 32) begin :gen_ramwr32
-
+wire wb_stb_r_ = (wb_stb_i && !wb_bsy_o);
 always_ff @(posedge clk_i) begin
-	if (_wb_stb_i && wb_we_i) begin
-		if (wb_sel_i[0]) ram[wb_addr_i][0] <= wb_dat_i[7:0];
-		if (wb_sel_i[1]) ram[wb_addr_i][1] <= wb_dat_i[15:8];
-		if (wb_sel_i[2]) ram[wb_addr_i][2] <= wb_dat_i[23:16];
-		if (wb_sel_i[3]) ram[wb_addr_i][3] <= wb_dat_i[31:24];
-	end
-	wb_dat_o <= ram[wb_addr_i];
+	wb_stb_r <= wb_stb_r_ ;
 end
 
-end else if (WORDBITSZ == 64) begin :gen_ramwr64
-
 always_ff @(posedge clk_i) begin
-	if (_wb_stb_i && wb_we_i) begin
-		if (wb_sel_i[0]) ram[wb_addr_i][0] <= wb_dat_i[7:0];
-		if (wb_sel_i[1]) ram[wb_addr_i][1] <= wb_dat_i[15:8];
-		if (wb_sel_i[2]) ram[wb_addr_i][2] <= wb_dat_i[23:16];
-		if (wb_sel_i[3]) ram[wb_addr_i][3] <= wb_dat_i[31:24];
-		if (wb_sel_i[4]) ram[wb_addr_i][4] <= wb_dat_i[39:32];
-		if (wb_sel_i[5]) ram[wb_addr_i][5] <= wb_dat_i[47:40];
-		if (wb_sel_i[6]) ram[wb_addr_i][6] <= wb_dat_i[55:48];
-		if (wb_sel_i[7]) ram[wb_addr_i][7] <= wb_dat_i[63:56];
-	end
-	wb_dat_o <= ram[wb_addr_i];
+	if (wb_stb_r_) begin
+		wb_we_r <= wb_we_i;
+		wb_addr_r <= wb_addr_i;
+		wb_sel_r <= wb_sel_i;
+		wb_dat_r <= wb_dat_i;
+	end else
+		wb_we_r <= 1'b0;
 end
 
-end else begin :gen_ramwr
+wire [WORDBITSZ -1 : 0] _wb_sel_r;
 
+wire [WORDBITSZ -1 : 0] ram_i = ((wb_dat_r & _wb_sel_r) | (wb_dat_o & ~_wb_sel_r));
+reg  [WORDBITSZ -1 : 0] ram_o;
 always_ff @(posedge clk_i) begin
-	if (_wb_stb_i && wb_we_i) begin
-		for (integer i = 0; i < (WORDBITSZ/8); i = i + 1) begin
-			if (wb_sel_i[i])
-				ram[wb_addr_i][i] <= wb_dat_i[(i*8) +: 8];
-		end
+	if (wb_stb_r_)
+		ram_o <= ram[wb_addr_i];
+end
+always_ff @(posedge clk_i) begin
+	if (wb_stb_r && wb_we_r) begin
+		ram[wb_addr_r] <= ram_i;
 	end
-	wb_dat_o <= ram[wb_addr_i];
 end
 
-end endgenerate
+reg use_ram_r;
+reg [WORDBITSZ -1 : 0] ram_r;
+always_ff @(posedge clk_i) begin
+	if (wb_stb_r_) begin
+		use_ram_r <= (wb_addr_i == wb_addr_r && wb_we_r);
+		ram_r <= ram_i;
+	end
+end
+
+assign wb_dat_o = (use_ram_r ? ram_r : ram_o);
 
 always_ff @(posedge clk_i) begin
 	if (rst_i)
 		cntr <= 0;
 	else if (cntr)
 		cntr <= (cntr - 1'b1);
-	else if (_wb_stb_i)
+	else if (wb_stb_r_)
 		cntr <= DELAY;
 end
 
@@ -172,7 +162,37 @@ always_ff @(posedge clk_i) begin
 	else if (DELAY)
 		wb_ack_o <= (cntr == 1);
 	else
-		wb_ack_o <= _wb_stb_i;
+		wb_ack_o <= wb_stb_r_;
 end
+
+generate if (WORDBITSZ == 16) begin
+	assign _wb_sel_r = {{8{wb_sel_r[1]}}, {8{wb_sel_r[0]}}};
+end endgenerate
+generate if (WORDBITSZ == 32) begin
+	assign _wb_sel_r = {{8{wb_sel_r[3]}}, {8{wb_sel_r[2]}}, {8{wb_sel_r[1]}}, {8{wb_sel_r[0]}}};
+end endgenerate
+generate if (WORDBITSZ == 64) begin
+	assign _wb_sel_r = {
+		{8{wb_sel_r[7]}}, {8{wb_sel_r[6]}}, {8{wb_sel_r[5]}}, {8{wb_sel_r[4]}},
+		{8{wb_sel_r[3]}}, {8{wb_sel_r[2]}}, {8{wb_sel_r[1]}}, {8{wb_sel_r[0]}}};
+end endgenerate
+generate if (WORDBITSZ == 128) begin
+	assign _wb_sel_r = {
+		{8{wb_sel_r[15]}}, {8{wb_sel_r[14]}}, {8{wb_sel_r[13]}}, {8{wb_sel_r[12]}},
+		{8{wb_sel_r[11]}}, {8{wb_sel_r[10]}}, {8{wb_sel_r[9]}}, {8{wb_sel_r[8]}},
+		{8{wb_sel_r[7]}}, {8{wb_sel_r[6]}}, {8{wb_sel_r[5]}}, {8{wb_sel_r[4]}},
+		{8{wb_sel_r[3]}}, {8{wb_sel_r[2]}}, {8{wb_sel_r[1]}}, {8{wb_sel_r[0]}}};
+end endgenerate
+generate if (WORDBITSZ == 256) begin
+	assign _wb_sel_r = {
+		{8{wb_sel_r[31]}}, {8{wb_sel_r[30]}}, {8{wb_sel_r[29]}}, {8{wb_sel_r[28]}},
+		{8{wb_sel_r[27]}}, {8{wb_sel_r[26]}}, {8{wb_sel_r[25]}}, {8{wb_sel_r[24]}},
+		{8{wb_sel_r[23]}}, {8{wb_sel_r[22]}}, {8{wb_sel_r[21]}}, {8{wb_sel_r[20]}},
+		{8{wb_sel_r[19]}}, {8{wb_sel_r[18]}}, {8{wb_sel_r[17]}}, {8{wb_sel_r[16]}},
+		{8{wb_sel_r[15]}}, {8{wb_sel_r[14]}}, {8{wb_sel_r[13]}}, {8{wb_sel_r[12]}},
+		{8{wb_sel_r[11]}}, {8{wb_sel_r[10]}}, {8{wb_sel_r[9]}}, {8{wb_sel_r[8]}},
+		{8{wb_sel_r[7]}}, {8{wb_sel_r[6]}}, {8{wb_sel_r[5]}}, {8{wb_sel_r[4]}},
+		{8{wb_sel_r[3]}}, {8{wb_sel_r[2]}}, {8{wb_sel_r[1]}}, {8{wb_sel_r[0]}}};
+end endgenerate
 
 endmodule
