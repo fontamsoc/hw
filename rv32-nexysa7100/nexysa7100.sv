@@ -257,7 +257,7 @@ serial_uart #(
 	 .WORDBITSZ   (WORDBITSZ)
 	,.PHYCLKFREQ  (WBPI_CLKFREQ)
 	,.DEFAULTBAUD (115200)
-	,.BUFSZ       (4096)
+	,.BUFSZ       (2048)
 ) serial (
 
 	 .rst_i (wbpi_rst_w)
