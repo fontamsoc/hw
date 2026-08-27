@@ -268,7 +268,7 @@ end
 serial_usb #(
 	 .WORDBITSZ  (WORDBITSZ)
 	,.PHYCLKFREQ (CLKFREQ48MHZ) // Must be 48MHz.
-	,.BUFSZ      (4096)
+	,.BUFSZ      (2048)
 ) serial (
 
 	 .rst_i ((|serial_rst_r)
