@@ -23,7 +23,7 @@ updsram: ${TOP}.sram.hex ${TOP}.bak.config
 %.json: ../%.sv
 	@ecpbram --generate ${TOP}.sram.hex --width ${XWORDBITSZ} --depth $$((${SRAM_KBSIZE}*1024/4))
 	yosys -p "verilog_defines -DCPU_COUNT=${CPU_COUNT} -DXWORDBITSZ=${XWORDBITSZ} -DSRAM_KBSIZE=${SRAM_KBSIZE} -DSRAM_INITFILE=\"${TOP}.sram.hex\"; \
-		read_verilog -sv -I../../ $<; synth_ecp5 -top ${TOP} -dff -json $@" &>$*.synth.log
+		read_verilog -sv -I../../ $<; proc; select -assert-none t:\$$dlatch t:\$$dlatchsr t:\$$sr; synth_ecp5 -top ${TOP} -dff -json $@" &>$*.synth.log
 %.out.config: %.json ../%.lpf
 	$(info # Running nextpnr-ecp5 ...)
 	@cntr=0; until \
