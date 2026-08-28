@@ -514,7 +514,7 @@ always_ff @(posedge clk_i) begin
 
 	end else begin
 
-		unique if (state == READY || state == TSTHIT) begin
+		if (state == READY || state == TSTHIT) begin
 
 			if (rst_r) begin
 

@@ -287,7 +287,7 @@ always_ff @(posedge clk_i) begin
 		// once per arm rather than sharing it, so the two are deliberately
 		// split across the two registers (measured on ecp5 as 891 versus 355
 		// added cells).
-		unique case (cntr)
+		case (cntr)
 		6'd0: begin nrOpa_r <= ({1'b1,33'd0} - nrProd[65:32]); nrOpb_r <= nrR; end // (2 - Dn*R0) * R0
 		6'd1: begin nrR <= nrProd[65:32];                                          // R1
 		            nrOpa_r <= {2'b0, nrDn}; nrOpb_r <= nrProd[65:32]; end         // Dn * R1

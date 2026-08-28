@@ -144,7 +144,7 @@ always_ff @(posedge clk_i) begin
 
 	end else if (rxen) begin
 
-		unique if   (rxstate == RXSTOP) begin
+		if (rxstate == RXSTOP) begin
 			// If I get here, I expect a stop bit which
 			// corresponds to the incoming serial line being high.
 			if (rx_i)

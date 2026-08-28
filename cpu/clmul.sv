@@ -133,8 +133,8 @@ wire [(WORDBITSZ*2) -1 : 0] cumulator = clmulFull(
 // muxes its result half there, so that what the WriteBack arbiter sees is the
 // fifo head and nothing else. The default arm is not a catch-all for
 // unreachable values: iF_isZbc admits iD_func3[1:0] == 2'b00, a reserved
-// encoding that the decode does not trap, hence a case with a default and not a
-// unique case, so that RTL and gates keep agreeing on it.
+// encoding that the decode does not trap, hence a case with a default that
+// carries a reachable value, so that RTL and gates keep agreeing on it.
 reg [WORDBITSZ -1 : 0] rslt_i; // ### comb-block-reg.
 always_comb begin
 	case (optype)

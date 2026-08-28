@@ -8,30 +8,30 @@ wire [(WORDBITSZ/8) -1 : 0] ldUnit_rqsts_sel;
 wire                        ldUnit_rqsts_zxt;
 // Apropriately set ldUnit_rqsts_dato depending on ldUnit_rqsts_sel.
 generate if (WORDBITSZ == 32) begin always_comb begin
-	unique if (ldUnit_rqsts_sel == 4'b1100) ldUnit_rqsts_dato = {{16{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[31]}}, dCache_m_dat_o[31:16]};
-	else   if (ldUnit_rqsts_sel == 4'b0011) ldUnit_rqsts_dato = {{16{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[15]}}, dCache_m_dat_o[15:0]};
-	else   if (ldUnit_rqsts_sel == 4'b1000) ldUnit_rqsts_dato = {{24{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[31]}}, dCache_m_dat_o[31:24]};
-	else   if (ldUnit_rqsts_sel == 4'b0100) ldUnit_rqsts_dato = {{24{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[23]}}, dCache_m_dat_o[23:16]};
-	else   if (ldUnit_rqsts_sel == 4'b0010) ldUnit_rqsts_dato = {{24{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[15]}}, dCache_m_dat_o[15:8]};
-	else   if (ldUnit_rqsts_sel == 4'b0001) ldUnit_rqsts_dato = {{24{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[7]}},  dCache_m_dat_o[7:0]};
-	else                                    ldUnit_rqsts_dato = dCache_m_dat_o;
+	if      (ldUnit_rqsts_sel == 4'b1100) ldUnit_rqsts_dato = {{16{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[31]}}, dCache_m_dat_o[31:16]};
+	else if (ldUnit_rqsts_sel == 4'b0011) ldUnit_rqsts_dato = {{16{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[15]}}, dCache_m_dat_o[15:0]};
+	else if (ldUnit_rqsts_sel == 4'b1000) ldUnit_rqsts_dato = {{24{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[31]}}, dCache_m_dat_o[31:24]};
+	else if (ldUnit_rqsts_sel == 4'b0100) ldUnit_rqsts_dato = {{24{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[23]}}, dCache_m_dat_o[23:16]};
+	else if (ldUnit_rqsts_sel == 4'b0010) ldUnit_rqsts_dato = {{24{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[15]}}, dCache_m_dat_o[15:8]};
+	else if (ldUnit_rqsts_sel == 4'b0001) ldUnit_rqsts_dato = {{24{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[7]}},  dCache_m_dat_o[7:0]};
+	else                                  ldUnit_rqsts_dato = dCache_m_dat_o;
 end end endgenerate
 generate if (WORDBITSZ == 64) begin always_comb begin
-	unique if (ldUnit_rqsts_sel == 8'b11110000) ldUnit_rqsts_dato = {{32{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[63]}}, dCache_m_dat_o[63:32]};
-	else   if (ldUnit_rqsts_sel == 8'b00001111) ldUnit_rqsts_dato = {{32{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[31]}}, dCache_m_dat_o[31:0]};
-	else   if (ldUnit_rqsts_sel == 8'b11000000) ldUnit_rqsts_dato = {{48{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[63]}}, dCache_m_dat_o[63:48]};
-	else   if (ldUnit_rqsts_sel == 8'b00110000) ldUnit_rqsts_dato = {{48{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[47]}}, dCache_m_dat_o[47:32]};
-	else   if (ldUnit_rqsts_sel == 8'b00001100) ldUnit_rqsts_dato = {{48{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[31]}}, dCache_m_dat_o[31:16]};
-	else   if (ldUnit_rqsts_sel == 8'b00000011) ldUnit_rqsts_dato = {{48{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[15]}}, dCache_m_dat_o[15:0]};
-	else   if (ldUnit_rqsts_sel == 8'b10000000) ldUnit_rqsts_dato = {{56{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[63]}}, dCache_m_dat_o[63:56]};
-	else   if (ldUnit_rqsts_sel == 8'b01000000) ldUnit_rqsts_dato = {{56{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[55]}}, dCache_m_dat_o[55:48]};
-	else   if (ldUnit_rqsts_sel == 8'b00100000) ldUnit_rqsts_dato = {{56{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[47]}}, dCache_m_dat_o[47:40]};
-	else   if (ldUnit_rqsts_sel == 8'b00010000) ldUnit_rqsts_dato = {{56{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[39]}}, dCache_m_dat_o[39:32]};
-	else   if (ldUnit_rqsts_sel == 8'b00001000) ldUnit_rqsts_dato = {{56{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[31]}}, dCache_m_dat_o[31:24]};
-	else   if (ldUnit_rqsts_sel == 8'b00000100) ldUnit_rqsts_dato = {{56{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[23]}}, dCache_m_dat_o[23:16]};
-	else   if (ldUnit_rqsts_sel == 8'b00000010) ldUnit_rqsts_dato = {{56{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[15]}}, dCache_m_dat_o[15:8]};
-	else   if (ldUnit_rqsts_sel == 8'b00000001) ldUnit_rqsts_dato = {{56{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[7]}},  dCache_m_dat_o[7:0]};
-	else                                        ldUnit_rqsts_dato = dCache_m_dat_o;
+	if      (ldUnit_rqsts_sel == 8'b11110000) ldUnit_rqsts_dato = {{32{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[63]}}, dCache_m_dat_o[63:32]};
+	else if (ldUnit_rqsts_sel == 8'b00001111) ldUnit_rqsts_dato = {{32{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[31]}}, dCache_m_dat_o[31:0]};
+	else if (ldUnit_rqsts_sel == 8'b11000000) ldUnit_rqsts_dato = {{48{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[63]}}, dCache_m_dat_o[63:48]};
+	else if (ldUnit_rqsts_sel == 8'b00110000) ldUnit_rqsts_dato = {{48{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[47]}}, dCache_m_dat_o[47:32]};
+	else if (ldUnit_rqsts_sel == 8'b00001100) ldUnit_rqsts_dato = {{48{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[31]}}, dCache_m_dat_o[31:16]};
+	else if (ldUnit_rqsts_sel == 8'b00000011) ldUnit_rqsts_dato = {{48{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[15]}}, dCache_m_dat_o[15:0]};
+	else if (ldUnit_rqsts_sel == 8'b10000000) ldUnit_rqsts_dato = {{56{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[63]}}, dCache_m_dat_o[63:56]};
+	else if (ldUnit_rqsts_sel == 8'b01000000) ldUnit_rqsts_dato = {{56{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[55]}}, dCache_m_dat_o[55:48]};
+	else if (ldUnit_rqsts_sel == 8'b00100000) ldUnit_rqsts_dato = {{56{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[47]}}, dCache_m_dat_o[47:40]};
+	else if (ldUnit_rqsts_sel == 8'b00010000) ldUnit_rqsts_dato = {{56{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[39]}}, dCache_m_dat_o[39:32]};
+	else if (ldUnit_rqsts_sel == 8'b00001000) ldUnit_rqsts_dato = {{56{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[31]}}, dCache_m_dat_o[31:24]};
+	else if (ldUnit_rqsts_sel == 8'b00000100) ldUnit_rqsts_dato = {{56{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[23]}}, dCache_m_dat_o[23:16]};
+	else if (ldUnit_rqsts_sel == 8'b00000010) ldUnit_rqsts_dato = {{56{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[15]}}, dCache_m_dat_o[15:8]};
+	else if (ldUnit_rqsts_sel == 8'b00000001) ldUnit_rqsts_dato = {{56{ldUnit_rqsts_zxt ? 1'b0 : dCache_m_dat_o[7]}},  dCache_m_dat_o[7:0]};
+	else                                      ldUnit_rqsts_dato = dCache_m_dat_o;
 end end endgenerate
 
 wire ldUnit_rqsts_full;

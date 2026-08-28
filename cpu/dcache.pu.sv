@@ -480,8 +480,8 @@ always_comb begin
 	dCache_m_sel_i_ = {(WORDBITSZ/8){1'b0}};
 	dCache_m_dat_i_ = {WORDBITSZ{1'b0}};
 	dcache_m_addr_misaligned = 0;
-	unique if (iD_func3[1:0] == 0) begin
-		unique if (dCache_m_addr_i_[1:0] == 0) begin
+	if (iD_func3[1:0] == 0) begin
+		if (dCache_m_addr_i_[1:0] == 0) begin
 			dCache_m_sel_i_ = 4'b0001;
 			dCache_m_dat_i_ = {{24{1'b0}}, iD_rs2[7:0]};
 		end else if (dCache_m_addr_i_[1:0] == 1) begin
@@ -495,7 +495,7 @@ always_comb begin
 			dCache_m_dat_i_ = {iD_rs2[7:0], {24{1'b0}}};
 		end
 	end else if (iD_func3[1:0] == 1) begin
-		unique if (dCache_m_addr_i_[1]) begin
+		if (dCache_m_addr_i_[1]) begin
 			dCache_m_sel_i_ = 4'b1100;
 			dCache_m_dat_i_ = {iD_rs2[15:0], {16{1'b0}}};
 		end else begin
@@ -515,8 +515,8 @@ always_comb begin
 	dCache_m_sel_i_ = {(WORDBITSZ/8){1'b0}};
 	dCache_m_dat_i_ = {WORDBITSZ{1'b0}};
 	dcache_m_addr_misaligned = 0;
-	unique if (iD_func3[1:0] == 0) begin
-		unique if (dCache_m_addr_i_[2:0] == 0) begin
+	if (iD_func3[1:0] == 0) begin
+		if (dCache_m_addr_i_[2:0] == 0) begin
 			dCache_m_sel_i_ = 8'b00000001;
 			dCache_m_dat_i_ = {{56{1'b0}}, iD_rs2[7:0]};
 		end else if (dCache_m_addr_i_[2:0] == 1) begin
@@ -542,7 +542,7 @@ always_comb begin
 			dCache_m_dat_i_ = {iD_rs2[7:0], {56{1'b0}}};
 		end
 	end else if (iD_func3[1:0] == 1) begin
-		unique if (dCache_m_addr_i_[2:1] == 0) begin
+		if (dCache_m_addr_i_[2:1] == 0) begin
 			dCache_m_sel_i_ = 8'b00000011;
 			dCache_m_dat_i_ = {{48{1'b0}}, iD_rs2[15:0]};
 		end else if (dCache_m_addr_i_[2:1] == 1) begin
@@ -557,7 +557,7 @@ always_comb begin
 		end
 		dcache_m_addr_misaligned = dCache_m_addr_i_[0];
 	end else if (iD_func3[1:0] == 2) begin
-		unique if (dCache_m_addr_i_[2]) begin
+		if (dCache_m_addr_i_[2]) begin
 			dCache_m_sel_i_ = 8'b11110000;
 			dCache_m_dat_i_ = {iD_rs2[31:0], {32{1'b0}}};
 		end else begin

@@ -783,14 +783,14 @@ wire iF_isZfinx = (iF_isZfinxSgnj || iF_isZfinxMnmx || iF_isZfinxCmp || iF_isZfi
 // optype encode -- MUST match the localparams in fpu.sv.
 reg [5 -1 : 0] iF_opFpu_optype; // ### comb-block-reg.
 always_comb begin
-	unique if (iF_isZfinxSgnj)  iF_opFpu_optype = {3'd0, iF_func3[1:0]};                                // 0=J,1=JN,2=JX
-	else   if (iF_isZfinxMnmx)  iF_opFpu_optype = iF_func3[0] ? 5'd4 : 5'd3;                            // 3=MIN,4=MAX
-	else   if (iF_isZfinxCmp)   iF_opFpu_optype = (iF_func3==3'b010) ? 5'd5 : (iF_func3==3'b001) ? 5'd6 : 5'd7; // 5=EQ,6=LT,7=LE
-	else   if (iF_isZfinxClass) iF_opFpu_optype = 5'd8;                                                 // 8=CLASS
-	else   if (iF_isZfinxSqrt)  iF_opFpu_optype = 5'd17;                                                // 17=SQRT
-	else   if (iF_isZfinxArith) iF_opFpu_optype = (iF_fpFunct5==5'b00000) ? 5'd13 : (iF_fpFunct5==5'b00001) ? 5'd14 : (iF_fpFunct5==5'b00010) ? 5'd15 : 5'd16; // ADD/SUB/MUL/DIV
-	else   if (iF_fpFunct5 == 5'b11000) iF_opFpu_optype = iF_rs2Id[0] ? 5'd10 : 5'd9;                   // 10=CVTWUS,9=CVTWS
-	else                                iF_opFpu_optype = iF_rs2Id[0] ? 5'd12 : 5'd11;                  // 12=CVTSWU,11=CVTSW
+	if      (iF_isZfinxSgnj)  iF_opFpu_optype = {3'd0, iF_func3[1:0]};                                // 0=J,1=JN,2=JX
+	else if (iF_isZfinxMnmx)  iF_opFpu_optype = iF_func3[0] ? 5'd4 : 5'd3;                            // 3=MIN,4=MAX
+	else if (iF_isZfinxCmp)   iF_opFpu_optype = (iF_func3==3'b010) ? 5'd5 : (iF_func3==3'b001) ? 5'd6 : 5'd7; // 5=EQ,6=LT,7=LE
+	else if (iF_isZfinxClass) iF_opFpu_optype = 5'd8;                                                 // 8=CLASS
+	else if (iF_isZfinxSqrt)  iF_opFpu_optype = 5'd17;                                                // 17=SQRT
+	else if (iF_isZfinxArith) iF_opFpu_optype = (iF_fpFunct5==5'b00000) ? 5'd13 : (iF_fpFunct5==5'b00001) ? 5'd14 : (iF_fpFunct5==5'b00010) ? 5'd15 : 5'd16; // ADD/SUB/MUL/DIV
+	else if (iF_fpFunct5 == 5'b11000) iF_opFpu_optype = iF_rs2Id[0] ? 5'd10 : 5'd9;                   // 10=CVTWUS,9=CVTWS
+	else                              iF_opFpu_optype = iF_rs2Id[0] ? 5'd12 : 5'd11;                  // 12=CVTSWU,11=CVTSW
 end
 
 // Binary ops need rs1+rs2; unary need rs1 only. Folded into the operand-need classes
@@ -1452,7 +1452,7 @@ end
 
 reg [WORDBITSZ -1 : 0] eX_aluOut_i; // ### comb-block-reg.
 always_comb begin
-	unique case (iD_func3)
+	case (iD_func3)
 	3'b000: eX_aluOut_i = ((iD_isALUreg && iD_func7[5]) ? eX_aluMinus_i[WORDBITSZ-1:0] : eX_aluPlus_i);
 	3'b001: eX_aluOut_i = reverseBits(eX_aluShift_i);
 	3'b010: eX_aluOut_i = {{(WORDBITSZ-1){1'b0}}, eX_lt_i};
@@ -1496,26 +1496,26 @@ end
 
 reg [WORDBITSZ -1 : 0] eX_rslt_i; // ### comb-block-reg.
 always_comb begin
-	unique if (iD_isJAlOrJALR) eX_rslt_i = iD_pc_plus_INSNBITSzBy8;
-	else   if (iD_isLUI)       eX_rslt_i = iD_Uimm;
-	else   if (iD_isAUIPC)     eX_rslt_i = iD_pc_plus_iD_Uimm;
-	else   if (iD_isCSR)       eX_rslt_i = eX_csrOut_i;
-	else   if (iD_isSc)        eX_rslt_i = eX_StoreCondOut_i;
+	if      (iD_isJAlOrJALR) eX_rslt_i = iD_pc_plus_INSNBITSzBy8;
+	else if (iD_isLUI)       eX_rslt_i = iD_Uimm;
+	else if (iD_isAUIPC)     eX_rslt_i = iD_pc_plus_iD_Uimm;
+	else if (iD_isCSR)       eX_rslt_i = eX_csrOut_i;
+	else if (iD_isSc)        eX_rslt_i = eX_StoreCondOut_i;
 	`ifdef PURV32ZBA
-	else   if (iD_isZba)       eX_rslt_i = eX_aluShadd_i;
+	else if (iD_isZba)       eX_rslt_i = eX_aluShadd_i;
 	`endif
 	`ifdef PURV32ZBS
-	else   if (iD_isZbs)       eX_rslt_i = eX_zbsOut_i;
+	else if (iD_isZbs)       eX_rslt_i = eX_zbsOut_i;
 	`endif
 	`ifdef PUCLMUL1
-	else   if (iD_isZbc)       eX_rslt_i = eX_clmulOut_i;
+	else if (iD_isZbc)       eX_rslt_i = eX_clmulOut_i;
 	`endif
-	else                       eX_rslt_i = eX_aluOut_i;
+	else                     eX_rslt_i = eX_aluOut_i;
 end
 
 reg eX_takeBranch_i; // ### comb-block-reg.
 always_comb begin
-	unique case (iD_func3)
+	case (iD_func3)
 	3'b000:  eX_takeBranch_i = eX_eq_i;
 	3'b001:  eX_takeBranch_i = !eX_eq_i;
 	3'b100:  eX_takeBranch_i = eX_brLt_i;
@@ -1565,7 +1565,7 @@ assign iD_insn_valid = (iD_insn_valid_ && !excTriggered);
 `ifdef PUPREDICTBRANCH
 reg [2 -1 : 0] bpt_i; // ### comb-block-reg.
 always_comb begin
-	unique case ({eX_takeBranch_i, eX_predictBranch_i})
+	case ({eX_takeBranch_i, eX_predictBranch_i})
 	3'b000:  bpt_i = 2'b00;
 	3'b001:  bpt_i = 2'b00;
 	3'b010:  bpt_i = 2'b01;

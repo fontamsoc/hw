@@ -239,11 +239,11 @@ always_ff @(posedge clk_i) begin
 end
 
 always_ff @(posedge clk_i) begin
-	unique if (devrd)
+	if (devrd)
 		wb_dat_o <= _i;
-	else   if (cmdconfigureio)
+	else if (cmdconfigureio)
 		wb_dat_o <= {IOCOUNT[WORDBITSZ-2:0], wb_dat_r[0]};
-	else   if (cmdsetdebounce)
+	else if (cmdsetdebounce)
 		wb_dat_o <= {CLKFREQ[WORDBITSZ-2:0], wb_dat_r[0]};
 	else;
 end
