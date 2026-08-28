@@ -16,6 +16,8 @@
 
 `default_nettype none
 
+`include "lib/cyc4pll_50_to_25_50_100.sv"
+
 `include "lib/rstctrl.sv"
 
 `define PURV32M
@@ -86,8 +88,17 @@ output wire uart_tx;
 output wire [8 -1 : 0] led_o;
 assign led_o = {8{1'b0}};
 
-localparam CLKFREQ50MHZ = 50000000;
-wire clk50mhz_w = clk50mhz_i;
+localparam CLKFREQ25MHZ  = 25000000;
+localparam CLKFREQ50MHZ  = 50000000;
+localparam CLKFREQ100MHZ = 100000000;
+wire pll_locked, clk25mhz_w, clk50mhz_w, clk100mhz_w;
+cyc4pll_50_to_25_50_100 pll (
+	 .locked      (pll_locked)
+	,.clk50mhz_i  (clk50mhz_i)
+	,.clk25mhz_o  (clk25mhz_w)
+	,.clk50mhz_o  (clk50mhz_w)
+	,.clk100mhz_o (clk100mhz_w)
+);
 
 wire rst_w;
 wire irqctrl_rst_rqst_w;
