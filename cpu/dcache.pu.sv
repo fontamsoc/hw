@@ -301,6 +301,19 @@ assign upSizr_dCache_m_bsy_i = dCache_s_bsy_i;
 assign upSizr_dCache_m_ack_i = dCache_s_ack_i;
 assign upSizr_dCache_m_dat_i = dCache_s_dat_i;
 
+// Without a dCache instance nothing drives the coherency ring ports:
+// tie the outputs off so the pu presents an idle, never-busy ring
+// participant instead of floating outputs.
+assign dcache_coherency_bsy_o = 1'b0;
+
+assign dcache_coherency_stb_o = 1'b0;
+assign dcache_coherency_rqid_o = {PUIDBITSZ{1'b0}};
+assign dcache_coherency_we_o = 1'b0;
+assign dcache_coherency_addr_o = {(XADDRBITSZ-XMSBSZIGN){1'b0}};
+assign dcache_coherency_sel_o = {(XWORDBITSZ/8){1'b0}};
+assign dcache_coherency_dat_o = {XWORDBITSZ{1'b0}};
+assign dcache_coherency_shr_o = 1'b0;
+
 end endgenerate
 
 assign dcache_addr_o = {upSizr_dCache_m_addr_o, {CLOG2XWORDBITSZBY8{1'b0}}};
