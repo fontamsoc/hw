@@ -175,4 +175,35 @@ always_ff @(posedge clk_i) begin
 		end
 	end
 end
+// The WriteBack hold above (dCache_m_bsy_i) is only honoured by a response
+// holding element; the DCACHESETCNT == 0 arm of dcache.pu.sv shipped without
+// one, so a bus ack colliding with rW_pipeWrites popped ldUnit_rqsts while
+// the strict-priority WriteBack mux dropped the loaded value, leaving the
+// destination gprRdy locked forever -- invisible to the monitors above, as
+// the pop itself is legal and the register is wrongly locked rather than
+// wrongly ready. Report the hold violation (an ack presented while
+// dCache_m_bsy_i holds) and the drop (the consequence). Each is
+// edge-reported so a stuck condition prints once, and a clean run prints
+// nothing; flushed, as the machine wedges right after either report.
+reg dCacheRespHoldViolated_r;
+reg ldUnit_wbDropped_r;
+always_ff @(posedge clk_i) begin
+	if (rst_i) begin
+		dCacheRespHoldViolated_r <= 1'b0;
+		ldUnit_wbDropped_r <= 1'b0;
+	end else begin
+		dCacheRespHoldViolated_r <= (dCache_m_bsy_i && dCache_m_ack_o);
+		ldUnit_wbDropped_r <= (ldUnit_memAck && rW_pipeWrites);
+		if ((dCache_m_bsy_i && dCache_m_ack_o) && !dCacheRespHoldViolated_r) begin
+			$display("pu%0d: error: load response hold violated, iD_pc %h",
+				PUID, iD_pc);
+			$fflush();
+		end
+		if ((ldUnit_memAck && rW_pipeWrites) && !ldUnit_wbDropped_r) begin
+			$display("pu%0d: error: load writeback dropped, iD_pc %h",
+				PUID, iD_pc);
+			$fflush();
+		end
+	end
+end
 `endif
