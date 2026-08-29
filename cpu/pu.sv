@@ -145,8 +145,8 @@
 // 	registered near-full for the ldUnit request fifo. Cuts the
 // 	routing-bound iD_stalled -> iD_insn_valid -> dcache-coherency
 // 	timing cone that ends at the cache BRAM enables, at the cost of
-// 	one added cycle of dcache request latency. Takes effect only when
-// 	DCACHESETCNT is non-zero.
+// 	one added cycle of dcache request latency. The one-entry stage
+// 	needs DCACHESETCNT non-zero; the registered near-full does not.
 //
 // PUDCACHEREGRESP
 // 	Register the dcache response path: dCache.REGMSTOUTPUT, a register on
