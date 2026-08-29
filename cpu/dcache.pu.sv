@@ -121,16 +121,43 @@ wb_skidbuf #(
 
 end else begin
 
-assign skidBuf_dCache_m_stb_o = dCache_m_stb_i;
-assign skidBuf_dCache_m_lock_o = dCache_m_lock_i;
-assign skidBuf_dCache_m_we_o = dCache_m_we_i;
-assign skidBuf_dCache_m_addr_o = dCache_m_addr_i;
-assign skidBuf_dCache_m_sel_o = dCache_m_sel_i;
-assign skidBuf_dCache_m_dat_o = dCache_m_dat_i;
-assign dCache_m_bsy_o = skidBuf_dCache_m_bsy_i;
-assign dCache_m_ack_o = skidBuf_dCache_m_ack_i;
-assign dCache_m_dat_o = skidBuf_dCache_m_dat_i;
-assign dCache_m_ack_avail_o = skidBuf_dCache_m_ack_i; // No response skidbuf here: avail == raw ack.
+// Even without a dcache, the response side must be able to hold a
+// completed load until the pipeline WriteBack slot is free, as per
+// dCache_m_bsy_i; otherwise an ack colliding with a pipeline GPR
+// write gets dropped and the load destination GPR stays locked.
+wb_skidbuf #(
+	 .WORDBITSZ   (WORDBITSZ)
+	,.ADDRLIMIT   (ADDRLIMIT)
+	,.DEPTH       (MAXPENDINGACK)
+	,.USEFWFTFIFO (1)
+) skidBuf_dCache (
+
+	 .rst_i (rst_i)
+
+	,.clk_i (clk_i)
+
+	,.m_wb_stb_i  (dCache_m_stb_i)
+	,.m_wb_lock_i (dCache_m_lock_i)
+	,.m_wb_we_i   (dCache_m_we_i)
+	,.m_wb_addr_i (dCache_m_addr_i)
+	,.m_wb_sel_i  (dCache_m_sel_i)
+	,.m_wb_dat_i  (dCache_m_dat_i)
+	,.m_wb_bsy_o  (dCache_m_bsy_o)
+	,.m_wb_ack_o  (dCache_m_ack_o)
+	,.m_wb_dat_o  (dCache_m_dat_o)
+	,.m_wb_bsy_i  (dCache_m_bsy_i)
+	,.m_wb_ack_avail_o (dCache_m_ack_avail_o)
+
+	,.s_wb_stb_o  (skidBuf_dCache_m_stb_o)
+	,.s_wb_lock_o (skidBuf_dCache_m_lock_o)
+	,.s_wb_we_o   (skidBuf_dCache_m_we_o)
+	,.s_wb_addr_o (skidBuf_dCache_m_addr_o)
+	,.s_wb_sel_o  (skidBuf_dCache_m_sel_o)
+	,.s_wb_dat_o  (skidBuf_dCache_m_dat_o)
+	,.s_wb_bsy_i  (skidBuf_dCache_m_bsy_i)
+	,.s_wb_ack_i  (skidBuf_dCache_m_ack_i)
+	,.s_wb_dat_i  (skidBuf_dCache_m_dat_i)
+);
 
 end endgenerate
 
