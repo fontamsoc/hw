@@ -85,7 +85,6 @@ output wire uart_tx;
 
 // Used in order to keep the seven-segment-display off.
 output wire [8 -1 : 0] an;
-
 assign an = {8{1'b1}};
 
 localparam CLKFREQ50MHZ  = 50000000;
@@ -114,6 +113,7 @@ localparam CPU_COUNT = `CPU_COUNT;
 
 localparam M_WBPI_CPU     = 0;
 localparam M_WBPI_LAST    = M_WBPI_CPU;
+
 localparam S_WBPI_IRQCTRL = 0;
 localparam S_WBPI_SERIAL  = (S_WBPI_IRQCTRL + 1);
 localparam S_WBPI_SRAM    = (S_WBPI_SERIAL + 1);
