@@ -38,7 +38,7 @@ Architectural state is the register file `gprDat[GPRCNT]` plus a one-bit-per-reg
 
 - **Lock** (`gprLock = _iF_use_rdId && !_iF_flushed`): when an instruction that writes a destination is admitted into ID and is not flushed, its `rd` is marked not-ready (`gprRdy[_iF_rdId] <= 0`). A flushed (wrong-path) instruction never locks.
 - **Unlock** (`gprUnlock`): when WB writes a register (`rW_we_i`), `gprRdy[rW_idx_i] <= 1`, guarded so a register that is *simultaneously* being (re)locked by a younger instruction is not released spuriously.
-- `rdWasLocked` records whether a destination was *already* locked when it got locked again (two in-flight writers of the same register). Its single consumer is the exception fix-up in EX: when an instruction is interrupted, its destination is unlocked by writing back the register's current value, unless `rdWasLocked` says an older writer still owns it — in which case the unlock is left to that writer. Because the unlock is held back whenever the instruction leaving ID targets the same register, `rdWasLocked` has to be keyed on the unlock actually happening rather than on a writeback merely occurring; reading `rW_we_i` alone used to drop the lock of a late result still in flight, letting a trap release a register it did not own. A simulation-only monitor at the end of `pu.sv` guards the underlying invariant: a register is never marked ready while a late result still targets it.
+- `rdWasLocked` records whether a destination was *already* locked when it got locked again (two in-flight writers of the same register). Its single consumer is the exception fix-up in EX: when an instruction is interrupted, its destination is unlocked by writing back the register's current value, unless `rdWasLocked` says an older writer still owns it — in which case the unlock is left to that writer. Because the unlock is held back whenever the instruction leaving ID targets the same register, `rdWasLocked` has to be keyed on the unlock actually happening rather than on a writeback merely occurring; reading `rW_we_i` alone used to drop the lock of a late result still in flight, letting a trap release a register it did not own. A simulation-only monitor at the end of `pu.sv`, compiled in when `SIMULATION_MONITOR` is defined, guards the underlying invariant: a register is never marked ready while a late result still targets it.
 
 Locking gates fetch admission and is itself gated by the same-cycle branch flush (`_iF_flushed` includes `iF_eX_JumpOrBranch_i`), so lock/unlock and branch resolution form a single-cycle control loop.
 
@@ -144,8 +144,8 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	register and its skidbuf. That width matters more than it looks, as `m_wb_bsy_o` tests the count
 	for non-null: a count too large for it does not lose precision, it reads null and removes the
 	wait entirely, and nothing an application prints would show that. A simulation-only monitor at
-	the end of `dCacheSub` reports it instead, along with the count exceeding the ring capacity that
-	the width is derived from.
+	the end of `dCacheSub`, compiled in when `SIMULATION_MONITOR` is defined, reports it instead,
+	along with the count exceeding the ring capacity that the width is derived from.
 - A data-cache stalled on an access the bus has not accepted stops the coherency ring, and that is a
 	way for one hart to stop the others which has nothing to do with arbitration. dcache.sv holds
 	`coherency_bsy_o_` for as long as the data-cache is outside READY and TSTHIT, so a data-cache
@@ -166,8 +166,8 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	bound, a hart reading that register, or fetching from it, held the bus for as long as no byte
 	came, and every other hart is held busy meanwhile, which reaches instruction fetching through
 	memctrl.pu.sv, hence executes nothing at all. rv32-sim/apps/smpfair covers it, and a
-	simulation-only monitor at the end of the arbiter reports a grant held very much past the bound
-	while another hart is waiting.
+	simulation-only monitor at the end of the arbiter, compiled in when `SIMULATION_MONITOR` is
+	defined, reports a grant held very much past the bound while another hart is waiting.
 	Preempting a hart mid-access loses nothing, as it re-presents the identical request until
 	accepted, and a response carries the hart it belongs to through the arbiter's pendingAcks fifo
 	rather than through the grant. `GRANTHELDLIMIT` has a floor as well as a purpose, though, and it
