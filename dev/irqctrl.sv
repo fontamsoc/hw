@@ -363,15 +363,19 @@ always_ff @(posedge clk_i) begin
 	if (!rst_i && cmdackirq && !irqdstseek &&
 		(wb_dat_r[WORDBITSZ -1 : 3] >= IRQDSTCOUNT ||
 			irqdsten[wb_dat_r[(CLOG2IRQDSTCOUNT +3) -1 : 3]])) begin
-		if (!irqpending)
+		if (!irqpending) begin
 			$display("irqctrl: error: acknowledgement from destination %0d with no interrupt pending",
 				wb_dat_r[WORDBITSZ -1 : 3]);
-		else if (wb_dat_r[WORDBITSZ -1 : 3] != dstidx)
+			$fflush();
+		end else if (wb_dat_r[WORDBITSZ -1 : 3] != dstidx) begin
 			$display("irqctrl: error: acknowledgement from destination %0d while the pending interrupt is routed to destination %0d",
 				wb_dat_r[WORDBITSZ -1 : 3], dstidx);
-		else if (irqpending_abort_dstidx)
+			$fflush();
+		end else if (irqpending_abort_dstidx) begin
 			$display("irqctrl: error: acknowledgement from destination %0d colliding with the abort of its routed interrupt",
 				wb_dat_r[WORDBITSZ -1 : 3]);
+			$fflush();
+		end
 	end
 end
 `endif

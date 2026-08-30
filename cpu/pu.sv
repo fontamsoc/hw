@@ -2063,6 +2063,7 @@ always_ff @(posedge clk_i) begin
 				gprLateOwnersFires <= gprLateOwnersFires + 1;
 				$display("pu%0d: error: gpr x%0d ready while %0d late result(s) still target it, iD_pc %h rdWasLocked %0d",
 					PUID, gprLateOwnersSeqIdx, gprLateOwners[gprLateOwnersSeqIdx], iD_pc, rdWasLocked);
+				$fflush();
 			end
 	end
 end
@@ -2072,11 +2073,15 @@ end
 always_ff @(posedge clk_i) begin
 	if (endSimRq && !wb_pending_acks) begin
 		for (gprLateOwnersEndIdx = 1; gprLateOwnersEndIdx < GPRCNT; gprLateOwnersEndIdx = gprLateOwnersEndIdx + 1)
-			if (gprLateOwners[gprLateOwnersEndIdx] != 0)
+			if (gprLateOwners[gprLateOwnersEndIdx] != 0) begin
 				$display("pu%0d: error: gpr x%0d left with %0d late result(s) in flight",
 					PUID, gprLateOwnersEndIdx, gprLateOwners[gprLateOwnersEndIdx]);
-		if (gprLateOwnersFires != 0)
+				$fflush();
+			end
+		if (gprLateOwnersFires != 0) begin
 			$display("pu%0d: error: %0d scoreboard violation(s)", PUID, gprLateOwnersFires);
+			$fflush();
+		end
 	end
 end
 `endif
