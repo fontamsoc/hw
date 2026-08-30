@@ -121,7 +121,7 @@ skidbuf #(
 );
 
 wire resp_stb_o_w;
-wire resp_bsy_o_w; // only read by the SIMULATION-only guard below; pruned in synthesis.
+wire resp_bsy_o_w; // only read by the SIMULATION_MONITOR guard below; pruned in synthesis.
 
 assign m_wb_ack_o = (resp_stb_o_w && !m_wb_bsy_i);
 // Un-gated response-available: stays high while a completed response is held by
@@ -147,7 +147,7 @@ skidbuf #(
 	,.bsy_i (m_wb_bsy_i)
 );
 
-`ifdef SIMULATION
+`ifdef SIMULATION_MONITOR
 // Guard for the invariant stated at the `skidbuf_resp` bsy_o port above: an ack
 // is a pulse (never held/retried), so a push while full would be silently dropped.
 always_ff @(posedge clk_i) begin

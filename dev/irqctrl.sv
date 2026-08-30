@@ -345,7 +345,7 @@ always_ff @(posedge clk_i) begin
 		srcidx <= nextsrcidx;
 end
 
-`ifdef SIMULATION
+`ifdef SIMULATION_MONITOR
 // Report an acknowledgement which does not hit, since software is expected
 // to acknowledge an interrupt only from the destination it was dispatched
 // to; each of these corners used to be mishandled before the hardening

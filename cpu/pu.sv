@@ -592,7 +592,7 @@ always_ff @(posedge clk_i) begin
 end
 
 `ifdef PUEARLYREDIRECTFETCH
-`ifdef SIMULATION
+`ifdef SIMULATION_MONITOR
 // The early fetch rests on one identity: whenever the read address was overridden
 // and the fetch it produces is not flushed, the address read is the address iF_pc
 // captured, ie: the anti-prediction of the registered candidates is the address
@@ -2000,7 +2000,7 @@ always_ff @(posedge clk_i) begin
 end
 `endif
 
-`ifdef SIMULATION
+`ifdef SIMULATION_MONITOR
 // Report a gpr advertised ready in gprRdy while a late result still owns it.
 // The scoreboard guarantees a single legitimate producer per register, so a gpr
 // locked by a load/AMO/MUL/DIV/clmul/zbb/fpu must stay locked until that result

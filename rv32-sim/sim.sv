@@ -20,6 +20,7 @@
 `default_nettype none
 
 `define SIMULATION
+//`define  SIMULATION_MONITOR
 
 `define PURV32M
 `define  PUIMULDSP

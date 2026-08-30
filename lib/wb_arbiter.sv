@@ -252,7 +252,7 @@ always_ff @(posedge clk_i) begin
 	end
 end
 
-`ifdef SIMULATION
+`ifdef SIMULATION_MONITOR
 // The lock is released by the lock owner's next accepted access that does not carry
 // it, and nothing bounds when that comes: an atomic sequence whose store-conditional
 // is branched over or never reached holds it until that hart's next load, store or

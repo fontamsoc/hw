@@ -735,7 +735,7 @@ generate if (WORDBITSZ == 256) begin
 		{8{cache_sel_o_tag_hit[3]}}, {8{cache_sel_o_tag_hit[2]}}, {8{cache_sel_o_tag_hit[1]}}, {8{cache_sel_o_tag_hit[0]}}};
 end endgenerate
 
-`ifdef SIMULATION
+`ifdef SIMULATION_MONITOR
 // m_wb_bsy_o above reads coherency_write_pending as a plain non-null test, hence a count that does
 // not fit its width does not merely lose precision, it reads null and releases the barrier while
 // coherency writes are still travelling the ring; the atomic operation then starts early, and

@@ -140,7 +140,7 @@ assign _amoUnit_lrValid = (amoUnit_lrValid && (amoUnit_LrAddr == iD_rs1));
 // failure. Reading amoUnit_lrValid here instead would report success for it.
 assign eX_StoreCondOut_i = {{(WORDBITSZ-1){1'b0}}, !_amoUnit_lrValid};
 
-`ifdef SIMULATION
+`ifdef SIMULATION_MONITOR
 // iD_ldUnit_bsy's ldUnit_rqsts_full term is subsumed by __dCache_m_bsy: the fifo
 // depth is MAXPENDINGACK and each entry is an outstanding request, while
 // dCache_m_rqst_cnt counts at presentation (the same cycle ldUnit_stb pushes) and

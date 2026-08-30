@@ -218,7 +218,7 @@ always_ff @(posedge clk_i) begin
 	end
 end
 
-`ifdef SIMULATION
+`ifdef SIMULATION_MONITOR
 // The fifo depth is derived from the acceptance rule, not enforced here: a push while
 // full is silently refused by the fifo (its write-enable gates on full_o), dropping a
 // completed multiply, whose gpr is then never unlocked by the WriteBack, and the hart

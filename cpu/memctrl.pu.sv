@@ -191,7 +191,7 @@ always_ff @(posedge clk_i) begin
 		iF_bypass_dat <= wb_dat_i;
 end
 
-`ifdef SIMULATION
+`ifdef SIMULATION_MONITOR
 // The fill bypass rests on three properties, and each is checked at its consumer
 // rather than trusted, as follow.
 // The word is handed over for the address it was requested for. The capture above
