@@ -33,6 +33,12 @@
 // 	"ALTERA" uses an altddio_out primitive for the clock pad
 // 	and lets the tool infer the data pad tristates,
 // 	while any other value uses portable verilog.
+//
+// SDRAM_ALTERA_FAMILY
+// 	Device family name given to the altddio_out primitive's
+// 	intended_device_family parameter when SDRAM_TARGET is "ALTERA";
+// 	any family for which quartus implements altddio_out is valid,
+// 	ie: "Cyclone IV E", "Cyclone 10 LP".
 
 // Ports:
 //
@@ -95,12 +101,13 @@ module wb4sdram (
 
 `include "lib/clog2.sv"
 
-parameter SDRAM_MHZ         = 50;
-parameter SDRAM_ROW_W       = 13;
-parameter SDRAM_COL_W       = 9;
-parameter SDRAM_BANK_W      = 2;
-parameter SDRAM_CAS_LATENCY = 2;
-parameter SDRAM_TARGET      = "XILINX";
+parameter SDRAM_MHZ           = 50;
+parameter SDRAM_ROW_W         = 13;
+parameter SDRAM_COL_W         = 9;
+parameter SDRAM_BANK_W        = 2;
+parameter SDRAM_CAS_LATENCY   = 2;
+parameter SDRAM_TARGET        = "XILINX";
+parameter SDRAM_ALTERA_FAMILY = "Cyclone IV E";
 
 // The wishbone interface is inherently 32bits and the data mask width must
 // be 2: a wishbone word maps onto two consecutive 16bits sdram columns,
@@ -716,9 +723,16 @@ end else if (SDRAM_TARGET == "ALTERA") begin :gen_pads_altera
     // is tied off rather than left dangling; the sim-model-only hrbypass
     // port is deliberately not connected, insuring portability across
     // quartus versions.
+    // The device family string comes from SDRAM_ALTERA_FAMILY: quartus
+    // takes the synthesis family from the project settings and uses this
+    // parameter for modeling and behavioral simulation, ie: any family
+    // for which quartus implements altddio_out reuses this arm unchanged.
+    // invert_output must remain "OFF": the 180 degree phase is already
+    // encoded by datain_h/datain_l, and altera's simulation model makes
+    // invert_output "ON" behave differently across device families.
     altddio_out #(
         .extend_oe_disable("OFF"),
-        .intended_device_family("Cyclone IV E"),
+        .intended_device_family(SDRAM_ALTERA_FAMILY),
         .invert_output("OFF"),
         .lpm_hint("UNUSED"),
         .lpm_type("altddio_out"),
