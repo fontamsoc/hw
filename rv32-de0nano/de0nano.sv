@@ -53,6 +53,8 @@
 
 `include "dev/sram.sv"
 
+`include "dev/wb4sdram.sv"
+
 `include "dev/dfltdev.sv"
 
 module de0nano (
@@ -67,6 +69,18 @@ module de0nano (
 
 	// LED signals.
 	,led_o
+
+	// SDRAM signals.
+	,sdram_clk_o
+	,sdram_cke_o
+	,sdram_cs_o
+	,sdram_ras_o
+	,sdram_cas_o
+	,sdram_we_o
+	,sdram_dqm_o
+	,sdram_addr_o
+	,sdram_ba_o
+	,sdram_data_io
 );
 
 `include "lib/clog2.sv"
@@ -87,6 +101,18 @@ output wire uart_tx;
 // LED signals.
 output wire [8 -1 : 0] led_o;
 assign led_o = {8{1'b0}};
+
+// SDRAM signals.
+output wire             sdram_clk_o;
+output wire             sdram_cke_o;
+output wire             sdram_cs_o;
+output wire             sdram_ras_o;
+output wire             sdram_cas_o;
+output wire             sdram_we_o;
+output wire [2 -1 : 0]  sdram_dqm_o;
+output wire [13 -1 : 0] sdram_addr_o;
+output wire [2 -1 : 0]  sdram_ba_o;
+inout  wire [16 -1 : 0] sdram_data_io;
 
 localparam CLKFREQ25MHZ  = 25000000;
 localparam CLKFREQ50MHZ  = 50000000;
@@ -120,23 +146,27 @@ localparam M_WBPI_LAST    = M_WBPI_CPU;
 localparam S_WBPI_IRQCTRL = 0;
 localparam S_WBPI_SERIAL  = (S_WBPI_IRQCTRL + 1);
 localparam S_WBPI_SRAM    = (S_WBPI_SERIAL + 1);
-localparam S_WBPI_DEFAULT = (S_WBPI_SRAM + 1);
+localparam S_WBPI_SDRAM   = (S_WBPI_SRAM + 1);
+localparam S_WBPI_DEFAULT = (S_WBPI_SDRAM + 1);
 
 localparam WBPI_MDEVCOUNT = (M_WBPI_LAST + 1);
 localparam WBPI_SDEVCOUNT = (S_WBPI_DEFAULT + 1);
+
+localparam SDRAM_MAPSZ = (32*1024*1024);
 
 localparam [0:(WBPI_SDEVCOUNT*2*32)-1] WBPI_SDEVS = {
 	/* S_WBPI_IRQCTRL */ 32'hf00,  32'(WORDBITSZ/8),
 	/* S_WBPI_SERIAL  */ 32'hf80,  32'(2*(WORDBITSZ/8)),
 	/* S_WBPI_SRAM    */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
+	/* S_WBPI_SDRAM   */ 32'('h1000+(`SRAM_KBSIZE*1024)), 32'(SDRAM_MAPSZ),
 	/* S_WBPI_DEFAULT */ 32'h0,    32'h0};
 
 localparam WBPI_MAXPENDINGACK     = 32;
-localparam WBPI_DNSIZR            = 4'b0011;
+localparam WBPI_DNSIZR            = 5'b01011;
 localparam WBPI_WORDBITSZ         = `XWORDBITSZ;
 localparam WBPI_CLOG2WORDBITSZBY8 = clog2(WBPI_WORDBITSZ/8);
 localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
-localparam WBPI_ADDRLIMIT         = ('h1000+(`SRAM_KBSIZE*1024));
+localparam WBPI_ADDRLIMIT         = ('h1000+(`SRAM_KBSIZE*1024)+SDRAM_MAPSZ);
 localparam WBPI_CLKFREQ           = CLKFREQ50MHZ;
 wire wbpi_rst_w = rst_w;
 wire wbpi_clk_w = clk50mhz_w;
@@ -226,7 +256,7 @@ ccx #(
 	,.rstaddr_i  ('h1000)
 	,.rstaddr2_i ('h1000)
 
-	,.spval_i ('h1000+(`SRAM_KBSIZE*1024))
+	,.spval_i ('h1000+(`SRAM_KBSIZE*1024)+SDRAM_MAPSZ)
 );
 
 irqctrl #(
@@ -307,6 +337,41 @@ sram #(
 	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SRAM])
 );
 
+wb4sdram #(
+	 .SDRAM_MHZ           (WBPI_CLKFREQ/1000000)
+	,.SDRAM_ROW_W         (13)
+	,.SDRAM_COL_W         (9)
+	,.SDRAM_BANK_W        (2)
+	,.SDRAM_CAS_LATENCY   (3)
+	,.SDRAM_TARGET        ("ALTERA")
+	,.SDRAM_ALTERA_FAMILY ("Cyclone IV E")
+) sdram (
+
+	 .rst_i (wbpi_rst_w)
+
+	,.clk_i (wbpi_clk_w)
+
+	,.wb_stb_i  (s_wbpi_stb_w[S_WBPI_SDRAM])
+	,.wb_we_i   (s_wbpi_we_w[S_WBPI_SDRAM])
+	,.wb_addr_i (s_wbpi_addr_w[S_WBPI_SDRAM])
+	,.wb_sel_i  (s_wbpi_sel_w[S_WBPI_SDRAM])
+	,.wb_dat_i  (s_wbpi_dato_w[S_WBPI_SDRAM])
+	,.wb_bsy_o  (s_wbpi_bsy_w[S_WBPI_SDRAM])
+	,.wb_ack_o  (s_wbpi_ack_w[S_WBPI_SDRAM])
+	,.wb_dat_o  (s_wbpi_dati_w[S_WBPI_SDRAM])
+
+	,.sdram_clk_o   (sdram_clk_o)
+	,.sdram_cke_o   (sdram_cke_o)
+	,.sdram_cs_o    (sdram_cs_o)
+	,.sdram_ras_o   (sdram_ras_o)
+	,.sdram_cas_o   (sdram_cas_o)
+	,.sdram_we_o    (sdram_we_o)
+	,.sdram_dqm_o   (sdram_dqm_o)
+	,.sdram_addr_o  (sdram_addr_o)
+	,.sdram_ba_o    (sdram_ba_o)
+	,.sdram_data_io (sdram_data_io)
+);
+
 // Catch invalid physical address space access.
 dfltdev #(
 	 .WORDBITSZ (WBPI_WORDBITSZ)
@@ -337,7 +402,7 @@ generate for (
 	gen_cpu_dcache_miss_w_idx = gen_cpu_dcache_miss_w_idx + 1) begin :gen_cpu_dcache_miss_w
 	wire [(WBPI_WORDBITSZ-WBPI_MSBSZIGN) -1 : 0] addr_w = cpu_dcache_addr_w[(gen_cpu_dcache_miss_w_idx*(WBPI_WORDBITSZ-WBPI_MSBSZIGN))+:(WBPI_WORDBITSZ-WBPI_MSBSZIGN)];
 assign cpu_dcache_miss_w[gen_cpu_dcache_miss_w_idx] = (
-	(addr_w < 'h1000) || (addr_w >= ('h1000+(`SRAM_KBSIZE*1024))));
+	(addr_w < 'h1000) || (addr_w >= ('h1000+(`SRAM_KBSIZE*1024)+SDRAM_MAPSZ)));
 end endgenerate
 
 endmodule
