@@ -74,6 +74,7 @@ localparam CPU_COUNT = `CPU_COUNT;
 
 localparam M_WBPI_CPU     = 0;
 localparam M_WBPI_LAST    = M_WBPI_CPU;
+
 localparam S_WBPI_IRQCTRL = 0;
 localparam S_WBPI_SERIAL  = (S_WBPI_IRQCTRL + 1);
 localparam S_WBPI_SRAM    = (S_WBPI_SERIAL + 1);
