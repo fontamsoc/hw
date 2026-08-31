@@ -30,6 +30,8 @@
 //
 // SDRAM_TARGET
 // 	"XILINX" uses ODDR2/IOBUF primitives for the pads,
+// 	"ALTERA" uses an altddio_out primitive for the clock pad
+// 	and lets the tool infer the data pad tristates,
 // 	while any other value uses portable verilog.
 
 // Ports:
@@ -707,6 +709,39 @@ generate if (SDRAM_TARGET == "XILINX") begin :gen_pads_xilinx
         .I(data_q[i]),
         .T(data_rd_en_q));
     end
+end else if (SDRAM_TARGET == "ALTERA") begin :gen_pads_altera
+    // 180 degree phase delayed sdram clock output, launched from the ioe
+    // ddr output register; mirror of the XILINX arm's ODDR2. Every
+    // parameter the megawizard emits is stated and every optional input
+    // is tied off rather than left dangling; the sim-model-only hrbypass
+    // port is deliberately not connected, insuring portability across
+    // quartus versions.
+    altddio_out #(
+        .extend_oe_disable("OFF"),
+        .intended_device_family("Cyclone IV E"),
+        .invert_output("OFF"),
+        .lpm_hint("UNUSED"),
+        .lpm_type("altddio_out"),
+        .oe_reg("UNREGISTERED"),
+        .power_up_high("OFF"),
+        .width(1)
+    ) u_clock_delay (
+        .datain_h(1'b0),
+        .datain_l(1'b1),
+        .outclock(clk_i),
+        .outclocken(1'b1),
+        .aclr(1'b0),
+        .aset(1'b0),
+        .sclr(1'b0),
+        .sset(1'b0),
+        .oe(1'b1),
+        .oe_out(),
+        .dataout(sdram_clk_o));
+
+    // Same data pad tristates as the portable arm below; quartus infers
+    // the ioe tristate cell from them, ie: no primitive needed for dq.
+    assign sdram_data_io   = data_rd_en_q ? {SDRAM_DATA_W{1'bz}} : data_q;
+    assign sdram_data_in_w = sdram_data_io;
 end else begin :gen_pads
     assign sdram_clk_o     = ~clk_i;
     assign sdram_data_io   = data_rd_en_q ? {SDRAM_DATA_W{1'bz}} : data_q;
