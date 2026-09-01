@@ -30,9 +30,9 @@
 //`define PURV32ZBS
 //`define PURV32ZFINX
 //`define  PUFDIVDSP
-//`define  PUFDIVDSP2
+`define  PUFDIVDSP2
 //`define  PUFSQRTDSP
-//`define  PUFSQRTDSP2
+`define  PUFSQRTDSP2
 `define PUPREDICTJAL
 `define PUPREDICTBRANCH
 `define PUPREDICTRET
