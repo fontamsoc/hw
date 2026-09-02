@@ -52,6 +52,8 @@
 
 `include "dev/sram.sv"
 
+`include "dev/dfltdev.sv"
+
 module orangecrab0285 (
 
 	 usr_btn_n
@@ -167,7 +169,8 @@ wire wbpi_clk_w = clk48mhz_w;
 // 	input  [WBPI_WORDBITSZ -1 : 0]                 s_wbpi_dati_w [WBPI_SDEVCOUNT];
 `include "lib/wbpi_inst.sv"
 
-localparam IRQ_SERIAL = 0;
+localparam IRQ_DFLTDEV = 0;
+localparam IRQ_SERIAL = (IRQ_DFLTDEV + 1);
 
 localparam IRQSRCCOUNT = (IRQ_SERIAL +1); // Number of interrupt sources.
 localparam IRQDSTCOUNT = CPU_COUNT; // Number of interrupt destinations.
@@ -316,8 +319,27 @@ sram #(
 );
 
 // Catch invalid physical address space access.
-assign s_wbpi_bsy_w[S_WBPI_DEFAULT] = 0;
-assign s_wbpi_ack_w[S_WBPI_DEFAULT] = 0;
+dfltdev #(
+	 .WORDBITSZ (WBPI_WORDBITSZ)
+	,.ADDRLIMIT (WBPI_ADDRLIMIT)
+) dfltdev (
+
+	 .rst_i (wbpi_rst_w)
+
+	,.clk_i (wbpi_clk_w)
+
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_DEFAULT])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_DEFAULT])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_DEFAULT])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_DEFAULT])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_DEFAULT])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_DEFAULT])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_DEFAULT])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_DEFAULT])
+
+	,.irq_stb_o (irq_src_stb_w[IRQ_DFLTDEV])
+	,.irq_rdy_i (irq_src_rdy_w[IRQ_DFLTDEV])
+);
 
 genvar gen_cpu_dcache_miss_w_idx;
 generate for (
