@@ -79,7 +79,7 @@ An i-cache miss holds fetch for four issue slots: the miss verdict, presenting t
 
 `ras0..ras7` is a shift register with no pointer: a call — JAL or JALR with `rd` x1 — pushes `iD_pc_plus_INSNBITSzBy8`, a return — JALR with `rd` x0 and `rs1` x1 — shifts everything back down, and both are gated on `iD_insn_valid`, so a wrong-path call or return never updates it and no misprediction recovery is needed. A push past 8 entries drops `ras7` on the floor.
 
-A pop of an empty stack leaves `ras7` in place, so it shifts back down and the last entry repeats. **That is deliberate and must stay that way.** It insures every predicted return address is one the pu has already executed from, and therefore mapped and aligned. This design has no instruction-access-fault and there is no bus watchdog, so a speculative fetch of an unmapped address is never acknowledged: in simulation it trips the default-slave trap, and on hardware it wedges the bus for every master. Such a fetch does reach the bus in practice, because a return whose `rs1` is still locked -- the ordinary `lw ra,N(sp)` epilogue -- stalls in ID and delays the redirect that would otherwise cancel the refill. Clearing `ras7` on underflow instead would turn every underflow into exactly that case, as address null is unmapped on every target, the lowest device being at 0xf00.
+A pop of an empty stack leaves `ras7` in place, so it shifts back down and the last entry repeats. **That is deliberate and must stay that way.** It insures every predicted return address is one the pu has already executed from, and therefore mapped and aligned. This design has no instruction-access-fault and there is no bus watchdog, so a speculative fetch of an unmapped address reaches the default slave: in simulation it trips the default-slave trap, and on the FPGA tops the default device (dev/dfltdev.sv) acknowledges it with a NOP and raises interrupt source 0, so that the OS reports a fault which never happened architecturally. Such a fetch does reach the bus in practice, because a return whose `rs1` is still locked -- the ordinary `lw ra,N(sp)` epilogue -- stalls in ID and delays the redirect that would otherwise cancel the refill. Clearing `ras7` on underflow instead would turn every underflow into exactly that case, as address null is unmapped on every target, the lowest device being at 0xf00.
 
 Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by construction and can never raise the misaligned-fetch exception; only the branch and JAL predictions can.
 
@@ -149,8 +149,9 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 - A data-cache stalled on an access the bus has not accepted stops the coherency ring, and that is a
 	way for one hart to stop the others which has nothing to do with arbitration. dcache.sv holds
 	`coherency_bsy_o_` for as long as the data-cache is outside READY and TSTHIT, so a data-cache
-	parked in REFILL or WRITEB on an access no device will accept refuses ring traffic for as long
-	as that lasts, and `m_wb_bsy_o` then holds every other hart's data-cache busy through
+	parked in REFILL or WRITEB on an access no device will accept -- a device holding its bus busy,
+	as an unmapped address is acknowledged by the default device on the FPGA tops -- refuses ring
+	traffic for as long as that lasts, and `m_wb_bsy_o` then holds every other hart's data-cache busy through
 	`coherency_stb_r`. Those harts stall having presented no bus request at all, hence they are not
 	starved of the bus and giving them the bus changes nothing. That is why a hart which stalls a
 	load on a device wedges the whole machine whereas one which stalls an instruction fetch does
