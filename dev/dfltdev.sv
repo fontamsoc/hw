@@ -12,9 +12,11 @@
 // The fault address register holds the address of the first fault since
 // it was last read; it is the address as seen on the bus, ie: a byte
 // address for which the bits beyond the address bus width are ored into
-// its most significant bit, hence the exact address is recoverable only
-// when it fits the address bus; the value is replicated across the width
-// of the data bus.
+// its most significant bit, which gets sign extended, hence an address
+// beyond the address bus reads negative, and the exact address is
+// recoverable only when it fits the address bus or the same size window
+// at the top of the address space; the value is replicated across the
+// width of the data bus.
 // Reading from any other address returns the instruction NOP (32'h00000013)
 // so that fetching instructions from an unmapped address executes harmlessly
 // until the interrupt gets serviced.
@@ -149,9 +151,10 @@ always_ff @(posedge clk_i) begin
 	end
 end
 
-// Byte address of the fault as a 32bits value.
+// Byte address of the fault as a 32bits value, sign extending
+// the most significant bit which ors the bits beyond the address bus.
 wire [31:0] faultaddr_w = {
-	{(32-(ADDRBITSZ-MSBSZIGN)-CLOG2WORDBITSZBY8){1'b0}},
+	{(32-(ADDRBITSZ-MSBSZIGN)-CLOG2WORDBITSZBY8){faultaddr[(ADDRBITSZ-MSBSZIGN)-1]}},
 	faultaddr, {CLOG2WORDBITSZBY8{1'b0}}};
 
 always_ff @(posedge clk_i) begin
