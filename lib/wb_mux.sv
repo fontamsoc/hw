@@ -117,7 +117,11 @@ reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_lo;
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] addrspace_slvidx_hi;
 
 // Determine whether slvidx needs to be recomputed.
-wire slvidx_invalid = (!slvidx_dflt &&
+// The default slave, selected by exhausting addrspace[] rather than
+// by range, is valid only for the address that the walk was done for,
+// since a master can present another address once the walk ends.
+wire slvidx_invalid = (slvidx_dflt ?
+	(m_wb_addr_i != m_wb_addr_r) :
 	!(m_wb_addr_i >= addrspace_slvidx_lo &&
 	  m_wb_addr_i <= addrspace_slvidx_hi));
 
@@ -156,6 +160,7 @@ always_ff @(posedge clk_i) begin
 		addrspace_slvidx_hi <= addrspace[0][1];
 		slvidx <= 0;
 		slvidx_rdy <= 0;
+		slvidx_dflt <= 0;
 
 		m_wb_addr_r <= m_wb_addr_i;
 
