@@ -68,7 +68,18 @@ input wire clk_i;
 
 wire clk_1x_w = clk_i;
 
-wire rst_w = rst_i;
+// A system reset requested through the irqctrl is stretched to 16 cycles,
+// as it hits an active bus unlike the reset at power-on; the counter has
+// no reset arm, it only loads from the request and counts down.
+wire irqctrl_rst_rqst_w;
+reg [4:0] softrst_cntr = 5'd0;
+always @ (posedge clk_i) begin
+	if (irqctrl_rst_rqst_w)
+		softrst_cntr <= 5'd16;
+	else if (|softrst_cntr)
+		softrst_cntr <= (softrst_cntr - 1'b1);
+end
+wire rst_w = (rst_i | (|softrst_cntr));
 
 localparam CPU_COUNT = `CPU_COUNT;
 
@@ -223,6 +234,8 @@ irqctrl #(
 
 	,.irq_src_stb_i (irq_src_stb_w)
 	,.irq_src_rdy_o (irq_src_rdy_w)
+
+	,.rst_rqst_o (irqctrl_rst_rqst_w)
 );
 
 serial_sim #(
