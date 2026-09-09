@@ -111,6 +111,7 @@ xc7pll_12_to_48_96_192 pll (
 // the soc is held in reset until btn0 get pressed once; thereafter,
 // resetting the soc requires holding btn0 pressed for at least RSTTHRESH.
 (* direct_reset = "true" *) wire rst_w;
+wire irqctrl_rst_rqst_w;
 rstctrl #(
 	 .RSTDURATION (CLKFREQ96MHZ/1000000) // 1us
 	,.RSTTHRESH   (4*CLKFREQ96MHZ) // 4s
@@ -118,6 +119,7 @@ rstctrl #(
 	 .clk_i (clk96mhz_w)
 	,.i     (rst_i)
 	,.o     (rst_w)
+	,.rqst_i (irqctrl_rst_rqst_w)
 );
 
 localparam CPU_COUNT = `CPU_COUNT;
@@ -263,6 +265,8 @@ irqctrl #(
 
 	,.irq_src_stb_i (irq_src_stb_w)
 	,.irq_src_rdy_o (irq_src_rdy_w)
+
+	,.rst_rqst_o (irqctrl_rst_rqst_w)
 );
 
 serial_uart #(
