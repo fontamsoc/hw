@@ -5,6 +5,9 @@
 `define RSTBTNCTRL
 
 // Reset controller.
+// Once the power-on hold has been released by a first press of `i',
+// a request on rqst_i restarts the reset pulse, bypassing the threshold
+// that a press must be held for.
 
 `include "lib/dbncr.sv"
 
@@ -13,6 +16,8 @@ module rstctrl (
 	 clk_i
 
 	,i ,o ,pt_o
+
+	,rqst_i
 );
 
 `include "lib/clog2.sv"
@@ -29,6 +34,8 @@ input wire clk_i;
 input wire i;
 output reg o = 1'b1;
 output wire pt_o; // Passthrough.
+
+input wire rqst_i; // Reset request; honored once the power-on hold has been released.
 
 reg rsthold = 1'b1; // After power-on, hold in reset until `i' asserted.
 
@@ -55,6 +62,11 @@ always @ (posedge clk_i) begin
 		i_r <= 1'b1;
 	end else
 		rstthresh <= (rstthresh - 1'b1);
+	// The request reloads the pulse whatever the branches above did,
+	// which is why it is not an else-if term: the first branch is taken
+	// every cycle `i' is released, an else-if would never be reached.
+	if (rqst_i && !rsthold)
+		rstduration <= RSTDURATION;
 end
 
 generate if (DBNCRTHRESH) begin: gen_dbncr
