@@ -51,6 +51,9 @@ void thrd_fn (void *arg) {
 	for (i = 0; i < LENGTH; i++) {
 		array[i] = ARRAY_INIT;
 	}
+	// The first pass reads array[LENGTH], which the original program
+	// relied on being zero; the array is noinit, hence not zeroed at boot.
+	array[LENGTH] = 0;
 
 	for (i = LENGTH; i > 0; i -= 14) {
 		int sum = 0, value;
