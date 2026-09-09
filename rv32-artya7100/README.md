@@ -177,7 +177,7 @@ retrieves its result; two memory operations are always needed.
 | :-: | :--- | :--- |
 | `0b00` | `CMDDEVRDY` | Ready the controller for a new command; clears `resp` |
 | `0b01` | `CMDACKIRQ` | Acknowledge an IRQ for destination `arg[31:3]`; `arg[2]` enables/disables further delivery. Returns the source index, `-2` if none pending, `-1` if raised by `CMDINTDST` |
-| `0b10` | `CMDINTDST` | Raise an interrupt at destination `arg[31:3]` (used for IPIs) |
+| `0b10` | `CMDINTDST` | Raise an interrupt at destination `arg[31:3]` (used for IPIs); the destination `-1` (all ones) requests a system reset instead |
 | `0b11` | `CMDENAIRQ` | Enable (`arg[2] = 1`) or disable a given interrupt source `arg[31:3]` |
 
 The controller has accepted a command only when the `cmd` field read back is
@@ -188,6 +188,13 @@ to stay thread-safe.
 Every source and every destination is **disabled at reset**; nothing is delivered
 until software enables the source with `CMDENAIRQ` and the destination with
 `CMDACKIRQ` (`arg[2] = 1`).
+
+A `CMDINTDST` targeting the destination `-1` (`arg[31:3]` all ones) is a **system
+reset request**: the controller pulses its `rst_rqst_o` output to the reset
+controller, which restarts its reset pulse, so every CPU, device and cache resets
+and the SoC boots again from `0x1000` with its memory contents intact (see
+[Reset behaviour](#reset-behaviour)). The command's result is `-1`, as for any
+invalid destination; underLineOS exposes it as `_sysreset()`.
 
 ### UART console — `0x00000F80`
 
@@ -368,10 +375,12 @@ Its behaviour is deliberate and surprising the first time:
 | First press of `RESET` | Releases reset after a 1 µs pulse; the SoC begins executing |
 | Short press afterwards | **Ignored** |
 | Press held ≥ 4 s | Asserts a fresh 1 µs reset pulse |
+| Software request (`_sysreset()`, ie: `CMDINTDST` with the destination `-1`) | Asserts a fresh 1 µs reset pulse at once, no button hold needed |
 
 > [!TIP]
 > If the board appears dead after programming, press `RESET` once — that is the
-> intended way to start it. To reset a running system, hold `RESET` for four seconds.
+> intended way to start it. To reset a running system, hold `RESET` for four seconds,
+> or have the program request it with `_sysreset()`.
 
 ---
 
