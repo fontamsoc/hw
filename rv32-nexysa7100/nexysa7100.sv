@@ -102,6 +102,7 @@ xc7pll_100_to_50_100_200 pll (
 );
 
 (* direct_reset = "true" *) wire rst_w;
+wire irqctrl_rst_rqst_w;
 rstctrl #(
 	 .RSTDURATION (CLKFREQ100MHZ/1000000) // 1us
 	,.RSTTHRESH   (4*CLKFREQ100MHZ) // 4s
@@ -109,6 +110,7 @@ rstctrl #(
 	 .clk_i (clk100mhz_w)
 	,.i     (~rst_n)
 	,.o     (rst_w)
+	,.rqst_i (irqctrl_rst_rqst_w)
 );
 
 localparam CPU_COUNT = `CPU_COUNT;
@@ -254,6 +256,8 @@ irqctrl #(
 
 	,.irq_src_stb_i (irq_src_stb_w)
 	,.irq_src_rdy_o (irq_src_rdy_w)
+
+	,.rst_rqst_o (irqctrl_rst_rqst_w)
 );
 
 serial_uart #(
