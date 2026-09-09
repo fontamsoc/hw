@@ -37,6 +37,9 @@
 // 	destination index to target, "rsvd" is reserved and ignored.
 // 	"resp" in the result gets set to the interrupt destination index
 // 	if valid, -2 if not ready due to an interrupt pending ack, or -1 if invalid.
+// 	The destination -1 (all ones) requests a system reset, which the
+// 	controller signals through rst_rqst_o; "resp" gets set to -1 as for
+// 	an invalid destination, the four command codes being all taken.
 // 	CMDENAIRQ: Enable/Disable an interrupt source; field "arg" is expected
 // 	to have following format | idx: (WORDBITSZ-3) bits | en: 1 bit |
 // 	where "idx" is the interrupt source index, "en" enables/disables
@@ -113,6 +116,11 @@
 // 	The source device must drive irq_src_stb_i low as soon as a falling edge
 // 	of irq_src_rdy_o occurs, otherwise another interrupt request will occur
 // 	when irq_src_rdy_o has become high and irq_src_stb_i is still high.
+//
+// rst_rqst_o
+// 	Raised for a clock cycle when an accepted CMDINTDST targets the
+// 	destination -1 (all ones), requesting a system reset; it is meant
+// 	for the reset controller, which stretches it into a reset pulse.
 
 module irqctrl (
 
@@ -136,6 +144,8 @@ module irqctrl (
 
 	,irq_src_stb_i
 	,irq_src_rdy_o
+
+	,rst_rqst_o
 );
 
 `include "lib/clog2.sv"
@@ -176,6 +186,8 @@ input  wire [IRQDSTCOUNT -1 : 0] irq_dst_pri_i;
 input  wire [IRQSRCCOUNT -1 : 0] irq_src_stb_i;
 output wire [IRQSRCCOUNT -1 : 0] irq_src_rdy_o;
 
+output reg rst_rqst_o;
+
 assign wb_bsy_o = 1'b0;
 
 reg                    wb_stb_r;
@@ -208,6 +220,18 @@ wire cmddevrdy = (wb_stb_r && wb_we_r && wb_dat_r[1:0] == CMDDEVRDY);
 wire cmdackirq = (prevcmddone && wb_dat_r[1:0] == CMDACKIRQ);
 wire cmdintdst = (prevcmddone && wb_dat_r[1:0] == CMDINTDST);
 wire cmdenairq = (prevcmddone && wb_dat_r[1:0] == CMDENAIRQ);
+
+// Registered one-cycle pulse requesting a system reset: an accepted
+// CMDINTDST targeting the destination -1 (all ones); cmdintdst carries
+// the prevcmddone gate, hence only an accepted command pulses and a
+// retried request cannot pulse twice; the pulse getting cleared by the
+// reset it requests is harmless, the reset controller having latched it.
+always_ff @(posedge clk_i) begin
+	if (rst_i)
+		rst_rqst_o <= 1'b0;
+	else
+		rst_rqst_o <= (cmdintdst && (&wb_dat_r[WORDBITSZ -1 : 3]));
+end
 
 reg [WORDBITSZ -1 : 0] irqdstdat;
 wire irqdstseek = (
