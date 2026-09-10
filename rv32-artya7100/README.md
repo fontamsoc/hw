@@ -439,8 +439,21 @@ picocom -q --imap lfcrlf -b 115200 /dev/ttyUSB1     # or screen, minicom, ...
 
 ## Loading a program
 
-There is no bootloader. SRAM contents come from `$readmemh` at elaboration time, so
-**changing the program means re-running synthesis and implementation.**
+There is no bootloader. SRAM contents come from `$readmemh` at elaboration time, so on
+this top as committed — one console, no gdb channel — **changing the program means
+re-running synthesis and implementation.**
+
+With a gdb channel (the `examples/*/serial_jtag` branches add serial_jtag channels the
+OpenOCD bridge of `tools/serial_jtag/` exposes as a pty), a running underLineOS image
+linked with `-lgdbstub` can be replaced from gdb without a new bitstream: `reload`
+(from `tools/underLineOS.gdb`: it sets the stub's reload flag and resumes into
+`_sysreset()`, the software reset request of [Reset behaviour](#reset-behaviour)),
+`Ctrl-C` once the boot loader has taken over, then `file`, `load`, `continue`; the
+loaded image starts by another soft reset. Holding `RESET` for four seconds after
+setting the flag is the manual alternative, and it is the way back when a reload flag
+was left set: the next boot then parks in the loader saying so on the console, and
+`continue` reboots. The underLineOS documentation (GDB stub, *Loading a new program*)
+has the details and the limitations.
 
 The build knobs are `` `ifndef ``-guarded defaults at the top of `artya7100.sv`, so
 they can be overridden from the Vivado *Verilog options* (`verilog_define`) without
