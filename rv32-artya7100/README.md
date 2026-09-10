@@ -448,12 +448,12 @@ OpenOCD bridge of `tools/serial_jtag/` exposes as a pty), a running underLineOS 
 linked with `-lgdbstub` can be replaced from gdb without a new bitstream: `reload`
 (from `tools/underLineOS.gdb`: it sets the stub's reload flag and resumes into
 `_sysreset()`, the software reset request of [Reset behaviour](#reset-behaviour)),
-`Ctrl-C` once the boot loader has taken over, then `file`, `load`, `continue`; the
-loaded image starts by another soft reset. Holding `RESET` for four seconds after
-setting the flag is the manual alternative, and it is the way back when a reload flag
-was left set: the next boot then parks in the loader saying so on the console, and
-`continue` reboots. The underLineOS documentation (GDB stub, *Loading a new program*)
-has the details and the limitations.
+`Ctrl-C` once the console shows the stub's loader awaiting gdb, then `file`, `load`,
+`continue`; the loaded image starts by another soft reset. Holding `RESET` for four
+seconds after setting the flag is the manual alternative, and it is the way back when
+a reload flag was left set: the next boot then parks in the loader saying so on the
+console, and `continue` reboots. The underLineOS documentation (GDB stub, *Loading a
+new program*) has the details and the limitations.
 
 The build knobs are `` `ifndef ``-guarded defaults at the top of `artya7100.sv`, so
 they can be overridden from the Vivado *Verilog options* (`verilog_define`) without
