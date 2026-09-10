@@ -17,3 +17,12 @@ else
 printf "usage: gx <_thread_t *>\n"
 end
 end
+define reload
+echo reload: if the next line fails with "No symbol", the image is not linked with -lgdbstub\n
+echo reload: delete your breakpoints first (delete): inserted ones are carried into the loaded image\n
+set var __gdbstub_reload = 1
+print __gdbstub_reload
+echo reload: resetting; now ^C, then file <elf>, load, continue (or continue alone to reboot)\n
+set $pc = _sysreset
+continue
+end
