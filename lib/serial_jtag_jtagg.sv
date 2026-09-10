@@ -49,7 +49,7 @@
 // Limitation of the JCE-derived capture strobe: a JTAG host must not
 // pass through the Pause-DR state within a scan, as resuming re-fires
 // the JCE rising edge and corrupts the framing of that scan; hosts
-// shifting each scan in one continuous pass (both bridges in
+// shifting each scan in one continuous pass (the bridge in
 // tools/serial_jtag/) are unaffected.
 //
 // In simulation (`SIMULATION`) the LUT4 chain is bypassed, as the
