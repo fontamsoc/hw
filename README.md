@@ -21,4 +21,3 @@ Each `examples/<target>/<feature>` branch is a self-contained demonstration; mos
 - `examples/rv32-orangecrab0285/serial_jtag`: two serial consoles tunneled through the ECP5 JTAGG primitive on the OrangeCrab r0.2 85F.
 - `examples/rv32-orangecrab0285/btnled_peripheral`: a GPIO peripheral driving the RGB LED with button-controlled PWM (`apps/ledbtn`) on the OrangeCrab r0.2 85F.
 - `examples/rv32-orangecrab0285/serial_usb_multi_port`: multiple CDC-ACM COM ports over a single USB link (`PORTCOUNT`, two ports here) on the OrangeCrab r0.2 85F.
-- `examples/tools/serial_jtag/vivado_bridge`: a Vivado host console bridge (`vivado_bridge.tcl`) for the JTAG serial channels, as an alternative to the openocd bridge.
