@@ -16,13 +16,18 @@
 #El Dorado Hills, CA, 95762 
 
 
-# Make sure the default target is to simply build and run the benchmark.
+# Make sure the default target is to simply build the benchmark image loaded by
+# sim.sv and the FPGA tops (SRAM_INITFILE): a PERFORMANCE_RUN build followed by
+# port_postbuild's .bin/.hex generation. `make run` keeps the stock build-and-run flow.
 RSTAMP = v1.0
 
 PORT_DIR ?= rv32
 
 .PHONY: all run score
-all run: $(OUTFILE) rerun score
+all:
+	$(MAKE) XCFLAGS="$(XCFLAGS) -DPERFORMANCE_RUN=1" link
+	$(MAKE) port_postbuild
+run: $(OUTFILE) rerun score
 
 score:
 	@echo "Check run1.log and run2.log for results."
