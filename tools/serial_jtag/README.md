@@ -148,8 +148,8 @@ lost nor duplicated across scans.
 ## On-board test procedure
 
 1. Build the `impl_1` bitstream (Vivado 2020 project under
-   `rv32-artya7100/vivado2020/`, `rv32-nexysa7100/vivado2020/` or
-   `rv32-cmoda735/vivado2020/`)
+   `rv32-artya7100/vivado/`, `rv32-nexysa7100/vivado/` or
+   `rv32-cmoda735/vivado/`)
    with a program which writes a banner to channel 0 then echoes
    channel 0 data-word reads back to writes; the driver code path is
    identical to the console serial peripheral, only the base
