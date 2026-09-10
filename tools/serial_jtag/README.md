@@ -136,8 +136,8 @@ first, plus one padding bit (shift 0, ignore the last tdo bit).
 
 On the ecp5 the first frame of every scan is status-only (`tx_valid`
 low, its byte deferred to the following frame), hence a scan must be
-at least 2 frames to carry device-to-host data; both bridges always
-scan more.
+at least 2 frames to carry device-to-host data; the bridge always
+scans more.
 
 `rx_ready` reports whether the byte sent in the same frame slot was
 accepted; refused bytes are always a suffix of the bytes sent and
