@@ -120,8 +120,12 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	variable exclusively through atomic instructions (a plain load can observe a stale value),
 	and, when such a variable is located in runtime-allocated memory, initialize it using an
 	atomic instruction (e.g. amoswap of 0), as another hart's atomic access reads memory which
-	may hold stale data from the memory's previous use; statically allocated variables are safe,
-	as their memory starts zeroed.
+	may hold stale data from the memory's previous use. A statically allocated variable needs the
+	same when another hart may update it before the boot hart's first own atomic access to it:
+	the boot zeroes .bss with plain stores, which sit in the boot hart's data-cache, and an
+	atomic access on a locally cached word writes the cached value back before its
+	read-modify-write, overwriting the other hart's update with that stale zero; whether the
+	entry survives until then depends on the image layout.
 - Ordinary cached writes do participate, and an atomic memory operation is ordered against the ones
 	its hart already made: dcache.sv holds off the first access of a load-reserved, or of an
 	atomic memory operation's read, until every coherency write this data-cache put on the ring has
