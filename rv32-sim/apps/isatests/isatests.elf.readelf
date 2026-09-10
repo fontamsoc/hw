@@ -10,7 +10,7 @@ ELF Header:
   Version:                           0x1
   Entry point address:               0x1000
   Start of program headers:          52 (bytes into file)
-  Start of section headers:          241064 (bytes into file)
+  Start of section headers:          241056 (bytes into file)
   Flags:                             0x1, RVC, soft-float ABI
   Size of this header:               52 (bytes)
   Size of program headers:           32 (bytes)
@@ -30,11 +30,11 @@ Section Headers:
   [ 6] .debug_info       PROGBITS        00000000 0224a8 000fc1 00      0   0  1
   [ 7] .debug_abbrev     PROGBITS        00000000 023469 000884 00      0   0  1
   [ 8] .debug_line       PROGBITS        00000000 023ced 00643d 00      0   0  1
-  [ 9] .debug_str        PROGBITS        00000000 02a12a 0005ff 01  MS  0   0  1
-  [10] .debug_line_str   PROGBITS        00000000 02a729 00035a 01  MS  0   0  1
-  [11] .symtab           SYMTAB          00000000 02aa84 00f500 10     12 3694  4
-  [12] .strtab           STRTAB          00000000 039f84 000d96 00      0   0  1
-  [13] .shstrtab         STRTAB          00000000 03ad1a 00008e 00      0   0  1
+  [ 9] .debug_str        PROGBITS        00000000 02a12a 0005fb 01  MS  0   0  1
+  [10] .debug_line_str   PROGBITS        00000000 02a725 000356 01  MS  0   0  1
+  [11] .symtab           SYMTAB          00000000 02aa7c 00f500 10     12 3694  4
+  [12] .strtab           STRTAB          00000000 039f7c 000d96 00      0   0  1
+  [13] .shstrtab         STRTAB          00000000 03ad12 00008e 00      0   0  1
 Key to Flags:
   W (write), A (alloc), X (execute), M (merge), S (strings), I (info),
   L (link order), O (extra OS processing required), G (group), T (TLS),
@@ -74,7 +74,7 @@ Symbol table '.symtab' contains 3920 entries:
      8: 00000000     0 SECTION LOCAL  DEFAULT    8 .debug_line
      9: 00000000     0 SECTION LOCAL  DEFAULT    9 .debug_str
     10: 00000000     0 SECTION LOCAL  DEFAULT   10 .debug_line_str
-    11: 00000000     0 FILE    LOCAL  DEFAULT  ABS ccDabQF8.o
+    11: 00000000     0 FILE    LOCAL  DEFAULT  ABS ccoI6kSt.o
     12: 00001000     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     13: 00000000     0 FILE    LOCAL  DEFAULT  ABS simple.o
     14: 000011b8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]

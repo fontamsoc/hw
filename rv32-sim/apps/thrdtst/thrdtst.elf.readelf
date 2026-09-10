@@ -10,7 +10,7 @@ ELF Header:
   Version:                           0x1
   Entry point address:               0x1000
   Start of program headers:          52 (bytes into file)
-  Start of section headers:          525908 (bytes into file)
+  Start of section headers:          534452 (bytes into file)
   Flags:                             0x0
   Size of this header:               52 (bytes)
   Size of program headers:           32 (bytes)
@@ -22,31 +22,31 @@ ELF Header:
 Section Headers:
   [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
   [ 0]                   NULL            00000000 000000 000000 00      0   0  0
-  [ 1] .text             PROGBITS        00001000 0000f4 00ea64 00  AX  0   0  4
-  [ 2] .rodata           PROGBITS        0000fa68 00eb58 0008bc 00   A  0   0  8
-  [ 3] .eh_frame         PROGBITS        00010324 00f414 00002c 00   A  0   0  4
-  [ 4] .tdata            PROGBITS        00010350 00f440 00005c 00 WAT  0   0  4
-  [ 5] .tbss             NOBITS          000103ac 00f49c 00001c 00 WAT  0   0  4
-  [ 6] .init_array       INIT_ARRAY      000103ac 00f49c 000008 04  WA  0   0  4
-  [ 7] .fini_array       FINI_ARRAY      000103b4 00f4a4 000004 04  WA  0   0  4
-  [ 8] .data             PROGBITS        000103b8 00f4a8 0005b8 00  WA  0   0  4
-  [ 9] .persistent       PROGBITS        00010970 00fa60 000000 00  WA  0   0  4
-  [10] .bss              NOBITS          00010970 00fa60 002750 00  WA  0   0  8
-  [11] .noinit           NOBITS          000130c0 00fa60 00002c 00  WA  0   0  4
-  [12] .comment          PROGBITS        00000000 00fa60 00001b 01  MS  0   0  1
-  [13] .riscv.attributes RISCV_ATTRIBUTE 00000000 00fa7b 00005b 00      0   0  1
-  [14] .debug_aranges    PROGBITS        00000000 00fad8 000e10 00      0   0  8
-  [15] .debug_info       PROGBITS        00000000 0108e8 01cb32 00      0   0  1
-  [16] .debug_abbrev     PROGBITS        00000000 02d41a 00800d 00      0   0  1
-  [17] .debug_line       PROGBITS        00000000 035427 0230cf 00      0   0  1
-  [18] .debug_frame      PROGBITS        00000000 0584f8 0022b4 00      0   0  4
-  [19] .debug_str        PROGBITS        00000000 05a7ac 00260d 01  MS  0   0  1
-  [20] .debug_line_str   PROGBITS        00000000 05cdb9 002743 01  MS  0   0  1
-  [21] .debug_loclists   PROGBITS        00000000 05f4fc 01b964 00      0   0  1
-  [22] .debug_rnglists   PROGBITS        00000000 07ae60 00284f 00      0   0  1
-  [23] .symtab           SYMTAB          00000000 07d6b0 001f60 10     24 307  4
-  [24] .strtab           STRTAB          00000000 07f610 000f33 00      0   0  1
-  [25] .shstrtab         STRTAB          00000000 080543 00010f 00      0   0  1
+  [ 1] .text             PROGBITS        00001000 0000f4 00edd4 00  AX  0   0  4
+  [ 2] .rodata           PROGBITS        0000fdd8 00eec8 0008c4 00   A  0   0  8
+  [ 3] .eh_frame         PROGBITS        0001069c 00f78c 00002c 00   A  0   0  4
+  [ 4] .tdata            PROGBITS        000106c8 00f7b8 00005c 00 WAT  0   0  4
+  [ 5] .tbss             NOBITS          00010724 00f814 00001c 00 WAT  0   0  4
+  [ 6] .init_array       INIT_ARRAY      00010724 00f814 000008 04  WA  0   0  4
+  [ 7] .fini_array       FINI_ARRAY      0001072c 00f81c 000004 04  WA  0   0  4
+  [ 8] .data             PROGBITS        00010730 00f820 0005c8 00  WA  0   0  4
+  [ 9] .persistent       PROGBITS        00010cf8 00fde8 000000 00  WA  0   0  4
+  [10] .bss              NOBITS          00010cf8 00fde8 002754 00  WA  0   0  8
+  [11] .noinit           NOBITS          0001344c 00fde8 00002c 00  WA  0   0  4
+  [12] .comment          PROGBITS        00000000 00fde8 00001b 01  MS  0   0  1
+  [13] .riscv.attributes RISCV_ATTRIBUTE 00000000 00fe03 00005b 00      0   0  1
+  [14] .debug_aranges    PROGBITS        00000000 00fe60 000e38 00      0   0  8
+  [15] .debug_info       PROGBITS        00000000 010c98 01d29d 00      0   0  1
+  [16] .debug_abbrev     PROGBITS        00000000 02df35 0080cb 00      0   0  1
+  [17] .debug_line       PROGBITS        00000000 036000 023bd0 00      0   0  1
+  [18] .debug_frame      PROGBITS        00000000 059bd0 002304 00      0   0  4
+  [19] .debug_str        PROGBITS        00000000 05bed4 0026a4 01  MS  0   0  1
+  [20] .debug_line_str   PROGBITS        00000000 05e578 00273f 01  MS  0   0  1
+  [21] .debug_loclists   PROGBITS        00000000 060cb7 01c08b 00      0   0  1
+  [22] .debug_rnglists   PROGBITS        00000000 07cd42 002969 00      0   0  1
+  [23] .symtab           SYMTAB          00000000 07f6ac 002050 10     24 315  4
+  [24] .strtab           STRTAB          00000000 0816fc 000fa7 00      0   0  1
+  [25] .shstrtab         STRTAB          00000000 0826a3 00010f 00      0   0  1
 Key to Flags:
   W (write), A (alloc), X (execute), M (merge), S (strings), I (info),
   L (link order), O (extra OS processing required), G (group), T (TLS),
@@ -57,11 +57,11 @@ There are no section groups in this file.
 
 Program Headers:
   Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
-  RISCV_ATTRIBUT 0x00fa7b 0x00000000 0x00000000 0x0005b 0x00000 R   0x1
-  LOAD           0x000000 0x00000f0c 0x00000f0c 0x0eb58 0x0eb58 R E 0x4
-  LOAD           0x00eb58 0x0000fa68 0x0000fa68 0x008e8 0x008e8 R   0x8
-  LOAD           0x00f440 0x00010350 0x00010350 0x00620 0x02d9c RW  0x8
-  TLS            0x00f440 0x00010350 0x00010350 0x0005c 0x00078 R   0x4
+  RISCV_ATTRIBUT 0x00fe03 0x00000000 0x00000000 0x0005b 0x00000 R   0x1
+  LOAD           0x000000 0x00000f0c 0x00000f0c 0x0eec8 0x0eec8 R E 0x4
+  LOAD           0x00eec8 0x0000fdd8 0x0000fdd8 0x008f0 0x008f0 R   0x8
+  LOAD           0x00f7b8 0x000106c8 0x000106c8 0x00630 0x02db0 RW  0x8
+  TLS            0x00f7b8 0x000106c8 0x000106c8 0x0005c 0x00078 R   0x4
   GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000 RW  0x10
 
  Section to Segment mapping:
@@ -79,20 +79,20 @@ There are no relocations in this file.
 
 The decoding of unwind sections for machine type RISC-V is not currently supported.
 
-Symbol table '.symtab' contains 502 entries:
+Symbol table '.symtab' contains 517 entries:
    Num:    Value  Size Type    Bind   Vis      Ndx Name
      0: 00000000     0 NOTYPE  LOCAL  DEFAULT  UND 
      1: 00001000     0 SECTION LOCAL  DEFAULT    1 .text
-     2: 0000fa68     0 SECTION LOCAL  DEFAULT    2 .rodata
-     3: 00010324     0 SECTION LOCAL  DEFAULT    3 .eh_frame
-     4: 00010350     0 SECTION LOCAL  DEFAULT    4 .tdata
-     5: 000103ac     0 SECTION LOCAL  DEFAULT    5 .tbss
-     6: 000103ac     0 SECTION LOCAL  DEFAULT    6 .init_array
-     7: 000103b4     0 SECTION LOCAL  DEFAULT    7 .fini_array
-     8: 000103b8     0 SECTION LOCAL  DEFAULT    8 .data
-     9: 00010970     0 SECTION LOCAL  DEFAULT    9 .persistent
-    10: 00010970     0 SECTION LOCAL  DEFAULT   10 .bss
-    11: 000130c0     0 SECTION LOCAL  DEFAULT   11 .noinit
+     2: 0000fdd8     0 SECTION LOCAL  DEFAULT    2 .rodata
+     3: 0001069c     0 SECTION LOCAL  DEFAULT    3 .eh_frame
+     4: 000106c8     0 SECTION LOCAL  DEFAULT    4 .tdata
+     5: 00010724     0 SECTION LOCAL  DEFAULT    5 .tbss
+     6: 00010724     0 SECTION LOCAL  DEFAULT    6 .init_array
+     7: 0001072c     0 SECTION LOCAL  DEFAULT    7 .fini_array
+     8: 00010730     0 SECTION LOCAL  DEFAULT    8 .data
+     9: 00010cf8     0 SECTION LOCAL  DEFAULT    9 .persistent
+    10: 00010cf8     0 SECTION LOCAL  DEFAULT   10 .bss
+    11: 0001344c     0 SECTION LOCAL  DEFAULT   11 .noinit
     12: 00000000     0 SECTION LOCAL  DEFAULT   12 .comment
     13: 00000000     0 SECTION LOCAL  DEFAULT   13 .riscv.attributes
     14: 00000000     0 SECTION LOCAL  DEFAULT   14 .debug_aranges
@@ -106,483 +106,498 @@ Symbol table '.symtab' contains 502 entries:
     22: 00000000     0 SECTION LOCAL  DEFAULT   22 .debug_rnglists
     23: 00000000     0 FILE    LOCAL  DEFAULT  ABS crt0.o
     24: 00001000     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-    25: 00001600     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-    26: 00001700     0 NOTYPE  LOCAL  DEFAULT    1 __trap_ret
+    25: 000016d4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    26: 000017d4     0 NOTYPE  LOCAL  DEFAULT    1 __trap_ret
     27: 00000000     0 FILE    LOCAL  DEFAULT  ABS exit.c
-    28: 00001184     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    28: 00001258     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     29: 00000000     0 FILE    LOCAL  DEFAULT  ABS thrdtst.c
-    30: 00001988     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-    31: 00001a9c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-    32: 00001bb0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-    33: 000011b0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    30: 00001a5c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    31: 00001b70     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    32: 00001c84     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    33: 00001284     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     34: 00000000     0 FILE    LOCAL  DEFAULT  ABS __call_atexit.c
-    35: 000015e8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-    36: 000015e8    24 FUNC    LOCAL  DEFAULT    1 register_fini
-    37: 000036f4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    35: 000016bc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    36: 000016bc    24 FUNC    LOCAL  DEFAULT    1 register_fini
+    37: 000037c8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     38: 00000000     0 FILE    LOCAL  DEFAULT  ABS crtstuff.c
-    39: 00010324     0 OBJECT  LOCAL  DEFAULT    3 __EH_FRAME_BEGIN__
-    40: 0000191c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-    41: 0000191c     0 FUNC    LOCAL  DEFAULT    1 __do_global_dtors_aux
-    42: 00010970     1 OBJECT  LOCAL  DEFAULT   10 completed.1
-    43: 000103b4     0 OBJECT  LOCAL  DEFAULT    7 __do_global_dtor[...]
-    44: 00001964     0 FUNC    LOCAL  DEFAULT    1 frame_dummy
-    45: 00010974    24 OBJECT  LOCAL  DEFAULT   10 object.0
-    46: 000103b0     0 OBJECT  LOCAL  DEFAULT    6 __frame_dummy_in[...]
+    39: 0001069c     0 OBJECT  LOCAL  DEFAULT    3 __EH_FRAME_BEGIN__
+    40: 000019f0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    41: 000019f0     0 FUNC    LOCAL  DEFAULT    1 __do_global_dtors_aux
+    42: 00010cf8     1 OBJECT  LOCAL  DEFAULT   10 completed.1
+    43: 0001072c     0 OBJECT  LOCAL  DEFAULT    7 __do_global_dtor[...]
+    44: 00001a38     0 FUNC    LOCAL  DEFAULT    1 frame_dummy
+    45: 00010cfc    24 OBJECT  LOCAL  DEFAULT   10 object.0
+    46: 00010728     0 OBJECT  LOCAL  DEFAULT    6 __frame_dummy_in[...]
     47: 00000000     0 FILE    LOCAL  DEFAULT  ABS libgcc2.c
-    48: 00001f50     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    48: 00002024     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     49: 00000000     0 FILE    LOCAL  DEFAULT  ABS atexit.c
-    50: 00002314     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    50: 000023e8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     51: 00000000     0 FILE    LOCAL  DEFAULT  ABS findfp.c
-    52: 00002328     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-    53: 00002328    24 FUNC    LOCAL  DEFAULT    1 stdio_exit_handler
-    54: 00002340     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-    55: 00002340   108 FUNC    LOCAL  DEFAULT    1 cleanup_stdio
-    56: 000023ac     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-    57: 000023ac   376 FUNC    LOCAL  DEFAULT    1 global_stdio_ini[...]
-    58: 00002524     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-    59: 00002580     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-    60: 00002588     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    52: 000023fc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    53: 000023fc    24 FUNC    LOCAL  DEFAULT    1 stdio_exit_handler
+    54: 00002414     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    55: 00002414   108 FUNC    LOCAL  DEFAULT    1 cleanup_stdio
+    56: 00002480     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    57: 00002480   376 FUNC    LOCAL  DEFAULT    1 global_stdio_ini[...]
+    58: 000025f8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    59: 00002654     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    60: 0000265c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     61: 00000000     0 FILE    LOCAL  DEFAULT  ABS fwalk.c
-    62: 00002590     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    62: 00002664     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     63: 00000000     0 FILE    LOCAL  DEFAULT  ABS printf.c
-    64: 00002644     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    64: 00002718     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     65: 00000000     0 FILE    LOCAL  DEFAULT  ABS puts.c
-    66: 0000268c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-    67: 00002830     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    66: 00002760     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    67: 00002904     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     68: 00000000     0 FILE    LOCAL  DEFAULT  ABS stdio.c
-    69: 0000283c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-    70: 00002898     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-    71: 00002920     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-    72: 00002984     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    69: 00002910     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    70: 0000296c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    71: 000029f4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    72: 00002a58     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     73: 00000000     0 FILE    LOCAL  DEFAULT  ABS wbuf.c
-    74: 0000298c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    74: 00002a60     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     75: 00000000     0 FILE    LOCAL  DEFAULT  ABS wsetup.c
-    76: 00002aa4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    76: 00002b78     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     77: 00000000     0 FILE    LOCAL  DEFAULT  ABS closer.c
-    78: 00002c58     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    78: 00002d2c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     79: 00000000     0 FILE    LOCAL  DEFAULT  ABS lseekr.c
-    80: 00002ca4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    80: 00002d78     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     81: 00000000     0 FILE    LOCAL  DEFAULT  ABS readr.c
-    82: 00002cf8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    82: 00002dcc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     83: 00000000     0 FILE    LOCAL  DEFAULT  ABS writer.c
-    84: 00002d4c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    84: 00002e20     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     85: 00000000     0 FILE    LOCAL  DEFAULT  ABS init.c
-    86: 00002da0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    86: 00002e74     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     87: 00000000     0 FILE    LOCAL  DEFAULT  ABS fini.c
-    88: 00002e34     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    88: 00002f08     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     89: 00000000     0 FILE    LOCAL  DEFAULT  ABS libc_a-memset.o
-    90: 00002e90     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    90: 00002f64     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     91: 00000000     0 FILE    LOCAL  DEFAULT  ABS memcpy.c
-    92: 00003034     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    92: 00003108     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     93: 00000000     0 FILE    LOCAL  DEFAULT  ABS __atexit.c
-    94: 00003614     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    94: 000036e8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     95: 00000000     0 FILE    LOCAL  DEFAULT  ABS dtoa.c
-    96: 0000392c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-    97: 0000392c   488 FUNC    LOCAL  DEFAULT    1 quorem
-    98: 00003b14     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    96: 00003a00     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+    97: 00003a00   488 FUNC    LOCAL  DEFAULT    1 quorem
+    98: 00003be8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
     99: 00000000     0 FILE    LOCAL  DEFAULT  ABS freer.c
-   100: 000053d4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   101: 000054fc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   100: 0000546c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   101: 00005594     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    102: 00000000     0 FILE    LOCAL  DEFAULT  ABS mallocr.c
-   103: 000057e8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   103: 00005880     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    104: 00000000     0 FILE    LOCAL  DEFAULT  ABS mprec.c
-   105: 00006058     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   106: 00006114     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   107: 00006138     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   108: 00006320     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   109: 000063b4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   110: 00006484     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   111: 00006758     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   112: 0000fe00    12 OBJECT  LOCAL  DEFAULT    2 p05.0
-   113: 00006914     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   114: 00006b40     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   115: 00006b98     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   116: 00006ec4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   105: 000060f0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   106: 000061ac     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   107: 000061d0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   108: 000063b8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   109: 0000644c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   110: 0000651c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   111: 000067f0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   112: 00010178    12 OBJECT  LOCAL  DEFAULT    2 p05.0
+   113: 000069ac     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   114: 00006bd8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   115: 00006c30     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   116: 00006f5c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    117: 00000000     0 FILE    LOCAL  DEFAULT  ABS vfprintf.c
-   118: 00007304     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   119: 00010064    16 OBJECT  LOCAL  DEFAULT    2 zeroes.0
-   120: 00010074    16 OBJECT  LOCAL  DEFAULT    2 blanks.1
+   118: 0000739c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   119: 000103dc    16 OBJECT  LOCAL  DEFAULT    2 zeroes.0
+   120: 000103ec    16 OBJECT  LOCAL  DEFAULT    2 blanks.1
    121: 00000000     0 FILE    LOCAL  DEFAULT  ABS sfputs_r.c
-   122: 00008fbc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   122: 00009054     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    123: 00000000     0 FILE    LOCAL  DEFAULT  ABS fclose.c
-   124: 00009054     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   124: 000090ec     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    125: 00000000     0 FILE    LOCAL  DEFAULT  ABS fflush.c
-   126: 000091b8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   127: 000093fc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   126: 00009250     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   127: 00009494     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    128: 00000000     0 FILE    LOCAL  DEFAULT  ABS fputc.c
-   129: 000094bc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   129: 00009554     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    130: 00000000     0 FILE    LOCAL  DEFAULT  ABS makebuf.c
-   131: 00009588     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   131: 00009620     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    132: 00000000     0 FILE    LOCAL  DEFAULT  ABS putc.c
-   133: 00009704     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   133: 0000979c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    134: 00000000     0 FILE    LOCAL  DEFAULT  ABS localeconv.c
-   135: 0000980c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   135: 000098a4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    136: 00000000     0 FILE    LOCAL  DEFAULT  ABS fstatr.c
-   137: 00009818     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   137: 000098b0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    138: 00000000     0 FILE    LOCAL  DEFAULT  ABS isattyr.c
-   139: 00009868     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   139: 00009900     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    140: 00000000     0 FILE    LOCAL  DEFAULT  ABS sbrkr.c
-   141: 000098b4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   141: 0000994c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    142: 00000000     0 FILE    LOCAL  DEFAULT  ABS strlen.c
-   143: 00009900     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   143: 00009998     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    144: 00000000     0 FILE    LOCAL  DEFAULT  ABS memchr.c
-   145: 0000998c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   145: 00009a24     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    146: 00000000     0 FILE    LOCAL  DEFAULT  ABS assert.c
-   147: 00009ab8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   147: 00009b50     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    148: 00000000     0 FILE    LOCAL  DEFAULT  ABS callocr.c
-   149: 00009b04     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   149: 00009b9c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    150: 00000000     0 FILE    LOCAL  DEFAULT  ABS fiprintf.c
-   151: 00009bcc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   151: 00009c64     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    152: 00000000     0 FILE    LOCAL  DEFAULT  ABS vfiprintf.c
-   153: 00009c18     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   154: 000101e8    16 OBJECT  LOCAL  DEFAULT    2 zeroes.0
-   155: 000101f8    16 OBJECT  LOCAL  DEFAULT    2 blanks.1
+   153: 00009cb0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   154: 00010560    16 OBJECT  LOCAL  DEFAULT    2 zeroes.0
+   155: 00010570    16 OBJECT  LOCAL  DEFAULT    2 blanks.1
    156: 00000000     0 FILE    LOCAL  DEFAULT  ABS abort.c
-   157: 0000aa60     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   157: 0000aaf8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    158: 00000000     0 FILE    LOCAL  DEFAULT  ABS mbtowc_r.c
-   159: 0000aa78     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   159: 0000ab10     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    160: 00000000     0 FILE    LOCAL  DEFAULT  ABS wctomb_r.c
-   161: 0000aae0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   161: 0000ab78     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    162: 00000000     0 FILE    LOCAL  DEFAULT  ABS signal.c
-   163: 0000ab10     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   163: 0000aba8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    164: 00000000     0 FILE    LOCAL  DEFAULT  ABS signalr.c
-   165: 0000abb0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   166: 0000ac00     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   165: 0000ac48     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   166: 0000ac98     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    167: 00000000     0 FILE    LOCAL  DEFAULT  ABS sys_close.c
-   168: 0000ac04     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   168: 0000ac9c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    169: 00000000     0 FILE    LOCAL  DEFAULT  ABS sys_exit.c
-   170: 0000ac14     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   170: 0000acac     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    171: 00000000     0 FILE    LOCAL  DEFAULT  ABS sys_fstat.c
-   172: 0000ac20     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   172: 0000acb8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    173: 00000000     0 FILE    LOCAL  DEFAULT  ABS sys_getpid.c
-   174: 0000ac30     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   174: 0000acc8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    175: 00000000     0 FILE    LOCAL  DEFAULT  ABS sys_isatty.c
-   176: 0000ac38     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   176: 0000acd0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    177: 00000000     0 FILE    LOCAL  DEFAULT  ABS sys_kill.c
-   178: 0000ac78     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   178: 0000ad10     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    179: 00000000     0 FILE    LOCAL  DEFAULT  ABS sys_lseek.c
-   180: 0000ac88     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   180: 0000ad20     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    181: 00000000     0 FILE    LOCAL  DEFAULT  ABS sys_read.c
-   182: 0000ac98     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   183: 0000ac98    60 FUNC    LOCAL  DEFAULT    1 __read_stdin
-   184: 0000acd4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   185: 00010958     4 OBJECT  LOCAL  DEFAULT    8 __compound_literal.0
+   182: 0000ad30     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   183: 0000ad30    60 FUNC    LOCAL  DEFAULT    1 __read_stdin
+   184: 0000ad6c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   185: 00010cd0     4 OBJECT  LOCAL  DEFAULT    8 __compound_literal.0
    186: 00000000     0 FILE    LOCAL  DEFAULT  ABS sys_sbrk.c
-   187: 0000ad18     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   187: 0000adb0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    188: 00000000     0 FILE    LOCAL  DEFAULT  ABS sys_write.c
-   189: 0000ad58     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   190: 0000ad58    44 FUNC    LOCAL  DEFAULT    1 __write_stdout
-   191: 0000ad84     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   192: 00010964    12 OBJECT  LOCAL  DEFAULT    8 __compound_literal.0
+   189: 0000adf0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   190: 0000adf0    44 FUNC    LOCAL  DEFAULT    1 __write_stdout
+   191: 0000ae1c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   192: 00010cdc    12 OBJECT  LOCAL  DEFAULT    8 __compound_literal.0
    193: 00000000     0 FILE    LOCAL  DEFAULT  ABS mlock.c
-   194: 0000adc8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   195: 0000ade4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   194: 0000ae60     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   195: 0000ae7c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    196: 00000000     0 FILE    LOCAL  DEFAULT  ABS lock.c
-   197: 0000ae00     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   198: 0000ae54     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   199: 0000ae58     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   200: 0000ae8c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   197: 0000ae98     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   198: 0000aeec     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   199: 0000aef0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   200: 0000af24     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
    201: 00000000     0 FILE    LOCAL  DEFAULT  ABS _os.c
-   202: 0000ae90     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   203: 0000ae90   108 FUNC    LOCAL  DEFAULT    1 __printdec
-   204: 0000aefc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   205: 0000aefc    36 FUNC    LOCAL  DEFAULT    1 __printstr
-   206: 0000af20     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   207: 0000af20   200 FUNC    LOCAL  DEFAULT    1 get.2
-   208: 0000afe8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   209: 0000afe8   212 FUNC    LOCAL  DEFAULT    1 _timer_disarm.part.0
-   210: 00011080    64 OBJECT  LOCAL  DEFAULT   10 __timer_list
-   211: 0000b0bc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   212: 0000b34c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   213: 0000b370     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   214: 0000b3a4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   215: 0000b3b8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   216: 0000b548     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   217: 0000b548   612 FUNC    LOCAL  DEFAULT    1 __thread_cur_preempt
-   218: 00010d70   768 OBJECT  LOCAL  DEFAULT   10 __runq
-   219: 00010d68     4 OBJECT  LOCAL  DEFAULT   10 schedlrhz
-   220: 0000b7ac     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   221: 0000b7ac     8 FUNC    LOCAL  DEFAULT    1 __timeslice_preempt
-   222: 0000b7b4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   223: 0000b7bc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   224: 0000b7bc   604 FUNC    LOCAL  DEFAULT    1 __thread_wakeup
-   225: 00011078     8 OBJECT  LOCAL  DEFAULT   10 __irqs
-   226: 0000ba18     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   227: 00011074     4 OBJECT  LOCAL  DEFAULT   10 irqctrl_lock
-   228: 0000bc28     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   229: 0000c004     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   230: 0000c044     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   231: 0000c1a8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   232: 0000c480     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   233: 0000c480   364 FUNC    LOCAL  DEFAULT    1 _thread_sched.part.0
-   234: 00010d54     4 OBJECT  LOCAL  DEFAULT   10 lock.5
-   235: 00010d14    64 OBJECT  LOCAL  DEFAULT   10 pnd.4
-   236: 0000c5ec     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   237: 0000c7bc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   238: 0000c7fc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   239: 0000c9bc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   240: 0000cb5c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   241: 0000cbbc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   242: 0000cefc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   243: 0000d1a4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   244: 0000d1d0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   245: 0000d2c8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   246: 0000d6e4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   247: 0000d6e8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   248: 0000d6ec     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   249: 0000d6f0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   250: 0000d6f4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   251: 0000d6f8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   252: 0000d6fc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   253: 0000d700     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   254: 0000d704     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   255: 0000d708     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   256: 0000d70c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   257: 0000d710     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   258: 0000d714     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   259: 0000d718     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   260: 00000000     0 FILE    LOCAL  DEFAULT  ABS malloc.c
-   261: 0000d71c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   262: 0000d728     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   263: 00000000     0 FILE    LOCAL  DEFAULT  ABS adddf3.c
-   264: 0000d734     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   265: 00000000     0 FILE    LOCAL  DEFAULT  ABS divdf3.c
-   266: 0000de80     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   267: 00000000     0 FILE    LOCAL  DEFAULT  ABS eqdf2.c
-   268: 0000e584     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   269: 00000000     0 FILE    LOCAL  DEFAULT  ABS gedf2.c
-   270: 0000e600     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   271: 00000000     0 FILE    LOCAL  DEFAULT  ABS ledf2.c
-   272: 0000e6d4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   273: 00000000     0 FILE    LOCAL  DEFAULT  ABS muldf3.c
-   274: 0000e7a8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   275: 00000000     0 FILE    LOCAL  DEFAULT  ABS subdf3.c
-   276: 0000ed90     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   277: 00000000     0 FILE    LOCAL  DEFAULT  ABS unorddf2.c
-   278: 0000f4ec     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   279: 00000000     0 FILE    LOCAL  DEFAULT  ABS fixdfsi.c
-   280: 0000f534     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   281: 00000000     0 FILE    LOCAL  DEFAULT  ABS floatsidf.c
-   282: 0000f5b0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   283: 00000000     0 FILE    LOCAL  DEFAULT  ABS floatunsidf.c
-   284: 0000f650     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   285: 00000000     0 FILE    LOCAL  DEFAULT  ABS trunctfdf2.c
-   286: 0000f6cc     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   287: 00000000     0 FILE    LOCAL  DEFAULT  ABS libgcc2.c
-   288: 0000fa18     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
-   289: 00000000     0 FILE    LOCAL  DEFAULT  ABS libgcc2.c
-   290: 00000000     0 FILE    LOCAL  DEFAULT  ABS ctype_.c
-   291: 00000000     0 FILE    LOCAL  DEFAULT  ABS crtstuff.c
-   292: 0001034c     0 OBJECT  LOCAL  DEFAULT    3 __FRAME_END__
-   293: 00000000     0 FILE    LOCAL  DEFAULT  ABS locale.c
-   294: 00000000     0 FILE    LOCAL  DEFAULT  ABS reent.c
-   295: 00000000     0 FILE    LOCAL  DEFAULT  ABS errno.c
-   296: 00000000     0 FILE    LOCAL  DEFAULT  ABS 
-   297: 000103b8     0 NOTYPE  LOCAL  DEFAULT    7 __fini_array_end
-   298: 000103ac     0 NOTYPE  LOCAL  DEFAULT    5 __tbss_start
-   299: 000103b4     0 NOTYPE  LOCAL  DEFAULT    7 __fini_array_start
-   300: 000103a0     0 NOTYPE  LOCAL  DEFAULT    4 __tdata_start
-   301: 000103ac     0 NOTYPE  LOCAL  DEFAULT    4 __tdata_end
-   302: 000103b4     0 NOTYPE  LOCAL  DEFAULT    6 __init_array_end
-   303: 000103ac     0 NOTYPE  LOCAL  DEFAULT    5 __preinit_array_end
-   304: 000103c8     0 NOTYPE  LOCAL  DEFAULT    5 __tbss_end
-   305: 000103ac     0 NOTYPE  LOCAL  DEFAULT    6 __init_array_start
-   306: 000103ac     0 NOTYPE  LOCAL  DEFAULT    5 __preinit_array_start
-   307: 0000b370    52 FUNC    GLOBAL DEFAULT    1 _preempt_enable
-   308: 0000d1d0   248 FUNC    GLOBAL DEFAULT    1 _thread_schedone
-   309: 00009868    76 FUNC    GLOBAL DEFAULT    1 _isatty_r
-   310: 0000ac30     8 FUNC    WEAK   DEFAULT    1 _getpid
-   311: 0000268c   420 FUNC    GLOBAL DEFAULT    1 _puts_r
-   312: 00002ca4    84 FUNC    GLOBAL DEFAULT    1 _lseek_r
-   313: 0000d708     4 FUNC    WEAK   DEFAULT    1 __trap_exc_ecall_s
-   314: 0000e584   124 FUNC    GLOBAL HIDDEN     1 __eqdf2
-   315: 0000bc28   988 FUNC    GLOBAL DEFAULT    1 __init_multithreading
-   316: 0000abb0    80 FUNC    GLOBAL DEFAULT    1 _kill_r
-   317: 00000050     4 TLS     GLOBAL DEFAULT    4 _tls_stderr
-   318: 0000c7bc    64 FUNC    GLOBAL DEFAULT    1 _thread_sched
-   319: 00002644    72 FUNC    GLOBAL DEFAULT    1 printf
-   320: 00011170     0 NOTYPE  GLOBAL DEFAULT  ABS __global_pointer$
-   321: 00010ce4    24 OBJECT  GLOBAL DEFAULT   10 __lock___atexit_[...]
-   322: 00002920   100 FUNC    GLOBAL DEFAULT    1 __sseek
-   323: 00002524    92 FUNC    GLOBAL DEFAULT    1 __sinit
-   324: 0000d704     4 FUNC    WEAK   DEFAULT    1 __trap_exc_ecall_u
-   325: 0000298c   280 FUNC    GLOBAL DEFAULT    1 __swbuf_r
-   326: 00001bb0   928 FUNC    GLOBAL DEFAULT    1 thrd_fn
-   327: 0000ba18   528 FUNC    GLOBAL DEFAULT    1 __trap_irq
-   328: 0000ade4    28 FUNC    GLOBAL DEFAULT    1 __malloc_unlock
-   329: 0000cefc   680 FUNC    GLOBAL DEFAULT    1 _mutex_lock
-   330: 000109a8    24 OBJECT  GLOBAL DEFAULT   10 timer0
-   331: 00006058   188 FUNC    GLOBAL DEFAULT    1 _Balloc
-   332: 000130c0    44 OBJECT  GLOBAL DEFAULT   11 tsttSem
-   333: 0000e600   212 FUNC    GLOBAL HIDDEN     1 __gtdf2
-   334: 000103d0     4 OBJECT  GLOBAL DEFAULT    8 __atexit_recursi[...]
-   335: 0000d70c     4 FUNC    WEAK   DEFAULT    1 __trap_exc_insn_[...]
-   336: 00010cc8     4 OBJECT  WEAK   DEFAULT   10 _stdin_echo
-   337: 00010af8     4 OBJECT  GLOBAL DEFAULT   10 __stdio_exit_handler
-   338: 00009818    80 FUNC    GLOBAL DEFAULT    1 _fstat_r
-   339: 00010afc     4 OBJECT  GLOBAL DEFAULT   10 errno
-   340: 0000d6e8     4 FUNC    WEAK   DEFAULT    1 __trap_exc_insn_[...]
-   341: 000110c0  8192 OBJECT  GLOBAL DEFAULT   10 __trap_stacks
-   342: 00010970     0 NOTYPE  GLOBAL DEFAULT    8 __SDATA_BEGIN__
-   343: 0000b3b8   400 FUNC    GLOBAL DEFAULT    1 _timer_arm
-   344: 00011070     4 OBJECT  GLOBAL DEFAULT   10 __ncpu
-   345: 00003034  1504 FUNC    GLOBAL DEFAULT    1 memcpy
-   346: 0000f5b0   160 FUNC    GLOBAL HIDDEN     1 __floatsidf
-   347: 0000e6d4   212 FUNC    GLOBAL HIDDEN     1 __ltdf2
-   348: 0000d6f0     4 FUNC    WEAK   DEFAULT    1 __trap_exc_break
-   349: 00002830    12 FUNC    GLOBAL DEFAULT    1 puts
-   350: 0000d71c    12 FUNC    GLOBAL DEFAULT    1 malloc
-   351: 0000ac20    16 FUNC    WEAK   DEFAULT    1 _fstat
-   352: 00009ab8    76 FUNC    GLOBAL DEFAULT    1 __assert_func
-   353: 0000fe38   200 OBJECT  GLOBAL DEFAULT    2 __mprec_tens
-   354: 0000006c     4 TLS     GLOBAL DEFAULT    5 _tls_mp_p5s
-   355: 00010cc4     4 OBJECT  GLOBAL DEFAULT   10 __malloc_top_pad
-   356: 0000ac00     4 FUNC    GLOBAL DEFAULT    1 _getpid_r
-   357: 00010960     4 OBJECT  WEAK   DEFAULT    8 _write_tbl
-   358: 0000980c    12 FUNC    GLOBAL DEFAULT    1 _localeconv_r
-   359: 000063b4   208 FUNC    GLOBAL DEFAULT    1 __i2b
-   360: 0000c004    64 FUNC    GLOBAL DEFAULT    1 __init_secondary_cpu
-   361: 000098b4    76 FUNC    GLOBAL DEFAULT    1 _sbrk_r
-   362: 00002cf8    84 FUNC    GLOBAL DEFAULT    1 _read_r
-   363: 00009054   356 FUNC    GLOBAL DEFAULT    1 _fclose_r
-   364: 00010cc0     4 OBJECT  GLOBAL DEFAULT   10 __malloc_max_sbr[...]
-   365: 0000d734  1868 FUNC    GLOBAL HIDDEN     1 __adddf3
-   366: 00000068     4 TLS     GLOBAL DEFAULT    5 _tls_mp_result
-   367: 0000ac38    64 FUNC    GLOBAL DEFAULT    1 _isatty
-   368: 00002da0   148 FUNC    GLOBAL DEFAULT    1 __libc_init_array
-   369: 00001f50   964 FUNC    GLOBAL HIDDEN     1 __udivdi3
-   370: 0000fe10    40 OBJECT  GLOBAL DEFAULT    2 __mprec_bigtens
-   371: 0000aa60    24 FUNC    GLOBAL DEFAULT    1 abort
-   372: 0000f650   124 FUNC    GLOBAL HIDDEN     1 __floatunsidf
-   373: 0000ad18    64 FUNC    WEAK   DEFAULT    1 _sbrk
-   374: 00006b40    88 FUNC    GLOBAL DEFAULT    1 __mcmp
-   375: 00000064     4 TLS     GLOBAL DEFAULT    5 _tls_mp_result_k
-   376: 00000060     4 TLS     GLOBAL DEFAULT    5 _tls_errno
-   377: 00002e34    92 FUNC    GLOBAL DEFAULT    1 __libc_fini_array
-   378: 0000c044   356 FUNC    GLOBAL DEFAULT    1 _thread_create
-   379: 0000d714     4 FUNC    WEAK   DEFAULT    1 __trap_exc_store[...]
-   380: 00006320   148 FUNC    GLOBAL DEFAULT    1 __hi0bits
-   381: 0000f534   124 FUNC    GLOBAL HIDDEN     1 __fixdfsi
-   382: 00010ccc    24 OBJECT  GLOBAL DEFAULT   10 __lock___malloc_[...]
-   383: 0000d2c8  1052 FUNC    GLOBAL DEFAULT    1 _fifo_get
-   384: 000109c0   312 OBJECT  GLOBAL DEFAULT   10 __sf
-   385: 000094bc   204 FUNC    GLOBAL DEFAULT    1 _fputc_r
-   386: 00009704   264 FUNC    GLOBAL DEFAULT    1 _putc_r
-   387: 0000b0bc   656 FUNC    GLOBAL DEFAULT    1 __trap_exc_ecall_m
-   388: 0000e6d4   212 FUNC    GLOBAL HIDDEN     1 __ledf2
-   389: 00006758   444 FUNC    GLOBAL DEFAULT    1 __pow5mult
-   390: 00000054     4 TLS     GLOBAL DEFAULT    4 _tls_stdout
-   391: 0000ae8c     4 FUNC    GLOBAL DEFAULT    1 __retarget_lock_[...]
-   392: 0000fa18    76 FUNC    GLOBAL HIDDEN     1 __clzsi2
-   393: 00008fbc   152 FUNC    GLOBAL DEFAULT    1 __sfputs_r
-   394: 00002580     8 FUNC    GLOBAL DEFAULT    1 __sfp_lock_acquire
-   395: 0000998c   300 FUNC    GLOBAL DEFAULT    1 memchr
-   396: 0000b3a4    20 FUNC    GLOBAL DEFAULT    1 _clkcycles
-   397: 000054fc   748 FUNC    GLOBAL DEFAULT    1 _free_r
-   398: 000036f4   568 FUNC    GLOBAL DEFAULT    1 __call_exitprocs
-   399: 00010b00   400 OBJECT  GLOBAL DEFAULT   10 __atexit0
-   400: 000103d4     4 OBJECT  GLOBAL DEFAULT    8 __malloc_sbrk_base
-   401: 00001000   388 FUNC    GLOBAL DEFAULT    1 _start
-   402: 0000ac88    16 FUNC    WEAK   DEFAULT    1 _lseek
-   403: 00006914   556 FUNC    GLOBAL DEFAULT    1 __lshift
-   404: 00003614   224 FUNC    GLOBAL DEFAULT    1 __register_exitproc
-   405: 0000d1a4    44 FUNC    GLOBAL DEFAULT    1 _mutex_lock_recursive
-   406: 00006484   724 FUNC    GLOBAL DEFAULT    1 __multiply
-   407: 00010c94    40 OBJECT  GLOBAL DEFAULT   10 __malloc_current[...]
-   408: 00006ec4  1088 FUNC    GLOBAL DEFAULT    1 __d2b
-   409: 0000c5ec   464 FUNC    GLOBAL DEFAULT    1 _mutex_unlock_re[...]
-   410: 0000d6fc     4 FUNC    WEAK   DEFAULT    1 __trap_exc_store[...]
-   411: 00002c58    76 FUNC    GLOBAL DEFAULT    1 _close_r
-   412: 00000058     4 TLS     GLOBAL DEFAULT    4 _tls_stdin
-   413: 0000c7fc   448 FUNC    GLOBAL DEFAULT    1 _thread_stop
-   414: 0000ae54     4 FUNC    GLOBAL DEFAULT    1 __retarget_lock_[...]
-   415: 00002aa4   436 FUNC    GLOBAL DEFAULT    1 __swsetup_r
-   416: 0000de80  1796 FUNC    GLOBAL HIDDEN     1 __divdf3
-   417: 00010954     4 OBJECT  WEAK   DEFAULT    8 _read_tbl
-   418: 000130ec     0 NOTYPE  GLOBAL DEFAULT   11 __BSS_END__
-   419: 000103dc  1032 OBJECT  GLOBAL DEFAULT    8 __malloc_av_
-   420: 00010c90     4 OBJECT  GLOBAL DEFAULT   10 __atexit
-   421: 0000e7a8  1512 FUNC    GLOBAL HIDDEN     1 __muldf3
-   422: 0000283c    92 FUNC    GLOBAL DEFAULT    1 __sread
-   423: 0001095c     4 OBJECT  WEAK   DEFAULT    8 _write_tblcnt
-   424: 00000000    80 TLS     GLOBAL DEFAULT    4 __thread_cur
-   425: 0000adc8    28 FUNC    GLOBAL DEFAULT    1 __malloc_lock
-   426: 000093fc   192 FUNC    GLOBAL DEFAULT    1 _fflush_r
-   427: 00009b04   200 FUNC    GLOBAL DEFAULT    1 _calloc_r
-   428: 000103bc     4 NOTYPE  GLOBAL DEFAULT    8 __heap_ptr
-   429: 0000ae58    52 FUNC    GLOBAL DEFAULT    1 __retarget_lock_[...]
-   430: 00010970     0 NOTYPE  GLOBAL DEFAULT   10 __bss_start
-   431: 00002e90   420 FUNC    GLOBAL DEFAULT    1 memset
-   432: 000011b0  1080 FUNC    GLOBAL DEFAULT    1 main
-   433: 00010cbc     4 OBJECT  GLOBAL DEFAULT   10 __malloc_max_tot[...]
-   434: 0000ae00    84 FUNC    GLOBAL DEFAULT    1 __retarget_lock_[...]
-   435: 0000c1a8   728 FUNC    GLOBAL DEFAULT    1 _thread_schedoncpu
-   436: 0000c9bc   416 FUNC    GLOBAL DEFAULT    1 _thread_exit
-   437: 00002984     8 FUNC    GLOBAL DEFAULT    1 __sclose
-   438: 00003b14  6336 FUNC    GLOBAL DEFAULT    1 _dtoa_r
-   439: 000057e8  2160 FUNC    GLOBAL DEFAULT    1 _malloc_r
-   440: 0000aae0    48 FUNC    GLOBAL DEFAULT    1 __ascii_wctomb
-   441: 00010950     4 OBJECT  WEAK   DEFAULT    8 _read_tblcnt
-   442: 000103b8     4 NOTYPE  GLOBAL DEFAULT    8 __rst_flg
-   443: 000053d4   296 FUNC    GLOBAL DEFAULT    1 _malloc_trim_r
-   444: 0000d6f8     4 FUNC    WEAK   DEFAULT    1 __trap_exc_load_[...]
-   445: 00000070     4 TLS     GLOBAL DEFAULT    5 _tls_mp_freelist
-   446: 000103c0     4 NOTYPE  GLOBAL DEFAULT    8 __heap_end
-   447: 0000005c     4 TLS     GLOBAL DEFAULT    5 _tls_cleanup
-   448: 0000e584   124 FUNC    GLOBAL HIDDEN     1 __nedf2
-   449: 0000fcb0   256 OBJECT  GLOBAL HIDDEN     2 __clz_tab
-   450: 00000074     4 TLS     GLOBAL DEFAULT    5 _tls_sig_func
-   451: 0000b7b4     8 FUNC    GLOBAL DEFAULT    1 __ipi_preempt
-   452: 00002314    20 FUNC    GLOBAL DEFAULT    1 atexit
-   453: 00002d4c    84 FUNC    GLOBAL DEFAULT    1 _write_r
-   454: 0000d710     4 FUNC    WEAK   DEFAULT    1 __trap_exc_load_[...]
-   455: 0000cbbc   832 FUNC    GLOBAL DEFAULT    1 _thread_sleeponw[...]
-   456: 000091b8   580 FUNC    GLOBAL DEFAULT    1 __sflush_r
-   457: 00002590   180 FUNC    GLOBAL DEFAULT    1 _fwalk_sglue
-   458: 0000aa78   104 FUNC    GLOBAL DEFAULT    1 __ascii_mbtowc
-   459: 00010990    24 OBJECT  GLOBAL DEFAULT   10 timer1
-   460: 000103b8     0 NOTYPE  GLOBAL DEFAULT    8 __DATA_BEGIN__
-   461: 000103c4    12 OBJECT  GLOBAL DEFAULT    8 __sglue
-   462: 0000d6ec     4 FUNC    WEAK   DEFAULT    1 __trap_exc_insn_[...]
-   463: 0000ad84    68 FUNC    WEAK   DEFAULT    1 _write
-   464: 0000cb5c    96 FUNC    GLOBAL DEFAULT    1 _thread_dispose
-   465: 00010970     0 NOTYPE  GLOBAL DEFAULT    8 _edata
-   466: 000130ec     0 NOTYPE  GLOBAL DEFAULT   11 _end
-   467: 0000b34c    36 FUNC    GLOBAL DEFAULT    1 _preempt_disable
-   468: 00002898   136 FUNC    GLOBAL DEFAULT    1 __swrite
-   469: 000103d8     4 OBJECT  GLOBAL DEFAULT    8 __malloc_trim_th[...]
-   470: 00001184    44 FUNC    GLOBAL DEFAULT    1 exit
-   471: 00009bcc    76 FUNC    GLOBAL DEFAULT    1 fiprintf
-   472: 00009c18  3656 FUNC    GLOBAL DEFAULT    1 _vfiprintf_r
-   473: 00006b98   812 FUNC    GLOBAL DEFAULT    1 __mdiff
-   474: 0000ac78    16 FUNC    WEAK   DEFAULT    1 _kill
-   475: 0000d6e4     4 FUNC    WEAK   DEFAULT    1 __trap_exc_insn_[...]
-   476: 00002588     8 FUNC    GLOBAL DEFAULT    1 __sfp_lock_release
-   477: 00010208   257 OBJECT  GLOBAL DEFAULT    2 _ctype_
-   478: 0000acd4    68 FUNC    WEAK   DEFAULT    1 _read
-   479: 0000f4ec    72 FUNC    GLOBAL HIDDEN     1 __unorddf2
-   480: 00001988   276 FUNC    GLOBAL DEFAULT    1 timer0_cb
-   481: 0000ac14    12 FUNC    WEAK   DEFAULT    1 _exit
-   482: 00009588   380 FUNC    GLOBAL DEFAULT    1 __smakebuf_r
-   483: 00009900   140 FUNC    GLOBAL DEFAULT    1 strlen
-   484: 0000e600   212 FUNC    GLOBAL HIDDEN     1 __gedf2
-   485: 00010d58    16 OBJECT  GLOBAL DEFAULT   10 __ipi
-   486: 0000d700     4 FUNC    WEAK   DEFAULT    1 __trap_exc_store[...]
-   487: 00001800   284 FUNC    GLOBAL DEFAULT    1 __switchctx
-   488: 0000d6f4     4 FUNC    WEAK   DEFAULT    1 __trap_exc_load_[...]
-   489: 0000ed90  1884 FUNC    GLOBAL HIDDEN     1 __subdf3
-   490: 00007304  7352 FUNC    GLOBAL DEFAULT    1 _vfprintf_r
-   491: 00001600   512 FUNC    GLOBAL DEFAULT    1 __trap
-   492: 00001a9c   276 FUNC    GLOBAL DEFAULT    1 timer1_cb
-   493: 0000d718     4 FUNC    WEAK   DEFAULT    1 __trap_exc_inv
-   494: 000107e4   364 OBJECT  GLOBAL DEFAULT    8 __global_locale
-   495: 0000f6cc   844 FUNC    GLOBAL HIDDEN     1 __trunctfdf2
-   496: 00010cfc    24 OBJECT  GLOBAL DEFAULT   10 __lock___sfp_rec[...]
-   497: 0000ab10   160 FUNC    GLOBAL DEFAULT    1 raise
-   498: 0000ac04    16 FUNC    WEAK   DEFAULT    1 _close
-   499: 0000d728    12 FUNC    GLOBAL DEFAULT    1 free
-   500: 00006138   488 FUNC    GLOBAL DEFAULT    1 __multadd
-   501: 00006114    36 FUNC    GLOBAL DEFAULT    1 _Bfree
+   202: 0000af28     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   203: 0000af28   108 FUNC    LOCAL  DEFAULT    1 __printdec
+   204: 0000af94     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   205: 0000af94    36 FUNC    LOCAL  DEFAULT    1 __printstr
+   206: 0000afb8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   207: 0000afb8    28 FUNC    LOCAL  DEFAULT    1 __halt
+   208: 0000afd4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   209: 0000afd4   200 FUNC    LOCAL  DEFAULT    1 get.2
+   210: 0000b09c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   211: 0000b09c   212 FUNC    LOCAL  DEFAULT    1 _timer_disarm.part.0
+   212: 0001140c    64 OBJECT  LOCAL  DEFAULT   10 __timer_list
+   213: 0000b170     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   214: 0000b2d4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   215: 0000b2f8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   216: 0000b32c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   217: 0000b340     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   218: 0000b4d0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   219: 0000b4d0   612 FUNC    LOCAL  DEFAULT    1 __thread_cur_preempt
+   220: 000110f8   768 OBJECT  LOCAL  DEFAULT   10 __runq
+   221: 000110f0     4 OBJECT  LOCAL  DEFAULT   10 schedlrhz
+   222: 0000b734     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   223: 0000b734     8 FUNC    LOCAL  DEFAULT    1 __timeslice_preempt
+   224: 0000b73c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   225: 0000b744     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   226: 0000b744   604 FUNC    LOCAL  DEFAULT    1 __thread_wakeup
+   227: 00011404     8 OBJECT  LOCAL  DEFAULT   10 __irqs
+   228: 0000b9a0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   229: 0000bc2c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   230: 0000bc2c     8 FUNC    LOCAL  DEFAULT    1 __dfltdev_irq
+   231: 0000bc34     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   232: 00011400     4 OBJECT  LOCAL  DEFAULT   10 irqctrl_lock
+   233: 0000be10     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   234: 0000be40     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   235: 00010ce8    16 OBJECT  LOCAL  DEFAULT    8 __dfltdev
+   236: 0000c370     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   237: 0000c3b0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   238: 0000c514     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   239: 0000c7ec     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   240: 0000c7ec   364 FUNC    LOCAL  DEFAULT    1 _thread_sched.part.0
+   241: 000110dc     4 OBJECT  LOCAL  DEFAULT   10 lock.5
+   242: 0001109c    64 OBJECT  LOCAL  DEFAULT   10 pnd.4
+   243: 0000c958     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   244: 0000cb28     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   245: 0000cb68     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   246: 0000cd28     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   247: 0000cec8     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   248: 0000cf28     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   249: 0000d268     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   250: 0000d510     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   251: 0000d53c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   252: 0000d634     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   253: 0000da50     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   254: 0000da54     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   255: 0000da58     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   256: 0000da5c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   257: 0000da60     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   258: 0000da64     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   259: 0000da68     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   260: 0000da6c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   261: 0000da70     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   262: 0000da74     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   263: 0000da78     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   264: 0000da7c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   265: 0000da80     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   266: 0000da84     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   267: 0000da88     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   268: 00000000     0 FILE    LOCAL  DEFAULT  ABS malloc.c
+   269: 0000da8c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   270: 0000da98     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   271: 00000000     0 FILE    LOCAL  DEFAULT  ABS adddf3.c
+   272: 0000daa4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   273: 00000000     0 FILE    LOCAL  DEFAULT  ABS divdf3.c
+   274: 0000e1f0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   275: 00000000     0 FILE    LOCAL  DEFAULT  ABS eqdf2.c
+   276: 0000e8f4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   277: 00000000     0 FILE    LOCAL  DEFAULT  ABS gedf2.c
+   278: 0000e970     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   279: 00000000     0 FILE    LOCAL  DEFAULT  ABS ledf2.c
+   280: 0000ea44     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   281: 00000000     0 FILE    LOCAL  DEFAULT  ABS muldf3.c
+   282: 0000eb18     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   283: 00000000     0 FILE    LOCAL  DEFAULT  ABS subdf3.c
+   284: 0000f100     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   285: 00000000     0 FILE    LOCAL  DEFAULT  ABS unorddf2.c
+   286: 0000f85c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   287: 00000000     0 FILE    LOCAL  DEFAULT  ABS fixdfsi.c
+   288: 0000f8a4     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   289: 00000000     0 FILE    LOCAL  DEFAULT  ABS floatsidf.c
+   290: 0000f920     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   291: 00000000     0 FILE    LOCAL  DEFAULT  ABS floatunsidf.c
+   292: 0000f9c0     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   293: 00000000     0 FILE    LOCAL  DEFAULT  ABS trunctfdf2.c
+   294: 0000fa3c     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   295: 00000000     0 FILE    LOCAL  DEFAULT  ABS libgcc2.c
+   296: 0000fd88     0 NOTYPE  LOCAL  DEFAULT    1 $xrv32i2p1_m2p0_[...]
+   297: 00000000     0 FILE    LOCAL  DEFAULT  ABS libgcc2.c
+   298: 00000000     0 FILE    LOCAL  DEFAULT  ABS ctype_.c
+   299: 00000000     0 FILE    LOCAL  DEFAULT  ABS crtstuff.c
+   300: 000106c4     0 OBJECT  LOCAL  DEFAULT    3 __FRAME_END__
+   301: 00000000     0 FILE    LOCAL  DEFAULT  ABS locale.c
+   302: 00000000     0 FILE    LOCAL  DEFAULT  ABS reent.c
+   303: 00000000     0 FILE    LOCAL  DEFAULT  ABS errno.c
+   304: 00000000     0 FILE    LOCAL  DEFAULT  ABS 
+   305: 00010730     0 NOTYPE  LOCAL  DEFAULT    7 __fini_array_end
+   306: 00010724     0 NOTYPE  LOCAL  DEFAULT    5 __tbss_start
+   307: 0001072c     0 NOTYPE  LOCAL  DEFAULT    7 __fini_array_start
+   308: 00010718     0 NOTYPE  LOCAL  DEFAULT    4 __tdata_start
+   309: 00010724     0 NOTYPE  LOCAL  DEFAULT    4 __tdata_end
+   310: 0001072c     0 NOTYPE  LOCAL  DEFAULT    6 __init_array_end
+   311: 00010724     0 NOTYPE  LOCAL  DEFAULT    5 __preinit_array_end
+   312: 00010740     0 NOTYPE  LOCAL  DEFAULT    5 __tbss_end
+   313: 00010724     0 NOTYPE  LOCAL  DEFAULT    6 __init_array_start
+   314: 00010724     0 NOTYPE  LOCAL  DEFAULT    5 __preinit_array_start
+   315: 0000b2f8    52 FUNC    GLOBAL DEFAULT    1 _preempt_enable
+   316: 0000d53c   248 FUNC    GLOBAL DEFAULT    1 _thread_schedone
+   317: 00009900    76 FUNC    GLOBAL DEFAULT    1 _isatty_r
+   318: 0000acc8     8 FUNC    WEAK   DEFAULT    1 _getpid
+   319: 00002760   420 FUNC    GLOBAL DEFAULT    1 _puts_r
+   320: 00002d78    84 FUNC    GLOBAL DEFAULT    1 _lseek_r
+   321: 0000da74     4 FUNC    WEAK   DEFAULT    1 __trap_exc_ecall_s
+   322: 0000e8f4   124 FUNC    GLOBAL HIDDEN     1 __eqdf2
+   323: 0000be40  1328 FUNC    GLOBAL DEFAULT    1 __init_multithreading
+   324: 0000ac48    80 FUNC    GLOBAL DEFAULT    1 _kill_r
+   325: 00000050     4 TLS     GLOBAL DEFAULT    4 _tls_stderr
+   326: 0000cb28    64 FUNC    GLOBAL DEFAULT    1 _thread_sched
+   327: 00002718    72 FUNC    GLOBAL DEFAULT    1 printf
+   328: 000114f8     0 NOTYPE  GLOBAL DEFAULT  ABS __global_pointer$
+   329: 0001106c    24 OBJECT  GLOBAL DEFAULT   10 __lock___atexit_[...]
+   330: 000029f4   100 FUNC    GLOBAL DEFAULT    1 __sseek
+   331: 000025f8    92 FUNC    GLOBAL DEFAULT    1 __sinit
+   332: 0000da70     4 FUNC    WEAK   DEFAULT    1 __trap_exc_ecall_u
+   333: 00002a60   280 FUNC    GLOBAL DEFAULT    1 __swbuf_r
+   334: 00001c84   928 FUNC    GLOBAL DEFAULT    1 thrd_fn
+   335: 0000bc34   476 FUNC    GLOBAL DEFAULT    1 __trap_irq
+   336: 0000ae7c    28 FUNC    GLOBAL DEFAULT    1 __malloc_unlock
+   337: 0000d268   680 FUNC    GLOBAL DEFAULT    1 _mutex_lock
+   338: 00010d30    24 OBJECT  GLOBAL DEFAULT   10 timer0
+   339: 0000be10    48 FUNC    GLOBAL DEFAULT    1 _sysreset
+   340: 000060f0   188 FUNC    GLOBAL DEFAULT    1 _Balloc
+   341: 0001344c    44 OBJECT  GLOBAL DEFAULT   11 tsttSem
+   342: 0000e970   212 FUNC    GLOBAL HIDDEN     1 __gtdf2
+   343: 00010748     4 OBJECT  GLOBAL DEFAULT    8 __atexit_recursi[...]
+   344: 0000da78     4 FUNC    WEAK   DEFAULT    1 __trap_exc_insn_[...]
+   345: 00011050     4 OBJECT  WEAK   DEFAULT   10 _stdin_echo
+   346: 00010e80     4 OBJECT  GLOBAL DEFAULT   10 __stdio_exit_handler
+   347: 000098b0    80 FUNC    GLOBAL DEFAULT    1 _fstat_r
+   348: 00010e84     4 OBJECT  GLOBAL DEFAULT   10 errno
+   349: 0000da54     4 FUNC    WEAK   DEFAULT    1 __trap_exc_insn_[...]
+   350: 0001144c  8192 OBJECT  GLOBAL DEFAULT   10 __trap_stacks
+   351: 00010cf8     0 NOTYPE  GLOBAL DEFAULT    8 __SDATA_BEGIN__
+   352: 0000b340   400 FUNC    GLOBAL DEFAULT    1 _timer_arm
+   353: 000113fc     4 OBJECT  GLOBAL DEFAULT   10 __ncpu
+   354: 000011f4    12 FUNC    GLOBAL DEFAULT    1 __oops_ram
+   355: 00003108  1504 FUNC    GLOBAL DEFAULT    1 memcpy
+   356: 0000f920   160 FUNC    GLOBAL HIDDEN     1 __floatsidf
+   357: 0000ea44   212 FUNC    GLOBAL HIDDEN     1 __ltdf2
+   358: 0000da5c     4 FUNC    WEAK   DEFAULT    1 __trap_exc_break
+   359: 00002904    12 FUNC    GLOBAL DEFAULT    1 puts
+   360: 0000da8c    12 FUNC    GLOBAL DEFAULT    1 malloc
+   361: 0000acb8    16 FUNC    WEAK   DEFAULT    1 _fstat
+   362: 00009b50    76 FUNC    GLOBAL DEFAULT    1 __assert_func
+   363: 000101b0   200 OBJECT  GLOBAL DEFAULT    2 __mprec_tens
+   364: 0000006c     4 TLS     GLOBAL DEFAULT    5 _tls_mp_p5s
+   365: 0001104c     4 OBJECT  GLOBAL DEFAULT   10 __malloc_top_pad
+   366: 0000ac98     4 FUNC    GLOBAL DEFAULT    1 _getpid_r
+   367: 00010cd8     4 OBJECT  WEAK   DEFAULT    8 _write_tbl
+   368: 000098a4    12 FUNC    GLOBAL DEFAULT    1 _localeconv_r
+   369: 0000644c   208 FUNC    GLOBAL DEFAULT    1 __i2b
+   370: 0000c370    64 FUNC    GLOBAL DEFAULT    1 __init_secondary_cpu
+   371: 0000994c    76 FUNC    GLOBAL DEFAULT    1 _sbrk_r
+   372: 00002dcc    84 FUNC    GLOBAL DEFAULT    1 _read_r
+   373: 000090ec   356 FUNC    GLOBAL DEFAULT    1 _fclose_r
+   374: 00011048     4 OBJECT  GLOBAL DEFAULT   10 __malloc_max_sbr[...]
+   375: 0000daa4  1868 FUNC    GLOBAL HIDDEN     1 __adddf3
+   376: 00000068     4 TLS     GLOBAL DEFAULT    5 _tls_mp_result
+   377: 0000acd0    64 FUNC    GLOBAL DEFAULT    1 _isatty
+   378: 00002e74   148 FUNC    GLOBAL DEFAULT    1 __libc_init_array
+   379: 0001344c     0 NOTYPE  GLOBAL DEFAULT   10 __bss_end
+   380: 00002024   964 FUNC    GLOBAL HIDDEN     1 __udivdi3
+   381: 00010188    40 OBJECT  GLOBAL DEFAULT    2 __mprec_bigtens
+   382: 0000aaf8    24 FUNC    GLOBAL DEFAULT    1 abort
+   383: 0000f9c0   124 FUNC    GLOBAL HIDDEN     1 __floatunsidf
+   384: 0000adb0    64 FUNC    WEAK   DEFAULT    1 _sbrk
+   385: 00006bd8    88 FUNC    GLOBAL DEFAULT    1 __mcmp
+   386: 00000064     4 TLS     GLOBAL DEFAULT    5 _tls_mp_result_k
+   387: 00000060     4 TLS     GLOBAL DEFAULT    5 _tls_errno
+   388: 00002f08    92 FUNC    GLOBAL DEFAULT    1 __libc_fini_array
+   389: 0000c3b0   356 FUNC    GLOBAL DEFAULT    1 _thread_create
+   390: 0000da80     4 FUNC    WEAK   DEFAULT    1 __trap_exc_store[...]
+   391: 000063b8   148 FUNC    GLOBAL DEFAULT    1 __hi0bits
+   392: 0000f8a4   124 FUNC    GLOBAL HIDDEN     1 __fixdfsi
+   393: 00011054    24 OBJECT  GLOBAL DEFAULT   10 __lock___malloc_[...]
+   394: 0000d634  1052 FUNC    GLOBAL DEFAULT    1 _fifo_get
+   395: 00010d48   312 OBJECT  GLOBAL DEFAULT   10 __sf
+   396: 00009554   204 FUNC    GLOBAL DEFAULT    1 _fputc_r
+   397: 0000979c   264 FUNC    GLOBAL DEFAULT    1 _putc_r
+   398: 0000b170   356 FUNC    GLOBAL DEFAULT    1 __trap_exc_ecall_m
+   399: 0000ea44   212 FUNC    GLOBAL HIDDEN     1 __ledf2
+   400: 000067f0   444 FUNC    GLOBAL DEFAULT    1 __pow5mult
+   401: 00000054     4 TLS     GLOBAL DEFAULT    4 _tls_stdout
+   402: 0000af24     4 FUNC    GLOBAL DEFAULT    1 __retarget_lock_[...]
+   403: 0000fd88    76 FUNC    GLOBAL HIDDEN     1 __clzsi2
+   404: 00009054   152 FUNC    GLOBAL DEFAULT    1 __sfputs_r
+   405: 00002654     8 FUNC    GLOBAL DEFAULT    1 __sfp_lock_acquire
+   406: 00009a24   300 FUNC    GLOBAL DEFAULT    1 memchr
+   407: 0000b32c    20 FUNC    GLOBAL DEFAULT    1 _clkcycles
+   408: 00005594   748 FUNC    GLOBAL DEFAULT    1 _free_r
+   409: 000037c8   568 FUNC    GLOBAL DEFAULT    1 __call_exitprocs
+   410: 00010e88   400 OBJECT  GLOBAL DEFAULT   10 __atexit0
+   411: 0001074c     4 OBJECT  GLOBAL DEFAULT    8 __malloc_sbrk_base
+   412: 00001000   500 FUNC    GLOBAL DEFAULT    1 _start
+   413: 0000ad20    16 FUNC    WEAK   DEFAULT    1 _lseek
+   414: 000069ac   556 FUNC    GLOBAL DEFAULT    1 __lshift
+   415: 000036e8   224 FUNC    GLOBAL DEFAULT    1 __register_exitproc
+   416: 0000d510    44 FUNC    GLOBAL DEFAULT    1 _mutex_lock_recursive
+   417: 0000651c   724 FUNC    GLOBAL DEFAULT    1 __multiply
+   418: 0001101c    40 OBJECT  GLOBAL DEFAULT   10 __malloc_current[...]
+   419: 00006f5c  1088 FUNC    GLOBAL DEFAULT    1 __d2b
+   420: 0000c958   464 FUNC    GLOBAL DEFAULT    1 _mutex_unlock_re[...]
+   421: 0000da68     4 FUNC    WEAK   DEFAULT    1 __trap_exc_store[...]
+   422: 00002d2c    76 FUNC    GLOBAL DEFAULT    1 _close_r
+   423: 00000058     4 TLS     GLOBAL DEFAULT    4 _tls_stdin
+   424: 0000cb68   448 FUNC    GLOBAL DEFAULT    1 _thread_stop
+   425: 0000aeec     4 FUNC    GLOBAL DEFAULT    1 __retarget_lock_[...]
+   426: 00002b78   436 FUNC    GLOBAL DEFAULT    1 __swsetup_r
+   427: 0000e1f0  1796 FUNC    GLOBAL HIDDEN     1 __divdf3
+   428: 00010ccc     4 OBJECT  WEAK   DEFAULT    8 _read_tbl
+   429: 00013478     0 NOTYPE  GLOBAL DEFAULT   11 __BSS_END__
+   430: 00010754  1032 OBJECT  GLOBAL DEFAULT    8 __malloc_av_
+   431: 00011018     4 OBJECT  GLOBAL DEFAULT   10 __atexit
+   432: 0000da88     4 FUNC    WEAK   DEFAULT    1 __gdbstub_boot
+   433: 0000eb18  1512 FUNC    GLOBAL HIDDEN     1 __muldf3
+   434: 00002910    92 FUNC    GLOBAL DEFAULT    1 __sread
+   435: 00010cd4     4 OBJECT  WEAK   DEFAULT    8 _write_tblcnt
+   436: 00000000    80 TLS     GLOBAL DEFAULT    4 __thread_cur
+   437: 0000ae60    28 FUNC    GLOBAL DEFAULT    1 __malloc_lock
+   438: 00009494   192 FUNC    GLOBAL DEFAULT    1 _fflush_r
+   439: 00009b9c   200 FUNC    GLOBAL DEFAULT    1 _calloc_r
+   440: 00010734     4 NOTYPE  GLOBAL DEFAULT    8 __heap_ptr
+   441: 0000aef0    52 FUNC    GLOBAL DEFAULT    1 __retarget_lock_[...]
+   442: 00010cf8     0 NOTYPE  GLOBAL DEFAULT   10 __bss_start
+   443: 00002f64   420 FUNC    GLOBAL DEFAULT    1 memset
+   444: 00001284  1080 FUNC    GLOBAL DEFAULT    1 main
+   445: 00011044     4 OBJECT  GLOBAL DEFAULT   10 __malloc_max_tot[...]
+   446: 0000ae98    84 FUNC    GLOBAL DEFAULT    1 __retarget_lock_[...]
+   447: 0000c514   728 FUNC    GLOBAL DEFAULT    1 _thread_schedoncpu
+   448: 0000cd28   416 FUNC    GLOBAL DEFAULT    1 _thread_exit
+   449: 00002a58     8 FUNC    GLOBAL DEFAULT    1 __sclose
+   450: 00003be8  6276 FUNC    GLOBAL DEFAULT    1 _dtoa_r
+   451: 00005880  2160 FUNC    GLOBAL DEFAULT    1 _malloc_r
+   452: 0000ab78    48 FUNC    GLOBAL DEFAULT    1 __ascii_wctomb
+   453: 00010cc8     4 OBJECT  WEAK   DEFAULT    8 _read_tblcnt
+   454: 00010730     4 NOTYPE  GLOBAL DEFAULT    8 __rst_flg
+   455: 0000546c   296 FUNC    GLOBAL DEFAULT    1 _malloc_trim_r
+   456: 0000da64     4 FUNC    WEAK   DEFAULT    1 __trap_exc_load_[...]
+   457: 00000070     4 TLS     GLOBAL DEFAULT    5 _tls_mp_freelist
+   458: 00010738     4 NOTYPE  GLOBAL DEFAULT    8 __heap_end
+   459: 0000005c     4 TLS     GLOBAL DEFAULT    5 _tls_cleanup
+   460: 0000e8f4   124 FUNC    GLOBAL HIDDEN     1 __nedf2
+   461: 00010028   256 OBJECT  GLOBAL HIDDEN     2 __clz_tab
+   462: 00000074     4 TLS     GLOBAL DEFAULT    5 _tls_sig_func
+   463: 0000b73c     8 FUNC    GLOBAL DEFAULT    1 __ipi_preempt
+   464: 000023e8    20 FUNC    GLOBAL DEFAULT    1 atexit
+   465: 00002e20    84 FUNC    GLOBAL DEFAULT    1 _write_r
+   466: 0000da7c     4 FUNC    WEAK   DEFAULT    1 __trap_exc_load_[...]
+   467: 0000cf28   832 FUNC    GLOBAL DEFAULT    1 _thread_sleeponw[...]
+   468: 00009250   580 FUNC    GLOBAL DEFAULT    1 __sflush_r
+   469: 00002664   180 FUNC    GLOBAL DEFAULT    1 _fwalk_sglue
+   470: 00001200    88 FUNC    GLOBAL DEFAULT    1 __oops
+   471: 0000ab10   104 FUNC    GLOBAL DEFAULT    1 __ascii_mbtowc
+   472: 00010d18    24 OBJECT  GLOBAL DEFAULT   10 timer1
+   473: 00010730     0 NOTYPE  GLOBAL DEFAULT    8 __DATA_BEGIN__
+   474: 0001073c    12 OBJECT  GLOBAL DEFAULT    8 __sglue
+   475: 0000da58     4 FUNC    WEAK   DEFAULT    1 __trap_exc_insn_[...]
+   476: 0000ae1c    68 FUNC    WEAK   DEFAULT    1 _write
+   477: 0000cec8    96 FUNC    GLOBAL DEFAULT    1 _thread_dispose
+   478: 00010cf8     0 NOTYPE  GLOBAL DEFAULT    8 _edata
+   479: 00013478     0 NOTYPE  GLOBAL DEFAULT   11 _end
+   480: 0000b2d4    36 FUNC    GLOBAL DEFAULT    1 _preempt_disable
+   481: 0000296c   136 FUNC    GLOBAL DEFAULT    1 __swrite
+   482: 00010750     4 OBJECT  GLOBAL DEFAULT    8 __malloc_trim_th[...]
+   483: 00001258    44 FUNC    GLOBAL DEFAULT    1 exit
+   484: 00009c64    76 FUNC    GLOBAL DEFAULT    1 fiprintf
+   485: 00009cb0  3656 FUNC    GLOBAL DEFAULT    1 _vfiprintf_r
+   486: 00006c30   812 FUNC    GLOBAL DEFAULT    1 __mdiff
+   487: 0000ad10    16 FUNC    WEAK   DEFAULT    1 _kill
+   488: 0000da50     4 FUNC    WEAK   DEFAULT    1 __trap_exc_insn_[...]
+   489: 0000265c     8 FUNC    GLOBAL DEFAULT    1 __sfp_lock_release
+   490: 00010580   257 OBJECT  GLOBAL DEFAULT    2 _ctype_
+   491: 0000ad6c    68 FUNC    WEAK   DEFAULT    1 _read
+   492: 0000f85c    72 FUNC    GLOBAL HIDDEN     1 __unorddf2
+   493: 00001a5c   276 FUNC    GLOBAL DEFAULT    1 timer0_cb
+   494: 0000acac    12 FUNC    WEAK   DEFAULT    1 _exit
+   495: 000113f8     4 OBJECT  GLOBAL DEFAULT   10 __ncpu_rendezvous
+   496: 00009620   380 FUNC    GLOBAL DEFAULT    1 __smakebuf_r
+   497: 00009998   140 FUNC    GLOBAL DEFAULT    1 strlen
+   498: 0000e970   212 FUNC    GLOBAL HIDDEN     1 __gedf2
+   499: 0000b9a0   652 FUNC    WEAK   DEFAULT    1 __irq_dfltdev
+   500: 000110e0    16 OBJECT  GLOBAL DEFAULT   10 __ipi
+   501: 0000da6c     4 FUNC    WEAK   DEFAULT    1 __trap_exc_store[...]
+   502: 000018d4   284 FUNC    GLOBAL DEFAULT    1 __switchctx
+   503: 0000da60     4 FUNC    WEAK   DEFAULT    1 __trap_exc_load_[...]
+   504: 0000f100  1884 FUNC    GLOBAL HIDDEN     1 __subdf3
+   505: 0000739c  7352 FUNC    GLOBAL DEFAULT    1 _vfprintf_r
+   506: 000016d4   512 FUNC    GLOBAL DEFAULT    1 __trap
+   507: 00001b70   276 FUNC    GLOBAL DEFAULT    1 timer1_cb
+   508: 0000da84     4 FUNC    WEAK   DEFAULT    1 __trap_exc_inv
+   509: 00010b5c   364 OBJECT  GLOBAL DEFAULT    8 __global_locale
+   510: 0000fa3c   844 FUNC    GLOBAL HIDDEN     1 __trunctfdf2
+   511: 00011084    24 OBJECT  GLOBAL DEFAULT   10 __lock___sfp_rec[...]
+   512: 0000aba8   160 FUNC    GLOBAL DEFAULT    1 raise
+   513: 0000ac9c    16 FUNC    WEAK   DEFAULT    1 _close
+   514: 0000da98    12 FUNC    GLOBAL DEFAULT    1 free
+   515: 000061d0   488 FUNC    GLOBAL DEFAULT    1 __multadd
+   516: 000061ac    36 FUNC    GLOBAL DEFAULT    1 _Bfree
 
 No version information found in this file.
 
