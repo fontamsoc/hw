@@ -406,7 +406,7 @@ Requires **Vivado 2020.2** (the project file declares that version; newer Vivado
 offer to upgrade it).
 
 ```sh
-cd rv32-artya7100/vivado2020
+cd rv32-artya7100/vivado
 vivado artya7100.xpr
 ```
 
@@ -475,7 +475,7 @@ editing the file:
 ```
 
 `SRAM_INITFILE` is resolved by `$readmemh` relative to the synthesis run directory
-(`vivado2020/artya7100.runs/synth_1/`), which is why the default climbs four levels
+(`vivado/artya7100.runs/synth_1/`), which is why the default climbs four levels
 to reach the repository root.
 
 The default image is CoreMark. Any application under [`rv32-sim/apps/`](../rv32-sim/apps)
@@ -510,7 +510,7 @@ for wider `XWORDBITSZ` builds, and this target uses a 32-bit bus.
 | :--- | :--- |
 | `artya7100.sv` | SoC top level: build-time defaults, PLL, reset, core complex, interconnect, peripherals |
 | `artya7100.xdc` | Pin, clock and bitstream constraints |
-| `vivado2020/artya7100.xpr` | Vivado 2020.2 project: one synthesis run, 21 implementation runs, latch-is-an-error rule |
+| `vivado/artya7100.xpr` | Vivado 2020.2 project: one synthesis run, 21 implementation runs, latch-is-an-error rule |
 | `.README.md/block_diagram.svg` | The block diagram above |
 
 Shared sources come from the repository root: [`cpu/`](../cpu) (core complex),
