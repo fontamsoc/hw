@@ -163,6 +163,21 @@ void main (void) {
 		return;
 	}
 
+	// Initialize atomically every word the other hart will update: the boot
+	// zeroed .bss with plain stores, which sit dirty in this hart's dcache, and
+	// an atomic access on a locally cached word writes the cached value back
+	// before its read-modify-write, which would overwrite the other hart's
+	// increment with the stale zero; whether the entry is still cached when
+	// that happens depends on the image layout.
+	_xchg(&failcnt, 0);
+	_xchg(&progress, 0);
+	_xchg(&stopticker, 0);
+	_xchg(&tickerdone, 0);
+	_xchg(&adderdone, 0);
+	_xchg(&sum, 0);
+	for (unsigned i = 0; i < 3; ++i)
+		_xchg(&lockword[i], 0);
+
 	_thread_schedoncpu(_thread_create(0, THREADS_STACKSZ, ticker_fn, 0), 1, true);
 
 	// Baseline, and the control for every case after it: with no load-reserved
