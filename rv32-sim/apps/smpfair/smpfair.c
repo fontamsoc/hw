@@ -82,12 +82,12 @@ void main (void) {
 		return;
 	}
 
-	// Initialize the flag atomically before the other hart touches it: the boot
-	// zeroed .bss with plain stores, which sit dirty in this hart's dcache, and
-	// an atomic access on a locally cached word writes the cached value back
-	// before its read-modify-write, which would overwrite the other hart's
-	// increment with the stale zero; whether the entry is still cached when
-	// that happens depends on the image layout.
+	// Initialize the flag atomically before the other hart touches it; the boot
+	// zeroes .bss with atomic stores, which leaves no copy of it in this hart's
+	// dcache, so this documents the contract rather than enforces it: an atomic
+	// access to a locally cached word writes the cached value back before its
+	// read-modify-write, and a stale zero left by a plain store would overwrite
+	// the other hart's increment.
 	_xchg(&stalling, 0);
 	_thread_schedoncpu(_thread_create(0, THREADS_STACKSZ, staller_fn, 0), 1, true);
 
