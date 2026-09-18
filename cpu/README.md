@@ -114,18 +114,20 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	result is pending retirement; it does not need those conditions to line-up with a
 	particular clock cycle parity, which formerly allowed a two-instruction load spinloop
 	to starve interrupts indefinitely.
-- Atomic memory operations always bypass the data-cache, flushing-and-invalidating any data-cache-hit.
-	They do not participate in the cache-coherency protocol: other harts' cached copies are not
-	invalidated by an atomic write. Software must therefore access an atomically-manipulated
-	variable exclusively through atomic instructions (a plain load can observe a stale value),
-	and initialize it using an atomic instruction (e.g. amoswap of 0) rather than a plain store:
-	the flush of a data-cache-hit writes the cached value back, clean or dirty, before the
-	read-modify-write, so the plain store, which sits in the initializing hart's data-cache,
-	would overwrite an update that another hart made in memory before the initializing hart's
-	first own atomic access; a plain store also leaves memory holding whatever a runtime-allocated
-	chunk held before. underLineOS zeroes .bss and copies .data with atomic accesses at boot, which
-	leaves the rule to memory the boot does not initialize: runtime-allocated memory, .noinit and
-	.persistent.
+- Atomic memory operations always bypass the data-cache: a dirty data-cache-hit is written back
+	before the read-modify-write, a clean one is dropped and the operation reads memory, and either
+	is invalidated. They do not participate in the cache-coherency protocol: other harts' cached
+	copies are not invalidated by an atomic write. Software must therefore access an
+	atomically-manipulated variable exclusively through atomic instructions (a plain load can
+	observe a stale value, and a plain store, which reaches memory only when written back, is not
+	seen by another hart's atomic access even where the cache-coherency protocol has already carried
+	it to that hart's data-cache, as the atomic access drops a clean data-cache-hit and reads memory),
+	and initialize it using an atomic instruction (e.g. amoswap of 0) rather than a plain store: the
+	plain store sits dirty in the initializing hart's data-cache, so its write-back before the
+	initializing hart's first own atomic access would overwrite an update that another hart made in
+	memory meanwhile; a plain store also leaves memory holding whatever a runtime-allocated chunk
+	held before. underLineOS zeroes .bss and copies .data with atomic accesses at boot, which leaves
+	the rule to memory the boot does not initialize: runtime-allocated memory, .noinit and .persistent.
 - Ordinary cached writes do participate, and an atomic memory operation is ordered against the ones
 	its hart already made: dcache.sv holds off the first access of a load-reserved, or of an
 	atomic memory operation's read, until every coherency write this data-cache put on the ring has
@@ -203,7 +205,9 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	Nothing bounds when the releasing access comes, and a store-conditional is allowed to issue no
 	store at all: branched over, which is what gcc emits for a compare-and-swap whose compare
 	fails, its reservation cancelled, or with no store-conditional after the load-reserved. Such an
-	abandoned sequence therefore holds the bus until that hart's next load, store or atomic. A
+	abandoned sequence therefore holds the bus until that hart's next load, store or atomic. That
+	access is forced to miss the data-cache as well, so that it reaches the bus and releases the lock
+	whether or not it hits, a data-cache-hit being invalidated, and written back first when dirty. A
 	retry loop holding a load-reserved and no other data access, ie: `1: lr.w t0,(a0); bnez t0,1b`,
 	issues none and starves the other harts for as long as it spins; use instead the
 	compare-and-swap shape, whose store-conditional is inside the loop. Note that the starvation is
