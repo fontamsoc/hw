@@ -3,7 +3,7 @@
 
 // TODO: Ports description:
 // conly_i: Make cache behave like an sram; no slave memory operation occurs.
-// cmiss_i: Cache-miss to force slave memory operation; any cache-tag-hit gets flushed-and-invalidated.
+// cmiss_i: Cache-miss to force slave memory operation; any cache-hit gets invalidated, a read writing back a dirty one first.
 // coherency_en_i: Enable logic that uses/generates coherency traffic.
 
 /* ### Cache Coherency logic:
@@ -271,13 +271,22 @@ wire [(WORDBITSZ/8) -1 : 0] cache_sel_i = (
 	(state == TSTHIT) ? (cache_sel_i_ & (cmiss_r ? ~m_wb_sel_r : {(WORDBITSZ/8){1'b1}})) :
 	(state == REFILL) ? ((cache_tag_hit ? cache_sel_o_tag_hit : {(WORDBITSZ/8){1'b0}}) | s_wb_sel_o) : {(WORDBITSZ/8){1'b0}});
 
+// Whether the bytes held by a cache-tag-hit are merged over the data from memory at (state == REFILL).
+// They are, but for an access carrying the bus lock, ie: a load-reserved or the read of an atomic
+// memory operation, which hits a clean entry: it may be behind memory, as an atomic memory operation
+// from another hart, which the cache-coherency logic does not carry, may have updated memory since the
+// entry was filled, whereas a dirty entry holds stores this hart made since. The access following a
+// locked one is forced to miss as well, so that it reaches the bus and releases the lock, but it is not
+// atomic, and the entry it hits, ahead of memory when filled from another data-cache, is what a hit returns.
+wire _cache_tag_hit = (cache_tag_hit && (!cmiss_r || !m_wb_lock_r || cache_drt_o[cache_tag_hit_wayidx]));
+
 wire [WORDBITSZ -1 : 0] _m_wb_sel_r;
 wire [WORDBITSZ -1 : 0] _m_wb_sel_r_n = ~_m_wb_sel_r;
 wire [WORDBITSZ -1 : 0] _cache_sel_o_tag_hit;
 wire [WORDBITSZ -1 : 0] _cache_sel_o_tag_hit_n = ~_cache_sel_o_tag_hit;
 wire [WORDBITSZ -1 : 0] _s_wb_dat_i = ((m_wb_dat_r & _m_wb_sel_r) |
-	(s_wb_dat_i & _m_wb_sel_r_n & (cache_tag_hit ? _cache_sel_o_tag_hit_n : {WORDBITSZ{1'b1}})) |
-	(cache_tag_hit ? (cache_dat_o_tag_hit & _cache_sel_o_tag_hit) : {WORDBITSZ{1'b0}}));
+	(s_wb_dat_i & _m_wb_sel_r_n & (_cache_tag_hit ? _cache_sel_o_tag_hit_n : {WORDBITSZ{1'b1}})) |
+	(_cache_tag_hit ? (cache_dat_o_tag_hit & _cache_sel_o_tag_hit) : {WORDBITSZ{1'b0}}));
 wire [WORDBITSZ -1 : 0] cache_dat_i_ = ((m_wb_dat_r & _m_wb_sel_r) | (cache_tag_hit ? (cache_dat_o_tag_hit & _m_wb_sel_r_n) : {WORDBITSZ{1'b0}}));
 wire [WORDBITSZ -1 : 0] cache_dat_i = ((state == TSTHIT) ? cache_dat_i_ : _s_wb_dat_i);
 
@@ -487,8 +496,10 @@ assign m_wb_bsy_o = (coherency_bsy_o_ || __coherency_stb_i || coherency_stb_r ||
 	// used to wait for pending coherency writes to update all other data caches.
 	(coherency_write_pending && m_wb_lock_i && !lock_r));
 
+// A read forced to miss is acknowledged from the cache only on a cache-hit of a dirty entry, which is
+// then written back; a clean one is invalidated and the read is made in memory, ie: acknowledged at REFILL.
 assign m_wb_ack_o = (
-	state == TSTHIT ? (((cache_hit || m_wb_we_r) && !coherency_r) || __coherency_stb_r_r) :
+	state == TSTHIT ? ((((cache_hit && (!cmiss_r || cache_drt_o_we_wayidx)) || m_wb_we_r) && !coherency_r) || __coherency_stb_r_r) :
 	state == REFILL ? (!s_wb_we_o && refill_ack) : 1'b0);
 
 assign m_wb_dat_o = (state == TSTHIT ? (__coherency_stb_r_r ? cache_dat_i_ : cache_dat_o_tag_hit) : _s_wb_dat_i);
@@ -524,8 +535,14 @@ always_ff @(posedge clk_i) begin
 					m_wb_addr_r <= m_wb_addr_r + 1'b1;
 
 			end else if (!coherency_r && (cmiss_r ?
-				(cache_hit && !m_wb_we_r && (m_wb_lock_r || cache_drt_o_we_wayidx)) :
+				(cache_hit && !m_wb_we_r && cache_drt_o_we_wayidx) :
 				(cache_miss && cache_writeb))) begin
+				// A read forced to miss writes back the entry it hits only when dirty. A clean entry may be
+				// behind memory, as an atomic memory operation from another hart, which the cache-coherency
+				// logic does not carry, may have updated memory since it was filled, hence it is only
+				// invalidated, through cache_we2, and the read is made in memory by the REFILL arm below,
+				// carrying the same lock, and acknowledged once from there; the bytes it held are merged
+				// back for an access not carrying the lock, cf. _cache_tag_hit.
 
 				s_wb_stb_o <= 1;
 				s_wb_lock_o <= m_wb_lock_r;
