@@ -53,6 +53,8 @@
 
 `include "dev/sram.sv"
 
+`include "dev/sram_is61wv5128bll.sv"
+
 `include "dev/dfltdev.sv"
 
 module cmoda735 (
@@ -69,6 +71,13 @@ module cmoda735 (
 	,led_red_n
 	,led_green_n
 	,led_blue_n
+
+	// SRAM signals.
+	,sram_ce_o
+	,sram_oe_o
+	,sram_we_o
+	,sram_addr_o
+	,sram_data_io
 );
 
 `include "lib/clog2.sv"
@@ -94,6 +103,13 @@ output wire led_blue_n;
 assign led_red_n = 1'b1;
 assign led_green_n = 1'b1;
 assign led_blue_n = 1'b1;
+
+// SRAM signals.
+output wire             sram_ce_o;
+output wire             sram_oe_o;
+output wire             sram_we_o;
+output wire [19 -1 : 0] sram_addr_o;
+inout  wire [8 -1 : 0]  sram_data_io;
 
 localparam CLKFREQ48MHZ  = 48000000;
 localparam CLKFREQ96MHZ  = 96000000;
@@ -130,23 +146,27 @@ localparam M_WBPI_LAST    = M_WBPI_CPU;
 localparam S_WBPI_IRQCTRL = 0;
 localparam S_WBPI_SERIAL  = (S_WBPI_IRQCTRL + 1);
 localparam S_WBPI_SRAM    = (S_WBPI_SERIAL + 1);
-localparam S_WBPI_DEFAULT = (S_WBPI_SRAM + 1);
+localparam S_WBPI_SRAMEXT = (S_WBPI_SRAM + 1);
+localparam S_WBPI_DEFAULT = (S_WBPI_SRAMEXT + 1);
 
 localparam WBPI_MDEVCOUNT = (M_WBPI_LAST + 1);
 localparam WBPI_SDEVCOUNT = (S_WBPI_DEFAULT + 1);
+
+localparam SRAMEXT_MAPSZ = (512*1024);
 
 localparam [0:(WBPI_SDEVCOUNT*2*32)-1] WBPI_SDEVS = {
 	/* S_WBPI_IRQCTRL */ 32'hf00,  32'(WORDBITSZ/8),
 	/* S_WBPI_SERIAL  */ 32'hf80,  32'(2*(WORDBITSZ/8)),
 	/* S_WBPI_SRAM    */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
+	/* S_WBPI_SRAMEXT */ 32'('h1000+(`SRAM_KBSIZE*1024)), 32'(SRAMEXT_MAPSZ),
 	/* S_WBPI_DEFAULT */ 32'h0,    32'h0};
 
 localparam WBPI_MAXPENDINGACK     = 32;
-localparam WBPI_DNSIZR            = 4'b0011;
+localparam WBPI_DNSIZR            = 5'b00011;
 localparam WBPI_WORDBITSZ         = `XWORDBITSZ;
 localparam WBPI_CLOG2WORDBITSZBY8 = clog2(WBPI_WORDBITSZ/8);
 localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
-localparam WBPI_ADDRLIMIT         = ('h1000+(`SRAM_KBSIZE*1024));
+localparam WBPI_ADDRLIMIT         = ('h1000+(`SRAM_KBSIZE*1024)+SRAMEXT_MAPSZ);
 localparam WBPI_CLKFREQ           = CLKFREQ96MHZ;
 wire wbpi_rst_w = rst_w;
 wire wbpi_clk_w = clk96mhz_w;
@@ -236,7 +256,7 @@ ccx #(
 	,.rstaddr_i  ('h1000)
 	,.rstaddr2_i ('h1000)
 
-	,.spval_i ('h1000+(`SRAM_KBSIZE*1024))
+	,.spval_i ('h1000+(`SRAM_KBSIZE*1024)+SRAMEXT_MAPSZ)
 );
 
 irqctrl #(
@@ -317,6 +337,32 @@ sram #(
 	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SRAM])
 );
 
+sram_is61wv5128bll #(
+	 .WORDBITSZ (WBPI_WORDBITSZ)
+	,.CLKFREQ   (WBPI_CLKFREQ)
+	,.PADDELAY  (12) // ns
+) sramext (
+
+	 .rst_i (wbpi_rst_w)
+
+	,.clk_i (wbpi_clk_w)
+
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_SRAMEXT])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_SRAMEXT])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_SRAMEXT])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_SRAMEXT])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_SRAMEXT])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_SRAMEXT])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SRAMEXT])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SRAMEXT])
+
+	,.sram_ce_o    (sram_ce_o)
+	,.sram_oe_o    (sram_oe_o)
+	,.sram_we_o    (sram_we_o)
+	,.sram_addr_o  (sram_addr_o)
+	,.sram_data_io (sram_data_io)
+);
+
 // Catch invalid physical address space access.
 dfltdev #(
 	 .WORDBITSZ (WBPI_WORDBITSZ)
@@ -347,7 +393,7 @@ generate for (
 	gen_cpu_dcache_miss_w_idx = gen_cpu_dcache_miss_w_idx + 1) begin :gen_cpu_dcache_miss_w
 	wire [(WBPI_WORDBITSZ-WBPI_MSBSZIGN) -1 : 0] addr_w = cpu_dcache_addr_w[(gen_cpu_dcache_miss_w_idx*(WBPI_WORDBITSZ-WBPI_MSBSZIGN))+:(WBPI_WORDBITSZ-WBPI_MSBSZIGN)];
 assign cpu_dcache_miss_w[gen_cpu_dcache_miss_w_idx] = (
-	(addr_w < 'h1000) || (addr_w >= ('h1000+(`SRAM_KBSIZE*1024))));
+	(addr_w < 'h1000) || (addr_w >= ('h1000+(`SRAM_KBSIZE*1024)+SRAMEXT_MAPSZ)));
 end endgenerate
 
 endmodule
