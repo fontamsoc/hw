@@ -206,4 +206,30 @@ always_ff @(posedge clk_i) begin
 		end
 	end
 end
+// A data-cache acknowledgement arriving with no request pending means the data-cache
+// acknowledged an accepted request twice, or one it never accepted: the pending count
+// then wraps below zero and never recovers, as the busy it drives stops every later
+// request, ie: the hart wedges at its next load, store or atomic, and its fence never
+// completes; before that, the surplus acknowledgement retires the next queued load with
+// another load's data. The count is compared before it is updated, hence it is null on
+// exactly the acknowledgement that has no request to match, whether or not a request is
+// accepted in the same clockcycle: an acknowledgement is never presented in the
+// clockcycle its request is accepted, the data-cache acknowledging at the earliest the
+// clockcycle after, and, without a data-cache, every device registering its
+// acknowledgement, which a device acknowledging in the clockcycle it accepts would
+// break, as the skid buffer falls through when empty. Edge-reported and flushed, as the
+// machine wedges right after.
+reg dCacheAckNonePending_r;
+always_ff @(posedge clk_i) begin
+	if (rst_i)
+		dCacheAckNonePending_r <= 1'b0;
+	else begin
+		dCacheAckNonePending_r <= (dCache_m_ack_o && !(|dCache_m_pending_acks));
+		if ((dCache_m_ack_o && !(|dCache_m_pending_acks)) && !dCacheAckNonePending_r) begin
+			$display("pu%0d: error: data-cache acknowledgement with no request pending, iD_pc %h",
+				PUID, iD_pc);
+			$fflush();
+		end
+	end
+end
 `endif
