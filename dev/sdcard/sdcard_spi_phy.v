@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// 20250519 (c) William Fonkou Tambe
+// 20260923 (c) William Fonkou Tambe
 
 `ifndef SDCARD_SPI_PHY_V
 `define SDCARD_SPI_PHY_V
@@ -110,17 +110,16 @@ parameter PHYCLKFREQ = 500000;
 localparam CLOG2CLKFREQ = clog2(CLKFREQ);
 localparam CLOG2PHYCLKFREQ = clog2(PHYCLKFREQ);
 
-localparam SCLKDIVLIMIT = ((PHYCLKFREQ <= 250000) ? 2 : ((PHYCLKFREQ/250000)+|(PHYCLKFREQ%250000)));
+// "spi.sclkdiv_i" is the count of "clk_phy_i" cycles per half-period of
+// "spi.sclk_o", less one; hence each limit below is computed against twice
+// the targeted bitrate. A null "spi.sclkdiv_i" being valid, the result of
+// the ceiling division is always usable, and needs no clamping.
+localparam SCLKDIVLIMIT = ((PHYCLKFREQ/500000)+|(PHYCLKFREQ%500000));
 localparam CLOG2SCLKDIVLIMIT = clog2(SCLKDIVLIMIT);
-// ### Use `<` instead of `<=` if spi.sclkdiv_i can be null.
-localparam SCLKDIV10LIMIT = (
-	(PHYCLKFREQ <= 10000000) ? SCLKDIVLIMIT : ((PHYCLKFREQ/10000000)+|(PHYCLKFREQ%10000000)));
-localparam SCLKDIV20LIMIT = (
-	(PHYCLKFREQ <= 20000000) ? SCLKDIV10LIMIT : ((PHYCLKFREQ/20000000)+|(PHYCLKFREQ%20000000)));
-localparam SCLKDIV25LIMIT = (
-	(PHYCLKFREQ <= 25000000) ? SCLKDIV20LIMIT : ((PHYCLKFREQ/25000000)+|(PHYCLKFREQ%25000000)));
-localparam SCLKDIV50LIMIT = (
-	(PHYCLKFREQ <= 50000000) ? SCLKDIV25LIMIT : ((PHYCLKFREQ/50000000)+|(PHYCLKFREQ%50000000)));
+localparam SCLKDIV10LIMIT = ((PHYCLKFREQ/20000000)+|(PHYCLKFREQ%20000000));
+localparam SCLKDIV20LIMIT = ((PHYCLKFREQ/40000000)+|(PHYCLKFREQ%40000000));
+localparam SCLKDIV25LIMIT = ((PHYCLKFREQ/50000000)+|(PHYCLKFREQ%50000000));
+localparam SCLKDIV50LIMIT = ((PHYCLKFREQ/100000000)+|(PHYCLKFREQ%100000000));
 
 input wire rst_i;
 
@@ -208,11 +207,16 @@ output wire err_o;
 // 	If no error reported, send data packet, and expect data response byte.
 
 // Register used to implement timeout.
-// The largest value that it will be set to, is > than the clock cycle count equivalent of 250ms.
-// Since 250ms is 4 Hz, the number of clock cycles using a clock frequency of CLKFREQ
-// would be CLKFREQ/4; the result of that value would largely be greater than
-// ((spi_master.DATABITSIZE + 1) * (1 << spi_master.SCLKDIVLIMIT))
-// which is the minimum number of clock cycles needed to reset spimaster;
+// It is counted down in the "clk_i" domain, and is set to all ones, which is
+// (1<<CLOG2CLKFREQ)-1 and therefore greater than CLKFREQ, hence a timeout of
+// more than one second; that covers the longest wait the card may impose,
+// which the card spec caps at 250ms for the busy period following a write.
+// This bound is a duration, and is unrelated to the bitrate set through
+// "spi.sclkdiv_i": the minimum number of "clk_phy_i" cycles needed to flush
+// spi_master is (DATABITSZ * 2 * SCLKDIVLIMIT), which at the initialization
+// bitrate is DATABITSZ bit-times, ie 32us for a DATABITSZ of 8, and so is
+// several orders of magnitude below the value above.
+// The separate 250ms reset wait uses CLKFREQ/4 cycles of "clk_i";
 // in fact CLKFREQ must be at least 250 KHz.
 reg [CLOG2CLKFREQ -1 : 0] timeout = 0;
 
@@ -255,7 +259,7 @@ localparam ERROR      = 25; // When in this state, an error occured, and a reset
 localparam STATEBITSZ = clog2(32);
 
 // Register used to hold the state of the controller.
-(* mark_debug = "true" *) reg [STATEBITSZ -1 : 0] state = ERROR;
+reg [STATEBITSZ -1 : 0] state = ERROR;
 reg [STATEBITSZ -1 : 0] nxtstate;
 
 assign err_o = (state == ERROR);
@@ -263,7 +267,7 @@ assign err_o = (state == ERROR);
 wire cs_w;
 
 // Register that hold the value of the input "spi.sclkdiv_i".
-(* mark_debug = "true" *) reg [CLOG2SCLKDIVLIMIT -1 : 0] sclkdiv_r;
+reg [CLOG2SCLKDIVLIMIT -1 : 0] sclkdiv_r;
 
 // Register that hold the value of the input "spi.push_i".
 reg spitxbufferwriteenable;
@@ -305,9 +309,9 @@ spi_master #(
 
 	,.sclkdiv_i (sclkdiv_r)
 
-	,.push_i (spitxbufferwriteenable)
-	,.data_i (spitxbufferdatain)
-	,.full_o (spitxbufferfull)
+	,.write_i (spitxbufferwriteenable)
+	,.data_i  (spitxbufferdatain)
+	,.full_o  (spitxbufferfull)
 
 	,.read_i  (1'b1)
 	,.data_o  (rx_data_o)
@@ -327,16 +331,16 @@ reg miscflag;
 
 // Register set to 1 when the card is found to be SDv2,
 // otherwise it is set to 0.
-(* mark_debug = "true" *) reg issdcardver2;
+reg issdcardver2;
 
 // Register set to 1 when the card is found to be MMC,
 // otherwise it is set to 0.
-(* mark_debug = "true" *) reg issdcardmmc;
+reg issdcardmmc;
 
 
 // Register set to 1 if the card addressing
 // is block aligned, otherwise it is set to 0.
-(* mark_debug = "true" *) reg issdcardaddrblockaligned;
+reg issdcardaddrblockaligned;
 
 // Register which will be used to store the value of the card CSD register.
 reg [128 -1 : 0] sdcardcsd;
@@ -373,8 +377,8 @@ always @* begin
 	else                                sclkdiv_w = (SCLKDIV10LIMIT-1);  // 10 Mbps.
 end
 
-(* mark_debug = "true" *) wire [2 -1 : 0] CSD_format = sdcardcsd[126+:2];
-(* mark_debug = "true" *) wire [8 -1 : 0] CSD_speed = sdcardcsd[96+:8];
+wire [2 -1 : 0] CSD_format = sdcardcsd[126+:2];
+wire [8 -1 : 0] CSD_speed = sdcardcsd[96+:8];
 
 // Register used as the controller counter.
 // The largest value that it will be set to, is greater

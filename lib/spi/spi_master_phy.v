@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// 20250519 (c) William Fonkou Tambe
+// 20260923 (c) William Fonkou Tambe
 
 `ifndef SPI_MASTER_PHY_V
 `define SPI_MASTER_PHY_V
@@ -10,7 +10,7 @@
 //
 // DATABITSZ:
 // 	Number of bits per data to transmit;
-//  it must be greater than 1.
+// 	it must be greater than 1.
 //
 // SCLKDIVLIMIT:
 // 	Limit below which the input "sclkdiv_i" must be set.
@@ -23,9 +23,9 @@
 // clk_i
 // 	Clock signal.
 // 	Its frequency determine the transmission bitrate
-// 	which is computed as follow: (CLKFREQ / (1 << sclkdiv_i)).
+// 	which is computed as follow: (CLKFREQ/(2*(sclkdiv_i+1))).
 // 	For a CLKFREQ of 100 Mhz and a value of 1 on the input "sclkdiv_i",
-// 	it results in a bitrate of 50 Mbps.
+// 	it results in a bitrate of 25 Mbps.
 //
 // sclk_o
 // mosi_o
@@ -34,10 +34,16 @@
 // 	SPI master signals.
 //
 // sclkdiv_i
-// 	This input is used to adjust the bitrate, and must be non-null.
-// 	The resulting bitrate is computed as follow: (CLKFREQ/(sclkdiv_i+1)).
+// 	This input is used to adjust the bitrate; it is the number of clock
+// 	cycles per half-period of the output "sclk_o", less one, and a null
+// 	value is valid.
+// 	The resulting bitrate is computed as follow: (CLKFREQ/(2*(sclkdiv_i+1))).
 // 	For a CLKFREQ of 100 Mhz and a value of 1 on the input "sclkdiv_i",
-// 	it results in a bitrate of 50 Mbps.
+// 	it results in a bitrate of 25 Mbps.
+// 	Each half-period of "sclk_o" lasts (sclkdiv_i+1) clock cycles, hence
+// 	its duty cycle is 50% for every value of this input; note that only
+// 	even divisions of CLKFREQ are reachable, which are precisely those
+// 	that a 50% duty cycle allows.
 //
 // stb_i
 // 	This signal is set high to begin transmitting the data value on
@@ -58,6 +64,25 @@
 //
 // data_i
 // 	Data value to transmit through "mosi_o".
+//
+// misoSync_i
+// 	When this signal is high, the shifting of "mosi_o" and the counting
+// 	of the bits transmitted do not begin until a null bit has been
+// 	sampled from the input "miso_i"; until then, "sclk_o" keeps toggling
+// 	with the output "cs_o" held low, and "mosi_o" keeps presenting the
+// 	most significant bit of "data_i", which must be 1'b1 in order for
+// 	"mosi_o" to remain high while waiting.
+// 	It is used with a slave which signals the beginning of its response
+// 	using a null bit, such as the start-bit of an SD card in SPI mode.
+// 	Once synchronized, it remains so until the output "cs_o" becomes high.
+//
+// misoSkipSyncBit_i
+// 	This signal must be asserted only when the input "misoSync_i" is
+// 	true, and must be null otherwise, as it would corrupt the first
+// 	data transmitted after the output "cs_o" was high.
+// 	When high, the null bit that synchronized the transmission is
+// 	discarded, and the DATABITSZ bits that follow it become "data_o";
+// 	when low, that null bit becomes the most significant bit of "data_o".
 
 module spi_master_phy (
 	rst_i, clk_i,
@@ -109,8 +134,12 @@ reg [CLOG2DATABITSZ -1 : 0] bitcnt = 0;
 wire bitcntNull = !bitcnt;
 wire bitcntNull_and_stbNull = (bitcntNull && !stb_i);
 
-// Keep track of the number of clock cycles.
+// Keep track of the number of clock cycles within the current half-period.
 reg [CLOG2SCLKDIVLIMIT -1 : 0] cntr;
+wire cntrDone = (cntr == sclkdiv_i);
+
+// The level of "sclk_o" doubles as the half-period phase.
+wire sclkIsIdle = (sclk_o == (|CPOL));
 
 always @ (posedge clk_i) begin
 	if (rst_i) begin
@@ -121,7 +150,7 @@ always @ (posedge clk_i) begin
 		inSync <= 1'b0;
 		mosibits <= {DATABITSZ{1'b1}};
 		bitcnt <= 0;
-	end else if (cs_o || (cntr == sclkdiv_i)) begin
+	end else if (cs_o || (cntrDone && !sclkIsIdle)) begin
 		sclk_o <= (|CPOL);
 		if (bitcnt) begin
 			if (!misoSync_i || inSync || misoIsLow) begin
@@ -139,11 +168,12 @@ always @ (posedge clk_i) begin
 		rdy_o <= (bitcntNull_and_stbNull || (bitcnt == 1));
 		rcvd_o <= (bitcntNull && !cs_o);
 		cntr <= 0;
+	end else if (cntrDone) begin
+		sclk_o <= ~(|CPOL);
+		data_o <= {data_o[(DATABITSZ-1)-1:0], miso_i};
+		rcvd_o <= 1'b0;
+		cntr <= 0;
 	end else begin
-		if (cntr == {1'b0, sclkdiv_i[CLOG2SCLKDIVLIMIT-1:1]}) begin
-			sclk_o <= ~(|CPOL);
-			data_o <= {data_o[(DATABITSZ-1)-1:0], miso_i};
-		end
 		rcvd_o <= 1'b0;
 		cntr <= (cntr + 1'b1);
 	end

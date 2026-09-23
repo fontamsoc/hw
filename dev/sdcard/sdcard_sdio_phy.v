@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
-// 20250619 (c) William Fonkou Tambe
+// 20260923 (c) William Fonkou Tambe
 
-`ifndef SDCARD_SPI_PHY_V
-`define SDCARD_SPI_PHY_V
+`ifndef SDCARD_SDIO_PHY_V
+`define SDCARD_SDIO_PHY_V
 
 // Module implementing an sd card controller using SD mode.
 // SDSC (8MB to 2GB), SDHC (4GB to 32GB) and SDXC (64GB to 2TB) cards are supported.
@@ -101,18 +101,21 @@ module sdcard_sdio_phy (
 parameter CLKFREQ = 500000;
 
 // Phy clock frequency in Hz.
-// It should be at least 2 * 250KHz needed to drive the card's input "sdclk_o".
-parameter PHYCLKFREQ = 500000;
+// It should be at least 2 * 400KHz needed to drive the card's input "sdclk_o".
+parameter PHYCLKFREQ = 800000;
 
 localparam CLOG2CLKFREQ = clog2(CLKFREQ);
 localparam CLOG2PHYCLKFREQ = clog2(PHYCLKFREQ);
 
-localparam SDCLKDIVLIMIT = ((PHYCLKFREQ <= 400000) ? 2 : ((PHYCLKFREQ/400000)+|(PHYCLKFREQ%400000)));
+// "sdcmd.sclkdiv_i" is the count of "clk_phy_i" cycles per half-period of
+// "sdcmd.sclk_o", less one; hence each limit below is computed against twice
+// the targeted bitrate. A null "sdcmd.sclkdiv_i" being valid, the result of
+// the ceiling division is always usable, and needs no clamping.
+localparam SDCLKDIVLIMIT = ((PHYCLKFREQ/800000)+|(PHYCLKFREQ%800000));
 localparam CLOG2SDCLKDIVLIMIT = clog2(SDCLKDIVLIMIT);
-// ### Use `<` instead of `<=` if sdcmd.sclkdiv_i can be null.
-localparam SDCLKDIV10LIMIT = ((PHYCLKFREQ <= 10000000) ? SDCLKDIVLIMIT : ((PHYCLKFREQ/10000000)+|(PHYCLKFREQ%10000000)));
-localparam SDCLKDIV25LIMIT = ((PHYCLKFREQ <= 25000000) ? SDCLKDIV10LIMIT : ((PHYCLKFREQ/25000000)+|(PHYCLKFREQ%25000000)));
-localparam SDCLKDIV50LIMIT = ((PHYCLKFREQ <= 50000000) ? SDCLKDIV25LIMIT : ((PHYCLKFREQ/50000000)+|(PHYCLKFREQ%50000000)));
+localparam SDCLKDIV10LIMIT = ((PHYCLKFREQ/20000000)+|(PHYCLKFREQ%20000000));
+localparam SDCLKDIV25LIMIT = ((PHYCLKFREQ/50000000)+|(PHYCLKFREQ%50000000));
+localparam SDCLKDIV50LIMIT = ((PHYCLKFREQ/100000000)+|(PHYCLKFREQ%100000000));
 
 input wire rst_i;
 
@@ -136,9 +139,9 @@ output wire            sdclk_o;
 input  wire            sdcmd_i;
 output wire            sdcmd_o;
 output reg             sdcmd_e = 0;
-(* mark_debug = "true" *) input  wire [4 -1 : 0] sddat_i;
-(* mark_debug = "true" *) output wire [4 -1 : 0] sddat_o;
-(* mark_debug = "true" *) output reg  [4 -1 : 0] sddat_e = 0;
+input  wire [4 -1 : 0] sddat_i;
+output wire [4 -1 : 0] sddat_o;
+output reg  [4 -1 : 0] sddat_e = 0;
 
 output reg [CMDADDRBITSZ -1 : 0] blkcnt_o = 0;
 
@@ -194,11 +197,16 @@ output wire err_o;
 // 	If no error reported, send data packet, and expect data response byte.
 
 // Register used to implement timeout.
-// The largest value that it will be set to, is > than the clock cycle count equivalent of 250ms.
-// Since 250ms is 4 Hz, the number of clock cycles using a clock frequency of CLKFREQ
-// would be CLKFREQ/4; the result of that value would largely be greater than
-// ((spi_master.DATABITSIZE + 1) * (1 << spi_master.SDCLKDIVLIMIT))
-// which is the minimum number of clock cycles needed to reset spi_master;
+// It is counted down in the "clk_i" domain, and is set to all ones, which is
+// (1<<CLOG2CLKFREQ)-1 and therefore greater than CLKFREQ, hence a timeout of
+// more than one second; that covers the longest wait the card may impose,
+// which the card spec caps at 250ms for the busy period following a write.
+// This bound is a duration, and is unrelated to the bitrate set through
+// "sdcmd.sclkdiv_i": the minimum number of "clk_phy_i" cycles needed to flush
+// spi_master is (DATABITSZ * 2 * SDCLKDIVLIMIT), which at the initialization
+// bitrate is DATABITSZ bit-times, ie 32us for a DATABITSZ of 8, and so is
+// several orders of magnitude below the value above.
+// The separate 250ms reset wait uses CLKFREQ/4 cycles of "clk_i";
 // in fact CLKFREQ must be at least 250 KHz.
 reg [CLOG2CLKFREQ -1 : 0] timeout = 0;
 
@@ -244,13 +252,13 @@ localparam ERROR      = 27; // When in this state, an error occured, and a reset
 localparam STATEBITSZ = clog2(32);
 
 // Register used to hold the state of the controller.
-(* mark_debug = "true" *) reg [STATEBITSZ -1 : 0] state = ERROR;
+reg [STATEBITSZ -1 : 0] state = ERROR;
 reg [STATEBITSZ -1 : 0] nxtstate;
 
 assign err_o = (state == ERROR);
 
 // Register that hold the value of the input "sdcmd.sclkdiv_i".
-(* mark_debug = "true" *) reg [CLOG2SDCLKDIVLIMIT -1 : 0] sclkdiv_r;
+reg [CLOG2SDCLKDIVLIMIT -1 : 0] sclkdiv_r;
 
 wire sdcmd_cs_w;
 
@@ -258,7 +266,7 @@ wire sdcmd_cs_w;
 reg sdcmd_txbuf_we;
 
 // Register that hold the value of the input "sdcmd.data_i".
-(* mark_debug = "true" *) reg [8 -1 : 0] sdcmd_txbuf_dati;
+reg [8 -1 : 0] sdcmd_txbuf_dati;
 
 wire sdcmd_txbuf_full;
 
@@ -267,7 +275,7 @@ reg  sdcmd_rxbuf_empty;
 always @ (posedge clk_i)
 	sdcmd_rxbuf_empty <= sdcmd_rxbuf_empty_;
 
-(* mark_debug = "true" *) wire [8 -1 : 0] sdcmd_rxbuf_dato;
+wire [8 -1 : 0] sdcmd_rxbuf_dato;
 
 // Size of spi_master buffer.
 // It is minimal to keep latency at its lowest when waiting
@@ -295,9 +303,9 @@ spi_master #(
 
 	,.sclkdiv_i (sclkdiv_r)
 
-	,.push_i (sdcmd_txbuf_we)
-	,.data_i (sdcmd_txbuf_dati)
-	,.full_o (sdcmd_txbuf_full)
+	,.write_i (sdcmd_txbuf_we)
+	,.data_i  (sdcmd_txbuf_dati)
+	,.full_o  (sdcmd_txbuf_full)
 
 	,.read_i  (1'b1)
 	,.data_o  (sdcmd_rxbuf_dato)
@@ -309,7 +317,7 @@ spi_master #(
 
 wire [4 -1 : 0] sddat_cs_w;
 reg             sddat_cs_r;
-(* mark_debug = "true" *) wire sddat_cs_w_posedge = (&sddat_cs_w && !sddat_cs_r);
+wire sddat_cs_w_posedge = (&sddat_cs_w && !sddat_cs_r);
 always @ (posedge clk_i) // TODO: Remove ...
 	sddat_cs_r <= &sddat_cs_w;
 
@@ -317,24 +325,24 @@ always @ (posedge clk_i) // TODO: Remove ...
 reg sddat_txbuf_we;
 
 // Register that hold the value of the input "sddat.data_i".
-(* mark_debug = "true" *) reg  [32 -1 : 0] sddat_txbuf_dati;
-(* mark_debug = "true" *) wire [32 -1 : 0] _sddat_txbuf_dati;
+reg  [32 -1 : 0] sddat_txbuf_dati;
+wire [32 -1 : 0] _sddat_txbuf_dati;
 
 wire [32 -1 : 0] _tx_data_i;
 wire [32 -1 : 0] __tx_data_i;
 
-(* mark_debug = "true" *) wire [4 -1 : 0] sddat_txbuf_full;
+wire [4 -1 : 0] sddat_txbuf_full;
 
 wire [4 -1 : 0] sddat_rxbuf_empty_;
-(* mark_debug = "true" *) reg             sddat_rxbuf_empty;
+reg             sddat_rxbuf_empty;
 always @ (posedge clk_i)
 	sddat_rxbuf_empty <= &sddat_rxbuf_empty_;
 
-(* mark_debug = "true" *) wire [32 -1 : 0] sddat_rxbuf_dato_;
-(* mark_debug = "true" *) wire [32 -1 : 0] sddat_rxbuf_dato;
+wire [32 -1 : 0] sddat_rxbuf_dato_;
+wire [32 -1 : 0] sddat_rxbuf_dato;
 
-(* mark_debug = "true" *) wire [32 -1 : 0] crc16_msb;
-(* mark_debug = "true" *) wire [32 -1 : 0] crc16_lsb;
+wire [32 -1 : 0] crc16_msb;
+wire [32 -1 : 0] crc16_lsb;
 wire [32 -1 : 0] _crc16_msb;
 wire [32 -1 : 0] _crc16_lsb;
 
@@ -420,11 +428,11 @@ reg miscflag;
 
 // Register set to 1 when the card is found to be SDv2,
 // otherwise it is set to 0.
-(* mark_debug = "true" *) reg issdcardver2;
+reg issdcardver2;
 
 // Register set to 1 if the card addressing
 // is block aligned, otherwise it is set to 0.
-(* mark_debug = "true" *) reg issdcardaddrblockaligned;
+reg issdcardaddrblockaligned;
 
 // Register which will be used to store the value of the published RCA.
 reg [16 -1 : 0] sdcardrca;
@@ -463,8 +471,8 @@ always @* begin
 	else                                sclkdiv_w = (SDCLKDIV10LIMIT-1);  // 10 Mbps.
 end
 
-(* mark_debug = "true" *) wire [2 -1 : 0] CSD_format = sdcardcsd[126+:2];
-(* mark_debug = "true" *) wire [8 -1 : 0] CSD_speed = sdcardcsd[96+:8];
+wire [2 -1 : 0] CSD_format = sdcardcsd[126+:2];
+wire [8 -1 : 0] CSD_speed = sdcardcsd[96+:8];
 
 // Register used as the controller counter.
 // The largest value that it will be set to, is greater
@@ -472,7 +480,7 @@ end
 // Since 250ms is 4 Hz, the number of clock cycles using
 // a clock frequency of CLKFREQ would be CLKFREQ/4.
 // In fact CLKFREQ must be at least 250 KHz.
-(* mark_debug = "true" *) reg [CLOG2CLKFREQ -1 : 0] cntr;
+reg [CLOG2CLKFREQ -1 : 0] cntr;
 
 assign tx_pop_o  = ((state == CMD24RESP) && !sddat_txbuf_full  && cntr && cntr <= 128);
 assign rx_push_o = ((state == CMD17RESP) && !sddat_rxbuf_empty && cntr && cntr <= 128);
@@ -1837,4 +1845,4 @@ end
 
 endmodule
 
-`endif /* SDCARD_SPI_PHY_V */
+`endif /* SDCARD_SDIO_PHY_V */
