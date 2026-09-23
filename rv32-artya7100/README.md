@@ -419,11 +419,16 @@ is how the `` `include "lib/..." `` and `` `include "cpu/..." `` directives in
 `artya7100.sv` resolve. If you build outside this project, reproduce both include
 paths.
 
-Two things the project does beyond the defaults:
+Three things the project does beyond the defaults:
 
 - **A latch fails the build.** A project message rule raises `Synth 8-327`
   (*inferring latch*) from warning to error, so a synthesis run that infers a latch
   stops at `synth_design` instead of quietly completing.
+- **A constraint that matches nothing fails the build.** A second rule raises
+  `Common 17-55` from critical warning to error. Vivado reports it when a
+  `set_property` is handed an empty object list — what a `get_ports` or `get_cells`
+  pattern matching nothing returns — so a mistyped or stale name in `artya7100.xdc`
+  is caught when it is written instead of silently constraining nothing.
 - **Twenty-one implementation runs.** `impl_1` builds on the default strategy;
   `impl_2` … `impl_21` each apply one of Vivado's *Performance_\** / *Congestion_\**
   strategies off the same `synth_1`. Launching them all is how timing closure at
@@ -500,7 +505,7 @@ for wider `XWORDBITSZ` builds, and this target uses a 32-bit bus.
 | :--- | :--- |
 | `artya7100.sv` | SoC top level: build-time defaults, PLL, reset, core complex, interconnect, peripherals |
 | `artya7100.xdc` | Pin, clock and bitstream constraints |
-| `vivado/artya7100.xpr` | Vivado 2020.2 project: one synthesis run, 21 implementation runs, latch-is-an-error rule |
+| `vivado/artya7100.xpr` | Vivado 2020.2 project: one synthesis run, 21 implementation runs, latch-is-an-error and unmatched-constraint-is-an-error rules |
 | `.README.md/block_diagram.svg` | The block diagram above |
 
 Shared sources come from the repository root: [`cpu/`](../cpu) (core complex),
