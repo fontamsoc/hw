@@ -72,7 +72,7 @@
 // sdram_data_io
 // 	SDRAM chip interface.
 
-module wb4sdram (
+module sdram_sdr (
 
 	 rst_i
 
@@ -206,12 +206,12 @@ initial begin
 	// The earliest PRECHARGE after a WRITE is 2 clockcycles after its
 	// last data beat (WRITE1 -> IDLE -> PRECHARGE).
 	if (SDRAM_TWR_CYCLES > 2) begin
-		$display("wb4sdram: error: SDRAM_MHZ too high for tWR");
+		$display("sdram_sdr: error: SDRAM_MHZ too high for tWR");
 		$finish;
 	end
 	// STATE_INIT spaces its commands 10 clockcycles apart.
 	if (SDRAM_TRFC_CYCLES > 10 || SDRAM_TMRD_CYCLES > 10) begin
-		$display("wb4sdram: error: SDRAM_MHZ too high for the init sequence command spacing");
+		$display("sdram_sdr: error: SDRAM_MHZ too high for the init sequence command spacing");
 		$finish;
 	end
 end
