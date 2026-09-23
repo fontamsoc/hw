@@ -128,8 +128,12 @@ set_property -dict { PACKAGE_PIN U14   IOSTANDARD LVCMOS33 } [get_ports { sram_d
 set_property -dict { PACKAGE_PIN P19   IOSTANDARD LVCMOS33 } [get_ports { sram_oe_o       }]; #IO_L10P_T1_D14_14 Sch=sram-oe
 set_property -dict { PACKAGE_PIN R19   IOSTANDARD LVCMOS33 } [get_ports { sram_we_o       }]; #IO_L10N_T1_D15_14 Sch=sram-we
 set_property -dict { PACKAGE_PIN N19   IOSTANDARD LVCMOS33 } [get_ports { sram_ce_o       }]; #IO_L9N_T1_DQS_D13_14 Sch=sram-ce
-## The controller registers every pad and its pad round-trip budget (PADDELAY)
-## assumes those registers sit in the I/O tiles: pack them there.
+## The controller keeps each pin in a register with no logic before the pad:
+## pack those registers in the I/O tiles, for short and uniform pad delays.
+## Writes rely on the uniformity: the data and WE# switch on the same clock
+## edge and tSD is met by the WE# pulse count alone, so at 96 MHz the data
+## pads may lag the WE# pad by 4.4 ns at most. Reads need the packing only if
+## PADDELAY is lowered from its default of 12 (see dev/sram_is61wv5128bll.sv).
 set_property IOB TRUE [get_ports { sram_addr_o[*] sram_data_io[*] sram_ce_o sram_oe_o sram_we_o }];
 
 set_property CFGBVS VCCO [current_design]
