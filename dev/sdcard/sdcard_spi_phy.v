@@ -269,8 +269,29 @@ wire cs_w;
 // Register that hold the value of the input "spi.sclkdiv_i".
 reg [CLOG2SCLKDIVLIMIT -1 : 0] sclkdiv_r;
 
-// Register that hold the value of the input "spi.push_i".
+// Register that hold the value of the input "spi.write_i".
 reg spitxbufferwriteenable;
+
+// The first data buffered while the output "spi.cs_o" is high is the control
+// data of the transmission that it begins; the register below keeps track of
+// that first data still being due, and is armed by each "spi.cs_o" posedge.
+// This phy never waits for a null bit sampled from "spi.miso_i", hence its
+// control data is {8{1'b1}}, which is also what gets transmitted in place of
+// a control data, so that the byte stream on the output "di_o" is unchanged.
+// Note that the data which the control data substitutes for is one of the
+// 0xff bytes buffered ahead of each command, hence nothing is lost.
+reg cs_r = 1;
+always @ (posedge clk_i)
+	cs_r <= cs_w;
+reg spitxbufferctrl = 1;
+always @ (posedge clk_i) begin
+	if (rst_i)
+		spitxbufferctrl <= 1'b1;
+	else if (cs_w && !cs_r)
+		spitxbufferctrl <= 1'b1;
+	else if (spitxbufferwriteenable && !spitxbufferfull)
+		spitxbufferctrl <= 1'b0;
+end
 
 // Register that hold the value of the input "spi.data_i".
 reg [8 -1 : 0] spitxbufferdatain;
@@ -310,15 +331,12 @@ spi_master #(
 	,.sclkdiv_i (sclkdiv_r)
 
 	,.write_i (spitxbufferwriteenable)
-	,.data_i  (spitxbufferdatain)
+	,.data_i  (spitxbufferctrl ? {8{1'b1}} : spitxbufferdatain)
 	,.full_o  (spitxbufferfull)
 
 	,.read_i  (1'b1)
 	,.data_o  (rx_data_o)
 	,.empty_o (spirxbufferempty_)
-
-	,.misoSync_i        (1'b0)
-	,.misoSkipSyncBit_i (1'b0)
 );
 
 // Register which when 1, keeps the sdcard input "cs_o" high.
@@ -524,7 +542,7 @@ always @ (posedge clk_i) begin
 		// I set keepsdcardcshigh to 1 so that the card input cs_o be kept high.
 		keepsdcardcshigh <= 1;
 
-		// I set spi.push_i to 0 to stop the spi clock.
+		// I set spi.write_i to 0 to stop the spi clock.
 		spitxbufferwriteenable <= 0;
 
 	end else if (state == RESETTING) begin

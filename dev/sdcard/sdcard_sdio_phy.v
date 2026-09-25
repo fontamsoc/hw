@@ -261,8 +261,41 @@ assign err_o = (state == ERROR);
 reg [CLOG2SDCLKDIVLIMIT -1 : 0] sclkdiv_r;
 
 wire sdcmd_cs_w;
+reg  sdcmd_cs_r = 1;
+always @ (posedge clk_i)
+	sdcmd_cs_r <= sdcmd_cs_w;
+// Set while the control data of the next transmission is still due.
+reg sdcmd_txbuf_ctrl = 1;
+always @ (posedge clk_i) begin
+	if (rst_i)
+		sdcmd_txbuf_ctrl <= 1'b1;
+	else if (sdcmd_cs_w && !sdcmd_cs_r)
+		sdcmd_txbuf_ctrl <= 1'b1;
+	else if (sdcmd_txbuf_we && !sdcmd_txbuf_full)
+		sdcmd_txbuf_ctrl <= 1'b0;
+end
 
-// Register that hold the value of the input "sdcmd.push_i".
+// The first data buffered while the output "cs_o" of an spi_master is high is
+// the control data of the transmission that it begins; the inverse of its least
+// significant bit enables waiting for a null bit sampled from "miso_i", and the
+// inverse of its 2nd least significant bit discards that null bit.
+// {8{1'b1}} is what gets transmitted in place of a control data, and the data
+// which a control data substitutes for is one of the 0xff bytes buffered ahead
+// of each transmission, hence the byte stream on the outputs "sdcmd_o" and
+// "sddat_o" is left unchanged.
+//
+// "sdcmd" waits for the start-bit of the card response while receiving, and
+// keeps it as the most significant bit of the data received, which the checks
+// done on "sdcmd_rxbuf_dato" expect.
+wire [8 -1 : 0] sdcmd_ctrldata_w = (sdcmd_e ? 8'hff : 8'hfe);
+
+// "sddat" waits for the start-bit of the card response while receiving, and
+// discards it, so that the data received are the payload bits.
+wire [32 -1 : 0] sddat_ctrldata_w = {
+	(sddat_e[3] ? 8'hff : 8'hfc), (sddat_e[2] ? 8'hff : 8'hfc),
+	(sddat_e[1] ? 8'hff : 8'hfc), (sddat_e[0] ? 8'hff : 8'hfc)};
+
+// Register that hold the value of the input "sdcmd.write_i".
 reg sdcmd_txbuf_we;
 
 // Register that hold the value of the input "sdcmd.data_i".
@@ -304,15 +337,12 @@ spi_master #(
 	,.sclkdiv_i (sclkdiv_r)
 
 	,.write_i (sdcmd_txbuf_we)
-	,.data_i  (sdcmd_txbuf_dati)
+	,.data_i  (sdcmd_txbuf_ctrl ? sdcmd_ctrldata_w : sdcmd_txbuf_dati)
 	,.full_o  (sdcmd_txbuf_full)
 
 	,.read_i  (1'b1)
 	,.data_o  (sdcmd_rxbuf_dato)
 	,.empty_o (sdcmd_rxbuf_empty_)
-
-	,.misoSync_i        (!sdcmd_e)
-	,.misoSkipSyncBit_i (1'b0)
 );
 
 wire [4 -1 : 0] sddat_cs_w;
@@ -320,8 +350,18 @@ reg             sddat_cs_r;
 wire sddat_cs_w_posedge = (&sddat_cs_w && !sddat_cs_r);
 always @ (posedge clk_i) // TODO: Remove ...
 	sddat_cs_r <= &sddat_cs_w;
+// Set while the control data of the next transmission is still due.
+reg sddat_txbuf_ctrl = 1;
+always @ (posedge clk_i) begin
+	if (rst_i)
+		sddat_txbuf_ctrl <= 1'b1;
+	else if (sddat_cs_w_posedge)
+		sddat_txbuf_ctrl <= 1'b1;
+	else if (sddat_txbuf_we && !(|sddat_txbuf_full))
+		sddat_txbuf_ctrl <= 1'b0;
+end
 
-// Register that hold the value of the input "sddat.push_i".
+// Register that hold the value of the input "sddat.write_i".
 reg sddat_txbuf_we;
 
 // Register that hold the value of the input "sddat.data_i".
@@ -372,16 +412,15 @@ spi_master #(
 
 	,.sclkdiv_i (sclkdiv_r)
 
-	,.push_i (sddat_txbuf_we)
-	,.data_i (_sddat_txbuf_dati[(gen_sddat_idx*8)+:8])
-	,.full_o (sddat_txbuf_full[gen_sddat_idx])
+	,.write_i (sddat_txbuf_we)
+	,.data_i  (sddat_txbuf_ctrl ?
+		sddat_ctrldata_w[(gen_sddat_idx*8)+:8] :
+		_sddat_txbuf_dati[(gen_sddat_idx*8)+:8])
+	,.full_o  (sddat_txbuf_full[gen_sddat_idx])
 
 	,.read_i  (1'b1)
 	,.data_o  (sddat_rxbuf_dato_[(gen_sddat_idx*8)+:8])
 	,.empty_o (sddat_rxbuf_empty_[gen_sddat_idx])
-
-	,.misoSync_i        (!sddat_e[gen_sddat_idx])
-	,.misoSkipSyncBit_i (!sddat_e[gen_sddat_idx])
 );
 
 assign __tx_data_i[(gen_sddat_idx*8)+:8] = {
@@ -688,7 +727,7 @@ always @ (posedge clk_i) begin
 		// as required by the card spec after poweron.
 		sclkdiv_r <= (SDCLKDIVLIMIT-1); // 400 Kbps.
 
-		// I set sdcmd.push_i to 0 to stop the sdio clock.
+		// I set sdcmd.write_i to 0 to stop the sdio clock.
 		sdcmd_txbuf_we <= 0;
 		sddat_txbuf_we <= 1;
 

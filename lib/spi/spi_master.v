@@ -15,7 +15,8 @@
 //
 // DATABITSZ:
 // 	Number of bits per data to transmit;
-// 	it must be greater than 1.
+// 	it must be greater than 1, also because
+// 	a control data uses its two least significant bits.
 //
 // SCLKDIVLIMIT:
 // 	Limit below which the input "sclkdiv_i" must be set.
@@ -61,33 +62,47 @@
 // 	in the transmit buffer to send after the last data
 // 	has been transmitted.
 //
+// 	The first data buffered while the output "cs_o" is high is a control
+// 	data: it configures the transmission that it begins instead of being
+// 	transmitted, and {DATABITSZ{1'b1}} is transmitted in its place.
+// 	The data buffered next, while the output "cs_o" is low, are
+// 	transmitted as usual.
+//
+// 	The inverse of the least significant bit of a control data enables
+// 	waiting for a null bit sampled from the input "miso_i" before
+// 	counting the bits transmitted; until then, "sclk_o" keeps toggling
+// 	with the output "cs_o" held low, and "mosi_o" remains high, since
+// 	{DATABITSZ{1'b1}} is what gets transmitted in place of a control
+// 	data. It is used with a slave which signals the beginning of its
+// 	response using a null bit, such as the start-bit of an SD card in
+// 	SPI mode. Once synchronized, it remains so until the output "cs_o"
+// 	becomes high, which happens when the transmit buffer runs empty;
+// 	hence the data that follow in an uninterrupted transmission are
+// 	retrieved without waiting for a null bit again.
+//
+// 	The inverse of the 2nd least significant bit of a control data
+// 	discards that null bit, so that the DATABITSZ bits which follow it
+// 	become the data pushed in the receive buffer; when null, that null
+// 	bit becomes the most significant bit of that data. It is ignored
+// 	unless waiting for a null bit was enabled.
+//
+// 	The remaining bits of a control data are reserved and expected 1'b1;
+// 	hence a control data of {DATABITSZ{1'b1}} configures a transmission
+// 	which neither waits for a null bit nor discards one.
+//
+// 	Note that the transmission substituted for a control data also
+// 	yields a data in the receive buffer, which is where the response of
+// 	a slave signaling using a null bit gets retrieved.
+//
+// 	Note also that the transmit buffer must not run empty before the
+// 	last data of a transmission has been buffered, otherwise the output
+// 	"cs_o" becomes high, and the next data buffered becomes the control
+// 	data of a new transmission instead of being transmitted.
+//
 // read_i
 // data_o
 // empty_o
 // 	Fifo interface to retrieve the data received.
-//
-// misoSync_i
-// 	When this signal is high, the transmission does not begin until
-// 	a null bit has been sampled from the input "miso_i"; until then,
-// 	"sclk_o" keeps toggling with the output "cs_o" held low, and
-// 	"mosi_o" keeps presenting the most significant bit of the data
-// 	at the head of the transmit buffer, which must be 1'b1 in order
-// 	for "mosi_o" to remain high while waiting.
-// 	It is used with a slave which signals the beginning of its response
-// 	using a null bit, such as the start-bit of an SD card in SPI mode.
-// 	Once synchronized, it remains so until the output "cs_o" becomes
-// 	high, which happens when the transmit buffer runs empty; hence
-// 	the data that follow in an uninterrupted transmission are retrieved
-// 	without waiting for a null bit again.
-//
-// misoSkipSyncBit_i
-// 	This signal must be asserted only when the input "misoSync_i" is
-// 	true, and must be null otherwise, as it would corrupt the first
-// 	data transmitted after the output "cs_o" was high.
-// 	When high, the null bit that synchronized the transmission is
-// 	discarded, and the DATABITSZ bits that follow it become the data
-// 	pushed in the receive buffer; when low, that null bit becomes the
-// 	most significant bit of that data.
 
 `include "lib/fifo.v"
 
@@ -99,8 +114,7 @@ module spi_master (
 	sclk_o, mosi_o, miso_i, cs_o,
 	sclkdiv_i,
 	write_i, data_i, full_o,
-	read_i, data_o, empty_o,
-	misoSync_i, misoSkipSyncBit_i
+	read_i, data_o, empty_o
 );
 
 `include "lib/clog2.v"
@@ -132,24 +146,29 @@ input  wire                    read_i;
 output wire [DATABITSZ -1 : 0] data_o;
 output wire                    empty_o;
 
-input wire misoSync_i;
-input wire misoSkipSyncBit_i;
-
-wire fifo_tx_empty_w;
-
 wire phy_rdy_w;
 wire phy_rcvd_w;
 
 wire [DATABITSZ -1 : 0] phy_data_w0;
 wire [DATABITSZ -1 : 0] phy_data_w1;
 
-reg phy_stb_w = 0;
+reg phy_stb_r = 0;
+
+// High while the data presented on the phy input "data_i" is a control data.
+reg phy_ctrl_r = 0;
+
+// Configuration latched from a control data; the phy samples those inputs
+// at each bit transmitted, hence they must remain valid for the whole
+// transmission, which they do until the next control data.
+reg phy_misoSync_r = 0;
+reg phy_misoSkipSyncBit_r = 0;
 
 spi_master_phy #(
 	 .SCLKDIVLIMIT (SCLKDIVLIMIT)
 	,.DATABITSZ    (DATABITSZ)
 	,.CPOL         (CPOL)
 ) spi_phy (
+
 	 .rst_i (rst_i)
 
 	,.clk_i (clk_phy_i)
@@ -159,7 +178,7 @@ spi_master_phy #(
 	,.miso_i (miso_i)
 	,.cs_o   (cs_o)
 
-	,.stb_i     (phy_stb_w)
+	,.stb_i     (phy_stb_r)
 	,.rdy_o     (phy_rdy_w)
 	,.rcvd_o    (phy_rcvd_w)
 	,.sclkdiv_i (sclkdiv_i)
@@ -167,8 +186,8 @@ spi_master_phy #(
 	,.data_o (phy_data_w0)
 	,.data_i (phy_data_w1)
 
-	,.misoSync_i        (misoSync_i)
-	,.misoSkipSyncBit_i (misoSkipSyncBit_i)
+	,.misoSync_i        (phy_misoSync_r)
+	,.misoSkipSyncBit_i (phy_misoSkipSyncBit_r)
 );
 
 fifo #( // fifo for storing data received.
@@ -190,19 +209,59 @@ fifo #( // fifo for storing data received.
 	,.data_i      (phy_data_w0)
 );
 
-reg phy_rdy_w_sampled = 0;
+reg phy_rdy_w_r = 0;
 always @ (posedge clk_phy_i)
-		phy_rdy_w_sampled <= phy_rdy_w;
-wire phy_rdy_w_negedge = (!phy_rdy_w && phy_rdy_w_sampled);
+	phy_rdy_w_r <= phy_rdy_w;
+wire phy_rdy_w_negedge = (!phy_rdy_w && phy_rdy_w_r);
 
-wire fifo_tx_read_w = (!fifo_tx_empty_w && (!phy_stb_w || phy_rdy_w_negedge));
+wire fifo_tx_empty_w;
+
+wire fifo_tx_read_w = (!fifo_tx_empty_w && (!phy_stb_r || phy_rdy_w_negedge));
 always @ (posedge clk_phy_i) begin
 	if (rst_i)
-		phy_stb_w <= 1'b0;
+		phy_stb_r <= 1'b0;
 	else if (fifo_tx_read_w)
-		phy_stb_w <= 1'b1;
+		phy_stb_r <= 1'b1;
 	else if (phy_rdy_w_negedge)
-		phy_stb_w <= 1'b0;
+		phy_stb_r <= 1'b0;
+end
+
+// The data read from the transmit buffer is a control data when the phy is
+// idle with nothing pending, which means that read begins a transmission.
+// Note that this must not be a register, as the output "cs_o" remains high
+// for one clock cycle after "phy_stb_r" became high, since the phy needs
+// "stb_i" high for a clock cycle before it can begin transmitting; a register
+// set from "cs_o" would be set again in that clock cycle, and the second data
+// of the transmission would also be taken for a control data.
+wire fifo_tx_ctrl_w = (cs_o && !phy_stb_r);
+
+always @ (posedge clk_phy_i) begin
+	if (rst_i)
+		phy_ctrl_r <= 1'b0;
+	else if (fifo_tx_read_w)
+		phy_ctrl_r <= fifo_tx_ctrl_w;
+end
+
+wire [DATABITSZ -1 : 0] fifo_tx_data_w;
+
+// {DATABITSZ{1'b1}} gets transmitted in place of a control data, which also
+// keeps "mosi_o" high while waiting for a null bit from the input "miso_i".
+assign phy_data_w1 = (phy_ctrl_r ? {DATABITSZ{1'b1}} : fifo_tx_data_w);
+
+// The transmit buffer not being first-word-fall-through, a control data
+// appears on "fifo_tx_data_w" only after it has been read, hence sampling
+// it while "phy_ctrl_r" is high; that sampling is idempotent, because
+// "fifo_tx_data_w" cannot change without a read.
+// Discarding the null bit is allowed only when waiting for it is enabled,
+// as the phy would otherwise transmit one bit too many.
+always @ (posedge clk_phy_i) begin
+	if (rst_i) begin
+		phy_misoSync_r <= 1'b0;
+		phy_misoSkipSyncBit_r <= 1'b0;
+	end else if (phy_ctrl_r) begin
+		phy_misoSync_r <= !fifo_tx_data_w[0];
+		phy_misoSkipSyncBit_r <= (!fifo_tx_data_w[1] && !fifo_tx_data_w[0]);
+	end
 end
 
 fifo #( // fifo for buffering data to transmit.
@@ -214,7 +273,7 @@ fifo #( // fifo for buffering data to transmit.
 
 	,.clk_read_i (clk_phy_i)
 	,.read_i     (fifo_tx_read_w)
-	,.data_o     (phy_data_w1)
+	,.data_o     (fifo_tx_data_w)
 	,.empty_o    (fifo_tx_empty_w)
 
 	,.clk_write_i (clk_i)
