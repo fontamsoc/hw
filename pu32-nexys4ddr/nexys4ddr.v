@@ -26,9 +26,9 @@
 `define PUFMULDSP
 `define PUFDIV
 //`define PUDCACHE
-`define PUSC2
-`define PUSC2SKIPSC1LI8
-`define PUSC2SKIPSC1CPY
+//`define PUSC2
+//`define PUSC2SKIPSC1LI8
+//`define PUSC2SKIPSC1CPY
 `define PUCOUNT 1 /* 8 max */
 `include "puxx/cpu.v"
 
