@@ -39,8 +39,9 @@ targeting the Digilent Arty A7-100T.**
 
 `artya7100.sv` is the top level of a compact RV32 SoC: one `ftpu` hart with private
 instruction and data caches, a Wishbone peripheral interconnect, an interrupt
-controller, a UART console, 256 KB of on-chip SRAM and a *default device* that
-acknowledges and reports every access to an address no other device maps.
+controller, a UART console, a SPI master on the ChipKit SPI header, 256 KB of
+on-chip SRAM and a *default device* that acknowledges and reports every access to
+an address no other device maps.
 
 The program is baked into the SRAM at synthesis time via `$readmemh`, so the SoC
 boots straight into application code at `0x1000` with no bootloader.
@@ -50,7 +51,7 @@ boots straight into application code at `0x1000` with no bootloader.
 ## Block diagram
 
 <p align="center">
-  <img src=".README.md/block_diagram.svg" alt="Arty A7-100T SoC block diagram: FonTamPU core complex mastering a 32-bit Wishbone bus with irqctrl, serial_uart, sram and dfltdev slaves; dfltdev and serial_uart raise interrupt sources 0 and 1 at irqctrl" width="960">
+  <img src=".README.md/block_diagram.svg" alt="Arty A7-100T SoC block diagram: FonTamPU core complex mastering a 32-bit Wishbone bus with irqctrl, serial_uart, sram, spi and dfltdev slaves; dfltdev, serial_uart and spi raise interrupt sources 0, 1 and 2 at irqctrl" width="960">
 </p>
 
 <div align="center">
@@ -74,8 +75,9 @@ boots straight into application code at `0x1000` with no bootloader.
 | **Caches** | 16 KB I-cache + 16 KB D-cache, direct-mapped |
 | **RAM** | 256 KB on-chip BRAM (`SRAM_KBSIZE = 256`) |
 | **Console** | UART, 115200 8N1 by default, 2 KB RX + 2 KB TX buffers |
+| **SPI** | Master on the ChipKit SPI header, mode 0, 400 kbps at reset, up to 50 Mbps, 2 KB RX + 2 KB TX buffers |
 | **Unmapped access** | Acknowledged by `dfltdev`: reads as `nop`, writes dropped, IRQ source 0 raised, address latched at `0xFFFFFFFC` |
-| **Interrupt sources** | 2 — `dfltdev` (0), `serial_uart` (1) |
+| **Interrupt sources** | 3 — `dfltdev` (0), `serial_uart` (1), `spi` (2) |
 | **Reset vector** | `0x00001000` |
 | **Initial `sp`** | `0x00041000` (end of RAM) |
 | **Toolchain** | Vivado 2020.2 · `riscv32-unknown-elf` GCC |
@@ -93,11 +95,17 @@ converts them to word indices internally.
 | 0 | Interrupt controller | `dev/irqctrl.sv` | `0x00000F00` | `0x00000F03` | 4 B (1 word) | no |
 | 1 | UART console | `dev/serial_uart.sv` | `0x00000F80` | `0x00000F87` | 8 B (2 words) | no |
 | 2 | SRAM | `dev/sram.sv` | `0x00001000` | `0x00040FFF` | 256 KB | yes |
-| 3 | Default device | `dev/dfltdev.sv` | *every other address* | — | — | no |
+| 3 | SPI | `dev/spi.sv` | `0x00000E00` | `0x00000E07` | 8 B (2 words) | no |
+| 4 | Default device | `dev/dfltdev.sv` | *every other address* | — | — | no |
 | ↳ | Fault address register | `dev/dfltdev.sv` | `0xFFFFFFFC` | `0xFFFFFFFF` | 4 B (1 word) | no |
 
 ```
  0x00000000        · · · unmapped → dfltdev · · ·    address 0 included
+ 0x00000DFF
+ 0x00000E00 ┌────────────────────────────────────┐
+            │   spi · 8 B                        │   0xE00 data · 0xE04 command
+ 0x00000E07 └────────────────────────────────────┘
+ 0x00000E08        · · · unmapped → dfltdev · · ·
  0x00000EFF
  0x00000F00 ┌────────────────────────────────────┐
             │   irqctrl · 4 B                    │
@@ -128,7 +136,7 @@ address bus from that: only bits `[18:2]` of the byte address are carried, with
 bits `[31:19]` OR-reduced into a single extra "out of range" bit so
 **nothing aliases back into a real device** for any access at or above `0x80000`.
 
-Slave 3 (`dev/dfltdev.sv`) is the catch-all for every address the table does not
+Slave 4 (`dev/dfltdev.sv`) is the catch-all for every address the table does not
 claim. It never drives `bsy` and acknowledges every access on the following cycle,
 so **an unmapped access always completes**. A read returns the instruction `nop`
 (`0x00000013`) and a write is dropped. Both are faults: the address is latched in
@@ -137,15 +145,18 @@ the fault address register and interrupt source 0 is raised (see
 to unmapped space that is *not* a fault is a read of the fault address register
 itself, at `0xFFFFFFFC`.
 
-Decode is a sequential walk of `WBPI_SDEVS` (`lib/wb_mux.sv`): when an address
-falls outside the currently selected device's range, the interconnect — once any
+Decode is a sequential walk of `WBPI_SDEVS` (`lib/wb_mux.sv`): when an address falls
+outside the currently selected device's range, the interconnect — once any
 outstanding acknowledgements have drained — restarts at entry 0 and advances one
 entry per cycle, holding the bus busy, until it finds the range containing the
 address or exhausts the table (which selects the default device). Back-to-back
 accesses within one device cost nothing extra; alternating between, say, the UART
-and the SRAM re-walks the table at every switch. The default-device selection is
-valid only for the address it was walked for: another address presented in that
-cycle restarts the walk rather than being handed the default device.
+and the SRAM re-walks the table at every switch. The SPI device, although mapped
+below the others, is the entry after the SRAM, so that adding it left the walk to
+the interrupt controller, the UART and the SRAM as short as it was. The
+default-device selection is valid only for the address it was walked for: another
+address presented in that cycle restarts the walk rather than being handed the
+default device.
 
 > [!NOTE]
 > The core marks everything outside `[0x1000, 0x41000)` as non-cacheable
@@ -220,6 +231,58 @@ Reset defaults: **115200 baud**, 2048-byte RX and TX buffers (`BUFSZ = 2048`),
 > work), but on a multi-hart build a blocked read holds the bus grant, which is why
 > `lib/wb_arbiter.sv` bounds grant duration with `GRANTHELDLIMIT`.
 
+### SPI — `0x00000E00`
+
+`dev/spi.sv` is a SPI master in mode 0 (`CPOL = 0`, `CPHA = 0`), most significant
+bit first, on the ChipKit SPI header. Its registers and commands are those of the
+UART console, so the character-device driver `hwdrvchar.h` drives it unmodified:
+
+| Offset | Address | Register | Description |
+| :-: | :--- | :--- | :--- |
+| `+0x0` | `0x00000E00` | Data | Write transmits one byte, read receives one byte |
+| `+0x4` | `0x00000E04` | Command | Write submits a command, read retrieves the result |
+
+| `cmd` | Name | Purpose |
+| :-: | :--- | :--- |
+| `0b00` | `CMDDEVRDY` | Make the device accept a new command |
+| `0b01` | `CMDGETBUFFERUSAGE` | `arg = 0` → RX bytes used, `arg = 1` → TX bytes not yet transmitted, capped to the buffer size; `0` only when no transmission is in progress |
+| `0b10` | `CMDSETINTERRUPT` | `arg = 0` disables; non-zero enables and sets the RX-usage threshold. Returns the buffer size |
+| `0b11` | `CMDSETSPEED` | `arg = PHYCLKFREQ / bitrate`; sets the highest bitrate `100 MHz / 2n` not above `100 MHz / arg`, from 50 Mbps down to about 100 kbps, `arg = 0` selecting the lowest. Returns `PHYCLKFREQ` |
+
+Reset defaults: **400 kbps**, 2048-byte RX and TX buffers (`BUFSZ = 2048`),
+**interrupt disabled**. At 100 MHz, `CMDSETSPEED` for 25 Mbps takes
+`100000000 / 25000000 = 4`.
+
+Transfers are full duplex: while a byte written is transmitted on `mosi`, a byte is
+received from `miso` into the RX buffer. A **transmission** lasts as long as the TX
+buffer does not run empty, `cs` low throughout, and the byte written while the TX
+usage is `0` begins a new one. That byte is a **control byte**: `0xFF` is
+transmitted in its place, the byte received meanwhile is kept as any other, and its
+bits configure the transmission:
+
+| Bit | When `0` |
+| :-: | :--- |
+| 0 | Before counting the bits transmitted, wait for a `0` bit on `miso`, `sclk` toggling meanwhile with `mosi` high — ie: the start bit of an SD card's response or data token |
+| 1 | Discard that `0` bit, so that the byte received in place of the control byte is the 8 bits after it; ignored unless bit 0 is `0` |
+| 2 | Keep `cs` **high** for the whole transmission — ie: `0xFB` followed by nine `0xFF` sends the 80 clock cycles with `cs` and `mosi` high which an SD card needs before its first command |
+| 3 – 7 | Reserved; write `1` |
+
+Hence `0xFF` begins a plain transmission. Waiting for the `0` bit is given up after
+**100 ms**: the transmission is aborted without a byte received in place of the
+control byte, the TX buffer is emptied, discarding what it holds, and no interrupt
+is raised — software sees the TX usage return to `0` while bytes it expects are
+missing from the RX buffer.
+
+> [!IMPORTANT]
+> Every byte written yields a byte received, and the RX buffer drops what arrives
+> while it is full: keep the bytes written less the bytes read within 2048. Write the
+> bytes of a transmission longer than the TX buffer without being preempted, or it
+> runs empty and ends the transmission early. Write the control byte of a
+> transmission which waits for a `0` bit along with the bytes which follow it, and
+> nothing more until its first byte has been received, as a byte written after the
+> TX buffer was emptied would begin a new transmission. Reads and writes of the
+> data register block as the UART console's do.
+
 ### Default device — every unmapped address
 
 `dev/dfltdev.sv` owns every address the table does not claim. It has one register,
@@ -262,7 +325,7 @@ Two details worth knowing:
 
 ## Interrupts
 
-The SoC instantiates `IRQSRCCOUNT = 2` sources and `IRQDSTCOUNT = CPU_COUNT = 1`
+The SoC instantiates `IRQSRCCOUNT = 3` sources and `IRQDSTCOUNT = CPU_COUNT = 1`
 destination.
 
 ### Sources
@@ -271,6 +334,7 @@ destination.
 | :-: | :--- | :--- | :--- |
 | 0 | `dfltdev` | `IRQ_DFLTDEV` | Any access to an unmapped address, other than a read of the fault address register |
 | 1 | `serial_uart` | `IRQ_SERIAL` | RX buffer usage reaches the threshold set by `CMDSETINTERRUPT` |
+| 2 | `spi` | `IRQ_SPI` | RX buffer usage reaches the threshold set by `CMDSETINTERRUPT` |
 
 Source 0 is reserved for the default device by convention on every top in the
 repository, including `rv32-sim/` where it never fires.
@@ -304,9 +368,9 @@ Three behaviours worth coding around:
 
 - **Acknowledge promptly.** `irqctrl` does not buffer requests; until the current
   one is acknowledged with `CMDACKIRQ` it cannot dispatch another.
-- **The UART interrupt disarms itself.** It is disabled at reset (so no spurious
-  interrupt can fire immediately after release) and disabled again each time a
-  raised interrupt is acknowledged, so the handler must re-enable it.
+- **The UART and SPI interrupts disarm themselves.** Each is disabled at reset (so
+  no spurious interrupt can fire immediately after release) and disabled again each
+  time a raised interrupt is acknowledged, so the handler must re-enable it.
 - **The fault interrupt is imprecise.** It arrives as an ordinary external
   interrupt, several instructions after the access that caused it, and that access
   has already completed — a load has consumed the word `0x00000013`, a store has
@@ -352,10 +416,10 @@ execution starts at the bottom of RAM with the stack pointer at the top of it.
 
 ## Clocking
 
-`lib/xc7pll_100_to_50_100_200.sv` turns the 100 MHz board oscillator into 50, 100 and
-200 MHz. The whole SoC — CPU, interconnect, UART PHY — runs in the **100 MHz**
-domain, so there is no clock-domain crossing (`USEMEMCLKDOM` evaluates to 0 for a
-single hart with a D-cache).
+`lib/xc7pll_100_to_50_100_200.sv` turns the 100 MHz board oscillator into 50, 100
+and 200 MHz. The whole SoC — CPU, interconnect, UART and SPI PHYs — runs in the
+**100 MHz** domain, so there is no clock-domain crossing (`USEMEMCLKDOM` evaluates
+to 0 for a single hart with a D-cache).
 
 > [!NOTE]
 > The 50 MHz and 200 MHz outputs and the PLL `locked` signal are generated but not
@@ -394,6 +458,10 @@ From `artya7100.xdc`:
 | `rst_n` | `C2` | LVCMOS33 | `ck_rst` (RESET button) |
 | `uart_rx` | `A9` | LVCMOS33 | `uart_txd_in` (from the USB-UART bridge) |
 | `uart_tx` | `D10` | LVCMOS33 | `uart_rxd_out` (to the USB-UART bridge) |
+| `spi_sclk_o` | `F1` | LVCMOS33 | `ck_sck` (ChipKit SPI header) |
+| `spi_mosi_o` | `H1` | LVCMOS33 | `ck_mosi` (ChipKit SPI header) |
+| `spi_miso_i` | `G1` | LVCMOS33, pull-up | `ck_miso` (ChipKit SPI header) |
+| `spi_cs_o` | `C1` | LVCMOS33 | `ck_ss` (ChipKit SPI header) |
 
 Bitstream settings: compression enabled, `CONFIGRATE 33`, `CONFIG_MODE SPIx4`,
 `CFGBVS VCCO` at 3.3 V.
@@ -510,7 +578,7 @@ for wider `XWORDBITSZ` builds, and this target uses a 32-bit bus.
 
 Shared sources come from the repository root: [`cpu/`](../cpu) (core complex),
 [`dev/`](../dev) (Wishbone peripherals, the default device included) and
-[`lib/`](../lib) (PLL, reset, FIFOs, interconnect).
+[`lib/`](../lib) (PLL, reset, FIFOs, interconnect, SPI master).
 
 ---
 
@@ -521,7 +589,7 @@ Shared sources come from the repository root: [`cpu/`](../cpu) (core complex),
   read returns `nop`, a write vanishes, interrupt source 0 is raised and the
   address is latched at `0xFFFFFFFC`. A program that never enables source 0
   therefore runs on past a wild pointer — poll the fault address register if in
-  doubt. The lowest mapped device sits at `0xF00` precisely so that a
+  doubt. The lowest mapped device sits at `0xE00` precisely so that a
   null-pointer access is reported rather than decoded.
 - **The fault interrupt is imprecise**, and a speculative instruction fetch can
   raise it without any instruction at that address ever executing (see
