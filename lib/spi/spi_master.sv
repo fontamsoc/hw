@@ -113,9 +113,9 @@
 // empty_o
 // 	Fifo interface to retrieve the data received.
 
-`include "lib/fifo.v"
+`include "lib/fifo.sv"
 
-`include "./spi_master_phy.v"
+`include "lib/spi/spi_master_phy.sv"
 
 module spi_master (
 	rst_i,
@@ -126,7 +126,7 @@ module spi_master (
 	read_i, data_o, empty_o
 );
 
-`include "lib/clog2.v"
+`include "lib/clog2.sv"
 
 parameter BUFSZ        = 2;
 parameter DATABITSZ    = 2;

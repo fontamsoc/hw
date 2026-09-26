@@ -92,7 +92,7 @@ module spi_master_phy (
 	misoSync_i, misoSkipSyncBit_i
 );
 
-`include "lib/clog2.v"
+`include "lib/clog2.sv"
 
 parameter DATABITSZ    = 2;
 parameter SCLKDIVLIMIT = 2;
