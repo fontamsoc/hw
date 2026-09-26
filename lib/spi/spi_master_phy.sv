@@ -17,6 +17,11 @@
 //
 // CPOL:
 // 	SPI clock polarity.
+//
+// SYNCTIMEOUT:
+// 	Number of clock cycles after which waiting for a null bit, which
+// 	the input "misoSync_i" enables, is given up; a null value disables
+// 	giving up.
 
 // Ports.
 //
@@ -75,6 +80,8 @@
 // 	It is used with a slave which signals the beginning of its response
 // 	using a null bit, such as the start-bit of an SD card in SPI mode.
 // 	Once synchronized, it remains so until the output "cs_o" becomes high.
+// 	Waiting is given up after SYNCTIMEOUT clock cycles, as described
+// 	with the output "syncTimeout_o".
 //
 // misoSkipSyncBit_i
 // 	This signal must be asserted only when the input "misoSync_i" is
@@ -83,13 +90,25 @@
 // 	When high, the null bit that synchronized the transmission is
 // 	discarded, and the DATABITSZ bits that follow it become "data_o";
 // 	when low, that null bit becomes the most significant bit of "data_o".
+//
+// syncTimeout_o
+// 	This signal is high in the clock cycle at the end of which waiting
+// 	for a null bit is given up, having lasted SYNCTIMEOUT clock cycles;
+// 	it happens on the first trailing edge of "sclk_o" after that, unless
+// 	the null bit was sampled on the leading edge before it.
+// 	The transmission is then aborted: the output "cs_o" becomes high,
+// 	as does "rdy_o", while "rcvd_o" does not become high for the data
+// 	given up. The phy being idle from that clock edge, "stb_i" must be
+// 	lowered at that same edge, unless its data is to begin a new
+// 	transmission.
 
 module spi_master_phy (
 	rst_i, clk_i,
 	sclk_o, mosi_o, miso_i, cs_o,
 	stb_i, rdy_o, rcvd_o, sclkdiv_i,
 	data_o, data_i,
-	misoSync_i, misoSkipSyncBit_i
+	misoSync_i, misoSkipSyncBit_i,
+	syncTimeout_o
 );
 
 `include "lib/clog2.sv"
@@ -97,9 +116,11 @@ module spi_master_phy (
 parameter DATABITSZ    = 2;
 parameter SCLKDIVLIMIT = 2;
 parameter CPOL         = 0;
+parameter SYNCTIMEOUT  = 0;
 
 localparam CLOG2DATABITSZ    = clog2(DATABITSZ);
 localparam CLOG2SCLKDIVLIMIT = clog2(SCLKDIVLIMIT);
+localparam CLOG2SYNCTIMEOUT  = clog2(SYNCTIMEOUT+1);
 
 input wire rst_i;
 
@@ -125,6 +146,8 @@ input  wire [DATABITSZ -1 : 0] data_i;
 input wire misoSync_i;
 input wire misoSkipSyncBit_i;
 
+output wire syncTimeout_o;
+
 wire misoIsLow = !data_o[0];
 
 reg inSync; // Relevant only if misoSync_i is true.
@@ -144,6 +167,27 @@ wire cntrDone = (cntr == sclkdiv_i);
 // The level of "sclk_o" doubles as the half-period phase.
 wire sclkIsIdle = (sclk_o == (|CPOL));
 
+// High while waiting for a null bit, which can only be in place of the
+// first data of a transmission, since once synchronized it remains so.
+wire syncWaiting = (misoSync_i && !inSync && !bitcntNull);
+
+// Keep track of the number of clock cycles spent waiting for a null bit;
+// it needs no reset, as it clears itself while not waiting, which a reset
+// insures.
+reg [CLOG2SYNCTIMEOUT -1 : 0] syncTimeoutCntr;
+wire syncTimeoutDone = ((SYNCTIMEOUT != 0) &&
+	(syncTimeoutCntr == SYNCTIMEOUT[CLOG2SYNCTIMEOUT -1 : 0]));
+always_ff @(posedge clk_i) begin
+	if (!syncWaiting)
+		syncTimeoutCntr <= 0;
+	else if (!syncTimeoutDone)
+		syncTimeoutCntr <= (syncTimeoutCntr + 1'b1);
+end
+
+// Waiting is given up on a trailing edge of "sclk_o", unless the null bit
+// was sampled on the leading edge which preceded it.
+assign syncTimeout_o = (syncTimeoutDone && syncWaiting && !misoIsLow && cntrDone && !sclkIsIdle);
+
 always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		sclk_o <= (|CPOL);
@@ -161,7 +205,8 @@ always_ff @(posedge clk_i) begin
 					bitcnt <= (bitcnt - 1'b1);
 				mosibits <= {mosibits[(DATABITSZ-1)-1:0], 1'b1};
 				inSync <= 1'b1;
-			end
+			end else if (syncTimeout_o)
+				bitcnt <= 0;
 		end else if (stb_i) begin
 			bitcnt <= (DATABITSZ-1);
 			mosibits <= data_i;
@@ -171,6 +216,12 @@ always_ff @(posedge clk_i) begin
 		rdy_o <= (bitcntNull_and_stbNull || (bitcnt == 1));
 		rcvd_o <= (bitcntNull && !cs_o);
 		cntr <= 0;
+		// Giving up waiting for a null bit ends the transmission;
+		// "rcvd_o" remains low, as "bitcnt" is non-null.
+		if (syncTimeout_o) begin
+			cs_o <= 1'b1;
+			rdy_o <= 1'b1;
+		end
 	end else if (cntrDone) begin
 		sclk_o <= ~(|CPOL);
 		data_o <= {data_o[(DATABITSZ-1)-1:0], miso_i};

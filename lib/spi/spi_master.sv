@@ -23,6 +23,11 @@
 //
 // CPOL:
 // 	SPI clock polarity.
+//
+// SYNCTIMEOUT:
+// 	Number of clock cycles of "clk_phy_i" after which waiting for a null
+// 	bit is given up, as described with the transmit buffer interface;
+// 	a null value disables giving up.
 
 // Ports.
 //
@@ -105,6 +110,17 @@
 // 	yields a data in the receive buffer, which is where the response of
 // 	a slave signaling using a null bit gets retrieved.
 //
+// 	Waiting for a null bit is given up after SYNCTIMEOUT clock cycles of
+// 	"clk_phy_i", on the next trailing edge of "sclk_o", unless the null
+// 	bit was sampled on the leading edge before it: the transmission is
+// 	aborted, the output "cs_o" becoming high without a data received in
+// 	place of the control data, and the transmit buffer is emptied,
+// 	discarding the data it holds, and those buffered until it is empty.
+// 	The output "usage_tx_o" becomes null once it is, and then the next
+// 	data buffered begins a new transmission; hence a caller detects that
+// 	waiting was given up from "usage_tx_o" becoming null while data it
+// 	expects are missing from the receive buffer.
+//
 // 	Note also that the transmit buffer must not run empty before the
 // 	last data of a transmission has been buffered, otherwise the output
 // 	"cs_o" becomes high, and the next data buffered begins a new
@@ -118,7 +134,9 @@
 // 	the phy takes it, and the one being transmitted; hence it reaches
 // 	BUFSZ+2 at most, and it is null only when the transmission has ended
 // 	with nothing left to transmit, so that a data buffered while it is
-// 	null begins a new transmission, becoming its control data.
+// 	null begins a new transmission, becoming its control data. While the
+// 	transmit buffer is emptied after waiting for a null bit was given up,
+// 	it counts one data more than the buffer holds.
 //
 // read_i
 // data_o
@@ -152,6 +170,7 @@ parameter BUFSZ        = 2;
 parameter DATABITSZ    = 2;
 parameter SCLKDIVLIMIT = 2;
 parameter CPOL         = 0;
+parameter SYNCTIMEOUT  = 0;
 
 localparam CLOG2BUFSZ        = clog2(BUFSZ);
 localparam CLOG2SCLKDIVLIMIT = clog2(SCLKDIVLIMIT);
@@ -181,11 +200,16 @@ output wire [(CLOG2BUFSZ +1) -1 : 0] usage_rx_o;
 
 wire phy_rdy_w;
 wire phy_rcvd_w;
+wire phy_syncTimeout_w;
 
 wire [DATABITSZ -1 : 0] phy_data_w0;
 wire [DATABITSZ -1 : 0] phy_data_w1;
 
 reg phy_stb_r;
+
+// High while the transmit buffer is emptied, after the phy gave up
+// waiting for a null bit.
+reg fifo_tx_flush_r;
 
 // Configuration latched from a control data; the phy samples those inputs
 // at each bit transmitted, hence they must remain valid for the whole
@@ -197,6 +221,7 @@ spi_master_phy #(
 	 .SCLKDIVLIMIT (SCLKDIVLIMIT)
 	,.DATABITSZ    (DATABITSZ)
 	,.CPOL         (CPOL)
+	,.SYNCTIMEOUT  (SYNCTIMEOUT)
 ) spi_phy (
 
 	 .rst_i (rst_i)
@@ -218,6 +243,8 @@ spi_master_phy #(
 
 	,.misoSync_i        (phy_misoSync_r)
 	,.misoSkipSyncBit_i (phy_misoSkipSyncBit_r)
+
+	,.syncTimeout_o (phy_syncTimeout_w)
 );
 
 fifo #( // fifo for storing data received.
@@ -250,14 +277,26 @@ wire fifo_tx_empty_w;
 
 wire [(CLOG2BUFSZ +1) -1 : 0] fifo_tx_usage_w;
 
+// Once the phy gave up waiting for a null bit, the data held on its input
+// "data_i" is discarded, and so is every data read out of the transmit
+// buffer until it is empty, a data per clock cycle; that includes any
+// data buffered meanwhile.
 wire fifo_tx_read_w = (!fifo_tx_empty_w && (!phy_stb_r || phy_rdy_w_negedge));
 always_ff @(posedge clk_phy_i) begin
-	if (rst_i)
+	if (rst_i || phy_syncTimeout_w)
 		phy_stb_r <= 1'b0;
-	else if (fifo_tx_read_w)
+	else if (fifo_tx_read_w && !fifo_tx_flush_r)
 		phy_stb_r <= 1'b1;
 	else if (phy_rdy_w_negedge)
 		phy_stb_r <= 1'b0;
+end
+always_ff @(posedge clk_phy_i) begin
+	if (rst_i)
+		fifo_tx_flush_r <= 1'b0;
+	else if (phy_syncTimeout_w)
+		fifo_tx_flush_r <= 1'b1;
+	else if (fifo_tx_empty_w)
+		fifo_tx_flush_r <= 1'b0;
 end
 
 wire [DATABITSZ -1 : 0] fifo_tx_data_w;
@@ -321,8 +360,9 @@ fifo #( // fifo for buffering data to transmit.
 // phy is transmitting. The data held stops being counted in the clock
 // cycle where "phy_rdy_w_negedge" is high, the phy having taken it at the
 // clock edge which began that clock cycle, from which it is counted as
-// the one being transmitted.
-assign usage_tx_o = (fifo_tx_usage_w + (phy_stb_r && !phy_rdy_w_negedge) + !cs_o);
+// the one being transmitted. One more is counted while the transmit
+// buffer is emptied, so that the count becomes null only once it is done.
+assign usage_tx_o = (fifo_tx_usage_w + (phy_stb_r && !phy_rdy_w_negedge) + !cs_o + fifo_tx_flush_r);
 
 endmodule
 
