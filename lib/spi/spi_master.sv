@@ -56,7 +56,9 @@
 //
 // write_i
 // data_i
+// near_full_o
 // full_o
+// usage_tx_o
 // 	Fifo interface to buffer the data to transmit.
 // 	The output "cs_o" becomes high when there is no data
 // 	in the transmit buffer to send after the last data
@@ -108,10 +110,28 @@
 // 	"cs_o" becomes high, and the next data buffered begins a new
 // 	transmission, becoming its control data instead of being transmitted.
 //
+// 	The output "near_full_o" is high when the transmit buffer is full
+// 	or one data away from full.
+//
+// 	The output "usage_tx_o" is the count of the data not yet transmitted:
+// 	those in the transmit buffer, the one read out of it and held until
+// 	the phy takes it, and the one being transmitted; hence it reaches
+// 	BUFSZ+2 at most, and it is null only when the transmission has ended
+// 	with nothing left to transmit, so that a data buffered while it is
+// 	null begins a new transmission, becoming its control data.
+//
 // read_i
 // data_o
 // empty_o
+// usage_rx_o
 // 	Fifo interface to retrieve the data received.
+// 	The output "usage_rx_o" is the count of the data in the receive buffer.
+//
+// 	The outputs "usage_tx_o" and "usage_rx_o" each span the clocks
+// 	"clk_i" and "clk_phy_i": sampled using "clk_i", they are exact only
+// 	when both clocks are related as the documentation of the output
+// 	"usage_o" of lib/fifo.sv requires, and must otherwise be debounced
+// 	as it describes.
 
 `include "lib/fifo.sv"
 
@@ -122,8 +142,8 @@ module spi_master (
 	clk_i, clk_phy_i,
 	sclk_o, mosi_o, miso_i, cs_o,
 	sclkdiv_i,
-	write_i, data_i, full_o,
-	read_i, data_o, empty_o
+	write_i, data_i, near_full_o, full_o, usage_tx_o,
+	read_i, data_o, empty_o, usage_rx_o
 );
 
 `include "lib/clog2.sv"
@@ -133,6 +153,7 @@ parameter DATABITSZ    = 2;
 parameter SCLKDIVLIMIT = 2;
 parameter CPOL         = 0;
 
+localparam CLOG2BUFSZ        = clog2(BUFSZ);
 localparam CLOG2SCLKDIVLIMIT = clog2(SCLKDIVLIMIT);
 
 input wire rst_i;
@@ -147,13 +168,16 @@ output wire cs_o;
 
 input wire [CLOG2SCLKDIVLIMIT -1 : 0] sclkdiv_i;
 
-input  wire                    write_i;
-input  wire [DATABITSZ -1 : 0] data_i;
-output wire                    full_o;
+input  wire                          write_i;
+input  wire [DATABITSZ -1 : 0]       data_i;
+output wire                          near_full_o;
+output wire                          full_o;
+output wire [(CLOG2BUFSZ +2) -1 : 0] usage_tx_o;
 
-input  wire                    read_i;
-output wire [DATABITSZ -1 : 0] data_o;
-output wire                    empty_o;
+input  wire                          read_i;
+output wire [DATABITSZ -1 : 0]       data_o;
+output wire                          empty_o;
+output wire [(CLOG2BUFSZ +1) -1 : 0] usage_rx_o;
 
 wire phy_rdy_w;
 wire phy_rcvd_w;
@@ -203,6 +227,8 @@ fifo #( // fifo for storing data received.
 
 	 .rst_i (rst_i)
 
+	,.usage_o (usage_rx_o)
+
 	,.clk_read_i (clk_i)
 	,.read_i     (read_i)
 	,.data_o     (data_o)
@@ -221,6 +247,8 @@ always_ff @(posedge clk_phy_i)
 wire phy_rdy_w_negedge = (!phy_rdy_w && phy_rdy_w_r);
 
 wire fifo_tx_empty_w;
+
+wire [(CLOG2BUFSZ +1) -1 : 0] fifo_tx_usage_w;
 
 wire fifo_tx_read_w = (!fifo_tx_empty_w && (!phy_stb_r || phy_rdy_w_negedge));
 always_ff @(posedge clk_phy_i) begin
@@ -274,6 +302,8 @@ fifo #( // fifo for buffering data to transmit.
 
 	 .rst_i (rst_i)
 
+	,.usage_o (fifo_tx_usage_w)
+
 	,.clk_read_i (clk_phy_i)
 	,.read_i     (fifo_tx_read_w)
 	,.data_o     (fifo_tx_data_w)
@@ -282,8 +312,17 @@ fifo #( // fifo for buffering data to transmit.
 	,.clk_write_i (clk_i)
 	,.write_i     (write_i)
 	,.data_i      (data_i)
+	,.near_full_o (near_full_o)
 	,.full_o      (full_o)
 );
+
+// The data not yet transmitted: those in the transmit buffer, the one
+// held on the phy input "data_i" until the phy takes it, and the one the
+// phy is transmitting. The data held stops being counted in the clock
+// cycle where "phy_rdy_w_negedge" is high, the phy having taken it at the
+// clock edge which began that clock cycle, from which it is counted as
+// the one being transmitted.
+assign usage_tx_o = (fifo_tx_usage_w + (phy_stb_r && !phy_rdy_w_negedge) + !cs_o);
 
 endmodule
 
