@@ -20,12 +20,15 @@ LOCATE COMP "usb_d_p" SITE "N1"; IOBUF PORT "usb_d_p" IO_TYPE=LVCMOS33;
 LOCATE COMP "usb_d_n" SITE "M2"; IOBUF PORT "usb_d_n" IO_TYPE=LVCMOS33;
 LOCATE COMP "usb_pullup" SITE "N2"; IOBUF PORT "usb_pullup" IO_TYPE=LVCMOS33;
 
-#LOCATE COMP "sdcard_clk" SITE "K1"; IOBUF PORT "sdcard_clk" IO_TYPE=LVCMOS33;
-#LOCATE COMP "sdcard_di" SITE "K2"; IOBUF PORT "sdcard_di" IO_TYPE=LVCMOS33 PULLMODE=UP;
-#LOCATE COMP "sdcard_do" SITE "J1"; IOBUF PORT "sdcard_do" IO_TYPE=LVCMOS33 PULLMODE=UP;
+# The sdcard slot used in SPI mode; litex-boards calls these ports sdcard_clk,
+# sdcard_di (the card's CMD, mosi), sdcard_do (its DAT0, miso, pulled up as the
+# card drives it only while selected) and sdcard_cs_n (its DAT3).
+LOCATE COMP "sdspi_sclk_o" SITE "K1"; IOBUF PORT "sdspi_sclk_o" IO_TYPE=LVCMOS33;
+LOCATE COMP "sdspi_mosi_o" SITE "K2"; IOBUF PORT "sdspi_mosi_o" IO_TYPE=LVCMOS33 PULLMODE=UP;
+LOCATE COMP "sdspi_miso_i" SITE "J1"; IOBUF PORT "sdspi_miso_i" IO_TYPE=LVCMOS33 PULLMODE=UP;
 #LOCATE COMP "sdcard_dat1" SITE "K3"; IOBUF PORT "sdcard_dat1" IO_TYPE=LVCMOS33 PULLMODE=UP;
 #LOCATE COMP "sdcard_dat2" SITE "L3"; IOBUF PORT "sdcard_dat2" IO_TYPE=LVCMOS33 PULLMODE=UP;
-#LOCATE COMP "sdcard_cs_n" SITE "M1"; IOBUF PORT "sdcard_cs_n" IO_TYPE=LVCMOS33 PULLMODE=UP;
+LOCATE COMP "sdspi_cs_o" SITE "M1"; IOBUF PORT "sdspi_cs_o" IO_TYPE=LVCMOS33 PULLMODE=UP;
 #LOCATE COMP "sdcard_cd" SITE "L1"; IOBUF PORT "sdcard_cd" IO_TYPE=LVCMOS33;
 
 #LOCATE COMP "gpio_0" SITE "N17"; IOBUF PORT "gpio_0"  IO_TYPE=LVCMOS33 PULLMODE=DOWN;
