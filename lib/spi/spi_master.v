@@ -105,6 +105,7 @@
 // 	Fifo interface to retrieve the data received.
 
 `include "lib/fifo.v"
+`include "lib/fifo_fwft.v"
 
 `include "./spi_master_phy.v"
 
@@ -152,11 +153,6 @@ wire phy_rcvd_w;
 wire [DATABITSZ -1 : 0] phy_data_w0;
 wire [DATABITSZ -1 : 0] phy_data_w1;
 
-reg phy_stb_r = 0;
-
-// High while the data presented on the phy input "data_i" is a control data.
-reg phy_ctrl_r = 0;
-
 // Configuration latched from a control data; the phy samples those inputs
 // at each bit transmitted, hence they must remain valid for the whole
 // transmission, which they do until the next control data.
@@ -178,7 +174,7 @@ spi_master_phy #(
 	,.miso_i (miso_i)
 	,.cs_o   (cs_o)
 
-	,.stb_i     (phy_stb_r)
+	,.stb_i     (!fifo_tx_empty_w)
 	,.rdy_o     (phy_rdy_w)
 	,.rcvd_o    (phy_rcvd_w)
 	,.sclkdiv_i (sclkdiv_i)
@@ -216,70 +212,54 @@ wire phy_rdy_w_negedge = (!phy_rdy_w && phy_rdy_w_r);
 
 wire fifo_tx_empty_w;
 
-wire fifo_tx_read_w = (!fifo_tx_empty_w && (!phy_stb_r || phy_rdy_w_negedge));
-always @ (posedge clk_phy_i) begin
-	if (rst_i)
-		phy_stb_r <= 1'b0;
-	else if (fifo_tx_read_w)
-		phy_stb_r <= 1'b1;
-	else if (phy_rdy_w_negedge)
-		phy_stb_r <= 1'b0;
-end
-
-// The data read from the transmit buffer is a control data when the phy is
-// idle with nothing pending, which means that read begins a transmission.
-// Note that this must not be a register, as the output "cs_o" remains high
-// for one clock cycle after "phy_stb_r" became high, since the phy needs
-// "stb_i" high for a clock cycle before it can begin transmitting; a register
-// set from "cs_o" would be set again in that clock cycle, and the second data
-// of the transmission would also be taken for a control data.
-wire fifo_tx_ctrl_w = (cs_o && !phy_stb_r);
-
-always @ (posedge clk_phy_i) begin
-	if (rst_i)
-		phy_ctrl_r <= 1'b0;
-	else if (fifo_tx_read_w)
-		phy_ctrl_r <= fifo_tx_ctrl_w;
-end
-
 wire [DATABITSZ -1 : 0] fifo_tx_data_w;
 
-// {DATABITSZ{1'b1}} gets transmitted in place of a control data, which also
-// keeps "mosi_o" high while waiting for a null bit from the input "miso_i".
-assign phy_data_w1 = (phy_ctrl_r ? {DATABITSZ{1'b1}} : fifo_tx_data_w);
+// The transmit buffer being first-word-fall-through, the data at its head is
+// presented on "fifo_tx_data_w" without being read, and is still counted in
+// the buffer usage until popped; hence the output "full_o" frees a slot only
+// once a data has been transmitted, which a caller pacing itself on "full_o"
+// may depend upon.
+//
+// While the output "cs_o" is high, the data at the head of the transmit buffer
+// is the control data of the transmission that it begins; "cs_o" becomes low
+// on the very clock edge at which the phy latches it, hence substituting
+// {DATABITSZ{1'b1}} while "cs_o" is high substitutes it for the control data.
+// That also keeps "mosi_o" high while waiting for a null bit from "miso_i".
+assign phy_data_w1 = (cs_o ? {DATABITSZ{1'b1}} : fifo_tx_data_w);
 
-// The transmit buffer not being first-word-fall-through, a control data
-// appears on "fifo_tx_data_w" only after it has been read, hence sampling
-// it while "phy_ctrl_r" is high; that sampling is idempotent, because
-// "fifo_tx_data_w" cannot change without a read.
+// Configuration sampled from the control data while it sits at the head of the
+// transmit buffer; the sampling is idempotent, and its last clock edge is the
+// one at which the phy latches the control data, hence the configuration is
+// valid before the phy first samples it, which it does only from the second
+// bit transmitted onward.
 // Discarding the null bit is allowed only when waiting for it is enabled,
 // as the phy would otherwise transmit one bit too many.
 always @ (posedge clk_phy_i) begin
 	if (rst_i) begin
 		phy_misoSync_r <= 1'b0;
 		phy_misoSkipSyncBit_r <= 1'b0;
-	end else if (phy_ctrl_r) begin
+	end else if (cs_o && !fifo_tx_empty_w) begin
 		phy_misoSync_r <= !fifo_tx_data_w[0];
 		phy_misoSkipSyncBit_r <= (!fifo_tx_data_w[1] && !fifo_tx_data_w[0]);
 	end
 end
 
-fifo #( // fifo for buffering data to transmit.
+fifo_fwft #( // fifo for buffering data to transmit.
 	 .WIDTH (DATABITSZ)
 	,.DEPTH (BUFSZ)
 ) fifo_tx (
 
 	 .rst_i (rst_i)
 
-	,.clk_read_i (clk_phy_i)
-	,.read_i     (fifo_tx_read_w)
-	,.data_o     (fifo_tx_data_w)
-	,.empty_o    (fifo_tx_empty_w)
+	,.clk_pop_i (clk_phy_i)
+	,.pop_i     (phy_rdy_w_negedge)
+	,.data_o    (fifo_tx_data_w)
+	,.empty_o   (fifo_tx_empty_w)
 
-	,.clk_write_i (clk_i)
-	,.write_i     (write_i)
-	,.data_i      (data_i)
-	,.full_o      (full_o)
+	,.clk_push_i (clk_i)
+	,.push_i     (write_i)
+	,.data_i     (data_i)
+	,.full_o     (full_o)
 );
 
 endmodule
