@@ -53,6 +53,8 @@
 
 `include "dev/sram.sv"
 
+`include "dev/spi.sv"
+
 `include "dev/dfltdev.sv"
 
 module nexysa7100 (
@@ -64,6 +66,13 @@ module nexysa7100 (
 	// UART signals.
 	,uart_rx
 	,uart_tx
+
+	// SD SPI signals.
+	,sdspi_sclk_o
+	,sdspi_mosi_o
+	,sdspi_miso_i
+	,sdspi_cs_o
+	,sd_reset_o
 
 	// Used in order to keep the seven-segment-display off.
 	,an
@@ -84,6 +93,15 @@ input wire clk100mhz_i;
 // UART signals.
 input  wire uart_rx;
 output wire uart_tx;
+
+// SD SPI signals.
+output wire sdspi_sclk_o;
+output wire sdspi_mosi_o;
+input  wire sdspi_miso_i;
+output wire sdspi_cs_o;
+// Held low, which powers the microSD slot.
+output wire sd_reset_o;
+assign sd_reset_o = 1'b0;
 
 // Used in order to keep the seven-segment-display off.
 output wire [8 -1 : 0] an;
@@ -121,7 +139,8 @@ localparam M_WBPI_LAST    = M_WBPI_CPU;
 localparam S_WBPI_IRQCTRL = 0;
 localparam S_WBPI_SERIAL  = (S_WBPI_IRQCTRL + 1);
 localparam S_WBPI_SRAM    = (S_WBPI_SERIAL + 1);
-localparam S_WBPI_DEFAULT = (S_WBPI_SRAM + 1);
+localparam S_WBPI_SDSPI   = (S_WBPI_SRAM + 1);
+localparam S_WBPI_DEFAULT = (S_WBPI_SDSPI + 1);
 
 localparam WBPI_MDEVCOUNT = (M_WBPI_LAST + 1);
 localparam WBPI_SDEVCOUNT = (S_WBPI_DEFAULT + 1);
@@ -130,10 +149,11 @@ localparam [0:(WBPI_SDEVCOUNT*2*32)-1] WBPI_SDEVS = {
 	/* S_WBPI_IRQCTRL */ 32'hf00,  32'(WORDBITSZ/8),
 	/* S_WBPI_SERIAL  */ 32'hf80,  32'(2*(WORDBITSZ/8)),
 	/* S_WBPI_SRAM    */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
+	/* S_WBPI_SDSPI   */ 32'he00,  32'(2*(WORDBITSZ/8)),
 	/* S_WBPI_DEFAULT */ 32'h0,    32'h0};
 
 localparam WBPI_MAXPENDINGACK     = 32;
-localparam WBPI_DNSIZR            = 4'b0011;
+localparam WBPI_DNSIZR            = 5'b01011;
 localparam WBPI_WORDBITSZ         = `XWORDBITSZ;
 localparam WBPI_CLOG2WORDBITSZBY8 = clog2(WBPI_WORDBITSZ/8);
 localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
@@ -166,8 +186,9 @@ wire wbpi_clk_w = clk100mhz_w;
 
 localparam IRQ_DFLTDEV = 0;
 localparam IRQ_SERIAL = (IRQ_DFLTDEV + 1);
+localparam IRQ_SDSPI = (IRQ_SERIAL + 1);
 
-localparam IRQSRCCOUNT = (IRQ_SERIAL +1); // Number of interrupt sources.
+localparam IRQSRCCOUNT = (IRQ_SDSPI +1); // Number of interrupt sources.
 localparam IRQDSTCOUNT = CPU_COUNT; // Number of interrupt destinations.
 wire [IRQSRCCOUNT -1 : 0] irq_src_stb_w;
 wire [IRQSRCCOUNT -1 : 0] irq_src_rdy_w;
@@ -306,6 +327,37 @@ sram #(
 	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_SRAM])
 	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SRAM])
 	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SRAM])
+);
+
+spi #(
+	 .WORDBITSZ      (WORDBITSZ)
+	,.PHYCLKFREQ     (WBPI_CLKFREQ)
+	,.DEFAULTBITRATE (400000)
+	,.BUFSZ          (2048)
+	,.CPOL           (0)
+) sdspi (
+
+	 .rst_i (wbpi_rst_w)
+
+	,.clk_i     (wbpi_clk_w)
+	,.clk_phy_i (wbpi_clk_w)
+
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_SDSPI])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_SDSPI])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_SDSPI])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_SDSPI])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_SDSPI])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_SDSPI])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SDSPI])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SDSPI])
+
+	,.irq_stb_o (irq_src_stb_w[IRQ_SDSPI])
+	,.irq_rdy_i (irq_src_rdy_w[IRQ_SDSPI])
+
+	,.sclk_o (sdspi_sclk_o)
+	,.mosi_o (sdspi_mosi_o)
+	,.miso_i (sdspi_miso_i)
+	,.cs_o   (sdspi_cs_o)
 );
 
 // Catch invalid physical address space access.
