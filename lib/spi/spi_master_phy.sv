@@ -105,14 +105,17 @@ input wire rst_i;
 
 input wire clk_i;
 
+// The registers driving the pins, "mosibits" below included, are
+// initialized at declaration, as the clock may not run until a pll
+// locks: the slave must see inactive levels from configuration on.
 output reg  sclk_o = (|CPOL);
 output wire mosi_o;
 input  wire miso_i;
 output reg  cs_o = 1'b1;
 
 input  wire stb_i;
-output reg  rdy_o = 1'b1;
-output reg  rcvd_o = 1'b0;
+output reg  rdy_o;
+output reg  rcvd_o;
 
 input wire [CLOG2SCLKDIVLIMIT -1 : 0] sclkdiv_i;
 
@@ -124,13 +127,13 @@ input wire misoSkipSyncBit_i;
 
 wire misoIsLow = !data_o[0];
 
-reg inSync = 0; // Relevant only if misoSync_i is true.
+reg inSync; // Relevant only if misoSync_i is true.
 
 reg  [DATABITSZ -1 : 0] mosibits = {DATABITSZ{1'b1}};
 assign mosi_o = mosibits[DATABITSZ-1];
 
 // Keep track of the number of bits left to transmit.
-reg [CLOG2DATABITSZ -1 : 0] bitcnt = 0;
+reg [CLOG2DATABITSZ -1 : 0] bitcnt;
 wire bitcntNull = !bitcnt;
 wire bitcntNull_and_stbNull = (bitcntNull && !stb_i);
 
@@ -141,7 +144,7 @@ wire cntrDone = (cntr == sclkdiv_i);
 // The level of "sclk_o" doubles as the half-period phase.
 wire sclkIsIdle = (sclk_o == (|CPOL));
 
-always @ (posedge clk_i) begin
+always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		sclk_o <= (|CPOL);
 		cs_o <= 1'b1;

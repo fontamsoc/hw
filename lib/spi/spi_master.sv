@@ -161,16 +161,16 @@ wire phy_rcvd_w;
 wire [DATABITSZ -1 : 0] phy_data_w0;
 wire [DATABITSZ -1 : 0] phy_data_w1;
 
-reg phy_stb_r = 0;
+reg phy_stb_r;
 
 // High while the data presented on the phy input "data_i" is a control data.
-reg phy_ctrl_r = 0;
+reg phy_ctrl_r;
 
 // Configuration latched from a control data; the phy samples those inputs
 // at each bit transmitted, hence they must remain valid for the whole
 // transmission, which they do until the next control data.
-reg phy_misoSync_r = 0;
-reg phy_misoSkipSyncBit_r = 0;
+reg phy_misoSync_r;
+reg phy_misoSkipSyncBit_r;
 
 spi_master_phy #(
 	 .SCLKDIVLIMIT (SCLKDIVLIMIT)
@@ -218,15 +218,15 @@ fifo #( // fifo for storing data received.
 	,.data_i      (phy_data_w0)
 );
 
-reg phy_rdy_w_r = 0;
-always @ (posedge clk_phy_i)
+reg phy_rdy_w_r;
+always_ff @(posedge clk_phy_i)
 	phy_rdy_w_r <= phy_rdy_w;
 wire phy_rdy_w_negedge = (!phy_rdy_w && phy_rdy_w_r);
 
 wire fifo_tx_empty_w;
 
 wire fifo_tx_read_w = (!fifo_tx_empty_w && (!phy_stb_r || phy_rdy_w_negedge));
-always @ (posedge clk_phy_i) begin
+always_ff @(posedge clk_phy_i) begin
 	if (rst_i)
 		phy_stb_r <= 1'b0;
 	else if (fifo_tx_read_w)
@@ -244,7 +244,7 @@ end
 // of the transmission would also be taken for a control data.
 wire fifo_tx_ctrl_w = (cs_o && !phy_stb_r);
 
-always @ (posedge clk_phy_i) begin
+always_ff @(posedge clk_phy_i) begin
 	if (rst_i)
 		phy_ctrl_r <= 1'b0;
 	else if (fifo_tx_read_w)
@@ -263,7 +263,7 @@ assign phy_data_w1 = (phy_ctrl_r ? {DATABITSZ{1'b1}} : fifo_tx_data_w);
 // "fifo_tx_data_w" cannot change without a read.
 // Discarding the null bit is allowed only when waiting for it is enabled,
 // as the phy would otherwise transmit one bit too many.
-always @ (posedge clk_phy_i) begin
+always_ff @(posedge clk_phy_i) begin
 	if (rst_i) begin
 		phy_misoSync_r <= 1'b0;
 		phy_misoSkipSyncBit_r <= 1'b0;
