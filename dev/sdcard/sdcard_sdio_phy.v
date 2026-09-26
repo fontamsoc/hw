@@ -260,6 +260,9 @@ assign err_o = (state == ERROR);
 // Register that hold the value of the input "sdcmd.sclkdiv_i".
 reg [CLOG2SDCLKDIVLIMIT -1 : 0] sclkdiv_r;
 
+// Set while no CRC computation is in progress.
+wire crcidle_w;
+
 wire sdcmd_cs_w;
 reg  sdcmd_cs_r = 1;
 always @ (posedge clk_i)
@@ -271,7 +274,7 @@ always @ (posedge clk_i) begin
 		sdcmd_txbuf_ctrl <= 1'b1;
 	else if (sdcmd_cs_w && !sdcmd_cs_r)
 		sdcmd_txbuf_ctrl <= 1'b1;
-	else if (sdcmd_txbuf_we && !sdcmd_txbuf_full)
+	else if (sdcmd_txbuf_we && crcidle_w && !sdcmd_txbuf_full)
 		sdcmd_txbuf_ctrl <= 1'b0;
 end
 
@@ -316,6 +319,17 @@ wire [8 -1 : 0] sdcmd_rxbuf_dato;
 // buffer to be full.
 localparam SDIOBUFFERSIZE = 2;
 
+// Number of 0xff bytes buffered ahead of the 6 bytes of each command.
+// It used to be (SDIOBUFFERSIZE + 1), so that the transmit buffer be full
+// before the command bytes got buffered, which was what left the CRC
+// computation enough clock cycles; crcidle_w now does that explicitly, hence
+// this no longer depends on SDIOBUFFERSIZE, and a large transmit buffer no
+// longer costs one 0xff byte transmitted per buffered data.
+// It must be at least 1, since the first data buffered while the output
+// "cs_o" of an spi_master is high is the control data of the transmission,
+// which is not transmitted.
+localparam SDIOCMDFILLER = 2;
+
 spi_master #(
 	 .SCLKDIVLIMIT (SDCLKDIVLIMIT)
 	,.DATABITSZ    (8)
@@ -336,7 +350,7 @@ spi_master #(
 
 	,.sclkdiv_i (sclkdiv_r)
 
-	,.write_i (sdcmd_txbuf_we)
+	,.write_i (sdcmd_txbuf_we && crcidle_w)
 	,.data_i  (sdcmd_txbuf_ctrl ? sdcmd_ctrldata_w : sdcmd_txbuf_dati)
 	,.full_o  (sdcmd_txbuf_full)
 
@@ -357,7 +371,7 @@ always @ (posedge clk_i) begin
 		sddat_txbuf_ctrl <= 1'b1;
 	else if (sddat_cs_w_posedge)
 		sddat_txbuf_ctrl <= 1'b1;
-	else if (sddat_txbuf_we && !(|sddat_txbuf_full))
+	else if (sddat_txbuf_we && crcidle_w && !(|sddat_txbuf_full))
 		sddat_txbuf_ctrl <= 1'b0;
 end
 
@@ -412,7 +426,7 @@ spi_master #(
 
 	,.sclkdiv_i (sclkdiv_r)
 
-	,.write_i (sddat_txbuf_we)
+	,.write_i (sddat_txbuf_we && crcidle_w)
 	,.data_i  (sddat_txbuf_ctrl ?
 		sddat_ctrldata_w[(gen_sddat_idx*8)+:8] :
 		_sddat_txbuf_dati[(gen_sddat_idx*8)+:8])
@@ -521,7 +535,9 @@ wire [8 -1 : 0] CSD_speed = sdcardcsd[96+:8];
 // In fact CLKFREQ must be at least 250 KHz.
 reg [CLOG2CLKFREQ -1 : 0] cntr;
 
-assign tx_pop_o  = ((state == CMD24RESP) && !sddat_txbuf_full  && cntr && cntr <= 128);
+// Note that crcidle_w gates this too: popping the data source while a byte
+// cannot be buffered for transmission would lose it.
+assign tx_pop_o  = ((state == CMD24RESP) && !sddat_txbuf_full && crcidle_w && cntr && cntr <= 128);
 assign rx_push_o = ((state == CMD17RESP) && !sddat_rxbuf_empty && cntr && cntr <= 128);
 
 localparam cmd0 = 40'h4000000000;
@@ -577,6 +593,25 @@ localparam CRCCOUNTERBITSZ = clog2(8+1);
 // It is set to 8 for each byte to accumulate in the CRC computation.
 reg [CRCCOUNTERBITSZ -1 : 0] crccounter = 0;
 reg [CRCCOUNTERBITSZ -1 : 0] _crccounter = 0;
+
+// Set while no CRC computation is in progress.
+// The CRC of a byte is computed bit-serially over 8 "clk_i" cycles, hence the
+// byte that follows must not be buffered for transmission before that
+// completes, otherwise the registers crcarg and crccounter get clobbered, and
+// the CRC transmitted is wrong. That used to be implied by a transmit buffer
+// being full, which freed a slot only once a byte had been transmitted; it is
+// made explicit here so that it no longer depends on how spi_master buffers
+// the data to transmit.
+// The registers crccounter and _crccounter are shared by the CRC7 of "sdcmd"
+// and the CRC16 of each "sddat", hence a single predicate for both.
+// It gates the inputs "sdcmd.write_i" and "sddat.write_i", every test of the
+// outputs "sdcmd.full_o" and "sddat.full_o" below, and the output "tx_pop_o",
+// so that a byte gets buffered exactly when the register holding it is loaded
+// with the byte that follows; gating only some of those would buffer a byte
+// twice, or lose one. Note that it must gate the "write_i" inputs
+// combinationally for that reason, and not the registers driving them, which
+// would take effect one clock cycle later.
+assign crcidle_w = !(crccounter || _crccounter);
 
 assign cmd_pop_o = (state == READY);
 
@@ -743,7 +778,7 @@ always @ (posedge clk_i) begin
 			if (cntr) begin
 				// I decrement cntr only if the transmit buffer is
 				// not full, otherwise bytes to send will get skipped.
-				if (!sdcmd_txbuf_full)
+				if (!sdcmd_txbuf_full && crcidle_w)
 					cntr <= cntr - 1'b1;
 
 			end else begin
@@ -759,7 +794,7 @@ always @ (posedge clk_i) begin
 					// full while sending each byte of the command is used
 					// in order to have enough clock cycles to compute the CRC
 					// for each byte transmitted.
-					cntr <= (6 + SDIOBUFFERSIZE + 1);
+					cntr <= (6 + SDIOCMDFILLER);
 				end
 
 				// I stop writting in the transmit buffer since
@@ -795,7 +830,7 @@ always @ (posedge clk_i) begin
 	end else if (state == READY) begin
 		// When I come to this state I expect:
 		// sdcmd_txbuf_we == 0;
-		// cntr == (6 + SDIOBUFFERSIZE + 1);
+		// cntr == (6 + SDIOCMDFILLER);
 
 		// Until there is something to do,
 		// sdcmd_txbuf_we == 0,
@@ -816,14 +851,14 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDCMD0) begin
 		// When I come to this state I expect:
 		// sdcmd_txbuf_we == 0;
-		// cntr == (6 + SDIOBUFFERSIZE + 1);
+		// cntr == (6 + SDIOCMDFILLER);
 
 		// I write the command in the transmit buffer.
 
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!sdcmd_txbuf_full) begin
+		if (!sdcmd_txbuf_full && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -858,14 +893,14 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDCMD8) begin
 		// When I come to this state I expect:
 		// sdcmd_txbuf_we == 0;
-		// cntr == (6 + SDIOBUFFERSIZE + 1);
+		// cntr == (6 + SDIOCMDFILLER);
 
 		// I write the command in the transmit buffer.
 
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!sdcmd_txbuf_full) begin
+		if (!sdcmd_txbuf_full && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -902,7 +937,7 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDINIT) begin
 		// When I come to this state I expect:
 		// sdcmd_txbuf_we == 0;
-		// cntr == (6 + SDIOBUFFERSIZE + 1);
+		// cntr == (6 + SDIOCMDFILLER);
 
 		if (!miscflag) begin
 			// If I get here, the card is done initializing.
@@ -917,7 +952,7 @@ always @ (posedge clk_i) begin
 			// I wait that the transmit buffer
 			// is not full, before doing anything,
 			// otherwise bytes will get lost.
-			if (!sdcmd_txbuf_full) begin
+			if (!sdcmd_txbuf_full && crcidle_w) begin
 
 				if (cntr <= 6) begin
 					// Transmit the byte containing the CRC7 when
@@ -955,14 +990,14 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDACMD41) begin
 		// When I come to this state I expect:
 		// sdcmd_txbuf_we == 0;
-		// cntr == (6 + SDIOBUFFERSIZE + 1);
+		// cntr == (6 + SDIOCMDFILLER);
 
 		// I write the command in the transmit buffer.
 
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!sdcmd_txbuf_full) begin
+		if (!sdcmd_txbuf_full && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -1000,14 +1035,14 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDCMD2) begin
 		// When I come to this state I expect:
 		// sdcmd_txbuf_we == 0;
-		// cntr == (6 + SDIOBUFFERSIZE + 1);
+		// cntr == (6 + SDIOCMDFILLER);
 
 		// I write the command in the transmit buffer.
 
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!sdcmd_txbuf_full) begin
+		if (!sdcmd_txbuf_full && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -1043,14 +1078,14 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDCMD3) begin
 		// When I come to this state I expect:
 		// sdcmd_txbuf_we == 0;
-		// cntr == (6 + SDIOBUFFERSIZE + 1);
+		// cntr == (6 + SDIOCMDFILLER);
 
 		// I write the command in the transmit buffer.
 
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!sdcmd_txbuf_full) begin
+		if (!sdcmd_txbuf_full && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -1086,14 +1121,14 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDCMD9) begin
 		// When I come to this state I expect:
 		// sdcmd_txbuf_we == 0;
-		// cntr == (6 + SDIOBUFFERSIZE + 1);
+		// cntr == (6 + SDIOCMDFILLER);
 
 		// I write the command in the transmit buffer.
 
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!sdcmd_txbuf_full) begin
+		if (!sdcmd_txbuf_full && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -1129,14 +1164,14 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDCMD7) begin
 		// When I come to this state I expect:
 		// sdcmd_txbuf_we == 0;
-		// cntr == (6 + SDIOBUFFERSIZE + 1);
+		// cntr == (6 + SDIOCMDFILLER);
 
 		// I write the command in the transmit buffer.
 
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!sdcmd_txbuf_full) begin
+		if (!sdcmd_txbuf_full && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -1172,7 +1207,7 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDACMD6) begin
 		// When I come to this state I expect:
 		// sdcmd_txbuf_we == 0;
-		// cntr == (6 + SDIOBUFFERSIZE + 1);
+		// cntr == (6 + SDIOCMDFILLER);
 		// miscflag == 0;
 
 		// I write the command in the transmit buffer.
@@ -1180,7 +1215,7 @@ always @ (posedge clk_i) begin
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!sdcmd_txbuf_full) begin
+		if (!sdcmd_txbuf_full && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -1218,14 +1253,14 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDCMD6) begin
 		// When I come to this state I expect:
 		// sdcmd_txbuf_we == 0;
-		// cntr == (6 + SDIOBUFFERSIZE + 1);
+		// cntr == (6 + SDIOCMDFILLER);
 
 		// I write the command in the transmit buffer.
 
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!sdcmd_txbuf_full) begin
+		if (!sdcmd_txbuf_full && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -1261,14 +1296,14 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDCMD16) begin
 		// When I come to this state I expect:
 		// sdcmd_txbuf_we == 0;
-		// cntr == (6 + SDIOBUFFERSIZE + 1);
+		// cntr == (6 + SDIOCMDFILLER);
 
 		// I write the command in the transmit buffer.
 
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!sdcmd_txbuf_full) begin
+		if (!sdcmd_txbuf_full && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -1304,14 +1339,14 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDCMD17) begin
 		// When I come to this state I expect:
 		// sdcmd_txbuf_we == 0;
-		// cntr == (6 + SDIOBUFFERSIZE + 1);
+		// cntr == (6 + SDIOCMDFILLER);
 
 		// I write the command in the transmit buffer.
 
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!sdcmd_txbuf_full) begin
+		if (!sdcmd_txbuf_full && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -1347,14 +1382,14 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDCMD24) begin
 		// When I come to this state I expect:
 		// sdcmd_txbuf_we == 0;
-		// cntr == (6 + SDIOBUFFERSIZE + 1);
+		// cntr == (6 + SDIOCMDFILLER);
 
 		// I write the command in the transmit buffer.
 
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!sdcmd_txbuf_full) begin
+		if (!sdcmd_txbuf_full && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -1749,7 +1784,7 @@ always @ (posedge clk_i) begin
 
 		if (miscflag) begin
 
-			if (!sddat_txbuf_full/*[0]*/) begin
+			if (!sddat_txbuf_full/*[0]*/ && crcidle_w) begin
 				// I get here for each word to send.
 				if (cntr == 133) begin
 					if (sddat_cs_w_posedge) begin
@@ -1828,7 +1863,7 @@ always @ (posedge clk_i) begin
 			// full while sending each byte of the command is used
 			// in order to have enough clock cycles to compute the CRC
 			// for each byte transmitted.
-			cntr <= (6 + SDIOBUFFERSIZE + 1);
+			cntr <= (6 + SDIOCMDFILLER);
 		end
 
 		// I stop writting in the transmit buffer since
@@ -1858,7 +1893,7 @@ always @ (posedge clk_i) begin
 				cntr <= cntr - 1'b1;
 			else begin
 				state <= SENDINIT;
-				cntr <= (6 + SDIOBUFFERSIZE + 1);
+				cntr <= (6 + SDIOCMDFILLER);
 			end
 		end else
 			cntr <= ((CLKFREQ/20)-1); // 50ms is 20Hz.

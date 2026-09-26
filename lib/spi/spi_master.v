@@ -62,6 +62,15 @@
 // 	in the transmit buffer to send after the last data
 // 	has been transmitted.
 //
+// 	Note that a data read from the transmit buffer is held outside of it
+// 	until it has been transmitted, hence the output "full_o" frees a slot
+// 	one data ahead of the transmission, and the buffer holds one data more
+// 	than BUFSZ. A caller must not rely on "full_o" to pace itself against
+// 	the transmission; in particular, if it computes something per data
+// 	buffered, such as a CRC over each data, it must pace itself against
+// 	that computation explicitly, and not assume that "full_o" leaves it
+// 	the time a transmission would.
+//
 // 	The first data buffered while the output "cs_o" is high is a control
 // 	data: it configures the transmission that it begins instead of being
 // 	transmitted, and {DATABITSZ{1'b1}} is transmitted in its place.
@@ -264,6 +273,10 @@ always @ (posedge clk_phy_i) begin
 	end
 end
 
+// Note that this fifo is not first-word-fall-through, hence a data is read
+// out of it before being transmitted, and its usage no longer counts that
+// data; the output "full_o" therefore frees a slot one data ahead of the
+// transmission, which the documentation of "full_o" above warns about.
 fifo #( // fifo for buffering data to transmit.
 	 .WIDTH (DATABITSZ)
 	,.DEPTH (BUFSZ)

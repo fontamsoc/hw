@@ -272,6 +272,9 @@ reg [CLOG2SCLKDIVLIMIT -1 : 0] sclkdiv_r;
 // Register that hold the value of the input "spi.write_i".
 reg spitxbufferwriteenable;
 
+// Set while no CRC computation is in progress.
+wire crcidle_w;
+
 // The first data buffered while the output "spi.cs_o" is high is the control
 // data of the transmission that it begins; the register below keeps track of
 // that first data still being due, and is armed by each "spi.cs_o" posedge.
@@ -289,7 +292,7 @@ always @ (posedge clk_i) begin
 		spitxbufferctrl <= 1'b1;
 	else if (cs_w && !cs_r)
 		spitxbufferctrl <= 1'b1;
-	else if (spitxbufferwriteenable && !spitxbufferfull)
+	else if (spitxbufferwriteenable && crcidle_w && !spitxbufferfull)
 		spitxbufferctrl <= 1'b0;
 end
 
@@ -308,6 +311,16 @@ always @ (posedge clk_i)
 // for the transmission to end or when waiting for the transmit
 // buffer to be full.
 localparam SPIBUFFERSIZE = 2;
+
+// Number of 0xff bytes buffered ahead of the 6 bytes of each command.
+// It used to be (SPIBUFFERSIZE + 1), so that the transmit buffer be full
+// before the command bytes got buffered, which was what left the CRC
+// computation enough clock cycles; crcidle_w now does that explicitly, hence
+// this no longer depends on SPIBUFFERSIZE, and a large transmit buffer no
+// longer costs one 0xff byte transmitted per buffered data.
+// It must be at least 1, since the first data buffered while "spi.cs_o" is
+// high is the control data of the transmission, which is not transmitted.
+localparam SPICMDFILLER = 2;
 
 // SPI master which will be used to communicate with the card.
 spi_master #(
@@ -330,7 +343,7 @@ spi_master #(
 
 	,.sclkdiv_i (sclkdiv_r)
 
-	,.write_i (spitxbufferwriteenable)
+	,.write_i (spitxbufferwriteenable && crcidle_w)
 	,.data_i  (spitxbufferctrl ? {8{1'b1}} : spitxbufferdatain)
 	,.full_o  (spitxbufferfull)
 
@@ -406,7 +419,9 @@ wire [8 -1 : 0] CSD_speed = sdcardcsd[96+:8];
 // In fact CLKFREQ must be at least 250 KHz.
 reg [CLOG2CLKFREQ -1 : 0] cntr;
 
-assign tx_pop_o  = ((state == CMD24RESP) && !spitxbufferfull  && cntr && cntr <= 512);
+// Note that crcidle_w gates this too: popping the data source while a byte
+// cannot be buffered for transmission would lose it.
+assign tx_pop_o  = ((state == CMD24RESP) && !spitxbufferfull && crcidle_w && cntr && cntr <= 512);
 assign rx_push_o = ((state == CMD17RESP) && !spirxbufferempty && cntr && cntr <= 512);
 
 localparam cmd0 = 40'h4000000000;
@@ -458,6 +473,22 @@ localparam CRCCOUNTERBITSZ = clog2(8+1);
 // It is set to 8 for each byte to accumulate in the CRC computation.
 reg [CRCCOUNTERBITSZ -1 : 0] crccounter = 0;
 reg [CRCCOUNTERBITSZ -1 : 0] _crccounter = 0;
+
+// Set while no CRC computation is in progress.
+// The CRC of a byte is computed bit-serially over 8 "clk_i" cycles, hence the
+// byte that follows must not be buffered for transmission before that
+// completes, otherwise the registers crcarg and crccounter get clobbered, and
+// the CRC transmitted is wrong. That used to be implied by the transmit buffer
+// being full, which freed a slot only once a byte had been transmitted; it is
+// made explicit here so that it no longer depends on how spi_master buffers
+// the data to transmit.
+// It gates the input "spi.write_i" as well as every test of the output
+// "spi.full_o" below, so that a byte gets buffered exactly when the register
+// spitxbufferdatain is loaded with the byte that follows it; gating only one
+// of the two would buffer a byte twice, or lose one. Note that it must gate
+// "spi.write_i" combinationally for that reason, and not the register
+// spitxbufferwriteenable, which would take effect one clock cycle later.
+assign crcidle_w = !(crccounter || _crccounter);
 
 assign cmd_pop_o = (state == READY);
 
@@ -556,7 +587,7 @@ always @ (posedge clk_i) begin
 			if (cntr) begin
 				// I decrement cntr only if the transmit buffer is
 				// not full, otherwise bytes to send will get skipped.
-				if (!spitxbufferfull)
+				if (!spitxbufferfull && crcidle_w)
 					cntr <= cntr - 1'b1;
 
 			end else begin
@@ -576,7 +607,7 @@ always @ (posedge clk_i) begin
 					// full while sending each byte of the command is used
 					// in order to have enough clock cycles to compute the CRC
 					// for each byte transmitted.
-					cntr <= (6 + SPIBUFFERSIZE + 1);
+					cntr <= (6 + SPICMDFILLER);
 				end
 
 				// I stop writting in the transmit buffer since
@@ -609,7 +640,7 @@ always @ (posedge clk_i) begin
 	end else if (state == READY) begin
 		// When I come to this state I expect:
 		// spitxbufferwriteenable == 0;
-		// cntr == (6 + SPIBUFFERSIZE + 1);
+		// cntr == (6 + SPICMDFILLER);
 
 		// Until there is something to do,
 		// spitxbufferwriteenable == 0,
@@ -632,7 +663,7 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDCMD0) begin
 		// When I come to this state I expect:
 		// spitxbufferwriteenable == 0;
-		// cntr == (6 + SPIBUFFERSIZE + 1);
+		// cntr == (6 + SPICMDFILLER);
 
 		// I write the command in the transmit buffer.
 		spitxbufferwriteenable <= 1;
@@ -640,7 +671,7 @@ always @ (posedge clk_i) begin
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!spitxbufferfull) begin
+		if (!spitxbufferfull && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -671,7 +702,7 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDCMD59) begin
 		// When I come to this state I expect:
 		// spitxbufferwriteenable == 0;
-		// cntr == (6 + SPIBUFFERSIZE + 1);
+		// cntr == (6 + SPICMDFILLER);
 
 		// I write the command in the transmit buffer.
 		spitxbufferwriteenable <= 1;
@@ -679,7 +710,7 @@ always @ (posedge clk_i) begin
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!spitxbufferfull) begin
+		if (!spitxbufferfull && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -710,7 +741,7 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDCMD8) begin
 		// When I come to this state I expect:
 		// spitxbufferwriteenable == 0;
-		// cntr == (6 + SPIBUFFERSIZE + 1);
+		// cntr == (6 + SPICMDFILLER);
 
 		// I write the command in the transmit buffer.
 		spitxbufferwriteenable <= 1;
@@ -718,7 +749,7 @@ always @ (posedge clk_i) begin
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!spitxbufferfull) begin
+		if (!spitxbufferfull && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -749,7 +780,7 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDINIT) begin
 		// When I come to this state I expect:
 		// spitxbufferwriteenable == 0;
-		// cntr == (6 + SPIBUFFERSIZE + 1);
+		// cntr == (6 + SPICMDFILLER);
 
 		if (!miscflag) begin
 			// If I get here, the card is done initializing.
@@ -765,7 +796,7 @@ always @ (posedge clk_i) begin
 			// I wait that the transmit buffer
 			// is not full, before doing anything,
 			// otherwise bytes will get lost.
-			if (!spitxbufferfull) begin
+			if (!spitxbufferfull && crcidle_w) begin
 
 				if (cntr <= 6) begin
 					// Transmit the byte containing the CRC7 when
@@ -806,7 +837,7 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDCMD41) begin
 		// When I come to this state I expect:
 		// spitxbufferwriteenable == 0;
-		// cntr == (6 + SPIBUFFERSIZE + 1);
+		// cntr == (6 + SPICMDFILLER);
 
 		// I write the command in the transmit buffer.
 		spitxbufferwriteenable <= 1;
@@ -814,7 +845,7 @@ always @ (posedge clk_i) begin
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!spitxbufferfull) begin
+		if (!spitxbufferfull && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -847,7 +878,7 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDCMD6) begin
 		// When I come to this state I expect:
 		// spitxbufferwriteenable == 0;
-		// cntr == (6 + SPIBUFFERSIZE + 1);
+		// cntr == (6 + SPICMDFILLER);
 
 		// I write the command in the transmit buffer.
 		spitxbufferwriteenable <= 1;
@@ -855,7 +886,7 @@ always @ (posedge clk_i) begin
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!spitxbufferfull) begin
+		if (!spitxbufferfull && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -886,7 +917,7 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDCMD9) begin
 		// When I come to this state I expect:
 		// spitxbufferwriteenable == 0;
-		// cntr == (6 + SPIBUFFERSIZE + 1);
+		// cntr == (6 + SPICMDFILLER);
 
 		// I write the command in the transmit buffer.
 		spitxbufferwriteenable <= 1;
@@ -894,7 +925,7 @@ always @ (posedge clk_i) begin
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!spitxbufferfull) begin
+		if (!spitxbufferfull && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -925,7 +956,7 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDCMD58) begin
 		// When I come to this state I expect:
 		// spitxbufferwriteenable == 0;
-		// cntr == (6 + SPIBUFFERSIZE + 1);
+		// cntr == (6 + SPICMDFILLER);
 
 		// I write the command in the transmit buffer.
 		spitxbufferwriteenable <= 1;
@@ -933,7 +964,7 @@ always @ (posedge clk_i) begin
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!spitxbufferfull) begin
+		if (!spitxbufferfull && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -964,7 +995,7 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDCMD16) begin
 		// When I come to this state I expect:
 		// spitxbufferwriteenable == 0;
-		// cntr == (6 + SPIBUFFERSIZE + 1);
+		// cntr == (6 + SPICMDFILLER);
 
 		// I write the command in the transmit buffer.
 		spitxbufferwriteenable <= 1;
@@ -972,7 +1003,7 @@ always @ (posedge clk_i) begin
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!spitxbufferfull) begin
+		if (!spitxbufferfull && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -1003,7 +1034,7 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDCMD17) begin
 		// When I come to this state I expect:
 		// spitxbufferwriteenable == 0;
-		// cntr == (6 + SPIBUFFERSIZE + 1);
+		// cntr == (6 + SPICMDFILLER);
 
 		// I write the command in the transmit buffer.
 		spitxbufferwriteenable <= 1;
@@ -1011,7 +1042,7 @@ always @ (posedge clk_i) begin
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!spitxbufferfull) begin
+		if (!spitxbufferfull && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -1042,7 +1073,7 @@ always @ (posedge clk_i) begin
 	end else if (state == SENDCMD24) begin
 		// When I come to this state I expect:
 		// spitxbufferwriteenable == 0;
-		// cntr == (6 + SPIBUFFERSIZE + 1);
+		// cntr == (6 + SPICMDFILLER);
 
 		// I write the command in the transmit buffer.
 		spitxbufferwriteenable <= 1;
@@ -1050,7 +1081,7 @@ always @ (posedge clk_i) begin
 		// I wait that the transmit buffer
 		// is not full, before doing anything,
 		// otherwise bytes will get lost.
-		if (!spitxbufferfull) begin
+		if (!spitxbufferfull && crcidle_w) begin
 
 			if (cntr <= 6) begin
 				// Transmit the byte containing the CRC7 when
@@ -1486,7 +1517,7 @@ always @ (posedge clk_i) begin
 			end else begin
 				// If I get here, I send the data packet.
 
-				if (!spitxbufferfull) begin
+				if (!spitxbufferfull && crcidle_w) begin
 
 					if (cntr) begin
 						// When cntr == 513, the last byte of the 512
@@ -1545,7 +1576,7 @@ always @ (posedge clk_i) begin
 			// full while sending each byte of the command is used
 			// in order to have enough clock cycles to compute the CRC
 			// for each byte transmitted.
-			cntr <= (6 + SPIBUFFERSIZE + 1);
+			cntr <= (6 + SPICMDFILLER);
 		end
 
 		// I stop writting in the transmit buffer since
@@ -1573,7 +1604,7 @@ always @ (posedge clk_i) begin
 				cntr <= cntr - 1'b1;
 			else begin
 				state <= SENDINIT;
-				cntr <= (6 + SPIBUFFERSIZE + 1);
+				cntr <= (6 + SPICMDFILLER);
 			end
 		end else
 			cntr <= ((CLKFREQ/20)-1); // 50ms is 20Hz.
