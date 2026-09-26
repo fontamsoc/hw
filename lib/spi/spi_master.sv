@@ -71,11 +71,11 @@
 // 	that computation explicitly, and not assume that "full_o" leaves it
 // 	the time a transmission would.
 //
-// 	The first data buffered while the output "cs_o" is high is a control
-// 	data: it configures the transmission that it begins instead of being
-// 	transmitted, and {DATABITSZ{1'b1}} is transmitted in its place.
-// 	The data buffered next, while the output "cs_o" is low, are
-// 	transmitted as usual.
+// 	The data which begins a transmission, ie: the first data taken for
+// 	transmission while the output "cs_o" is high, is a control data:
+// 	it configures that transmission instead of being transmitted, and
+// 	{DATABITSZ{1'b1}} is transmitted in its place. The data which follow
+// 	it within that transmission are transmitted as usual.
 //
 // 	The inverse of the least significant bit of a control data enables
 // 	waiting for a null bit sampled from the input "miso_i" before
@@ -105,8 +105,8 @@
 //
 // 	Note also that the transmit buffer must not run empty before the
 // 	last data of a transmission has been buffered, otherwise the output
-// 	"cs_o" becomes high, and the next data buffered becomes the control
-// 	data of a new transmission instead of being transmitted.
+// 	"cs_o" becomes high, and the next data buffered begins a new
+// 	transmission, becoming its control data instead of being transmitted.
 //
 // read_i
 // data_o
@@ -162,9 +162,6 @@ wire [DATABITSZ -1 : 0] phy_data_w0;
 wire [DATABITSZ -1 : 0] phy_data_w1;
 
 reg phy_stb_r;
-
-// High while the data presented on the phy input "data_i" is a control data.
-reg phy_ctrl_r;
 
 // Configuration latched from a control data; the phy samples those inputs
 // at each bit transmitted, hence they must remain valid for the whole
@@ -235,39 +232,32 @@ always_ff @(posedge clk_phy_i) begin
 		phy_stb_r <= 1'b0;
 end
 
-// The data read from the transmit buffer is a control data when the phy is
-// idle with nothing pending, which means that read begins a transmission.
-// Note that this must not be a register, as the output "cs_o" remains high
-// for one clock cycle after "phy_stb_r" became high, since the phy needs
-// "stb_i" high for a clock cycle before it can begin transmitting; a register
-// set from "cs_o" would be set again in that clock cycle, and the second data
-// of the transmission would also be taken for a control data.
-wire fifo_tx_ctrl_w = (cs_o && !phy_stb_r);
-
-always_ff @(posedge clk_phy_i) begin
-	if (rst_i)
-		phy_ctrl_r <= 1'b0;
-	else if (fifo_tx_read_w)
-		phy_ctrl_r <= fifo_tx_ctrl_w;
-end
-
 wire [DATABITSZ -1 : 0] fifo_tx_data_w;
 
+// The phy takes a data either while idle, with the output "cs_o" high,
+// which begins a transmission, or at the end of the data transmitted,
+// with "cs_o" low, which continues it; hence whether a data is a control
+// data is decided from "cs_o" in the clock cycle the phy takes it.
+// It cannot be decided when the data is read from the transmit buffer,
+// as the phy may become idle at that very clock edge, the buffer having
+// run empty until then, and that data would begin a transmission while
+// having been read as one continuing it.
 // {DATABITSZ{1'b1}} gets transmitted in place of a control data, which also
 // keeps "mosi_o" high while waiting for a null bit from the input "miso_i".
-assign phy_data_w1 = (phy_ctrl_r ? {DATABITSZ{1'b1}} : fifo_tx_data_w);
+assign phy_data_w1 = (cs_o ? {DATABITSZ{1'b1}} : fifo_tx_data_w);
 
-// The transmit buffer not being first-word-fall-through, a control data
-// appears on "fifo_tx_data_w" only after it has been read, hence sampling
-// it while "phy_ctrl_r" is high; that sampling is idempotent, because
-// "fifo_tx_data_w" cannot change without a read.
+// The configuration is latched from a control data in the clock cycle the
+// phy takes it, the only one where "phy_stb_r" is high while the output
+// "cs_o" is high; the transmit buffer is not read in that clock cycle, the
+// phy output "rdy_o" remaining high until then, and the phy first uses
+// the configuration at the end of the first bit transmitted.
 // Discarding the null bit is allowed only when waiting for it is enabled,
 // as the phy would otherwise transmit one bit too many.
 always_ff @(posedge clk_phy_i) begin
 	if (rst_i) begin
 		phy_misoSync_r <= 1'b0;
 		phy_misoSkipSyncBit_r <= 1'b0;
-	end else if (phy_ctrl_r) begin
+	end else if (cs_o && phy_stb_r) begin
 		phy_misoSync_r <= !fifo_tx_data_w[0];
 		phy_misoSkipSyncBit_r <= (!fifo_tx_data_w[1] && !fifo_tx_data_w[0]);
 	end
