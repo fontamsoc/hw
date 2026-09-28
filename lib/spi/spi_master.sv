@@ -15,8 +15,8 @@
 //
 // DATABITSZ:
 // 	Number of bits per data to transmit;
-// 	it must be greater than 2, as a control
-// 	data uses its three least significant bits.
+// 	it must be greater than 3, as a control
+// 	data uses its four least significant bits.
 //
 // SCLKDIVLIMIT:
 // 	Limit below which the input "sclkdiv_i" must be set.
@@ -122,9 +122,19 @@
 // 	null bit while "cs_o" is kept high waits on a slave which is not
 // 	selected, until given up.
 //
+// 	The inverse of the 4th least significant bit of a control data enables
+// 	receive flow control: while the receive buffer holds BUFSZ-1 data or
+// 	more, the transmission pauses instead of taking the next data, hence
+// 	no data received gets dropped; the control data itself waits for room
+// 	before the transmission begins. As the room left is for the data taken
+// 	and for the one whose reception is completing, the receive buffer
+// 	usage stops at BUFSZ-1, or at BUFSZ when the next data was already
+// 	waiting as the previous one completed.
+//
 // 	The remaining bits of a control data are reserved and expected 1'b1;
 // 	hence a control data of {DATABITSZ{1'b1}} configures a transmission
-// 	which neither waits for a null bit nor discards one, with "cs_o" low.
+// 	which neither waits for a null bit nor discards one, with "cs_o" low,
+// 	and without receive flow control.
 //
 // 	Note that the transmission substituted for a control data also
 // 	yields a data in the receive buffer, which is where the response of
@@ -189,7 +199,7 @@ module spi_master (
 `include "lib/clog2.sv"
 
 parameter BUFSZ        = 2;
-parameter DATABITSZ    = 3;
+parameter DATABITSZ    = 4;
 parameter SCLKDIVLIMIT = 2;
 parameter CPOL         = 0;
 parameter SYNCTIMEOUT  = 0;
@@ -234,6 +244,9 @@ wire [DATABITSZ -1 : 0] fifo_tx_data_w;
 
 reg phy_stb_r;
 
+// The data held, presented to the phy unless receive flow control holds it.
+wire phy_stb_w;
+
 // High from the phy giving up waiting for a null bit until the transmission
 // is closed, while every data read out of the transmit buffer is discarded.
 reg aborted_r;
@@ -246,6 +259,9 @@ reg close_r;
 // transmission, which they do until the next control data.
 reg phy_misoSync_r;
 reg phy_misoSkipSyncBit_r;
+reg phy_rxFlowCtrl_r;
+
+wire fifo_rx_near_full_w;
 
 spi_master_phy #(
 	 .SCLKDIVLIMIT (SCLKDIVLIMIT)
@@ -263,7 +279,7 @@ spi_master_phy #(
 	,.miso_i (miso_i)
 	,.cs_o   (cs_o)
 
-	,.stb_i     (phy_stb_r)
+	,.stb_i     (phy_stb_w)
 	,.rdy_o     (phy_rdy_w)
 	,.rcvd_o    (phy_rcvd_w)
 	,.sclkdiv_i (sclkdiv_i)
@@ -300,6 +316,7 @@ fifo #( // fifo for storing data received.
 	,.clk_write_i (clk_phy_i)
 	,.write_i     (phy_rcvd_w)
 	,.data_i      (phy_data_w0)
+	,.near_full_o (fifo_rx_near_full_w)
 );
 
 reg phy_rdy_w_r;
@@ -341,8 +358,19 @@ always_ff @(posedge clk_phy_i) begin
 		aborted_r <= 1'b0;
 end
 
-// A transmission pauses instead of ending, unless a close takes effect.
-assign phy_hold_w = (!phy_idle_w && !closing_w);
+// Under receive flow control, the data held is not presented to the phy
+// while the receive buffer lacks room for two data: the one the phy would
+// take, and the one whose reception it is completing, which it pushes in
+// the receive buffer in the clock cycle after it takes the next data.
+// While idle, the phy is to take a control data, whose own bit decides.
+wire phy_rxFlowCtrl_w = (phy_idle_w ? !fifo_tx_data_w[3] : phy_rxFlowCtrl_r);
+assign phy_stb_w = (phy_stb_r && !(phy_rxFlowCtrl_w && fifo_rx_near_full_w));
+wire phy_flowWait_w = (phy_stb_r && !phy_stb_w);
+
+// A transmission pauses instead of ending, unless a close takes effect;
+// and it pauses while a data held waits for room in the receive buffer,
+// a close notwithstanding, as that data was buffered before the close.
+assign phy_hold_w = ((!phy_idle_w && !closing_w) || phy_flowWait_w);
 
 // A close is a level, pending until the transmission has ended, the
 // transmit buffer is empty, no data is held for the phy, and discarding
@@ -374,20 +402,24 @@ end
 assign phy_data_w1 = (phy_idle_w ? {DATABITSZ{1'b1}} : fifo_tx_data_w);
 
 // The configuration is latched from a control data in the clock cycle the
-// phy takes it, the only one where "phy_stb_r" is high while the phy output
-// "idle_o" is high; the transmit buffer is not read in that clock cycle, the
-// phy output "rdy_o" remaining high until then, and the phy first uses
-// the configuration at the end of the first bit transmitted. The phy
-// latches its input "csKeepHigh_i" in that same clock cycle.
+// phy takes it, the only one where "phy_stb_w" is high while the phy output
+// "idle_o" is high, "phy_stb_r" possibly having been high before while the
+// control data waited for room in the receive buffer; the transmit buffer
+// is not read in that clock cycle, the phy output "rdy_o" remaining high
+// until then, and the phy first uses the configuration at the end of the
+// first bit transmitted. The phy latches its input "csKeepHigh_i" in that
+// same clock cycle.
 // Discarding the null bit is allowed only when waiting for it is enabled,
 // as the phy would otherwise transmit one bit too many.
 always_ff @(posedge clk_phy_i) begin
 	if (rst_i) begin
 		phy_misoSync_r <= 1'b0;
 		phy_misoSkipSyncBit_r <= 1'b0;
-	end else if (phy_idle_w && phy_stb_r) begin
+		phy_rxFlowCtrl_r <= 1'b0;
+	end else if (phy_idle_w && phy_stb_w) begin
 		phy_misoSync_r <= !fifo_tx_data_w[0];
 		phy_misoSkipSyncBit_r <= (!fifo_tx_data_w[1] && !fifo_tx_data_w[0]);
+		phy_rxFlowCtrl_r <= !fifo_tx_data_w[3];
 	end
 end
 

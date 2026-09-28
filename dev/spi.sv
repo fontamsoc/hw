@@ -97,9 +97,18 @@
 // 	first command. The bits are independent: waiting for a null bit while
 // 	"cs_o" is kept high waits on a slave which is not selected, until
 // 	given up.
-// 	bits 3 to 7: reserved and expected 1.
+// 	bit 3: when null, receive flow control is enabled: while the receive
+// 	buffer holds BUFSZ-1 bytes or more, the transmission pauses instead
+// 	of taking the next byte, hence no byte received gets dropped, and
+// 	the reader can be preempted as the writer can; the control byte
+// 	itself waits for room in the receive buffer before the transmission
+// 	begins. The receive buffer usage then stops at BUFSZ-1, or at BUFSZ
+// 	when the next byte was already waiting as the previous one completed,
+// 	hence an interrupt threshold of at most BUFSZ-1 is to be used with it.
+// 	bits 4 to 7: reserved and expected 1.
 // Hence a control byte of 0xff begins a transmission which neither waits
-// for a null bit nor keeps "cs_o" high.
+// for a null bit, keeps "cs_o" high, nor pauses for room in the receive
+// buffer.
 //
 // A close remains pending until the transmission has ended, and is counted
 // in the transmit buffer usage meanwhile; a byte written while it is pending
@@ -114,7 +123,7 @@
 // 	do hwdrvchar_read(dev, junk, sizeof(junk));
 // 	while (hwdrvchar_writable(dev) != dev->bufsz);
 // 	while (hwdrvchar_read(dev, junk, sizeof(junk)));
-// 	uint8_t c = 0xff; // The control byte.
+// 	uint8_t c = 0xff; // The control byte; ie: 0xf7 for receive flow control.
 // 	hwdrvchar_write(dev, &c, 1);
 // 	// hwdrvchar_write() and hwdrvchar_read() at any pace, reading every
 // 	// byte expected; ie: for an SD card, the command, polling its response
@@ -139,8 +148,9 @@
 // receive buffer.
 //
 // For every byte written, a byte is received, and the receive buffer drops
-// the bytes received while it is full; hence the count of bytes written
-// less the count of bytes read must not exceed BUFSZ.
+// the bytes received while it is full; hence, unless receive flow control
+// is enabled, the count of bytes written less the count of bytes read
+// must not exceed BUFSZ.
 //
 // A read while the receive buffer is empty, or a write while the transmit
 // buffer is full or one byte away from full, stalls the memory interface
