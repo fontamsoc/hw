@@ -22,6 +22,12 @@
 // 	Number of clock cycles after which waiting for a null bit, which
 // 	the input "misoSync_i" enables, is given up; a null value disables
 // 	giving up.
+//
+// PAUSETIMEOUT:
+// 	Number of clock cycles after which waiting for a data, which the
+// 	input "hold_i" causes, is given up; a null value disables giving up.
+// 	The waits for a null bit and for a data exclude each other, hence
+// 	they share a counter, which only the greater of both timeouts sizes.
 
 // Ports.
 //
@@ -83,7 +89,7 @@
 // 	using a null bit, such as the start-bit of an SD card in SPI mode.
 // 	Once synchronized, it remains so until the transmission ends.
 // 	Waiting is given up after SYNCTIMEOUT clock cycles, as described
-// 	with the output "syncTimeout_o".
+// 	with the output "timeout_o".
 //
 // misoSkipSyncBit_i
 // 	This signal must be asserted only when the input "misoSync_i" is
@@ -93,23 +99,29 @@
 // 	discarded, and the DATABITSZ bits that follow it become "data_o";
 // 	when low, that null bit becomes the most significant bit of "data_o".
 //
-// syncTimeout_o
-// 	This signal is high in the clock cycle at the end of which waiting
-// 	for a null bit is given up, having lasted SYNCTIMEOUT clock cycles;
-// 	it happens on the first trailing edge of "sclk_o" after that, unless
+// timeout_o
+// 	This signal is high in the clock cycle at the end of which a wait
+// 	is given up.
+// 	Waiting for a null bit is given up having lasted SYNCTIMEOUT clock
+// 	cycles, on the first trailing edge of "sclk_o" after that, unless
 // 	the null bit was sampled on the leading edge before it.
+// 	Waiting for a data, while paused or while idle as described with
+// 	the input "hold_i", is given up in the clock cycle where it has
+// 	lasted PAUSETIMEOUT clock cycles, unless a data is presented through
+// 	"stb_i", or "hold_i" is low, in that clock cycle.
 // 	The transmission is then aborted: the outputs "idle_o", "cs_o" and
 // 	"rdy_o" become high, while "rcvd_o" does not become high for the
 // 	data given up. The phy being idle from that clock edge, "stb_i" must
 // 	be lowered at that same edge, unless its data is to begin a new
-// 	transmission.
+// 	transmission; a data waiting while the phy was idle is expected
+// 	dropped.
 //
 // idle_o
 // 	This signal is high while no transmission is in progress; the data
 // 	taken while it is high begins a transmission, which ends when no
 // 	data is presented through "stb_i" at the end of the data transmitted
-// 	while the input "hold_i" is low, or when waiting for a null bit is
-// 	given up; it remains low while the transmission is paused.
+// 	while the input "hold_i" is low, or when a wait is given up; it
+// 	remains low while the transmission is paused.
 //
 // hold_i
 // 	This signal is sampled at the end of the data transmitted when no data
@@ -121,7 +133,9 @@
 // 	kept; the data which resumes the transmission continues it, and its
 // 	first bit lasts a full half-period of "sclk_o" before its leading edge,
 // 	as when a data begins a transmission.
-// 	It is ignored while "idle_o" is high.
+// 	While "idle_o" is high, it reports a data waiting outside of the phy
+// 	to begin a transmission, as the phy is not presented it through "stb_i"
+// 	meanwhile; that wait is then given up as a pause is.
 //
 // csKeepHigh_i
 // 	This signal is sampled when the phy takes a data while "idle_o" is
@@ -136,7 +150,7 @@ module spi_master_phy (
 	stb_i, rdy_o, rcvd_o, sclkdiv_i,
 	data_o, data_i,
 	misoSync_i, misoSkipSyncBit_i,
-	syncTimeout_o,
+	timeout_o,
 	idle_o, hold_i, csKeepHigh_i
 );
 
@@ -146,10 +160,12 @@ parameter DATABITSZ    = 2;
 parameter SCLKDIVLIMIT = 2;
 parameter CPOL         = 0;
 parameter SYNCTIMEOUT  = 0;
+parameter PAUSETIMEOUT = 0;
 
 localparam CLOG2DATABITSZ    = clog2(DATABITSZ);
 localparam CLOG2SCLKDIVLIMIT = clog2(SCLKDIVLIMIT);
-localparam CLOG2SYNCTIMEOUT  = clog2(SYNCTIMEOUT+1);
+localparam TIMEOUTMAX        = ((SYNCTIMEOUT > PAUSETIMEOUT) ? SYNCTIMEOUT : PAUSETIMEOUT);
+localparam CLOG2TIMEOUT      = clog2(TIMEOUTMAX+1);
 
 input wire rst_i;
 
@@ -175,7 +191,7 @@ input  wire [DATABITSZ -1 : 0] data_i;
 input wire misoSync_i;
 input wire misoSkipSyncBit_i;
 
-output wire syncTimeout_o;
+output wire timeout_o;
 
 output reg  idle_o;
 input  wire hold_i;
@@ -215,22 +231,36 @@ wire sclkIsIdle = (sclk_o == (|CPOL));
 // first data of a transmission, since once synchronized it remains so.
 wire syncWaiting = (misoSync_i && !inSync && !bitcntNull);
 
-// Keep track of the number of clock cycles spent waiting for a null bit;
-// it needs no reset, as it clears itself while not waiting, which a reset
-// insures.
-reg [CLOG2SYNCTIMEOUT -1 : 0] syncTimeoutCntr;
+// High while waiting for a null bit, for a data while paused, or, while
+// idle, for a data which "hold_i" reports waiting outside of the phy. A
+// pause is at the end of a data, where waiting for a null bit is done,
+// hence the waits exclude each other, and every wait begins from a clock
+// cycle where none happens, which clears the counter they share.
+wire waiting = (syncWaiting || paused || (idle_o && hold_i));
+
+// Keep track of the number of clock cycles spent waiting; it needs no
+// reset, as it clears itself while not waiting, which a reset insures.
+reg [CLOG2TIMEOUT -1 : 0] timeoutCntr;
 wire syncTimeoutDone = ((SYNCTIMEOUT != 0) &&
-	(syncTimeoutCntr == SYNCTIMEOUT[CLOG2SYNCTIMEOUT -1 : 0]));
+	(timeoutCntr == SYNCTIMEOUT[CLOG2TIMEOUT -1 : 0]));
+wire pauseTimeoutDone = ((PAUSETIMEOUT != 0) &&
+	(timeoutCntr == PAUSETIMEOUT[CLOG2TIMEOUT -1 : 0]));
 always_ff @(posedge clk_i) begin
-	if (!syncWaiting)
-		syncTimeoutCntr <= 0;
-	else if (!syncTimeoutDone)
-		syncTimeoutCntr <= (syncTimeoutCntr + 1'b1);
+	if (!waiting)
+		timeoutCntr <= 0;
+	else if (!(syncWaiting && syncTimeoutDone))
+		timeoutCntr <= (timeoutCntr + 1'b1);
 end
 
-// Waiting is given up on a trailing edge of "sclk_o", unless the null bit
-// was sampled on the leading edge which preceded it.
-assign syncTimeout_o = (syncTimeoutDone && syncWaiting && !misoIsLow && cntrDone && !sclkIsIdle);
+// Waiting for a null bit is given up on a trailing edge of "sclk_o",
+// unless the null bit was sampled on the leading edge which preceded it.
+wire syncTimeout = (syncTimeoutDone && syncWaiting && !misoIsLow && cntrDone && !sclkIsIdle);
+
+// Waiting for a data is given up in the clock cycle its count is reached,
+// unless a data is presented, or "hold_i" is low, in that clock cycle.
+wire pauseTimeout = (pauseTimeoutDone && (paused || idle_o) && !stb_i && hold_i);
+
+assign timeout_o = (syncTimeout || pauseTimeout);
 
 always_ff @(posedge clk_i) begin
 	if (rst_i) begin
@@ -252,7 +282,7 @@ always_ff @(posedge clk_i) begin
 					bitcnt <= (bitcnt - 1'b1);
 				mosibits <= {mosibits[(DATABITSZ-1)-1:0], 1'b1};
 				inSync <= 1'b1;
-			end else if (syncTimeout_o)
+			end else if (timeout_o)
 				bitcnt <= 0;
 		end else if (stb_i) begin
 			bitcnt <= (DATABITSZ-1);
@@ -273,9 +303,11 @@ always_ff @(posedge clk_i) begin
 		// Counting restarts at every clock cycle of a pause, so that the data
 		// which resumes it gets a full half-period before its leading edge.
 		cntr <= 0;
-		// Giving up waiting for a null bit ends the transmission;
-		// "rcvd_o" remains low, as "bitcnt" is non-null.
-		if (syncTimeout_o) begin
+		// Giving up a wait ends the transmission; "rcvd_o" remains low, as
+		// "bitcnt" is non-null while waiting for a null bit, and no data is
+		// being received while paused or idle. The synchronization which a
+		// pause kept is not passed on.
+		if (timeout_o) begin
 			idle_o <= 1'b1;
 			paused <= 1'b0;
 			cs_o <= 1'b1;

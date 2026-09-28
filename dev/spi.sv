@@ -146,6 +146,16 @@
 // closed the transmission, whereas it is never null while a transmission
 // is in progress; the bytes received before the abort remain in the
 // receive buffer.
+// A transmission paused for PAUSETIMEOUT clock cycles of "clk_phy_i",
+// whether waiting for a byte to be written or for room in the receive
+// buffer, is aborted likewise, "cs_o" becoming high; so is a control byte
+// waiting for room in the receive buffer as long, which is dropped. The
+// discarding follows until the close, as above. Hence a transmission left
+// open ends by itself, and hwdrvchar_init() alone returns the transmit
+// side to idle, taking the time to transmit the bytes buffered, up to
+// BUFSZ+2 byte-times, then PAUSETIMEOUT+1 clock cycles of "clk_phy_i",
+// its final CMDSETINTERRUPT ending the discarding; the bytes received
+// meanwhile remain to be read.
 //
 // For every byte written, a byte is received, and the receive buffer drops
 // the bytes received while it is full; hence, unless receive flow control
@@ -155,6 +165,11 @@
 // A read while the receive buffer is empty, or a write while the transmit
 // buffer is full or one byte away from full, stalls the memory interface
 // until a byte is received, or until room is made by a byte transmitted.
+// Under receive flow control, such a write while the transmission waits for
+// room in the receive buffer stalls it until the transmission is aborted,
+// or for good if PAUSETIMEOUT is null, as the reader cannot run meanwhile;
+// hence no more bytes than hwdrvchar_writable() returns are to be written,
+// as hwdrvchar_write() does.
 //
 // The transmissions of different software contexts must not interleave,
 // hence the accesses to the device must be serialized, ie: using a lock.
@@ -193,6 +208,14 @@
 // 	bit is given up; a null value disables giving up, as happens at the
 // 	default PHYCLKFREQ. Its default of (PHYCLKFREQ/10) is 100 ms, the
 // 	time within which an SD card answers a read.
+//
+// PAUSETIMEOUT
+// 	Number of clock cycles of "clk_phy_i" after which a paused
+// 	transmission, or a control byte waiting for room in the receive
+// 	buffer, is given up; a null value disables giving up, as happens at
+// 	the default PHYCLKFREQ. Its default of (PHYCLKFREQ/10) is 100 ms,
+// 	twice the 50 ms within which underLineOS resumes a preempted thread;
+// 	equal to SYNCTIMEOUT, it adds no counter bits.
 
 // Ports:
 //
@@ -271,6 +294,7 @@ parameter DEFAULTBITRATE = 1;
 parameter BUFSZ          = 2;
 parameter CPOL           = 0;
 parameter SYNCTIMEOUT    = (PHYCLKFREQ/10);
+parameter PAUSETIMEOUT   = (PHYCLKFREQ/10);
 
 localparam CLOG2BUFSZ = clog2(BUFSZ);
 
@@ -451,6 +475,7 @@ spi_master #(
 	,.SCLKDIVLIMIT (SCLKDIVLIMIT)
 	,.CPOL         (CPOL)
 	,.SYNCTIMEOUT  (SYNCTIMEOUT)
+	,.PAUSETIMEOUT (PAUSETIMEOUT)
 
 ) spi_master (
 

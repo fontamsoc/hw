@@ -28,6 +28,12 @@
 // 	Number of clock cycles of "clk_phy_i" after which waiting for a null
 // 	bit is given up, as described with the transmit buffer interface;
 // 	a null value disables giving up.
+//
+// PAUSETIMEOUT:
+// 	Number of clock cycles of "clk_phy_i" after which a paused transmission,
+// 	or a control data waiting for room in the receive buffer, is given up,
+// 	as described with the transmit buffer interface; a null value disables
+// 	giving up.
 
 // Ports.
 //
@@ -156,6 +162,15 @@
 // 	hence a caller detects that waiting was given up from "usage_tx_o"
 // 	becoming null before it closed the transmission.
 //
+// 	A transmission paused for PAUSETIMEOUT clock cycles of "clk_phy_i",
+// 	whether waiting for a data to be buffered or for room in the receive
+// 	buffer, is aborted likewise, ending with the output "cs_o" high, the
+// 	data received until then remaining in the receive buffer; so is a
+// 	control data waiting for room in the receive buffer as long, which is
+// 	dropped. The discarding described above follows until the close.
+// 	Hence a transmission left open ends by itself, and the next one begins
+// 	once closed.
+//
 // 	The output "near_full_o" is high when the transmit buffer is full
 // 	or one data away from full.
 //
@@ -166,8 +181,8 @@
 // 	pending. Hence it reaches BUFSZ+3 at most, and it is null only when
 // 	no transmission is in progress and no close is pending, so that a data
 // 	buffered while it is null begins a new transmission, becoming its
-// 	control data. The data being discarded after waiting for a null bit
-// 	was given up are counted only while in the transmit buffer.
+// 	control data. The data being discarded after a wait was given up are
+// 	counted only while in the transmit buffer.
 //
 // read_i
 // data_o
@@ -203,6 +218,7 @@ parameter DATABITSZ    = 4;
 parameter SCLKDIVLIMIT = 2;
 parameter CPOL         = 0;
 parameter SYNCTIMEOUT  = 0;
+parameter PAUSETIMEOUT = 0;
 
 localparam CLOG2BUFSZ        = clog2(BUFSZ);
 localparam CLOG2SCLKDIVLIMIT = clog2(SCLKDIVLIMIT);
@@ -233,7 +249,7 @@ output wire [(CLOG2BUFSZ +1) -1 : 0] usage_rx_o;
 
 wire phy_rdy_w;
 wire phy_rcvd_w;
-wire phy_syncTimeout_w;
+wire phy_timeout_w;
 wire phy_idle_w;
 wire phy_hold_w;
 
@@ -247,8 +263,8 @@ reg phy_stb_r;
 // The data held, presented to the phy unless receive flow control holds it.
 wire phy_stb_w;
 
-// High from the phy giving up waiting for a null bit until the transmission
-// is closed, while every data read out of the transmit buffer is discarded.
+// High from the phy giving up a wait until the transmission is closed,
+// while every data read out of the transmit buffer is discarded.
 reg aborted_r;
 
 // High while a close requested through "close_i" is pending.
@@ -268,6 +284,7 @@ spi_master_phy #(
 	,.DATABITSZ    (DATABITSZ)
 	,.CPOL         (CPOL)
 	,.SYNCTIMEOUT  (SYNCTIMEOUT)
+	,.PAUSETIMEOUT (PAUSETIMEOUT)
 ) spi_phy (
 
 	 .rst_i (rst_i)
@@ -290,7 +307,7 @@ spi_master_phy #(
 	,.misoSync_i        (phy_misoSync_r)
 	,.misoSkipSyncBit_i (phy_misoSkipSyncBit_r)
 
-	,.syncTimeout_o (phy_syncTimeout_w)
+	,.timeout_o (phy_timeout_w)
 
 	,.idle_o       (phy_idle_w)
 	,.hold_i       (phy_hold_w)
@@ -328,13 +345,14 @@ wire fifo_tx_empty_w;
 
 wire [(CLOG2BUFSZ +1) -1 : 0] fifo_tx_usage_w;
 
-// Once the phy gave up waiting for a null bit, the data held on its input
-// "data_i" is discarded, and so is every data read out of the transmit
-// buffer, a data per clock cycle, until the transmission is closed; that
-// includes any data buffered meanwhile.
+// Once the phy gave up a wait, the data held on its input "data_i" is
+// discarded, whether it was waiting for room in the receive buffer or not,
+// and so is every data read out of the transmit buffer, a data per clock
+// cycle, until the transmission is closed; that includes any data
+// buffered meanwhile.
 wire fifo_tx_read_w = (!fifo_tx_empty_w && (!phy_stb_r || phy_rdy_w_negedge));
 always_ff @(posedge clk_phy_i) begin
-	if (rst_i || phy_syncTimeout_w)
+	if (rst_i || phy_timeout_w)
 		phy_stb_r <= 1'b0;
 	else if (fifo_tx_read_w && !aborted_r)
 		phy_stb_r <= 1'b1;
@@ -352,7 +370,7 @@ wire closing_w = (close_r && fifo_tx_empty_w);
 always_ff @(posedge clk_phy_i) begin
 	if (rst_i)
 		aborted_r <= 1'b0;
-	else if (phy_syncTimeout_w)
+	else if (phy_timeout_w)
 		aborted_r <= 1'b1;
 	else if (closing_w)
 		aborted_r <= 1'b0;
