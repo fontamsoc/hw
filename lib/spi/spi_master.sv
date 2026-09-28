@@ -64,10 +64,23 @@
 // near_full_o
 // full_o
 // usage_tx_o
+// close_i
 // 	Fifo interface to buffer the data to transmit.
-// 	A transmission ends when there is no data
-// 	in the transmit buffer to send after the last data
-// 	has been transmitted.
+// 	A transmission lasts until it is closed using the input "close_i";
+// 	when the transmit buffer runs empty before, the transmission pauses:
+// 	"sclk_o" remains at its idle level, "cs_o" keeps its level and nothing
+// 	is clocked, until the next data buffered resumes it. Hence the data of
+// 	a transmission can be buffered at any pace, and no data can begin a
+// 	new transmission before the previous one was closed.
+//
+// 	The input "close_i", when high on a posedge of "clk_i", requests the
+// 	end of the transmission, which happens once every data buffered before
+// 	it has been transmitted, "cs_o" becoming high. The request remains
+// 	pending until then; a data buffered meanwhile continues the
+// 	transmission instead of beginning the next one, hence the next
+// 	transmission is to be buffered once "usage_tx_o" is null. A request
+// 	while no transmission is in progress does nothing, other than ending
+// 	the discarding described below.
 //
 // 	Note that a data read from the transmit buffer is held outside of it
 // 	until it has been transmitted, hence the output "full_o" frees a slot
@@ -91,10 +104,8 @@
 // 	transmitted in place of a control data. It is used with a slave
 // 	which signals the beginning of its response using a null bit, such
 // 	as the start-bit of an SD card in SPI mode. Once synchronized, it
-// 	remains so until the transmission ends, which happens when the
-// 	transmit buffer runs empty; hence the data that follow in an
-// 	uninterrupted transmission are retrieved without waiting for a null
-// 	bit again.
+// 	remains so until the transmission ends, pauses included; hence the
+// 	data that follow are retrieved without waiting for a null bit again.
 //
 // 	The inverse of the 2nd least significant bit of a control data
 // 	discards that null bit, so that the DATABITSZ bits which follow it
@@ -123,30 +134,30 @@
 // 	"clk_phy_i", on the next trailing edge of "sclk_o", unless the null
 // 	bit was sampled on the leading edge before it: the transmission is
 // 	aborted, ending with the output "cs_o" high and without a data
-// 	received in place of the control data, and the transmit buffer is
-// 	emptied, discarding the data it holds, and those buffered until it
-// 	is empty.
-// 	The output "usage_tx_o" becomes null once it is, and then the next
-// 	data buffered begins a new transmission; hence a caller detects that
-// 	waiting was given up from "usage_tx_o" becoming null while data it
-// 	expects are missing from the receive buffer.
-//
-// 	Note also that the transmit buffer must not run empty before the
-// 	last data of a transmission has been buffered, otherwise the
-// 	transmission ends, and the next data buffered begins a new
-// 	transmission, becoming its control data instead of being transmitted.
+// 	received in place of the control data. The data in the transmit
+// 	buffer are then discarded, and so are the data buffered afterwards,
+// 	until the transmission is closed using "close_i", which a caller must
+// 	do before buffering the next transmission, as for any other; a close
+// 	already requested ends the discarding once the transmit buffer is
+// 	empty. Hence a data meant to continue the transmission after it was
+// 	aborted is never taken for the control data of a new one.
+// 	The output "usage_tx_o" becomes null once the transmit buffer is
+// 	empty, whereas it is never null while a transmission is in progress;
+// 	hence a caller detects that waiting was given up from "usage_tx_o"
+// 	becoming null before it closed the transmission.
 //
 // 	The output "near_full_o" is high when the transmit buffer is full
 // 	or one data away from full.
 //
 // 	The output "usage_tx_o" is the count of the data not yet transmitted:
 // 	those in the transmit buffer, the one read out of it and held until
-// 	the phy takes it, and the one being transmitted; hence it reaches
-// 	BUFSZ+2 at most, and it is null only when the transmission has ended
-// 	with nothing left to transmit, so that a data buffered while it is
-// 	null begins a new transmission, becoming its control data. While the
-// 	transmit buffer is emptied after waiting for a null bit was given up,
-// 	it counts one data more than the buffer holds.
+// 	the phy takes it, and the one being transmitted; one more is counted
+// 	while the transmission is paused, and one more while a close is
+// 	pending. Hence it reaches BUFSZ+3 at most, and it is null only when
+// 	no transmission is in progress and no close is pending, so that a data
+// 	buffered while it is null begins a new transmission, becoming its
+// 	control data. The data being discarded after waiting for a null bit
+// 	was given up are counted only while in the transmit buffer.
 //
 // read_i
 // data_o
@@ -171,6 +182,7 @@ module spi_master (
 	sclk_o, mosi_o, miso_i, cs_o,
 	sclkdiv_i,
 	write_i, data_i, near_full_o, full_o, usage_tx_o,
+	close_i,
 	read_i, data_o, empty_o, usage_rx_o
 );
 
@@ -202,6 +214,7 @@ input  wire [DATABITSZ -1 : 0]       data_i;
 output wire                          near_full_o;
 output wire                          full_o;
 output wire [(CLOG2BUFSZ +2) -1 : 0] usage_tx_o;
+input  wire                          close_i;
 
 input  wire                          read_i;
 output wire [DATABITSZ -1 : 0]       data_o;
@@ -212,6 +225,7 @@ wire phy_rdy_w;
 wire phy_rcvd_w;
 wire phy_syncTimeout_w;
 wire phy_idle_w;
+wire phy_hold_w;
 
 wire [DATABITSZ -1 : 0] phy_data_w0;
 wire [DATABITSZ -1 : 0] phy_data_w1;
@@ -220,9 +234,12 @@ wire [DATABITSZ -1 : 0] fifo_tx_data_w;
 
 reg phy_stb_r;
 
-// High while the transmit buffer is emptied, after the phy gave up
-// waiting for a null bit.
-reg fifo_tx_flush_r;
+// High from the phy giving up waiting for a null bit until the transmission
+// is closed, while every data read out of the transmit buffer is discarded.
+reg aborted_r;
+
+// High while a close requested through "close_i" is pending.
+reg close_r;
 
 // Configuration latched from a control data; the phy samples those inputs
 // at each bit transmitted, hence they must remain valid for the whole
@@ -260,6 +277,7 @@ spi_master_phy #(
 	,.syncTimeout_o (phy_syncTimeout_w)
 
 	,.idle_o       (phy_idle_w)
+	,.hold_i       (phy_hold_w)
 	,.csKeepHigh_i (!fifo_tx_data_w[2])
 );
 
@@ -295,24 +313,52 @@ wire [(CLOG2BUFSZ +1) -1 : 0] fifo_tx_usage_w;
 
 // Once the phy gave up waiting for a null bit, the data held on its input
 // "data_i" is discarded, and so is every data read out of the transmit
-// buffer until it is empty, a data per clock cycle; that includes any
-// data buffered meanwhile.
+// buffer, a data per clock cycle, until the transmission is closed; that
+// includes any data buffered meanwhile.
 wire fifo_tx_read_w = (!fifo_tx_empty_w && (!phy_stb_r || phy_rdy_w_negedge));
 always_ff @(posedge clk_phy_i) begin
 	if (rst_i || phy_syncTimeout_w)
 		phy_stb_r <= 1'b0;
-	else if (fifo_tx_read_w && !fifo_tx_flush_r)
+	else if (fifo_tx_read_w && !aborted_r)
 		phy_stb_r <= 1'b1;
 	else if (phy_rdy_w_negedge)
 		phy_stb_r <= 1'b0;
 end
+
+// A close takes effect only while the transmit buffer is empty, so that
+// the data buffered before it are transmitted first: a data buffered just
+// before it, and not yet read out of the transmit buffer at the end of the
+// data transmitted, makes the transmission pause instead of ending, and
+// then resume with that data.
+wire closing_w = (close_r && fifo_tx_empty_w);
+
 always_ff @(posedge clk_phy_i) begin
 	if (rst_i)
-		fifo_tx_flush_r <= 1'b0;
+		aborted_r <= 1'b0;
 	else if (phy_syncTimeout_w)
-		fifo_tx_flush_r <= 1'b1;
-	else if (fifo_tx_empty_w)
-		fifo_tx_flush_r <= 1'b0;
+		aborted_r <= 1'b1;
+	else if (closing_w)
+		aborted_r <= 1'b0;
+end
+
+// A transmission pauses instead of ending, unless a close takes effect.
+assign phy_hold_w = (!phy_idle_w && !closing_w);
+
+// A close is a level, pending until the transmission has ended, the
+// transmit buffer is empty, no data is held for the phy, and discarding
+// has ended; hence a phy clocked slower or faster than "clk_i" cannot miss
+// it, and it cannot clear early: until the transmission it closes has
+// ended, the transmit buffer is not empty, a data is held for the phy, or
+// the phy is not idle. It ends discarding through "aborted_r" being cleared
+// first, so that "usage_tx_o", which counts it, becomes null only once a
+// data buffered would not be discarded.
+always_ff @(posedge clk_i) begin
+	if (rst_i)
+		close_r <= 1'b0;
+	else if (close_i)
+		close_r <= 1'b1;
+	else if (phy_idle_w && fifo_tx_empty_w && !phy_stb_r && !aborted_r)
+		close_r <= 1'b0;
 end
 
 // The phy takes a data either while idle, with its output "idle_o" high,
@@ -375,9 +421,11 @@ fifo #( // fifo for buffering data to transmit.
 // phy is transmitting. The data held stops being counted in the clock
 // cycle where "phy_rdy_w_negedge" is high, the phy having taken it at the
 // clock edge which began that clock cycle, from which it is counted as
-// the one being transmitted. One more is counted while the transmit
-// buffer is emptied, so that the count becomes null only once it is done.
-assign usage_tx_o = (fifo_tx_usage_w + (phy_stb_r && !phy_rdy_w_negedge) + !phy_idle_w + fifo_tx_flush_r);
+// the one being transmitted. The phy output "idle_o" remaining low while
+// the transmission is paused, one more is counted meanwhile, and one more
+// while a close is pending, so that the count becomes null only once the
+// transmission has ended, and a data buffered would begin a new one.
+assign usage_tx_o = (fifo_tx_usage_w + (phy_stb_r && !phy_rdy_w_negedge) + !phy_idle_w + close_r);
 
 endmodule
 

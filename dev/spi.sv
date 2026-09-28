@@ -30,13 +30,16 @@
 // 	When "arg" is 0, the receive buffer usage is returned;
 // 	when "arg" is 1, the transmit buffer usage is returned, which is
 // 	the count of bytes not yet transmitted; it includes up to two bytes
-// 	taken out of the transmit buffer, hence it is capped to BUFSZ, and
-// 	it is null only when no transmission is in progress.
+// 	taken out of the transmit buffer, one while a transmission is paused
+// 	in place of the byte being transmitted, and one while a close is
+// 	pending, hence it is capped to BUFSZ, and it is null only when no
+// 	transmission is in progress and no close is pending.
 // 	"resp" in the result gets set to the usage in number of bytes.
 // 	CMDSETINTERRUPT: enable/disable interrupt.
 // 	"arg" value when 0 disables interrupt, and when non-null, enables
 // 	interrupt and sets the minimum receive buffer usage that would
-// 	trigger an interrupt.
+// 	trigger an interrupt. When the whole "arg" is 0, it also closes
+// 	the transmission in progress, as described below.
 // 	"resp" in the result gets set to the size in bytes of the transmit
 // 	and receive buffer.
 // 	CMDSETSPEED: Set the bitrate used when sending and receiving bytes.
@@ -64,14 +67,17 @@
 // atomic read-write sending CMDDEVRDY must be used to retrieve the
 // result while making the device ready for the next command.
 //
-// A transmission lasts as long as the transmit buffer does not run empty:
-// it ends once the last byte buffered has been transmitted, "cs_o" being
-// low meanwhile. Hence the bytes of a transmission which does not fit in
-// the transmit buffer must be written without being preempted, with a
-// BUFSZ and a bitrate which leave the time to refill it.
 // A byte written while the transmit buffer usage is null begins a new
-// transmission; that byte is a control byte, which configures the
-// transmission instead of being transmitted, 0xff being transmitted in
+// transmission, which lasts until it is closed using CMDSETINTERRUPT with
+// a null "arg": it then ends once every byte written before that command
+// has been transmitted, "cs_o" becoming high. When the transmit buffer
+// runs empty before, the transmission pauses: "sclk_o" remains at its idle
+// level, "cs_o" keeps its level and nothing is clocked, until the next
+// byte written resumes it. Hence the bytes of a transmission can be written
+// at any pace, preemption included, and a byte written within a
+// transmission never begins a new one.
+// The byte which begins a transmission is a control byte, which configures
+// the transmission instead of being transmitted, 0xff being transmitted in
 // its place, while the byte received in its place gets pushed in the
 // receive buffer as any other. The bits of a control byte are as follow:
 // 	bit 0: when null, waiting for a null bit on "miso_i" before counting
@@ -86,26 +92,51 @@
 // 	becomes the most significant bit of that byte.
 // 	bit 2: when null, "cs_o" remains high for the whole transmission,
 // 	while "sclk_o" and "mosi_o" behave as usual; ie: A control byte of
-// 	0xfb followed by nine bytes 0xff sends the 80 clock cycles with
-// 	"cs_o" and "mosi_o" high which an SD card needs before its first
-// 	command. The bits are independent: waiting for a null bit while
+// 	0xfb followed by nine bytes 0xff, then the close, sends the 80 clock
+// 	cycles with "cs_o" and "mosi_o" high which an SD card needs before its
+// 	first command. The bits are independent: waiting for a null bit while
 // 	"cs_o" is kept high waits on a slave which is not selected, until
 // 	given up.
 // 	bits 3 to 7: reserved and expected 1.
 // Hence a control byte of 0xff begins a transmission which neither waits
 // for a null bit nor keeps "cs_o" high.
 //
+// A close remains pending until the transmission has ended, and is counted
+// in the transmit buffer usage meanwhile; a byte written while it is pending
+// continues the transmission instead of beginning the next one, hence the
+// next transmission is to be written once the transmit buffer usage is null.
+// A close while no transmission is in progress does nothing, other than
+// ending the discarding described below; hence the CMDSETINTERRUPT which
+// ends hwdrvchar_init() is harmless.
+// Using hwdrvchar.h, a transmission is performed as follow:
+// 	// End what may have been left open, drop stale bytes, wait until idle.
+// 	hwdrvchar_interrupt(dev, 0);
+// 	do hwdrvchar_read(dev, junk, sizeof(junk));
+// 	while (hwdrvchar_writable(dev) != dev->bufsz);
+// 	while (hwdrvchar_read(dev, junk, sizeof(junk)));
+// 	uint8_t c = 0xff; // The control byte.
+// 	hwdrvchar_write(dev, &c, 1);
+// 	// hwdrvchar_write() and hwdrvchar_read() at any pace, reading every
+// 	// byte expected; ie: for an SD card, the command, polling its response
+// 	// using 0xff, polling the data token, then the block and its CRC.
+// 	hwdrvchar_interrupt(dev, 0); // The close.
+// 	while (hwdrvchar_writable(dev) != dev->bufsz); // Ended.
+// Its first lines insure that a transmission left open, ie: by a context
+// which did not complete it, does not take the bytes written as its own.
+//
 // Waiting for a null bit is given up after SYNCTIMEOUT clock cycles of
 // "clk_phy_i": the transmission is aborted, without a byte received in
-// place of the control byte, and the transmit buffer is emptied, discarding
-// the bytes it holds and those written until it is empty; no interrupt is
-// raised. Software detects it from the transmit buffer usage becoming null
-// while bytes it expects are missing from the receive buffer. Hence the
-// control byte of a transmission which waits for a null bit is to be
-// written along with the bytes which follow it, and no further byte is to
-// be written until the first byte of the transmission has been received,
-// as a byte written once the transmit buffer has been emptied would begin
-// a new transmission.
+// place of the control byte, "cs_o" becoming high, and no interrupt is
+// raised. The bytes in the transmit buffer are then discarded, and so are
+// the bytes written afterwards, until the transmission is closed, which
+// must be done before writing the next transmission as for any other; a
+// close already requested ends the discarding once the transmit buffer is
+// empty. Hence a byte meant to continue the transmission after it was
+// aborted is never taken for the control byte of a new one. Software
+// detects the abort from the transmit buffer usage becoming null before it
+// closed the transmission, whereas it is never null while a transmission
+// is in progress; the bytes received before the abort remain in the
+// receive buffer.
 //
 // For every byte written, a byte is received, and the receive buffer drops
 // the bytes received while it is full; hence the count of bytes written
@@ -123,6 +154,10 @@
 // When enabled, an interrupt request is raised if the receive buffer
 // usage interrupt threshold is reached; interrupt gets disabled when
 // the raised interrupt gets acknowledged.
+// CMDSETINTERRUPT with a null "arg" closing the transmission in progress,
+// interrupt is to be enabled again after the close if it is used, and
+// is to be disabled within a transmission using a threshold of BUFSZ+1,
+// which the receive buffer usage never reaches.
 
 // Parameters:
 //
@@ -297,6 +332,12 @@ wire cmdgetbuf = (prevcmddone && wb_dat_r[1:0] == CMDGETBUFFERUSAGE);
 wire cmdsetint = (prevcmddone && wb_dat_r[1:0] == CMDSETINTERRUPT);
 wire cmdsetspd = (prevcmddone && wb_dat_r[1:0] == CMDSETSPEED);
 
+// CMDSETINTERRUPT with a null "arg" closes the transmission in progress;
+// the whole "arg" is decoded, as "intrqstthresh" keeps its (CLOG2BUFSZ+1)
+// lsb only, and a non-null "arg" which truncates to a null threshold only
+// disables interrupt.
+wire cmdclose = (cmdsetint && !(|wb_dat_r[WORDBITSZ-1:2]));
+
 wire devrd = (wb_stb_r && !wb_we_r && !wb_addr_r[ISCMDBIT] && prevcmdisdevrdy);
 wire devwr = (wb_stb_r &&  wb_we_r && !wb_addr_r[ISCMDBIT] && prevcmdisdevrdy);
 
@@ -420,6 +461,7 @@ spi_master #(
 	,.near_full_o (tx_near_full_w)
 	,.full_o      ()
 	,.usage_tx_o  (tx_usage_w)
+	,.close_i     (cmdclose)
 
 	,.read_i     (rx_read_w)
 	,.data_o     (rx_data_w0)
