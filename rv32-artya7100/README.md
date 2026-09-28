@@ -245,8 +245,8 @@ UART console, so the character-device driver `hwdrvchar.h` drives it unmodified:
 | `cmd` | Name | Purpose |
 | :-: | :--- | :--- |
 | `0b00` | `CMDDEVRDY` | Make the device accept a new command |
-| `0b01` | `CMDGETBUFFERUSAGE` | `arg = 0` → RX bytes used, `arg = 1` → TX bytes not yet transmitted, capped to the buffer size; `0` only when no transmission is in progress |
-| `0b10` | `CMDSETINTERRUPT` | `arg = 0` disables; non-zero enables and sets the RX-usage threshold. Returns the buffer size |
+| `0b01` | `CMDGETBUFFERUSAGE` | `arg = 0` → RX bytes used, `arg = 1` → TX bytes not yet transmitted, counting a paused transmission and a pending close, capped to the buffer size; `0` only when no transmission is in progress |
+| `0b10` | `CMDSETINTERRUPT` | `arg = 0` disables, and **closes** the transmission in progress; non-zero enables and sets the RX-usage threshold. Returns the buffer size |
 | `0b11` | `CMDSETSPEED` | `arg = PHYCLKFREQ / bitrate`; sets the highest bitrate `100 MHz / 2n` not above `100 MHz / arg`, from 50 Mbps down to about 100 kbps, `arg = 0` selecting the lowest. Returns `PHYCLKFREQ` |
 
 Reset defaults: **400 kbps**, 2048-byte RX and TX buffers (`BUFSZ = 2048`),
@@ -254,33 +254,63 @@ Reset defaults: **400 kbps**, 2048-byte RX and TX buffers (`BUFSZ = 2048`),
 `100000000 / 25000000 = 4`.
 
 Transfers are full duplex: while a byte written is transmitted on `mosi`, a byte is
-received from `miso` into the RX buffer. A **transmission** lasts as long as the TX
-buffer does not run empty, `cs` low throughout, and the byte written while the TX
-usage is `0` begins a new one. That byte is a **control byte**: `0xFF` is
-transmitted in its place, the byte received meanwhile is kept as any other, and its
-bits configure the transmission:
+received from `miso` into the RX buffer. The byte written while the TX usage is `0`
+begins a **transmission**, which lasts, `cs` low, until it is **closed** with
+`CMDSETINTERRUPT` and a null `arg`: it then ends once every byte written before that
+command has been transmitted. When the TX buffer runs empty before, the transmission
+**pauses** — `sclk` idle, `cs` kept, nothing clocked — until the next byte written
+resumes it, so the bytes can be written at any pace, preemption included. A close
+while no transmission is in progress does nothing, hence the `CMDSETINTERRUPT` which
+ends `hwdrvchar_init()` is harmless. The first byte of a transmission is a **control
+byte**: `0xFF` is transmitted in its place, the byte received meanwhile is kept as
+any other, and its bits configure the transmission:
 
 | Bit | When `0` |
 | :-: | :--- |
 | 0 | Before counting the bits transmitted, wait for a `0` bit on `miso`, `sclk` toggling meanwhile with `mosi` high — ie: the start bit of an SD card's response or data token |
 | 1 | Discard that `0` bit, so that the byte received in place of the control byte is the 8 bits after it; ignored unless bit 0 is `0` |
-| 2 | Keep `cs` **high** for the whole transmission — ie: `0xFB` followed by nine `0xFF` sends the 80 clock cycles with `cs` and `mosi` high which an SD card needs before its first command |
-| 3 – 7 | Reserved; write `1` |
+| 2 | Keep `cs` **high** for the whole transmission — ie: `0xFB` followed by nine `0xFF`, then the close, sends the 80 clock cycles with `cs` and `mosi` high which an SD card needs before its first command |
+| 3 | **Receive flow control**: while the RX buffer holds 2047 bytes or more, pause instead of taking the next byte, so that nothing received is dropped; the control byte itself waits for room. The RX usage then stops at 2047, or at 2048 when the next byte was already waiting, so use an interrupt threshold of at most 2047 |
+| 4 – 7 | Reserved; write `1` |
 
-Hence `0xFF` begins a plain transmission. Waiting for the `0` bit is given up after
-**100 ms**: the transmission is aborted without a byte received in place of the
-control byte, the TX buffer is emptied, discarding what it holds, and no interrupt
-is raised — software sees the TX usage return to `0` while bytes it expects are
-missing from the RX buffer.
+Hence `0xFF` begins a plain transmission, and `0xF7` one with flow control. A
+transaction goes as follows:
+
+```c
+// Prologue: end whatever is left open, drop stale responses, wait until idle.
+hwdrvchar_interrupt(dev, 0);
+do hwdrvchar_read(dev, junk, sizeof(junk)); while (hwdrvchar_writable(dev) != dev->bufsz);
+while (hwdrvchar_read(dev, junk, sizeof(junk)));
+uint8_t c = 0xff;                              // plain; 0xf7 = receive flow control, 0xfb = cs high
+hwdrvchar_write(dev, &c, 1);
+/* hwdrvchar_write()/hwdrvchar_read() at any pace, preemptible; read every expected response,
+   e.g. SD: command, poll R1 with 0xff, poll the data token, read the block and its CRC */
+hwdrvchar_interrupt(dev, 0);                   // close (re-arm the interrupt afterwards if used)
+while (hwdrvchar_writable(dev) != dev->bufsz); // ended
+```
+
+Waiting for the `0` bit is given up after **100 ms**, and so is a pause, whether it
+waits for a byte to be written or for room in the RX buffer, as is a control byte
+waiting for room: the transmission is aborted with `cs` high, and no interrupt is
+raised. The bytes still buffered, and every byte written afterwards, are then
+**discarded until the close**, so that a writer resuming after the abort never has a
+data byte taken for a control byte; the bytes received before remain. Software sees
+the TX usage return to `0` before its close, which never happens while a
+transmission is in progress. A transmission left open thus ends by itself:
+`hwdrvchar_init()` alone returns the device to idle, its final command ending the
+discard.
 
 > [!IMPORTANT]
-> Every byte written yields a byte received, and the RX buffer drops what arrives
-> while it is full: keep the bytes written less the bytes read within 2048. Write the
-> bytes of a transmission longer than the TX buffer without being preempted, or it
-> runs empty and ends the transmission early. Write the control byte of a
-> transmission which waits for a `0` bit along with the bytes which follow it, and
-> nothing more until its first byte has been received, as a byte written after the
-> TX buffer was emptied would begin a new transmission. Reads and writes of the
+> Close every transaction, and begin it with the prologue above: a transaction begun
+> within 100 ms of another left open goes out as that one's data, control byte
+> included. The next transaction cannot be queued behind a close: wait for the TX
+> usage to reach `0`. Without flow control, every byte written yields a byte received
+> and the RX buffer drops what arrives while it is full, so keep the bytes written
+> less the bytes read within 2048. `CMDSETINTERRUPT 0` within a transaction ends it;
+> to silence the interrupt without closing, set a threshold of 2049, never reached.
+> Under flow control, write no more than `hwdrvchar_writable()` allows, as
+> `hwdrvchar_write()` does: a write stalled on a full TX buffer while the transmission
+> waits for the reader holds the bus until the 100 ms timeout. Reads and writes of the
 > data register block as the UART console's do.
 
 ### Default device — every unmapped address
@@ -370,7 +400,9 @@ Three behaviours worth coding around:
   one is acknowledged with `CMDACKIRQ` it cannot dispatch another.
 - **The UART and SPI interrupts disarm themselves.** Each is disabled at reset (so
   no spurious interrupt can fire immediately after release) and disabled again each
-  time a raised interrupt is acknowledged, so the handler must re-enable it.
+  time a raised interrupt is acknowledged, so the handler must re-enable it. The
+  SPI's `CMDSETINTERRUPT 0` also closes the transmission in progress: disable its
+  interrupt within a transaction with a threshold of 2049 instead.
 - **The fault interrupt is imprecise.** It arrives as an ordinary external
   interrupt, several instructions after the access that caused it, and that access
   has already completed — a load has consumed the word `0x00000013`, a store has
