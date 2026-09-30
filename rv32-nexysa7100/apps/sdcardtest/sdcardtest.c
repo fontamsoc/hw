@@ -22,7 +22,6 @@
 
 #include "hwdrvchar.h"
 #include "hwdrvirqctrl.h"
-#include "hwdrvsdspi.h"
 
 #ifndef SDCARDTEST_ADDR
 #define SDCARDTEST_ADDR 0xe00
@@ -42,6 +41,13 @@
 #ifndef SDCARDTEST_POLL
 #define SDCARDTEST_POLL 0 // When non-null, poll instead of sleeping on the interrupt.
 #endif
+#ifndef SDCARDTEST_CRC
+#define SDCARDTEST_CRC 1 // When null, CRC checks are not used, as HWDRVSDSPI_CRC describes.
+#endif
+
+// HWDRVSDSPI_CRC is to be defined before including hwdrvsdspi.h.
+#define HWDRVSDSPI_CRC SDCARDTEST_CRC
+#include "hwdrvsdspi.h"
 
 static_assert((SDCARDTEST_BLKCNT > 0 && SDCARDTEST_BLKCNT <= (0xffffffff/HWDRVSDSPI_BLKSZ)),
 	"the byte count is printed with %u");
@@ -154,11 +160,11 @@ void main (void) {
 	}
 #endif
 	char s[16];
-	printf("💾 %s card | 📦 %u blocks (%sB) | ⚡ TRAN_SPEED 0x%02x @ %u bps%s\n",
+	printf("💾 %s card | 📦 %u blocks (%sB) | ⚡ TRAN_SPEED 0x%02x @ %u bps%s | 🛡️ CRC %s\n",
 		((sd.flags & HWDRVSDSPI_FLAG_MMC) ? "MMC" : (sd.flags & HWDRVSDSPI_FLAG_BLKADDR) ? "SDHC/SDXC" :
 		 (sd.flags & HWDRVSDSPI_FLAG_SDV2) ? "SDSC v2" : "SDSC v1"),
 		(unsigned)sd.blkcnt, hrstr(s, ((unsigned long long)sd.blkcnt * HWDRVSDSPI_BLKSZ)),
-		(unsigned)sd.csd[3], (unsigned)sd.bitrate, lowered);
+		(unsigned)sd.csd[3], (unsigned)sd.bitrate, lowered, (HWDRVSDSPI_CRC ? "on" : "off"));
 	if (SDCARDTEST_BLKCNT > sd.blkcnt || SDCARDTEST_FIRSTBLK > (sd.blkcnt - SDCARDTEST_BLKCNT)) {
 		printf("❌ ERROR: blocks %u to %u are beyond the card\n", (unsigned)SDCARDTEST_FIRSTBLK,
 			((unsigned)SDCARDTEST_FIRSTBLK + SDCARDTEST_BLKCNT - 1));

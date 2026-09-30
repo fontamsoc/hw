@@ -35,6 +35,21 @@ typedef struct hwdrvsdspi {
 // Block size in bytes.
 #define HWDRVSDSPI_BLKSZ 512
 
+// Whether CRC checks are used, 1 by default; the includer may define it before
+// including this file. When non-null, the CMD59 of hwdrvsdspi_init() turns on
+// the checks of the card, of the CRC7 of the commands and of the CRC16 of the
+// data blocks written, whereas the driver checks the CRC16 of the data blocks
+// read. When null, the CMD59 turns them off, and the CRC16 of the data blocks
+// is neither computed nor checked, which saves its computation for every block
+// transferred: an error in the transfer of a data block then goes undetected,
+// and a data block whose write a fatal failure interrupts gets written by the
+// card, completed with the bytes 0xff which the next hwdrvsdspi_init() gives
+// it, instead of being rejected. The CRC7 of the commands is computed
+// regardless, the card always checking those of CMD0 and CMD8.
+#ifndef HWDRVSDSPI_CRC
+#define HWDRVSDSPI_CRC 1
+#endif
+
 // The sdspi device is an SD or MMC card in SPI mode, attached to the SPI
 // peripheral dev/spi.sv, which is driven using hwdrvchar.h only; as for
 // hwdrvchar.h, <_os.h> must be included before this file.
@@ -105,8 +120,9 @@ typedef struct hwdrvsdspi {
 //
 // A failure is either recoverable, the card remaining usable, or fatal.
 // Recoverable failures are a response R1 reporting an error, a data error token,
-// a CRC16 mismatch of the data read, and a data response rejecting the data
-// written, the busy state which follows it being awaited.
+// a CRC16 mismatch of the data read when HWDRVSDSPI_CRC is non-null, and a data
+// response rejecting the data written, the busy state which follows it being
+// awaited.
 // Fatal failures set dev->blkcnt null: no response R1 within the NCR (Command
 // Response Time), 8 bytes at most, a response R1 reporting the idle state to a
 // read or a write (the card was reset), no data token within the NAC (Data Read
@@ -662,7 +678,8 @@ static uintptr_t hwdrvsdspi_init (hwdrvsdspi_t *dev) {
 	// ie: still sending a data block or expecting the rest of one, is given the
 	// bytes it needs with "cs" low: more than a data token, a data block, its
 	// CRC16, a data response and 8 bytes; a partial data block written fails its
-	// CRC16, CRC checking being on since the CMD59 of the previous initialization.
+	// CRC16, CRC checks being on since the CMD59 of the previous initialization,
+	// unless HWDRVSDSPI_CRC is null, the card then writing it as completed.
 	// Then the busy state is awaited, since CMD0 would end a write in progress.
 	// A card just powered up ignores those bytes, and is not busy.
 	__hwdrvsdspi_open(c, &x);
@@ -675,8 +692,8 @@ static uintptr_t hwdrvsdspi_init (hwdrvsdspi_t *dev) {
 	r = __hwdrvsdspi_cmd(dev, &x, 0, 0, 0);
 	if (r < 0 || (r & 0x7e))
 		return 0;
-	// CMD59, turn-on CRC.
-	r = __hwdrvsdspi_cmd(dev, &x, 59, 1, 0);
+	// CMD59, turn CRC checks on, or off when HWDRVSDSPI_CRC is null.
+	r = __hwdrvsdspi_cmd(dev, &x, 59, (HWDRVSDSPI_CRC ? 1 : 0), 0);
 	if (r < 0 || (r & 0x7a))
 		return 0;
 	// CMD8, check voltage range, illegal for SDv1 and MMC; the response R7
@@ -740,8 +757,8 @@ static uintptr_t hwdrvsdspi_init (hwdrvsdspi_t *dev) {
 		if (r < 0 || (!r && !(r1 & 0x7e)))
 			return 0;
 	}
-	// CMD9, the CSD register, its CRC16 checked.
-	if (__hwdrvsdspi_datain(dev, &x, 9, 0, dev->csd, 16, 1, &r1) != 1)
+	// CMD9, the CSD register, its CRC16 checked when HWDRVSDSPI_CRC is non-null.
+	if (__hwdrvsdspi_datain(dev, &x, 9, 0, dev->csd, 16, HWDRVSDSPI_CRC, &r1) != 1)
 		return 0;
 	// CMD58, the OCR register, whose bit 30 is set if the card is block addressed.
 	r = __hwdrvsdspi_cmd(dev, &x, 58, 0, r4);
@@ -777,7 +794,7 @@ static uintptr_t hwdrvsdspi_read (hwdrvsdspi_t *dev, void* ptr, uintptr_t idx) {
 	__hwdrvsdspi_xmit_t x;
 	uintptr_t r1;
 	intptr_t r = __hwdrvsdspi_datain(dev, &x, 17,
-		((dev->flags & HWDRVSDSPI_FLAG_BLKADDR) ? idx : (idx << 9)), ptr, HWDRVSDSPI_BLKSZ, 1, &r1);
+		((dev->flags & HWDRVSDSPI_FLAG_BLKADDR) ? idx : (idx << 9)), ptr, HWDRVSDSPI_BLKSZ, HWDRVSDSPI_CRC, &r1);
 	if (r < 0) { // Fatal; the transmission is closed and has ended.
 		dev->blkcnt = 0;
 		return 0;
@@ -795,8 +812,10 @@ static uintptr_t hwdrvsdspi_write (hwdrvsdspi_t *dev, void* ptr, uintptr_t idx) 
 	hwdrvchar_t *c = dev->addr;
 	__hwdrvsdspi_xmit_t x;
 	unsigned char *bb = (unsigned char *)x.bb;
-	// The CRC16 is computed before the transmission, bringing ptr in the data cache.
-	uintptr_t crc = __hwdrvsdspi_crc16(0, ptr, HWDRVSDSPI_BLKSZ);
+	// The CRC16 is computed before the transmission, bringing ptr in the data cache;
+	// when HWDRVSDSPI_CRC is null, bytes 0xff are sent in its place, which the card
+	// ignores.
+	uintptr_t crc = (HWDRVSDSPI_CRC ? __hwdrvsdspi_crc16(0, ptr, HWDRVSDSPI_BLKSZ) : 0xffff);
 	uintptr_t r1 = 0x100, dr = 0x100, v = 0, k0, m, q; // 0x100 meaning none yet.
 	// The command and the window of its response R1, the NCR (Command Response
 	// Time), the transmission left open, pausing while R1 gets checked.
