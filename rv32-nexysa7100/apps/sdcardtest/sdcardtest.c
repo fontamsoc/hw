@@ -2,11 +2,12 @@
 // 20260927 (c) William Fonkou Tambe
 
 // Benchmark of the SD card driven by hwdrvsdspi.h: the SDCARDTEST_BLKCNT blocks
-// from SDCARDTEST_FIRSTBLK are read, then each is read again and written back
-// with its own content, only the writes being timed, hence the card is left as
-// it was, barring a power loss during the writes; each pass ends with a status
-// line giving the bytes copied, the seconds taken and the rate, the sizes being
-// formatted as BusyBox dd does.
+// from SDCARDTEST_FIRSTBLK are read, SDCARDTEST_NBLK at a time, then each chunk
+// of SDCARDTEST_NBLK blocks is read again and written back with its own content,
+// only the writes being timed, hence the card is left as it was, barring a power
+// loss during the writes; the last chunk may be shorter. Each pass ends with a
+// status line giving the bytes copied, the seconds taken and the rate, the sizes
+// being formatted as BusyBox dd does.
 //
 // The drivers hwdrv*.h next to this file are copies of those of ftpu/sw, their
 // canonical location.
@@ -35,6 +36,9 @@
 #ifndef SDCARDTEST_BLKCNT
 #define SDCARDTEST_BLKCNT 16384 // 8 MiB.
 #endif
+#ifndef SDCARDTEST_NBLK
+#define SDCARDTEST_NBLK 128 // Blocks per call of hwdrvsdspi_read() and hwdrvsdspi_write(); 1 uses CMD17/CMD24.
+#endif
 #ifndef SDCARDTEST_BITRATE
 #define SDCARDTEST_BITRATE 0 // When non-null, bitrate not to exceed after initialization.
 #endif
@@ -44,15 +48,21 @@
 #ifndef SDCARDTEST_CRC
 #define SDCARDTEST_CRC 1 // When null, CRC checks are not used, as HWDRVSDSPI_CRC describes.
 #endif
+#ifndef SDCARDTEST_PREERASE
+#define SDCARDTEST_PREERASE 0 // When non-null, writes pre-erase their blocks, as HWDRVSDSPI_PREERASE describes.
+#endif
 
-// HWDRVSDSPI_CRC is to be defined before including hwdrvsdspi.h.
+// HWDRVSDSPI_CRC and HWDRVSDSPI_PREERASE are to be defined before including hwdrvsdspi.h.
 #define HWDRVSDSPI_CRC SDCARDTEST_CRC
+#define HWDRVSDSPI_PREERASE SDCARDTEST_PREERASE
 #include "hwdrvsdspi.h"
 
 static_assert((SDCARDTEST_BLKCNT > 0 && SDCARDTEST_BLKCNT <= (0xffffffff/HWDRVSDSPI_BLKSZ)),
 	"the byte count is printed with %u");
 static_assert((!SDCARDTEST_BITRATE || SDCARDTEST_BITRATE >= 400000),
 	"SDCARDTEST_BITRATE below the initialization bitrate");
+static_assert((SDCARDTEST_NBLK > 0 && SDCARDTEST_NBLK <= 256),
+	"SDCARDTEST_NBLK from 1 to 256 (128 KiB of buffer)");
 
 static hwdrvchar_t spi = {.addr = (void *)SDCARDTEST_ADDR};
 
@@ -94,7 +104,7 @@ static hwdrvsdspi_t sd = {
 #endif
 };
 
-static unsigned char buf[HWDRVSDSPI_BLKSZ];
+static unsigned char buf[SDCARDTEST_NBLK * HWDRVSDSPI_BLKSZ];
 
 // Integer port of make_human_readable_str(val, 1, 0) of BusyBox,
 // which dd uses; ie: 8388608 gives "8.0M", 1000 gives "1000".
@@ -160,35 +170,44 @@ void main (void) {
 	}
 #endif
 	char s[16];
-	printf("💾 %s card | 📦 %u blocks (%sB) | ⚡ TRAN_SPEED 0x%02x @ %u bps%s | 🛡️ CRC %s\n",
+	printf("💾 %s card | 📦 %u blocks (%sB) | ⚡ TRAN_SPEED 0x%02x @ %u bps%s | 🛡️ CRC %s | 🧹 pre-erase %s\n",
 		((sd.flags & HWDRVSDSPI_FLAG_MMC) ? "MMC" : (sd.flags & HWDRVSDSPI_FLAG_BLKADDR) ? "SDHC/SDXC" :
 		 (sd.flags & HWDRVSDSPI_FLAG_SDV2) ? "SDSC v2" : "SDSC v1"),
 		(unsigned)sd.blkcnt, hrstr(s, ((unsigned long long)sd.blkcnt * HWDRVSDSPI_BLKSZ)),
-		(unsigned)sd.csd[3], (unsigned)sd.bitrate, lowered, (HWDRVSDSPI_CRC ? "on" : "off"));
+		(unsigned)sd.csd[3], (unsigned)sd.bitrate, lowered, (HWDRVSDSPI_CRC ? "on" : "off"),
+		(HWDRVSDSPI_PREERASE ? "on" : "off"));
 	if (SDCARDTEST_BLKCNT > sd.blkcnt || SDCARDTEST_FIRSTBLK > (sd.blkcnt - SDCARDTEST_BLKCNT)) {
 		printf("❌ ERROR: blocks %u to %u are beyond the card\n", (unsigned)SDCARDTEST_FIRSTBLK,
 			((unsigned)SDCARDTEST_FIRSTBLK + SDCARDTEST_BLKCNT - 1));
 		goto done;
 	}
-	uintptr_t end = ((uintptr_t)SDCARDTEST_FIRSTBLK + SDCARDTEST_BLKCNT), i;
+	// Chunks of n blocks from i, SDCARDTEST_NBLK but the last, which is fewer when
+	// SDCARDTEST_BLKCNT is not a multiple of it; a call transferring r blocks of
+	// them failed at the block (i+r).
+	uintptr_t end = ((uintptr_t)SDCARDTEST_FIRSTBLK + SDCARDTEST_BLKCNT), i, n = 0, r = 0;
 	_date_t t = _clkcycles();
-	for (i = SDCARDTEST_FIRSTBLK; i < end && hwdrvsdspi_read(&sd, buf, i); ++i);
+	for (i = SDCARDTEST_FIRSTBLK; i < end; i += n) {
+		n = (((end - i) < SDCARDTEST_NBLK) ? (end - i) : SDCARDTEST_NBLK);
+		if ((r = hwdrvsdspi_read(&sd, buf, i, n)) != n)
+			break;
+	}
 	t = (_clkcycles() - t);
 	if (i < end) {
-		failed("reading", i);
+		failed("reading", (i + r));
 		goto done;
 	}
 	report("📥 Read:  ", t);
-	for (t = 0, i = SDCARDTEST_FIRSTBLK; i < end; ++i) {
-		if (!hwdrvsdspi_read(&sd, buf, i)) {
-			failed("reading", i);
+	for (t = 0, i = SDCARDTEST_FIRSTBLK; i < end; i += n) {
+		n = (((end - i) < SDCARDTEST_NBLK) ? (end - i) : SDCARDTEST_NBLK);
+		if ((r = hwdrvsdspi_read(&sd, buf, i, n)) != n) {
+			failed("reading", (i + r));
 			goto done;
 		}
 		_date_t t0 = _clkcycles();
-		uintptr_t ok = hwdrvsdspi_write(&sd, buf, i);
+		r = hwdrvsdspi_write(&sd, buf, i, n);
 		t += (_clkcycles() - t0);
-		if (!ok) {
-			failed("writing", i);
+		if (r != n) {
+			failed("writing", (i + r));
 			goto done;
 		}
 	}
