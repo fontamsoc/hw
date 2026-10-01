@@ -32,7 +32,7 @@ typedef struct hwdrvsdspi {
 #define HWDRVSDSPI_FLAG_MMC     2 // The card is MMC.
 #define HWDRVSDSPI_FLAG_BLKADDR 4 // The card is block addressed, ie: SDHC or SDXC.
 
-// Block size in bytes.
+// Block size in bytes; the SD spec fixes it.
 #define HWDRVSDSPI_BLKSZ 512
 
 // Whether CRC checks are used, 1 by default; the includer may define it before
