@@ -4,7 +4,7 @@
 #ifndef HWDRVCHAR_H
 #define HWDRVCHAR_H
 
-// Structure representing a UART device.
+// Structure representing a serial device.
 // Before initializing the device using hwdrvchar_init(),
 // the fields addr must be valid.
 typedef struct {
@@ -22,7 +22,7 @@ typedef struct {
 #define HWDRVCHAR_CMDSETINTERRUPT   2
 #define HWDRVCHAR_CMDSETSPEED       3
 
-// Initialize the UART device at the address given through
+// Initialize the serial device at the address given through
 // the argument dev->addr using the baudrate given as argument.
 // The field dev->bufsz get initialized by this function.
 static void hwdrvchar_init (hwdrvchar_t *dev, uintptr_t baudrate) {
@@ -33,7 +33,7 @@ static void hwdrvchar_init (hwdrvchar_t *dev, uintptr_t baudrate) {
 	uintptr_t dat;
 
 	// Command HWDRVCHAR_CMDGETBUFFERUSAGE to retrieve
-	// the number of bytes in the UART transmit buffer.
+	// the number of bytes in the serial transmit buffer.
 	// The encoding of a command and its argument
 	// is as follow: | arg: (ARCHBITSZ-2) bits | cmd: 2 bits |
 	do {
@@ -46,7 +46,7 @@ static void hwdrvchar_init (hwdrvchar_t *dev, uintptr_t baudrate) {
 	} while ((intptr_t)dat >> 2); // Wait for the transmit buffer to be empty.
 
 	// Command HWDRVCHAR_CMDSETSPEED to retrieve
-	// the clock frequency used by the UART device.
+	// the clock frequency used by the serial device.
 	// The encoding of a command and its argument
 	// is as follow: | arg: (ARCHBITSZ-2) bits | cmd: 2 bits |
 	do {
@@ -69,7 +69,7 @@ static void hwdrvchar_init (hwdrvchar_t *dev, uintptr_t baudrate) {
 	(void)_xchg((uintptr_t *)addrCmd, dat);
 
 	// Command HWDRVCHAR_CMDSETINTERRUPT to retrieve
-	// the size in bytes of the UART transmit
+	// the size in bytes of the serial transmit
 	// and receive buffer.
 	// The encoding of a command and its argument
 	// is as follow: | arg: (ARCHBITSZ-2) bits | cmd: 2 bits |
@@ -83,13 +83,13 @@ static void hwdrvchar_init (hwdrvchar_t *dev, uintptr_t baudrate) {
 }
 
 // Return the count of bytes that can be read
-// from the UART device without blocking.
+// from the serial device without blocking.
 static inline uintptr_t hwdrvchar_readable (hwdrvchar_t *dev) {
 	void *addrDat = dev->addr;
 	void *addrCmd = (addrDat + sizeof(uintptr_t));
 	uintptr_t dat;
 	// Command HWDRVCHAR_CMDGETBUFFERUSAGE to retrieve
-	// the number of bytes in the UART receive buffer.
+	// the number of bytes in the serial receive buffer.
 	// The encoding of a command and its argument
 	// is as follow: | arg: (ARCHBITSZ-2) bits | cmd: 2 bits |
 	do {
@@ -101,7 +101,7 @@ static inline uintptr_t hwdrvchar_readable (hwdrvchar_t *dev) {
 	return ((intptr_t)dat >> 2);
 }
 
-// Read from the UART device into the buffer given by the
+// Read from the serial device into the buffer given by the
 // argument ptr, the byte amount given by the argument sz.
 // Return the byte amount read.
 static uintptr_t hwdrvchar_read (hwdrvchar_t *dev, void *ptr, uintptr_t sz) {
@@ -126,13 +126,13 @@ static uintptr_t hwdrvchar_read (hwdrvchar_t *dev, void *ptr, uintptr_t sz) {
 }
 
 // Return the count of bytes that can be written
-// to the UART device without blocking.
+// to the serial device without blocking.
 static inline uintptr_t hwdrvchar_writable (hwdrvchar_t *dev) {
 	void *addrDat = dev->addr;
 	void *addrCmd = (addrDat + sizeof(uintptr_t));
 	uintptr_t dat;
 	// Command HWDRVCHAR_CMDGETBUFFERUSAGE to retrieve
-	// the number of bytes in the UART transmit buffer.
+	// the number of bytes in the serial transmit buffer.
 	// The encoding of a command and its argument
 	// is as follow: | arg: (ARCHBITSZ-2) bits | cmd: 2 bits |
 	do {
@@ -144,7 +144,7 @@ static inline uintptr_t hwdrvchar_writable (hwdrvchar_t *dev) {
 	return (dev->bufsz - ((intptr_t)dat >> 2));
 }
 
-// Write to the UART device from the buffer given by the
+// Write to the serial device from the buffer given by the
 // argument ptr, the byte amount given by the argument sz.
 // Return the byte amount written.
 static uintptr_t hwdrvchar_write (hwdrvchar_t *dev, void *ptr, uintptr_t sz) {
@@ -168,7 +168,7 @@ static uintptr_t hwdrvchar_write (hwdrvchar_t *dev, void *ptr, uintptr_t sz) {
 	return cnt;
 }
 
-// Configure the UART device interrupt.
+// Configure the serial device interrupt.
 // When the argument threshold is null, interrupt gets disabled.
 // When the argument threshold is non-null, interrupt gets enabled,
 // and its value is the receive buffer byte amount that will
