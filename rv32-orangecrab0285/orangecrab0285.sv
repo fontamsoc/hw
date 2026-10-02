@@ -343,7 +343,7 @@ spi #(
 	 .WORDBITSZ      (WORDBITSZ)
 	,.PHYCLKFREQ     (WBPI_CLKFREQ)
 	,.DEFAULTBITRATE (400000)
-	,.BUFSZ          (2048)
+	,.BUFSZ          (512)
 	,.CPOL           (0)
 ) sdspi (
 

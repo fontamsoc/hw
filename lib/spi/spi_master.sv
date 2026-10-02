@@ -15,8 +15,9 @@
 //
 // DATABITSZ:
 // 	Number of bits per data to transmit;
-// 	it must be greater than 3, as a control
-// 	data uses its four least significant bits.
+// 	it must be at least 8, as the control bits
+// 	of a control data are the four least significant
+// 	bits of its first byte in transmission order.
 //
 // SCLKDIVLIMIT:
 // 	Limit below which the input "sclkdiv_i" must be set.
@@ -102,40 +103,42 @@
 // 	data: it configures that transmission instead of being transmitted,
 // 	and {DATABITSZ{1'b1}} is transmitted in its place. The data which
 // 	follow it within that transmission are transmitted as usual.
+// 	The control bits of a control data, numbered from 0, are the four
+// 	least significant bits of its first byte in transmission order, ie: of
+// 	its 8 most significant bits; for a DATABITSZ of 8, they are its four
+// 	least significant bits.
 //
-// 	The inverse of the least significant bit of a control data enables
-// 	waiting for a null bit sampled from the input "miso_i" before
-// 	counting the bits transmitted; until then, "sclk_o" keeps toggling,
-// 	and "mosi_o" remains high, since {DATABITSZ{1'b1}} is what gets
-// 	transmitted in place of a control data. It is used with a slave
-// 	which signals the beginning of its response using a null bit, such
-// 	as the start-bit of an SD card in SPI mode. Once synchronized, it
-// 	remains so until the transmission ends, pauses included; hence the
-// 	data that follow are retrieved without waiting for a null bit again.
+// 	The inverse of control bit 0 enables waiting for a null bit sampled
+// 	from the input "miso_i" before counting the bits transmitted; until
+// 	then, "sclk_o" keeps toggling, and "mosi_o" remains high, since
+// 	{DATABITSZ{1'b1}} is what gets transmitted in place of a control data.
+// 	It is used with a slave which signals the beginning of its response
+// 	using a null bit, such as the start-bit of an SD card in SPI mode.
+// 	Once synchronized, it remains so until the transmission ends, pauses
+// 	included; hence the data that follow are retrieved without waiting
+// 	for a null bit again.
 //
-// 	The inverse of the 2nd least significant bit of a control data
-// 	discards that null bit, so that the DATABITSZ bits which follow it
-// 	become the data pushed in the receive buffer; when null, that null
-// 	bit becomes the most significant bit of that data. It is ignored
-// 	unless waiting for a null bit was enabled.
+// 	The inverse of control bit 1 discards that null bit, so that the
+// 	DATABITSZ bits which follow it become the data pushed in the receive
+// 	buffer; when null, that null bit becomes the most significant bit of
+// 	that data. It is ignored unless waiting for a null bit was enabled.
 //
-// 	The inverse of the 3rd least significant bit of a control data keeps
-// 	the output "cs_o" high for the whole transmission, while "sclk_o"
-// 	and "mosi_o" behave as usual; hence the slave is sent clock cycles
-// 	without being selected, such as the 74 clock cycles at least, with
-// 	"cs_o" and "mosi_o" high, which an SD card needs before its first
-// 	command. The bits of a control data are independent: waiting for a
-// 	null bit while "cs_o" is kept high waits on a slave which is not
-// 	selected, until given up.
+// 	The inverse of control bit 2 keeps the output "cs_o" high for the
+// 	whole transmission, while "sclk_o" and "mosi_o" behave as usual; hence
+// 	the slave is sent clock cycles without being selected, such as the 74
+// 	clock cycles at least, with "cs_o" and "mosi_o" high, which an SD card
+// 	needs before its first command. The control bits are independent:
+// 	waiting for a null bit while "cs_o" is kept high waits on a slave
+// 	which is not selected, until given up.
 //
-// 	The inverse of the 4th least significant bit of a control data enables
-// 	receive flow control: while the receive buffer holds BUFSZ-1 data or
-// 	more, the transmission pauses instead of taking the next data, hence
-// 	no data received gets dropped; the control data itself waits for room
-// 	before the transmission begins. As the room left is for the data taken
-// 	and for the one whose reception is completing, the receive buffer
-// 	usage stops at BUFSZ-1, or at BUFSZ when the next data was already
-// 	waiting as the previous one completed.
+// 	The inverse of control bit 3 enables receive flow control: while the
+// 	receive buffer holds BUFSZ-1 data or more, the transmission pauses
+// 	instead of taking the next data, hence no data received gets dropped;
+// 	the control data itself waits for room before the transmission
+// 	begins. As the room left is for the data taken and for the one whose
+// 	reception is completing, the receive buffer usage stops at BUFSZ-1,
+// 	or at BUFSZ when the next data was already waiting as the previous
+// 	one completed.
 //
 // 	The remaining bits of a control data are reserved and expected 1'b1;
 // 	hence a control data of {DATABITSZ{1'b1}} configures a transmission
@@ -214,7 +217,7 @@ module spi_master (
 `include "lib/clog2.sv"
 
 parameter BUFSZ        = 2;
-parameter DATABITSZ    = 4;
+parameter DATABITSZ    = 8;
 parameter SCLKDIVLIMIT = 2;
 parameter CPOL         = 0;
 parameter SYNCTIMEOUT  = 0;
@@ -257,6 +260,11 @@ wire [DATABITSZ -1 : 0] phy_data_w0;
 wire [DATABITSZ -1 : 0] phy_data_w1;
 
 wire [DATABITSZ -1 : 0] fifo_tx_data_w;
+
+// The control bits of the data read out of the transmit buffer, used when
+// it is a control data: the four least significant bits of its first byte
+// in transmission order, ie: of its 8 most significant bits.
+wire [4 -1 : 0] fifo_tx_ctrl_w = fifo_tx_data_w[(DATABITSZ-8) +: 4];
 
 reg phy_stb_r;
 
@@ -311,7 +319,7 @@ spi_master_phy #(
 
 	,.idle_o       (phy_idle_w)
 	,.hold_i       (phy_hold_w)
-	,.csKeepHigh_i (!fifo_tx_data_w[2])
+	,.csKeepHigh_i (!fifo_tx_ctrl_w[2])
 );
 
 fifo #( // fifo for storing data received.
@@ -381,7 +389,7 @@ end
 // take, and the one whose reception it is completing, which it pushes in
 // the receive buffer in the clock cycle after it takes the next data.
 // While idle, the phy is to take a control data, whose own bit decides.
-wire phy_rxFlowCtrl_w = (phy_idle_w ? !fifo_tx_data_w[3] : phy_rxFlowCtrl_r);
+wire phy_rxFlowCtrl_w = (phy_idle_w ? !fifo_tx_ctrl_w[3] : phy_rxFlowCtrl_r);
 assign phy_stb_w = (phy_stb_r && !(phy_rxFlowCtrl_w && fifo_rx_near_full_w));
 wire phy_flowWait_w = (phy_stb_r && !phy_stb_w);
 
@@ -435,9 +443,9 @@ always_ff @(posedge clk_phy_i) begin
 		phy_misoSkipSyncBit_r <= 1'b0;
 		phy_rxFlowCtrl_r <= 1'b0;
 	end else if (phy_idle_w && phy_stb_w) begin
-		phy_misoSync_r <= !fifo_tx_data_w[0];
-		phy_misoSkipSyncBit_r <= (!fifo_tx_data_w[1] && !fifo_tx_data_w[0]);
-		phy_rxFlowCtrl_r <= !fifo_tx_data_w[3];
+		phy_misoSync_r <= !fifo_tx_ctrl_w[0];
+		phy_misoSkipSyncBit_r <= (!fifo_tx_ctrl_w[1] && !fifo_tx_ctrl_w[0]);
+		phy_rxFlowCtrl_r <= !fifo_tx_ctrl_w[3];
 	end
 end
 

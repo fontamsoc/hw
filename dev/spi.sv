@@ -4,11 +4,21 @@
 // SPI peripheral.
 //
 // The device is a SPI master with CPHA 0, the clock polarity being the
-// parameter CPOL, and it transfers data a byte at a time, most significant
-// bit first, and full duplex: while a byte is transmitted through "mosi_o",
-// a byte is received through "miso_i", and pushed in the receive buffer.
+// parameter CPOL, and it transfers data a word at a time, most significant
+// bit of least significant byte first, ie: the bytes of a word from the
+// least significant one, each most significant bit first. It transfers
+// full duplex: while a word is transmitted through "mosi_o", a word is
+// received through "miso_i", and pushed in the receive buffer, the first
+// byte received becoming its least significant byte. Hence the bytes of a
+// buffer in a little-endian memory are transmitted, and the bytes received
+// are stored, in the order of their addresses.
 // The first word of the device memory mapping is used to send/receive
-// bytes while the second word is used to send commands to the device.
+// words while the second word is used to send commands to the device.
+// An access to the first word transfers a whole word, as "wb_sel_i" is
+// ignored: a write of fewer bytes than a word buffers a whole word for
+// transmission, its other bytes being whatever the memory interface
+// carries, and a read of fewer bytes than a word takes a whole word out of
+// the receive buffer.
 //
 // Commands sent to the device expect following format
 // | arg: (WORDBITSZ-2) bits | cmd: 2 bit | where the field "cmd" values
@@ -29,20 +39,24 @@
 // 	"arg" value encodes which buffer should the usage be returned.
 // 	When "arg" is 0, the receive buffer usage is returned;
 // 	when "arg" is 1, the transmit buffer usage is returned, which is
-// 	the count of bytes not yet transmitted; it includes up to two bytes
-// 	taken out of the transmit buffer, one while a transmission is paused
-// 	in place of the byte being transmitted, and one while a close is
-// 	pending, hence it is capped to BUFSZ, and it is null only when no
-// 	transmission is in progress and no close is pending.
-// 	"resp" in the result gets set to the usage in number of bytes.
+// 	the count of the bytes of the words not yet transmitted; it includes
+// 	up to two words taken out of the transmit buffer, one while a
+// 	transmission is paused in place of the word being transmitted, and
+// 	one while a close is pending, hence it is capped to the size in bytes
+// 	of the buffer, and it is null only when no transmission is in
+// 	progress and no close is pending.
+// 	"resp" in the result gets set to the usage in number of bytes, which
+// 	is a multiple of (WORDBITSZ/8), as the buffers hold whole words.
 // 	CMDSETINTERRUPT: enable/disable interrupt.
 // 	"arg" value when 0 disables interrupt, and when non-null, enables
-// 	interrupt and sets the minimum receive buffer usage that would
-// 	trigger an interrupt. When the whole "arg" is 0, it also closes
-// 	the transmission in progress, as described below.
+// 	interrupt and sets the minimum receive buffer usage in bytes that
+// 	would trigger an interrupt; the usage being a multiple of
+// 	(WORDBITSZ/8), a threshold between two multiples is reached at the
+// 	greater one. When the whole "arg" is 0, it also closes the
+// 	transmission in progress, as described below.
 // 	"resp" in the result gets set to the size in bytes of the transmit
-// 	and receive buffer.
-// 	CMDSETSPEED: Set the bitrate used when sending and receiving bytes.
+// 	and receive buffer, which is (BUFSZ*(WORDBITSZ/8)).
+// 	CMDSETSPEED: Set the bitrate used when sending and receiving words.
 // 	"arg" value is the speed computed as follow: (PHYCLKFREQ/bitrate);
 // 	the bitrate used is the highest of the form (PHYCLKFREQ/(2*n)), n
 // 	being non-null, which does not exceed (PHYCLKFREQ/arg), and no lower
@@ -67,19 +81,21 @@
 // atomic read-write sending CMDDEVRDY must be used to retrieve the
 // result while making the device ready for the next command.
 //
-// A byte written while the transmit buffer usage is null begins a new
+// A word written while the transmit buffer usage is null begins a new
 // transmission, which lasts until it is closed using CMDSETINTERRUPT with
-// a null "arg": it then ends once every byte written before that command
+// a null "arg": it then ends once every word written before that command
 // has been transmitted, "cs_o" becoming high. When the transmit buffer
 // runs empty before, the transmission pauses: "sclk_o" remains at its idle
 // level, "cs_o" keeps its level and nothing is clocked, until the next
-// byte written resumes it. Hence the bytes of a transmission can be written
-// at any pace, preemption included, and a byte written within a
+// word written resumes it. Hence the words of a transmission can be written
+// at any pace, preemption included, and a word written within a
 // transmission never begins a new one.
-// The byte which begins a transmission is a control byte, which configures
-// the transmission instead of being transmitted, 0xff being transmitted in
-// its place, while the byte received in its place gets pushed in the
-// receive buffer as any other. The bits of a control byte are as follow:
+// The word which begins a transmission is a control word, which configures
+// the transmission instead of being transmitted, ones being transmitted in
+// its place, while the word received in its place gets pushed in the
+// receive buffer as any other. The bits 0 to 3 of its least significant
+// byte, ie: its first byte in transmission order, are its control bits,
+// and its other bits are reserved and expected 1; they are as follow:
 // 	bit 0: when null, waiting for a null bit on "miso_i" before counting
 // 	the bits transmitted is enabled, "sclk_o" toggling meanwhile with
 // 	"mosi_o" high; it is used with a slave which signals the beginning
@@ -87,89 +103,104 @@
 // 	card in SPI mode, and the transmission remains synchronized to that
 // 	null bit until it ends.
 // 	bit 1: when null, and waiting for a null bit is enabled, that null
-// 	bit is discarded, the 8 bits which follow it becoming the byte
-// 	received in place of the control byte; otherwise, that null bit
-// 	becomes the most significant bit of that byte.
+// 	bit is discarded, the WORDBITSZ bits which follow it becoming the word
+// 	received in place of the control word; otherwise, that null bit
+// 	becomes the most significant bit of the least significant byte of
+// 	that word.
 // 	bit 2: when null, "cs_o" remains high for the whole transmission,
-// 	while "sclk_o" and "mosi_o" behave as usual; ie: A control byte of
-// 	0xfb followed by nine bytes 0xff, then the close, sends the 80 clock
-// 	cycles with "cs_o" and "mosi_o" high which an SD card needs before its
-// 	first command. The bits are independent: waiting for a null bit while
+// 	while "sclk_o" and "mosi_o" behave as usual; ie: For a WORDBITSZ of
+// 	32, a control word of 0xfffffffb followed by two words 0xffffffff,
+// 	then the close, sends 96 clock cycles with "cs_o" and "mosi_o" high,
+// 	which covers the 74 at least that an SD card needs before its first
+// 	command. The bits are independent: waiting for a null bit while
 // 	"cs_o" is kept high waits on a slave which is not selected, until
 // 	given up.
 // 	bit 3: when null, receive flow control is enabled: while the receive
-// 	buffer holds BUFSZ-1 bytes or more, the transmission pauses instead
-// 	of taking the next byte, hence no byte received gets dropped, and
-// 	the reader can be preempted as the writer can; the control byte
-// 	itself waits for room in the receive buffer before the transmission
-// 	begins. The receive buffer usage then stops at BUFSZ-1, or at BUFSZ
-// 	when the next byte was already waiting as the previous one completed,
-// 	hence an interrupt threshold of at most BUFSZ-1 is to be used with it.
-// 	bits 4 to 7: reserved and expected 1.
-// Hence a control byte of 0xff begins a transmission which neither waits
-// for a null bit, keeps "cs_o" high, nor pauses for room in the receive
-// buffer.
+// 	buffer holds BUFSZ-1 words or more, the transmission pauses instead
+// 	of taking the next word, hence no word received gets dropped, and the
+// 	reader can be preempted as the writer can; the control word itself
+// 	waits for room in the receive buffer before the transmission begins.
+// 	The receive buffer usage then stops at BUFSZ-1 words, or at BUFSZ
+// 	words when the next word was already waiting as the previous one
+// 	completed, hence an interrupt threshold of at most
+// 	((BUFSZ-1)*(WORDBITSZ/8)) bytes is to be used with it.
+// Hence, for a WORDBITSZ of 32, a control word of 0xffffffff begins a
+// transmission which neither waits for a null bit, keeps "cs_o" high, nor
+// pauses for room in the receive buffer; 0xfffffffe waits for a null bit,
+// 0xfffffffc also discarding it, 0xfffffffb keeps "cs_o" high, and
+// 0xfffffff7 enables receive flow control. Since a write of fewer bytes
+// than a word buffers a whole word, a byte which begins a transmission,
+// written at the address of the first word, makes a control word whose
+// least significant byte is that byte.
 //
 // A close remains pending until the transmission has ended, and is counted
-// in the transmit buffer usage meanwhile; a byte written while it is pending
+// in the transmit buffer usage meanwhile; a word written while it is pending
 // continues the transmission instead of beginning the next one, hence the
 // next transmission is to be written once the transmit buffer usage is null.
 // A close while no transmission is in progress does nothing, other than
 // ending the discarding described below; hence the CMDSETINTERRUPT which
 // ends hwdrvchar_init() is harmless.
-// Using hwdrvchar.h, a transmission is performed as follow:
-// 	// End what may have been left open, drop stale bytes, wait until idle.
+// Using hwdrvchar.h, HWDRVCHAR_DATATYPE being defined to a type of WORDBITSZ
+// bits, ie: uintptr_t, so that hwdrvchar_read() and hwdrvchar_write() access
+// the first word a word at a time, a transmission is performed as follow:
+// 	uintptr_t junk[16], c;
+// 	// End what may have been left open, drop stale words, wait until idle.
 // 	hwdrvchar_interrupt(dev, 0);
 // 	do hwdrvchar_read(dev, junk, sizeof(junk));
 // 	while (hwdrvchar_writable(dev) != dev->bufsz);
 // 	while (hwdrvchar_read(dev, junk, sizeof(junk)));
-// 	uint8_t c = 0xff; // The control byte; ie: 0xf7 for receive flow control.
-// 	hwdrvchar_write(dev, &c, 1);
+// 	c = -1; // The control word; ie: ~8 for receive flow control.
+// 	hwdrvchar_write(dev, &c, sizeof(c));
 // 	// hwdrvchar_write() and hwdrvchar_read() at any pace, reading every
-// 	// byte expected; ie: for an SD card, the command, polling its response
-// 	// using 0xff, polling the data token, then the block and its CRC.
+// 	// word expected; ie: for an SD card, the command, polling its response
+// 	// using bytes 0xff, polling the data token, then the block and its CRC.
 // 	hwdrvchar_interrupt(dev, 0); // The close.
 // 	while (hwdrvchar_writable(dev) != dev->bufsz); // Ended.
 // Its first lines insure that a transmission left open, ie: by a context
-// which did not complete it, does not take the bytes written as its own.
+// which did not complete it, does not take the words written as its own.
+// With a HWDRVCHAR_DATATYPE of a byte, each access of hwdrvchar_read() or
+// hwdrvchar_write() to the first word would transfer a whole word, and the
+// reads beyond the words received would stall the memory interface, as
+// described below.
 //
 // Waiting for a null bit is given up after SYNCTIMEOUT clock cycles of
-// "clk_phy_i": the transmission is aborted, without a byte received in
-// place of the control byte, "cs_o" becoming high, and no interrupt is
-// raised. The bytes in the transmit buffer are then discarded, and so are
-// the bytes written afterwards, until the transmission is closed, which
+// "clk_phy_i": the transmission is aborted, without a word received in
+// place of the control word, "cs_o" becoming high, and no interrupt is
+// raised. The words in the transmit buffer are then discarded, and so are
+// the words written afterwards, until the transmission is closed, which
 // must be done before writing the next transmission as for any other; a
 // close already requested ends the discarding once the transmit buffer is
-// empty. Hence a byte meant to continue the transmission after it was
-// aborted is never taken for the control byte of a new one. Software
+// empty. Hence a word meant to continue the transmission after it was
+// aborted is never taken for the control word of a new one. Software
 // detects the abort from the transmit buffer usage becoming null before it
 // closed the transmission, whereas it is never null while a transmission
-// is in progress; the bytes received before the abort remain in the
+// is in progress; the words received before the abort remain in the
 // receive buffer.
 // A transmission paused for PAUSETIMEOUT clock cycles of "clk_phy_i",
-// whether waiting for a byte to be written or for room in the receive
-// buffer, is aborted likewise, "cs_o" becoming high; so is a control byte
+// whether waiting for a word to be written or for room in the receive
+// buffer, is aborted likewise, "cs_o" becoming high; so is a control word
 // waiting for room in the receive buffer as long, which is dropped. The
 // discarding follows until the close, as above. Hence a transmission left
 // open ends by itself, and hwdrvchar_init() alone returns the transmit
-// side to idle, taking the time to transmit the bytes buffered, up to
-// BUFSZ+2 byte-times, then PAUSETIMEOUT+1 clock cycles of "clk_phy_i",
-// its final CMDSETINTERRUPT ending the discarding; the bytes received
+// side to idle, taking the time to transmit the words buffered, up to
+// BUFSZ+2 word-times, then PAUSETIMEOUT+1 clock cycles of "clk_phy_i",
+// its final CMDSETINTERRUPT ending the discarding; the words received
 // meanwhile remain to be read.
 //
-// For every byte written, a byte is received, and the receive buffer drops
-// the bytes received while it is full; hence, unless receive flow control
-// is enabled, the count of bytes written less the count of bytes read
+// For every word written, a word is received, and the receive buffer drops
+// the words received while it is full; hence, unless receive flow control
+// is enabled, the count of words written less the count of words read
 // must not exceed BUFSZ.
 //
 // A read while the receive buffer is empty, or a write while the transmit
-// buffer is full or one byte away from full, stalls the memory interface
-// until a byte is received, or until room is made by a byte transmitted.
+// buffer is full or one word away from full, stalls the memory interface
+// until a word is received, or until room is made by a word transmitted;
+// hence such a read stalls it for good when no word written remains to be
+// received.
 // Under receive flow control, such a write while the transmission waits for
 // room in the receive buffer stalls it until the transmission is aborted,
 // or for good if PAUSETIMEOUT is null, as the reader cannot run meanwhile;
-// hence no more bytes than hwdrvchar_writable() returns are to be written,
-// as hwdrvchar_write() does.
+// hence no more bytes than hwdrvchar_writable() returns are to be written.
 //
 // The transmissions of different software contexts must not interleave,
 // hence the accesses to the device must be serialized, ie: using a lock.
@@ -181,13 +212,14 @@
 // the raised interrupt gets acknowledged.
 // CMDSETINTERRUPT with a null "arg" closing the transmission in progress,
 // interrupt is to be enabled again after the close if it is used, and
-// is to be disabled within a transmission using a threshold of BUFSZ+1,
-// which the receive buffer usage never reaches.
+// is to be disabled within a transmission using a threshold of
+// ((BUFSZ*(WORDBITSZ/8))+1) bytes, which the receive buffer usage never
+// reaches.
 
 // Parameters:
 //
 // WORDBITSZ
-// 	Must be a power-of-2 and <= 64.
+// 	Must be 32 or 64.
 //
 // PHYCLKFREQ
 // 	Frequency of the clock input "clk_phy_i" in Hz.
@@ -197,7 +229,7 @@
 // 	bitrate at which an SD card may be initialized.
 //
 // BUFSZ
-// 	Size in bytes of the receive and transmit buffer.
+// 	Size in words of the receive and transmit buffer.
 // 	It must be at least 2 and a power of 2.
 //
 // CPOL
@@ -211,7 +243,7 @@
 //
 // PAUSETIMEOUT
 // 	Number of clock cycles of "clk_phy_i" after which a paused
-// 	transmission, or a control byte waiting for room in the receive
+// 	transmission, or a control word waiting for room in the receive
 // 	buffer, is given up; a null value disables giving up, as happens at
 // 	the default PHYCLKFREQ. Its default of (PHYCLKFREQ/10) is 100 ms,
 // 	twice the 50 ms within which underLineOS resumes a preempted thread;
@@ -305,6 +337,11 @@ localparam MAPSZ = (2*(WORDBITSZ/8));
 
 localparam MSBSZIGN = (WORDBITSZ-clog2(MAPSZ));
 
+// Size in bytes of the receive and transmit buffer, in which software
+// counts the buffer usages and the interrupt threshold.
+localparam BUFBYTESZ = (BUFSZ*(WORDBITSZ/8));
+localparam CLOG2BUFBYTESZ = clog2(BUFBYTESZ);
+
 input wire rst_i;
 
 input wire clk_i;
@@ -367,28 +404,51 @@ wire cmdsetint = (prevcmddone && wb_dat_r[1:0] == CMDSETINTERRUPT);
 wire cmdsetspd = (prevcmddone && wb_dat_r[1:0] == CMDSETSPEED);
 
 // CMDSETINTERRUPT with a null "arg" closes the transmission in progress;
-// the whole "arg" is decoded, as "intrqstthresh" keeps its (CLOG2BUFSZ+1)
-// lsb only, and a non-null "arg" which truncates to a null threshold only
-// disables interrupt.
+// the whole "arg" is decoded, as "intrqstthresh" keeps its
+// (CLOG2BUFBYTESZ+1) lsb only, and a non-null "arg" which truncates to a
+// null threshold only disables interrupt.
 wire cmdclose = (cmdsetint && !(|wb_dat_r[WORDBITSZ-1:2]));
 
 wire devrd = (wb_stb_r && !wb_we_r && !wb_addr_r[ISCMDBIT] && prevcmdisdevrdy);
 wire devwr = (wb_stb_r &&  wb_we_r && !wb_addr_r[ISCMDBIT] && prevcmdisdevrdy);
 
-wire            rx_read_w = devrd;
-wire [8 -1 : 0] rx_data_w0;
+wire                    rx_read_w = devrd;
+wire [WORDBITSZ -1 : 0] rx_data_w0_;
+wire [WORDBITSZ -1 : 0] rx_data_w0;
 
-wire            tx_write_w = devwr;
-wire [8 -1 : 0] tx_data_w1 = wb_dat_r[8 -1 : 0];
+wire                    tx_write_w = devwr;
+wire [WORDBITSZ -1 : 0] tx_data_w1;
 
-wire [(CLOG2BUFSZ +1) -1 : 0] rx_usage_w;
-wire [(CLOG2BUFSZ +2) -1 : 0] tx_usage_w;
+// A word is transmitted from its least significant byte, while spi_master
+// transmits a data from its most significant bit: the bytes of the word
+// written are reversed into the data to transmit, its least significant
+// byte becoming the 8 most significant bits of that data; likewise, the
+// bytes of the data received are reversed into the word read, the first
+// byte received becoming its least significant byte.
+genvar gen_data_byte_idx;
+generate for (
+	gen_data_byte_idx = 0;
+	gen_data_byte_idx < (WORDBITSZ/8);
+	gen_data_byte_idx = gen_data_byte_idx + 1) begin :gen_data_byte
+	assign tx_data_w1[((WORDBITSZ-8)-(gen_data_byte_idx*8)) +: 8] = wb_dat_r[(gen_data_byte_idx*8) +: 8];
+	assign rx_data_w0[(gen_data_byte_idx*8) +: 8] = rx_data_w0_[((WORDBITSZ-8)-(gen_data_byte_idx*8)) +: 8];
+end endgenerate
+
+// The buffer usages, which spi_master counts in words, are reported in
+// bytes, as BUFBYTESZ is.
+wire [(CLOG2BUFSZ +1) -1 : 0]     rx_usage_w_;
+wire [(CLOG2BUFSZ +2) -1 : 0]     tx_usage_w_;
+wire [(CLOG2BUFBYTESZ +1) -1 : 0] rx_usage_w = {rx_usage_w_, {CLOG2WORDBITSZBY8{1'b0}}};
+wire [(CLOG2BUFBYTESZ +2) -1 : 0] tx_usage_w = {tx_usage_w_, {CLOG2WORDBITSZBY8{1'b0}}};
 
 wire tx_near_full_w;
 
 assign wb_bsy_o = (!wb_addr_i[ISCMDBIT] && (wb_we_i ? tx_near_full_w : (rx_usage_w == 0)));
 
-reg [(CLOG2BUFSZ +1) -1 : 0] intrqstthresh;
+// The interrupt threshold in bytes, wide enough to hold BUFBYTESZ+1, which
+// the receive buffer usage never reaches; a threshold between two multiples
+// of (WORDBITSZ/8) is reached at the greater one.
+reg [(CLOG2BUFBYTESZ +1) -1 : 0] intrqstthresh;
 
 assign irq_stb_o = (|intrqstthresh && (rx_usage_w >= intrqstthresh) &&
 	// Raise intrqst only when the device is ready for the next command,
@@ -402,13 +462,13 @@ wire irq_rdy_i_negedge = (!irq_rdy_i && irq_rdy_i_r);
 
 reg rx_read_w_sampled;
 
-assign wb_dat_o = (rx_read_w_sampled ? {{(WORDBITSZ-8){1'b0}}, rx_data_w0} : wb_dat_o_);
+assign wb_dat_o = (rx_read_w_sampled ? rx_data_w0 : wb_dat_o_);
 
-// The transmit buffer usage counts up to two bytes taken out of the
-// transmit buffer, hence it is capped to BUFSZ, so that software which
-// computes the room in the transmit buffer as BUFSZ less that usage
+// The transmit buffer usage counts up to two words taken out of the
+// transmit buffer, hence it is capped to BUFBYTESZ, so that software which
+// computes the room in the transmit buffer as BUFBYTESZ less that usage
 // never computes a negative value.
-wire [(CLOG2BUFSZ +1) -1 : 0] _tx_usage_w = ((tx_usage_w > BUFSZ) ? BUFSZ : tx_usage_w);
+wire [(CLOG2BUFBYTESZ +1) -1 : 0] _tx_usage_w = ((tx_usage_w > BUFBYTESZ) ? BUFBYTESZ : tx_usage_w);
 
 localparam SCLKDIVLIMIT = ((PHYCLKFREQ/200000)+1); // 100 kbps is the minimum bitrate.
 localparam CLOG2SCLKDIVLIMIT = clog2(SCLKDIVLIMIT);
@@ -445,10 +505,10 @@ always_ff @(posedge clk_i) begin
 	if (rst_i || cmddevrdy) begin
 		wb_dat_o_ <= {WORDBITSZ{1'b0}};
 	end else if (cmdsetint) begin
-		wb_dat_o_ <= {BUFSZ[(WORDBITSZ-2)-1:0], wb_dat_r[1:0]};
+		wb_dat_o_ <= {BUFBYTESZ[(WORDBITSZ-2)-1:0], wb_dat_r[1:0]};
 	end else if (cmdgetbuf) begin
 		wb_dat_o_ <= {
-			{((WORDBITSZ-2)-(CLOG2BUFSZ+1)){1'b0}},
+			{((WORDBITSZ-2)-(CLOG2BUFBYTESZ+1)){1'b0}},
 			(wb_dat_r[2] ? _tx_usage_w : rx_usage_w),
 			wb_dat_r[1:0]};
 	end else if (cmdsetspd) begin
@@ -471,7 +531,7 @@ end
 spi_master #(
 
 	 .BUFSZ        (BUFSZ)
-	,.DATABITSZ    (8)
+	,.DATABITSZ    (WORDBITSZ)
 	,.SCLKDIVLIMIT (SCLKDIVLIMIT)
 	,.CPOL         (CPOL)
 	,.SYNCTIMEOUT  (SYNCTIMEOUT)
@@ -495,13 +555,13 @@ spi_master #(
 	,.data_i      (tx_data_w1)
 	,.near_full_o (tx_near_full_w)
 	,.full_o      ()
-	,.usage_tx_o  (tx_usage_w)
+	,.usage_tx_o  (tx_usage_w_)
 	,.close_i     (cmdclose)
 
 	,.read_i     (rx_read_w)
-	,.data_o     (rx_data_w0)
+	,.data_o     (rx_data_w0_)
 	,.empty_o    ()
-	,.usage_rx_o (rx_usage_w)
+	,.usage_rx_o (rx_usage_w_)
 );
 
 endmodule
