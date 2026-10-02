@@ -206,18 +206,24 @@ always_ff @(posedge clk_i) begin
 	end
 end
 
+// The constants which the results of commands hold, sized to "resp": a
+// part-select of BUFSZ or PHYCLKFREQ, integers of 32 bits, would yield
+// undefined bits beyond their 32 bits for a WORDBITSZ of 64.
+localparam [(WORDBITSZ-2) -1 : 0] RESPBUFSZ      = BUFSZ;
+localparam [(WORDBITSZ-2) -1 : 0] RESPPHYCLKFREQ = PHYCLKFREQ;
+
 always_ff @(posedge clk_i) begin
 	if (rst_i || cmddevrdy) begin
 		wb_dat_o_ <= {WORDBITSZ{1'b0}};
 	end else if (cmdsetint) begin
-		wb_dat_o_ <= {BUFSZ[(WORDBITSZ-2)-1:0], wb_dat_r[1:0]};
+		wb_dat_o_ <= {RESPBUFSZ, wb_dat_r[1:0]};
 	end else if (cmdgetbuf) begin
 		wb_dat_o_ <= {
 			{((WORDBITSZ-2)-(CLOG2BUFSZ+1)){1'b0}},
 			(wb_dat_r[2] ? tx_usage_w : rx_usage_w),
 			wb_dat_r[1:0]};
 	end else if (cmdsetspd) begin
-		wb_dat_o_ <= {PHYCLKFREQ[(WORDBITSZ-2)-1:0], wb_dat_r[1:0]};
+		wb_dat_o_ <= {RESPPHYCLKFREQ, wb_dat_r[1:0]};
 	end
 end
 

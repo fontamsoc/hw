@@ -277,11 +277,16 @@ always_ff @(posedge clk_i) begin
 	end
 end
 
+// The constant which the result of CMDSETINTERRUPT holds, sized to "resp":
+// a part-select of BUFSZ, an integer of 32 bits, would yield undefined bits
+// beyond its 32 bits for a WORDBITSZ of 64.
+localparam [(WORDBITSZ-2) -1 : 0] RESPBUFSZ = BUFSZ;
+
 always_ff @(posedge clk_i) begin
 	if (rst_i || cmddevrdy) begin
 		wb_dat_o_ <= {WORDBITSZ{1'b0}};
 	end else if (cmdsetint) begin
-		wb_dat_o_ <= {BUFSZ[(WORDBITSZ-2)-1:0], wb_dat_r[1:0]};
+		wb_dat_o_ <= {RESPBUFSZ, wb_dat_r[1:0]};
 	end else if (cmdgetbuf) begin
 		wb_dat_o_ <= {
 			{((WORDBITSZ-2)-(CLOG2BUFSZ+1)){1'b0}},
