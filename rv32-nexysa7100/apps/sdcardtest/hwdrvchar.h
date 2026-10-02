@@ -4,6 +4,15 @@
 #ifndef HWDRVCHAR_H
 #define HWDRVCHAR_H
 
+// HWDRVCHAR_DATATYPE is the type of the data which an access to the data word
+// of the device transfers, which hwdrvchar_read() and hwdrvchar_write() use
+// when copying data; it must be defined before including this file, ie:
+// uint8_t for a device transferring a byte at a time, as a UART does, or
+// uintptr_t for one transferring a word at a time, as dev/spi.sv does.
+#ifndef HWDRVCHAR_DATATYPE
+#error "HWDRVCHAR_DATATYPE must be defined!"
+#endif
+
 // Structure representing a serial device.
 // Before initializing the device using hwdrvchar_init(),
 // the fields addr must be valid.
@@ -102,11 +111,14 @@ static inline uintptr_t hwdrvchar_readable (hwdrvchar_t *dev) {
 }
 
 // Read from the serial device into the buffer given by the
-// argument ptr, the byte amount given by the argument sz.
+// argument ptr, the byte amount given by the argument sz,
+// a HWDRVCHAR_DATATYPE at a time: sz is a multiple of the size
+// of HWDRVCHAR_DATATYPE, on which ptr is aligned.
 // Return the byte amount read.
-static uintptr_t hwdrvchar_read (hwdrvchar_t *dev, void *ptr, uintptr_t sz) {
+static inline uintptr_t hwdrvchar_read (hwdrvchar_t *dev, void *ptr, uintptr_t sz) {
 	void *addrDat = dev->addr;
 	uintptr_t cnt = 0;
+	ptr = __builtin_assume_aligned(ptr, sizeof(HWDRVCHAR_DATATYPE));
 	while (sz) {
 		uintptr_t n = hwdrvchar_readable(dev);
 		if (!n)
@@ -118,9 +130,13 @@ static uintptr_t hwdrvchar_read (hwdrvchar_t *dev, void *ptr, uintptr_t sz) {
 			sz = 0;
 		}
 		cnt += n;
+		// The data is stored using __builtin_memcpy(), the buffer
+		// being possibly declared of another type than its data.
 		do {
-			*(unsigned char *)(ptr++) = *((volatile unsigned char *)addrDat);
-		} while (--n);
+			HWDRVCHAR_DATATYPE dat = *((volatile HWDRVCHAR_DATATYPE *)addrDat);
+			__builtin_memcpy(ptr, &dat, sizeof(dat));
+			ptr += sizeof(dat);
+		} while (n -= sizeof(HWDRVCHAR_DATATYPE));
 	}
 	return cnt;
 }
@@ -145,11 +161,14 @@ static inline uintptr_t hwdrvchar_writable (hwdrvchar_t *dev) {
 }
 
 // Write to the serial device from the buffer given by the
-// argument ptr, the byte amount given by the argument sz.
+// argument ptr, the byte amount given by the argument sz,
+// a HWDRVCHAR_DATATYPE at a time: sz is a multiple of the size
+// of HWDRVCHAR_DATATYPE, on which ptr is aligned.
 // Return the byte amount written.
-static uintptr_t hwdrvchar_write (hwdrvchar_t *dev, void *ptr, uintptr_t sz) {
+static inline uintptr_t hwdrvchar_write (hwdrvchar_t *dev, void *ptr, uintptr_t sz) {
 	void *addrDat = dev->addr;
 	uintptr_t cnt = 0;
+	ptr = __builtin_assume_aligned(ptr, sizeof(HWDRVCHAR_DATATYPE));
 	while (sz) {
 		uintptr_t n = hwdrvchar_writable(dev);
 		if (!n)
@@ -161,9 +180,14 @@ static uintptr_t hwdrvchar_write (hwdrvchar_t *dev, void *ptr, uintptr_t sz) {
 			sz = 0;
 		}
 		cnt += n;
+		// The data is loaded using __builtin_memcpy(), the buffer
+		// being possibly declared of another type than its data.
 		do {
-			*((volatile unsigned char *)addrDat) = *(unsigned char *)(ptr++);
-		} while (--n);
+			HWDRVCHAR_DATATYPE dat;
+			__builtin_memcpy(&dat, ptr, sizeof(dat));
+			*((volatile HWDRVCHAR_DATATYPE *)addrDat) = dat;
+			ptr += sizeof(dat);
+		} while (n -= sizeof(HWDRVCHAR_DATATYPE));
 	}
 	return cnt;
 }

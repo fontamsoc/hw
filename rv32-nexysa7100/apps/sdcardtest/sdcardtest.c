@@ -21,6 +21,9 @@
 
 #include <_os.h>
 
+// HWDRVCHAR_DATATYPE is to be defined before including hwdrvchar.h: dev/spi.sv
+// transfers a word per access of its data word, as hwdrvsdspi.h requires.
+#define HWDRVCHAR_DATATYPE uintptr_t
 #include "hwdrvchar.h"
 #include "hwdrvirqctrl.h"
 
@@ -104,7 +107,8 @@ static hwdrvsdspi_t sd = {
 #endif
 };
 
-static unsigned char buf[SDCARDTEST_NBLK * HWDRVSDSPI_BLKSZ];
+// Word aligned, as hwdrvsdspi_read() and hwdrvsdspi_write() require.
+static alignas(uintptr_t) uint8_t buf[SDCARDTEST_NBLK * HWDRVSDSPI_BLKSZ];
 
 // Integer port of make_human_readable_str(val, 1, 0) of BusyBox,
 // which dd uses; ie: 8388608 gives "8.0M", 1000 gives "1000".
