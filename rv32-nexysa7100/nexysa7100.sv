@@ -53,7 +53,7 @@
 
 `include "dev/sram.sv"
 
-`include "dev/spi.sv"
+`include "dev/sdio.sv"
 
 `include "dev/dfltdev.sv"
 
@@ -67,11 +67,10 @@ module nexysa7100 (
 	,uart_rx
 	,uart_tx
 
-	// SD SPI signals.
-	,sdspi_sclk_o
-	,sdspi_mosi_o
-	,sdspi_miso_i
-	,sdspi_cs_o
+	// SD signals.
+	,sdsdio_clk_o
+	,sdsdio_cmd_io
+	,sdsdio_dat_io
 	,sd_reset_o
 
 	// Used in order to keep the seven-segment-display off.
@@ -94,12 +93,14 @@ input wire clk100mhz_i;
 input  wire uart_rx;
 output wire uart_tx;
 
-// SD SPI signals.
-output wire sdspi_sclk_o;
-output wire sdspi_mosi_o;
-input  wire sdspi_miso_i;
-output wire sdspi_cs_o;
-// Held low, which powers the microSD slot.
+// SD signals.
+output wire            sdsdio_clk_o;
+inout  wire            sdsdio_cmd_io;
+inout  wire [4 -1 : 0] sdsdio_dat_io;
+// Held low, which powers the microSD slot. The board keeps the slot
+// unpowered until the FPGA is configured, hence loading a bitstream
+// power-cycles the card, which returns it to SD mode if it was left in SPI
+// mode, whereas a reset of the design does not.
 output wire sd_reset_o;
 assign sd_reset_o = 1'b0;
 
@@ -139,8 +140,8 @@ localparam M_WBPI_LAST    = M_WBPI_CPU;
 localparam S_WBPI_IRQCTRL = 0;
 localparam S_WBPI_SERIAL  = (S_WBPI_IRQCTRL + 1);
 localparam S_WBPI_SRAM    = (S_WBPI_SERIAL + 1);
-localparam S_WBPI_SDSPI   = (S_WBPI_SRAM + 1);
-localparam S_WBPI_DEFAULT = (S_WBPI_SDSPI + 1);
+localparam S_WBPI_SDSDIO  = (S_WBPI_SRAM + 1);
+localparam S_WBPI_DEFAULT = (S_WBPI_SDSDIO + 1);
 
 localparam WBPI_MDEVCOUNT = (M_WBPI_LAST + 1);
 localparam WBPI_SDEVCOUNT = (S_WBPI_DEFAULT + 1);
@@ -149,7 +150,7 @@ localparam [0:(WBPI_SDEVCOUNT*2*32)-1] WBPI_SDEVS = {
 	/* S_WBPI_IRQCTRL */ 32'hf00,  32'(WORDBITSZ/8),
 	/* S_WBPI_SERIAL  */ 32'hf80,  32'(2*(WORDBITSZ/8)),
 	/* S_WBPI_SRAM    */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
-	/* S_WBPI_SDSPI   */ 32'he00,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_SDSDIO  */ 32'he00,  32'(4*(WORDBITSZ/8)),
 	/* S_WBPI_DEFAULT */ 32'h0,    32'h0};
 
 localparam WBPI_MAXPENDINGACK     = 32;
@@ -186,9 +187,9 @@ wire wbpi_clk_w = clk100mhz_w;
 
 localparam IRQ_DFLTDEV = 0;
 localparam IRQ_SERIAL = (IRQ_DFLTDEV + 1);
-localparam IRQ_SDSPI = (IRQ_SERIAL + 1);
+localparam IRQ_SDSDIO = (IRQ_SERIAL + 1);
 
-localparam IRQSRCCOUNT = (IRQ_SDSPI +1); // Number of interrupt sources.
+localparam IRQSRCCOUNT = (IRQ_SDSDIO +1); // Number of interrupt sources.
 localparam IRQDSTCOUNT = CPU_COUNT; // Number of interrupt destinations.
 wire [IRQSRCCOUNT -1 : 0] irq_src_stb_w;
 wire [IRQSRCCOUNT -1 : 0] irq_src_rdy_w;
@@ -329,36 +330,56 @@ sram #(
 	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SRAM])
 );
 
-spi #(
+wire            sdsdio_cmd_o_w;
+wire            sdsdio_cmd_e_w;
+wire [4 -1 : 0] sdsdio_dat_o_w;
+wire [4 -1 : 0] sdsdio_dat_e_w;
+
+sdio #(
 	 .WORDBITSZ      (WORDBITSZ)
 	,.PHYCLKFREQ     (WBPI_CLKFREQ)
 	,.DEFAULTBITRATE (400000)
-	,.BUFSZ          (512)
-	,.CPOL           (0)
-) sdspi (
+	,.CMDBUFSZ       (32)
+	,.DATBUFSZ       (2048)
+) sdsdio (
 
 	 .rst_i (wbpi_rst_w)
 
 	,.clk_i     (wbpi_clk_w)
 	,.clk_phy_i (wbpi_clk_w)
 
-	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_SDSPI])
-	,.wb_we_i    (s_wbpi_we_w[S_WBPI_SDSPI])
-	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_SDSPI])
-	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_SDSPI])
-	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_SDSPI])
-	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_SDSPI])
-	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SDSPI])
-	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SDSPI])
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_SDSDIO])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_SDSDIO])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_SDSDIO])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_SDSDIO])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_SDSDIO])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_SDSDIO])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SDSDIO])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SDSDIO])
 
-	,.irq_stb_o (irq_src_stb_w[IRQ_SDSPI])
-	,.irq_rdy_i (irq_src_rdy_w[IRQ_SDSPI])
+	,.irq_stb_o (irq_src_stb_w[IRQ_SDSDIO])
+	,.irq_rdy_i (irq_src_rdy_w[IRQ_SDSDIO])
 
-	,.sclk_o (sdspi_sclk_o)
-	,.mosi_o (sdspi_mosi_o)
-	,.miso_i (sdspi_miso_i)
-	,.cs_o   (sdspi_cs_o)
+	,.sdclk_o (sdsdio_clk_o)
+	,.sdcmd_i (sdsdio_cmd_io)
+	,.sdcmd_o (sdsdio_cmd_o_w)
+	,.sdcmd_e (sdsdio_cmd_e_w)
+	,.sddat_i (sdsdio_dat_io)
+	,.sddat_o (sdsdio_dat_o_w)
+	,.sddat_e (sdsdio_dat_e_w)
 );
+
+// Tristate per pad, driven while its enable from the device is high;
+// a single ternary on the vector would reduce the enable to one bit.
+assign sdsdio_cmd_io = (sdsdio_cmd_e_w ? sdsdio_cmd_o_w : 1'bz);
+genvar gen_sdsdio_dat_io_idx;
+generate for (
+	gen_sdsdio_dat_io_idx = 0;
+	gen_sdsdio_dat_io_idx < 4;
+	gen_sdsdio_dat_io_idx = gen_sdsdio_dat_io_idx + 1) begin :gen_sdsdio_dat_io
+	assign sdsdio_dat_io[gen_sdsdio_dat_io_idx] = (sdsdio_dat_e_w[gen_sdsdio_dat_io_idx] ?
+		sdsdio_dat_o_w[gen_sdsdio_dat_io_idx] : 1'bz);
+end endgenerate
 
 // Catch invalid physical address space access.
 dfltdev #(

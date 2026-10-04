@@ -138,18 +138,30 @@ set_property -dict { PACKAGE_PIN C12   IOSTANDARD LVCMOS33 } [get_ports { rst_n 
 #set_property -dict { PACKAGE_PIN B12   IOSTANDARD LVCMOS33 } [get_ports { VGA_VS }]; #IO_L3N_T0_DQS_AD1N_15 Sch=vga_vs
 
 ##Micro SD Connector
-## Used in SPI mode; Digilent's master xdc calls these ports SD_RESET,
-## SD_SCK, SD_CMD, SD_DAT[0] and SD_DAT[3]: the card receives on CMD,
-## transmits on DAT[0], which is pulled up as it is driven only while
-## the card is selected, and is selected through DAT[3].
+## Used in SD mode; Digilent's master xdc calls these ports SD_RESET,
+## SD_SCK, SD_CMD and SD_DAT[3:0]: the card receives commands and answers
+## them on CMD, and transfers data on DAT[3:0]. CMD and DAT[3:0] are
+## driven in turn by the device and by the card, and the board pulls them
+## up to the supply of the slot through 100K resistors; they are pulled up
+## here as well, so that they are high while neither drives them.
+## The clock switches with a fast slew rate, as the high speed mode of the
+## card requires edges of 3 ns at most.
 set_property -dict { PACKAGE_PIN E2    IOSTANDARD LVCMOS33 } [get_ports { sd_reset_o }]; #IO_L14P_T2_SRCC_35 Sch=sd_reset
 #set_property -dict { PACKAGE_PIN A1    IOSTANDARD LVCMOS33 } [get_ports { SD_CD }]; #IO_L9N_T1_DQS_AD7N_35 Sch=sd_cd
-set_property -dict { PACKAGE_PIN B1    IOSTANDARD LVCMOS33 } [get_ports { sdspi_sclk_o }]; #IO_L9P_T1_DQS_AD7P_35 Sch=sd_sck
-set_property -dict { PACKAGE_PIN C1    IOSTANDARD LVCMOS33 } [get_ports { sdspi_mosi_o }]; #IO_L16N_T2_35 Sch=sd_cmd
-set_property -dict { PACKAGE_PIN C2    IOSTANDARD LVCMOS33 PULLUP TRUE } [get_ports { sdspi_miso_i }]; #IO_L16P_T2_35 Sch=sd_dat[0]
-#set_property -dict { PACKAGE_PIN E1    IOSTANDARD LVCMOS33 } [get_ports { SD_DAT[1] }]; #IO_L18N_T2_35 Sch=sd_dat[1]
-#set_property -dict { PACKAGE_PIN F1    IOSTANDARD LVCMOS33 } [get_ports { SD_DAT[2] }]; #IO_L18P_T2_35 Sch=sd_dat[2]
-set_property -dict { PACKAGE_PIN D2    IOSTANDARD LVCMOS33 } [get_ports { sdspi_cs_o }]; #IO_L14N_T2_SRCC_35 Sch=sd_dat[3]
+set_property -dict { PACKAGE_PIN B1    IOSTANDARD LVCMOS33 SLEW FAST } [get_ports { sdsdio_clk_o }]; #IO_L9P_T1_DQS_AD7P_35 Sch=sd_sck
+set_property -dict { PACKAGE_PIN C1    IOSTANDARD LVCMOS33 PULLUP TRUE } [get_ports { sdsdio_cmd_io }]; #IO_L16N_T2_35 Sch=sd_cmd
+set_property -dict { PACKAGE_PIN C2    IOSTANDARD LVCMOS33 PULLUP TRUE } [get_ports { sdsdio_dat_io[0] }]; #IO_L16P_T2_35 Sch=sd_dat[0]
+set_property -dict { PACKAGE_PIN E1    IOSTANDARD LVCMOS33 PULLUP TRUE } [get_ports { sdsdio_dat_io[1] }]; #IO_L18N_T2_35 Sch=sd_dat[1]
+set_property -dict { PACKAGE_PIN F1    IOSTANDARD LVCMOS33 PULLUP TRUE } [get_ports { sdsdio_dat_io[2] }]; #IO_L18P_T2_35 Sch=sd_dat[2]
+set_property -dict { PACKAGE_PIN D2    IOSTANDARD LVCMOS33 PULLUP TRUE } [get_ports { sdsdio_dat_io[3] }]; #IO_L14N_T2_SRCC_35 Sch=sd_dat[3]
+## The device drives each pin from a register, and samples each input into a
+## register, with no logic between that register and the pad: pack those
+## registers in the I/O tiles, for short pad delays which placement does not
+## change. A bit sent by the card is sampled in the clock cycle where the
+## device raises the clock, before the card sees that edge, hence the delays
+## of the clock pad and of the data pads shorten the time left to the card
+## to answer.
+set_property IOB TRUE [get_ports { sdsdio_clk_o sdsdio_cmd_io sdsdio_dat_io[*] }];
 
 ##Accelerometer
 #set_property -dict { PACKAGE_PIN E15   IOSTANDARD LVCMOS33 } [get_ports { ACL_MISO }]; #IO_L11P_T1_SRCC_15 Sch=acl_miso
