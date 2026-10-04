@@ -242,9 +242,17 @@
 //
 // A read of the first word of an interface while its receive buffer is
 // empty, which for the DAT interface is while the receive buffer of any
-// lane is empty, or a write while its transmit buffer is full or one word
-// away from full, which for the DAT interface is while the transmit buffer
-// of any lane is, stalls the memory interface, as described in dev/spi.sv.
+// lane is empty, or a write while its transmit buffer is full, which for the
+// DAT interface is while the transmit buffer of any lane is, the words read
+// or written by the accesses accepted before it being accounted, stalls the
+// memory interface, as described in dev/spi.sv, but once the access was
+// accepted: the access waits in the device until its buffer allows it, a
+// single access more gets accepted meanwhile, which waits behind it, then
+// "wb_bsy_o" stalls the memory interface. The words received or transmitted
+// in the clock cycle before the access executes are not accounted, hence the
+// access may wait a clock cycle more than its buffer requires. An access
+// which does not wait is acknowledged two clock cycles after it was
+// accepted, accesses being accepted one per clock cycle.
 //
 // On reset, interrupt is disabled on both interfaces, and must be explicitly
 // enabled. The device raises one interrupt request, when enabled on either
@@ -255,7 +263,11 @@
 // which is not ready, waiting indefinitely for it. Interrupt gets disabled on
 // both interfaces when the raised interrupt gets acknowledged; as a close
 // disables it on its interface, it is to be enabled again after the close if
-// it is used.
+// it is used. The interrupt request comes from registers: it rises, or
+// falls, a clock cycle after the receive buffer usage of the CMD interface
+// reaches its threshold, or falls below it, and two clock cycles after that
+// of the DAT interface does; an acknowledge lowers it in the next clock
+// cycle, and an interface which is not ready masks it at once.
 
 // Parameters:
 //
@@ -452,25 +464,74 @@ output wire [4 -1 : 0] sddat_e;
 localparam ISCMDBIT = 0;
 localparam ISDATBIT = 1;
 
+// The accesses accepted are held in two stages: the access in the first
+// stage, "wb_stb_r", executes in the clock cycle where it can, as described
+// with "wb_exec_w", and an access accepted while it waits is held in the
+// second stage, "skid_stb_r", which drives "wb_bsy_o"; hence an access gets
+// accepted while the second stage is empty, and "wb_bsy_o" is a register.
+// An access which does not wait executes in the clock cycle after it was
+// accepted, while the next access gets accepted, and is acknowledged in the
+// clock cycle which follows, hence accesses which do not wait are accepted
+// one per clock cycle, each acknowledged two clock cycles after it was.
 reg                               wb_stb_r;
 reg                               wb_we_r;
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] wb_addr_r;
 reg [WORDBITSZ -1 : 0]            wb_dat_r;
 
+reg                               skid_stb_r;
+reg                               skid_we_r;
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] skid_addr_r;
+reg [WORDBITSZ -1 : 0]            skid_dat_r;
+
+assign wb_bsy_o = skid_stb_r;
+
+wire wb_stb_r_ = (wb_stb_i && !wb_bsy_o);
+
+// The conditions on the buffers, from registers described with them below:
+// the receive buffer of the interface holds a word to read, or its transmit
+// buffer has room for a word to write.
+reg cmd_rdok_r;
+reg cmd_wrok_r;
+reg dat_rdok_r;
+reg dat_wrok_r;
+
+// High in the clock cycle where the access in the first stage executes: at
+// once for an access to the second word of an interface, and for an access
+// to its first word, once the condition on the buffer which it reads or
+// writes holds.
+wire wb_exec_w = (wb_stb_r && (wb_addr_r[ISCMDBIT] || (wb_we_r ?
+	(wb_addr_r[ISDATBIT] ? dat_wrok_r : cmd_wrok_r) :
+	(wb_addr_r[ISDATBIT] ? dat_rdok_r : cmd_rdok_r))));
+
+// The first stage is free when empty, or when its access executes; it then
+// takes the access of the second stage, else the access accepted.
+wire wb_free_w = (!wb_stb_r || wb_exec_w);
+
 // The interface accessed, sampled for the clock cycle where "wb_ack_o"
 // returns the result of its previous command.
 reg wb_isdat_r;
 
-wire wb_stb_r_ = (wb_stb_i && !wb_bsy_o);
-
 always_ff @(posedge clk_i) begin
-	wb_stb_r <= wb_stb_r_;
-	if (wb_stb_r_) begin
-		wb_we_r <= wb_we_i;
-		wb_addr_r <= wb_addr_i;
-		wb_dat_r <= wb_dat_i;
+	// An access waiting on a reset is dropped, as is an access accepted
+	// during it, as no master waits for it after the reset.
+	if (rst_i) begin
+		wb_stb_r <= 1'b0;
+		skid_stb_r <= 1'b0;
+	end else begin
+		wb_stb_r <= (!wb_free_w || skid_stb_r || wb_stb_r_);
+		skid_stb_r <= ((skid_stb_r || wb_stb_r_) && !wb_free_w);
 	end
-	wb_ack_o <= wb_stb_r;
+	if (wb_free_w) begin
+		wb_we_r <= (skid_stb_r ? skid_we_r : wb_we_i);
+		wb_addr_r <= (skid_stb_r ? skid_addr_r : wb_addr_i);
+		wb_dat_r <= (skid_stb_r ? skid_dat_r : wb_dat_i);
+	end
+	if (!skid_stb_r) begin
+		skid_we_r <= wb_we_i;
+		skid_addr_r <= wb_addr_i;
+		skid_dat_r <= wb_dat_i;
+	end
+	wb_ack_o <= wb_exec_w;
 	wb_isdat_r <= wb_addr_r[ISDATBIT];
 end
 
@@ -483,8 +544,8 @@ localparam CMDSETSPEED       = 3;
 reg [WORDBITSZ -1 : 0] cmd_wb_dat_o_;
 reg [WORDBITSZ -1 : 0] dat_wb_dat_o_;
 
-wire cmd_iscmd = (wb_stb_r && wb_we_r && wb_addr_r[ISCMDBIT] && !wb_addr_r[ISDATBIT]);
-wire dat_iscmd = (wb_stb_r && wb_we_r && wb_addr_r[ISCMDBIT] &&  wb_addr_r[ISDATBIT]);
+wire cmd_iscmd = (wb_exec_w && wb_we_r && wb_addr_r[ISCMDBIT] && !wb_addr_r[ISDATBIT]);
+wire dat_iscmd = (wb_exec_w && wb_we_r && wb_addr_r[ISCMDBIT] &&  wb_addr_r[ISDATBIT]);
 
 wire cmd_prevcmdisdevrdy = (cmd_wb_dat_o_[1:0] == CMDDEVRDY);
 wire dat_prevcmdisdevrdy = (dat_wb_dat_o_[1:0] == CMDDEVRDY);
@@ -507,10 +568,10 @@ wire dat_cmdsetspd = (dat_prevcmddone && wb_dat_r[1:0] == CMDSETSPEED);
 wire cmd_cmdclose = (cmd_cmdsetint && !(|wb_dat_r[WORDBITSZ-1:2]));
 wire dat_cmdclose = (dat_cmdsetint && !(|wb_dat_r[WORDBITSZ-1:2]));
 
-wire cmd_devrd = (wb_stb_r && !wb_we_r && !wb_addr_r[ISCMDBIT] && !wb_addr_r[ISDATBIT] && cmd_prevcmdisdevrdy);
-wire cmd_devwr = (wb_stb_r &&  wb_we_r && !wb_addr_r[ISCMDBIT] && !wb_addr_r[ISDATBIT] && cmd_prevcmdisdevrdy);
-wire dat_devrd = (wb_stb_r && !wb_we_r && !wb_addr_r[ISCMDBIT] &&  wb_addr_r[ISDATBIT] && dat_prevcmdisdevrdy);
-wire dat_devwr = (wb_stb_r &&  wb_we_r && !wb_addr_r[ISCMDBIT] &&  wb_addr_r[ISDATBIT] && dat_prevcmdisdevrdy);
+wire cmd_devrd = (wb_exec_w && !wb_we_r && !wb_addr_r[ISCMDBIT] && !wb_addr_r[ISDATBIT] && cmd_prevcmdisdevrdy);
+wire cmd_devwr = (wb_exec_w &&  wb_we_r && !wb_addr_r[ISCMDBIT] && !wb_addr_r[ISDATBIT] && cmd_prevcmdisdevrdy);
+wire dat_devrd = (wb_exec_w && !wb_we_r && !wb_addr_r[ISCMDBIT] &&  wb_addr_r[ISDATBIT] && dat_prevcmdisdevrdy);
+wire dat_devwr = (wb_exec_w &&  wb_we_r && !wb_addr_r[ISCMDBIT] &&  wb_addr_r[ISDATBIT] && dat_prevcmdisdevrdy);
 
 wire                    cmd_rx_read_w = cmd_devrd;
 wire [WORDBITSZ -1 : 0] cmd_rx_data_w0_;
@@ -538,7 +599,9 @@ generate for (
 end endgenerate
 
 // The buffer usages, which spi_master counts in words, are reported in
-// bytes; those of the DAT interface are computed below from its lanes.
+// bytes; those of the DAT interface are computed below from its lanes, from
+// registers which hold the usages of the previous clock cycle, as described
+// there.
 wire [(CLOG2CMDBUFSZ +1) -1 : 0]     cmd_rx_usage_w_;
 wire [(CLOG2CMDBUFSZ +2) -1 : 0]     cmd_tx_usage_w_;
 wire [(CLOG2CMDBUFBYTESZ +1) -1 : 0] cmd_rx_usage_w = {cmd_rx_usage_w_, {CLOG2WORDBITSZBY8{1'b0}}};
@@ -546,16 +609,15 @@ wire [(CLOG2CMDBUFBYTESZ +2) -1 : 0] cmd_tx_usage_w = {cmd_tx_usage_w_, {CLOG2WO
 
 wire [(CLOG2DATBUFSZ +1) -1 : 0]     dat_rx_usage_w_;
 wire [(CLOG2DATBUFSZ +2) -1 : 0]     dat_tx_usage_w_;
-wire [(CLOG2DATBUFBYTESZ +1) -1 : 0] dat_rx_usage_w = {dat_rx_usage_w_, {CLOG2WORDBITSZBY8{1'b0}}};
+reg  [(CLOG2DATBUFSZ +1) -1 : 0]     dat_rx_usage_r;
+wire [(CLOG2DATBUFBYTESZ +1) -1 : 0] dat_rx_usage_w = {dat_rx_usage_r, {CLOG2WORDBITSZBY8{1'b0}}};
 wire [(CLOG2DATBUFBYTESZ +2) -1 : 0] dat_tx_usage_w = {dat_tx_usage_w_, {CLOG2WORDBITSZBY8{1'b0}}};
 
 wire cmd_tx_near_full_w;
+wire cmd_tx_full_w;
 wire dat_tx_near_full_w;
+wire dat_tx_full_w;
 wire dat_rx_empty_w;
-
-assign wb_bsy_o = (!wb_addr_i[ISCMDBIT] && (wb_addr_i[ISDATBIT] ?
-	(wb_we_i ? dat_tx_near_full_w : dat_rx_empty_w) :
-	(wb_we_i ? cmd_tx_near_full_w : (cmd_rx_usage_w == 0))));
 
 // The interrupt threshold in bytes of each interface, wide enough to hold
 // the size in bytes of its buffer plus one, which its receive buffer usage
@@ -564,9 +626,12 @@ assign wb_bsy_o = (!wb_addr_i[ISCMDBIT] && (wb_addr_i[ISDATBIT] ?
 reg [(CLOG2CMDBUFBYTESZ +1) -1 : 0] cmd_intrqstthresh;
 reg [(CLOG2DATBUFBYTESZ +1) -1 : 0] dat_intrqstthresh;
 
-assign irq_stb_o = (
-	((|cmd_intrqstthresh && (cmd_rx_usage_w >= cmd_intrqstthresh)) ||
-	 (|dat_intrqstthresh && (dat_rx_usage_w >= dat_intrqstthresh))) &&
+// The interrupt request of each interface, from a register described below
+// with the thresholds.
+reg cmd_intrqst_r;
+reg dat_intrqst_r;
+
+assign irq_stb_o = ((cmd_intrqst_r || dat_intrqst_r) &&
 	// Raise intrqst only when both interfaces are ready for the next command,
 	// otherwise an interrupt would cause software to send an interface a new
 	// command while it is not ready, waiting indefinitely for it to be ready.
@@ -629,6 +694,26 @@ always_ff @(posedge clk_i) begin
 	end
 end
 
+// The interrupt request of each interface is a register, so that the logic
+// computing it does not reach "irq_stb_o": it follows the receive buffer
+// usage a clock cycle late, which for the DAT interface is that of the
+// register of its usage, hence two clock cycles late; it is null in the
+// clock cycle after a threshold changes, as it compares the threshold before
+// the change, hence an acknowledge lowers it at once, as the threshold
+// becoming null would, while CMDSETINTERRUPT masks it meanwhile anyway, the
+// command being not CMDDEVRDY.
+always_ff @(posedge clk_i) begin
+	if (rst_i) begin
+		cmd_intrqst_r <= 1'b0;
+		dat_intrqst_r <= 1'b0;
+	end else begin
+		cmd_intrqst_r <= (|cmd_intrqstthresh && (cmd_rx_usage_w >= cmd_intrqstthresh) &&
+			!cmd_cmdsetint && !irq_rdy_i_negedge);
+		dat_intrqst_r <= (|dat_intrqstthresh && (dat_rx_usage_w >= dat_intrqstthresh) &&
+			!dat_cmdsetint && !irq_rdy_i_negedge);
+	end
+end
+
 // The constants which the results of commands hold, sized to "resp", as
 // dev/spi.sv does.
 localparam [(WORDBITSZ-2) -1 : 0] RESPCMDBUFBYTESZ = CMDBUFBYTESZ;
@@ -650,16 +735,29 @@ always_ff @(posedge clk_i) begin
 	end
 end
 
+// The usage which CMDGETBUFFERUSAGE returns on the DAT interface gets set in
+// its result in the clock cycle after the command executed, from registers
+// which then hold the usages of the clock cycle where it executed, hence the
+// value which the CMD interface latches at once; the earliest access which
+// reads the result executes in that clock cycle, and gets it with its
+// acknowledge. A CMDDEVRDY executing in that clock cycle, the only command
+// which can, clears the result instead.
+reg dat_cmdgetbuf_r;
+reg dat_cmdgetbuftx_r;
+always_ff @(posedge clk_i) begin
+	dat_cmdgetbuf_r <= dat_cmdgetbuf;
+	dat_cmdgetbuftx_r <= wb_dat_r[2];
+end
+
 always_ff @(posedge clk_i) begin
 	if (rst_i || dat_cmddevrdy) begin
 		dat_wb_dat_o_ <= {WORDBITSZ{1'b0}};
 	end else if (dat_cmdsetint) begin
 		dat_wb_dat_o_ <= {RESPDATBUFBYTESZ, wb_dat_r[1:0]};
 	end else if (dat_cmdgetbuf) begin
-		dat_wb_dat_o_ <= {
-			{((WORDBITSZ-2)-(CLOG2DATBUFBYTESZ+1)){1'b0}},
-			(wb_dat_r[2] ? _dat_tx_usage_w : dat_rx_usage_w),
-			wb_dat_r[1:0]};
+		dat_wb_dat_o_ <= {{(WORDBITSZ-2){1'b0}}, wb_dat_r[1:0]};
+	end else if (dat_cmdgetbuf_r) begin
+		dat_wb_dat_o_[2 +: (CLOG2DATBUFBYTESZ+1)] <= (dat_cmdgetbuftx_r ? _dat_tx_usage_w : dat_rx_usage_w);
 	end else if (dat_cmdsetspd) begin
 		dat_wb_dat_o_ <= {RESPPHYCLKFREQ, wb_dat_r[1:0]};
 	end
@@ -742,7 +840,7 @@ spi_master #(
 	,.write_i     (cmd_tx_write_w)
 	,.data_i      (cmd_tx_data_w1)
 	,.near_full_o (cmd_tx_near_full_w)
-	,.full_o      ()
+	,.full_o      (cmd_tx_full_w)
 	,.usage_tx_o  (cmd_tx_usage_w_)
 	,.close_i     (cmd_cmdclose)
 
@@ -759,20 +857,35 @@ spi_master #(
 	,.trailing_o (cmd_trailing_w)
 );
 
-// The usages of each DAT lane, in words.
+// The usages of each DAT lane, in words; the transmit usages are also
+// registered at every clock cycle, as described below.
 wire [(4*(CLOG2DATBUFSZ+1)) -1 : 0] dat_rx_usages_w;
 wire [(4*(CLOG2DATBUFSZ+2)) -1 : 0] dat_tx_usages_w;
+reg  [(4*(CLOG2DATBUFSZ+2)) -1 : 0] dat_tx_usages_r;
 
 wire [4 -1 : 0] dat_tx_near_fulls_w;
+wire [4 -1 : 0] dat_tx_fulls_w;
 wire [4 -1 : 0] dat_rx_empties_w;
 
 assign dat_tx_near_full_w = (|dat_tx_near_fulls_w);
+assign dat_tx_full_w = (|dat_tx_fulls_w);
 assign dat_rx_empty_w = (|dat_rx_empties_w);
 
 // A word written to the DAT interface while its transmit buffer usage is
 // null is a control word, which every lane takes as the control data of its
-// transmission, as spi_master decides it from the same usage.
-wire dat_tx_isctrl_w = !(|dat_tx_usages_w);
+// transmission, as spi_master decides it from the same usage. That decision
+// is made from registers, so that the logic computing the usage does not
+// reach the word written: the registers of the transmit usages of the lanes,
+// which hold the usages of the previous clock cycle, and a register of the
+// write executing in that clock cycle, which makes the usage non-null. It is
+// exact, as only a write or a close makes the usage non-null, and a control
+// word gets written once the usage was read null, ie: clock cycles after it
+// became null, with no close in between, while the words which follow it
+// are written while the usage is not null.
+reg dat_tx_write_r;
+always_ff @(posedge clk_i)
+	dat_tx_write_r <= dat_tx_write_w;
+wire dat_tx_isctrl_w = (!(|dat_tx_usages_r) && !dat_tx_write_r);
 
 genvar gen_sddat_idx;
 genvar gen_lanebit_idx;
@@ -842,7 +955,7 @@ generate for (
 		,.write_i     (dat_tx_write_w)
 		,.data_i      (tx_data_w1)
 		,.near_full_o (dat_tx_near_fulls_w[gen_sddat_idx])
-		,.full_o      ()
+		,.full_o      (dat_tx_fulls_w[gen_sddat_idx])
 		,.usage_tx_o  (dat_tx_usages_w[(gen_sddat_idx*(CLOG2DATBUFSZ+2)) +: (CLOG2DATBUFSZ+2)])
 		,.close_i     (dat_cmdclose)
 
@@ -862,23 +975,82 @@ generate for (
 end endgenerate
 
 // The receive buffer usage of the DAT interface is the lowest of its lanes,
-// and its transmit buffer usage the highest.
+// and its transmit buffer usage the highest; each is selected using the
+// comparisons of every two lanes, made at once, so that a single comparison
+// precedes the selection: the lane selected is the first which holds the
+// lowest, or the highest, usage, ie: whose usage is below, or above, that of
+// every lane before it, and not above, or not below, that of every lane
+// after it.
 localparam DATRXUSAGESZ = (CLOG2DATBUFSZ+1);
 localparam DATTXUSAGESZ = (CLOG2DATBUFSZ+2);
 wire [DATRXUSAGESZ -1 : 0] dat_rx_usage0_w = dat_rx_usages_w[(0*DATRXUSAGESZ) +: DATRXUSAGESZ];
 wire [DATRXUSAGESZ -1 : 0] dat_rx_usage1_w = dat_rx_usages_w[(1*DATRXUSAGESZ) +: DATRXUSAGESZ];
 wire [DATRXUSAGESZ -1 : 0] dat_rx_usage2_w = dat_rx_usages_w[(2*DATRXUSAGESZ) +: DATRXUSAGESZ];
 wire [DATRXUSAGESZ -1 : 0] dat_rx_usage3_w = dat_rx_usages_w[(3*DATRXUSAGESZ) +: DATRXUSAGESZ];
-wire [DATRXUSAGESZ -1 : 0] dat_rx_usage01_w = ((dat_rx_usage0_w < dat_rx_usage1_w) ? dat_rx_usage0_w : dat_rx_usage1_w);
-wire [DATRXUSAGESZ -1 : 0] dat_rx_usage23_w = ((dat_rx_usage2_w < dat_rx_usage3_w) ? dat_rx_usage2_w : dat_rx_usage3_w);
-assign dat_rx_usage_w_ = ((dat_rx_usage01_w < dat_rx_usage23_w) ? dat_rx_usage01_w : dat_rx_usage23_w);
-wire [DATTXUSAGESZ -1 : 0] dat_tx_usage0_w = dat_tx_usages_w[(0*DATTXUSAGESZ) +: DATTXUSAGESZ];
-wire [DATTXUSAGESZ -1 : 0] dat_tx_usage1_w = dat_tx_usages_w[(1*DATTXUSAGESZ) +: DATTXUSAGESZ];
-wire [DATTXUSAGESZ -1 : 0] dat_tx_usage2_w = dat_tx_usages_w[(2*DATTXUSAGESZ) +: DATTXUSAGESZ];
-wire [DATTXUSAGESZ -1 : 0] dat_tx_usage3_w = dat_tx_usages_w[(3*DATTXUSAGESZ) +: DATTXUSAGESZ];
-wire [DATTXUSAGESZ -1 : 0] dat_tx_usage01_w = ((dat_tx_usage0_w > dat_tx_usage1_w) ? dat_tx_usage0_w : dat_tx_usage1_w);
-wire [DATTXUSAGESZ -1 : 0] dat_tx_usage23_w = ((dat_tx_usage2_w > dat_tx_usage3_w) ? dat_tx_usage2_w : dat_tx_usage3_w);
-assign dat_tx_usage_w_ = ((dat_tx_usage01_w > dat_tx_usage23_w) ? dat_tx_usage01_w : dat_tx_usage23_w);
+wire dat_rx_le01_w = (dat_rx_usage0_w <= dat_rx_usage1_w);
+wire dat_rx_le02_w = (dat_rx_usage0_w <= dat_rx_usage2_w);
+wire dat_rx_le03_w = (dat_rx_usage0_w <= dat_rx_usage3_w);
+wire dat_rx_le12_w = (dat_rx_usage1_w <= dat_rx_usage2_w);
+wire dat_rx_le13_w = (dat_rx_usage1_w <= dat_rx_usage3_w);
+wire dat_rx_le23_w = (dat_rx_usage2_w <= dat_rx_usage3_w);
+wire [2 -1 : 0] dat_rx_minidx_w = (
+	( dat_rx_le01_w &&  dat_rx_le02_w && dat_rx_le03_w) ? 2'd0 :
+	(!dat_rx_le01_w &&  dat_rx_le12_w && dat_rx_le13_w) ? 2'd1 :
+	(!dat_rx_le02_w && !dat_rx_le12_w && dat_rx_le23_w) ? 2'd2 : 2'd3);
+assign dat_rx_usage_w_ = (
+	(dat_rx_minidx_w == 2'd0) ? dat_rx_usage0_w :
+	(dat_rx_minidx_w == 2'd1) ? dat_rx_usage1_w :
+	(dat_rx_minidx_w == 2'd2) ? dat_rx_usage2_w : dat_rx_usage3_w);
+
+// The receive usage of the DAT interface is registered at every clock cycle,
+// for the result of CMDGETBUFFERUSAGE and for the interrupt request, as
+// described with them; so are the transmit usages of the lanes, before their
+// highest gets selected, for that result and for the decision of a control
+// word. Each register holds in a clock cycle the usage of the previous one.
+always_ff @(posedge clk_i) begin
+	dat_rx_usage_r <= dat_rx_usage_w_;
+	dat_tx_usages_r <= dat_tx_usages_w;
+end
+wire [DATTXUSAGESZ -1 : 0] dat_tx_usage0_w = dat_tx_usages_r[(0*DATTXUSAGESZ) +: DATTXUSAGESZ];
+wire [DATTXUSAGESZ -1 : 0] dat_tx_usage1_w = dat_tx_usages_r[(1*DATTXUSAGESZ) +: DATTXUSAGESZ];
+wire [DATTXUSAGESZ -1 : 0] dat_tx_usage2_w = dat_tx_usages_r[(2*DATTXUSAGESZ) +: DATTXUSAGESZ];
+wire [DATTXUSAGESZ -1 : 0] dat_tx_usage3_w = dat_tx_usages_r[(3*DATTXUSAGESZ) +: DATTXUSAGESZ];
+wire dat_tx_ge01_w = (dat_tx_usage0_w >= dat_tx_usage1_w);
+wire dat_tx_ge02_w = (dat_tx_usage0_w >= dat_tx_usage2_w);
+wire dat_tx_ge03_w = (dat_tx_usage0_w >= dat_tx_usage3_w);
+wire dat_tx_ge12_w = (dat_tx_usage1_w >= dat_tx_usage2_w);
+wire dat_tx_ge13_w = (dat_tx_usage1_w >= dat_tx_usage3_w);
+wire dat_tx_ge23_w = (dat_tx_usage2_w >= dat_tx_usage3_w);
+wire [2 -1 : 0] dat_tx_maxidx_w = (
+	( dat_tx_ge01_w &&  dat_tx_ge02_w && dat_tx_ge03_w) ? 2'd0 :
+	(!dat_tx_ge01_w &&  dat_tx_ge12_w && dat_tx_ge13_w) ? 2'd1 :
+	(!dat_tx_ge02_w && !dat_tx_ge12_w && dat_tx_ge23_w) ? 2'd2 : 2'd3);
+assign dat_tx_usage_w_ = (
+	(dat_tx_maxidx_w == 2'd0) ? dat_tx_usage0_w :
+	(dat_tx_maxidx_w == 2'd1) ? dat_tx_usage1_w :
+	(dat_tx_maxidx_w == 2'd2) ? dat_tx_usage2_w : dat_tx_usage3_w);
+
+// The conditions on the buffers, registered so that the logic computing
+// them from the buffer usages does not reach the memory interface, are
+// computed for the clock cycle which follows, accounting for the access
+// executing meanwhile, a single access executing at a time: a read pops a
+// word from the receive buffer of every lane of its interface, and a write
+// pushes a word in the transmit buffer of every lane. Hence a read can
+// execute when every lane holds two words, or a word when no read executes,
+// and a write when no lane is full or one word away from full, or when no
+// lane is full and no write executes. The words received, and transmitted,
+// meanwhile only add to the words to read, and to the room to write, hence
+// an access may wait a clock cycle more than its buffer requires, but never
+// pops a word which a lane does not hold, nor pushes a word in a full lane.
+wire dat_rx_twowords_w = (
+	(|dat_rx_usage0_w[DATRXUSAGESZ-1:1]) && (|dat_rx_usage1_w[DATRXUSAGESZ-1:1]) &&
+	(|dat_rx_usage2_w[DATRXUSAGESZ-1:1]) && (|dat_rx_usage3_w[DATRXUSAGESZ-1:1]));
+always_ff @(posedge clk_i) begin
+	cmd_rdok_r <= (cmd_rx_read_w ? (|cmd_rx_usage_w_[CLOG2CMDBUFSZ:1]) : (|cmd_rx_usage_w_));
+	cmd_wrok_r <= (cmd_tx_write_w ? !cmd_tx_near_full_w : !cmd_tx_full_w);
+	dat_rdok_r <= (dat_rx_read_w ? dat_rx_twowords_w : !dat_rx_empty_w);
+	dat_wrok_r <= (dat_tx_write_w ? !dat_tx_near_full_w : !dat_tx_full_w);
+end
 
 `ifdef SIMULATION_MONITOR
 // Run-time checks of the lockstep of the lanes; they read the internals of
@@ -966,6 +1138,29 @@ always_ff @(posedge clk_phy_i) begin
 			end
 			mon_errcnt_r <= (mon_errcnt_r + 1);
 		end
+	end
+end
+// Run-time checks of the accesses to the buffers, out of reset, at every
+// clock cycle of "clk_i":
+// B1: a read of the first word of an interface pops a word which every lane
+// of the interface holds;
+// B2: a write to the first word of an interface pushes a word in a transmit
+// buffer which no lane of the interface has full.
+// The first 32 clock cycles with a violation are reported, and
+// "mon_buferrcnt_r" counts them all.
+reg [32 -1 : 0] mon_buferrcnt_r;
+wire mon_b1_w = ((cmd_rx_read_w && !(|cmd_rx_usage_w_)) || (dat_rx_read_w && dat_rx_empty_w));
+wire mon_b2_w = ((cmd_tx_write_w && cmd_tx_full_w) || (dat_tx_write_w && dat_tx_full_w));
+always_ff @(posedge clk_i) begin
+	if (rst_i)
+		mon_buferrcnt_r <= 0;
+	else if (mon_b1_w || mon_b2_w) begin
+		if (mon_buferrcnt_r < 32) begin
+			$display("sdio: error: buffers: B1 %b B2 %b at %0t: cmd rx usage %0d tx full %b, dat rx empties %b tx fulls %b",
+				mon_b1_w, mon_b2_w, $time, cmd_rx_usage_w_, cmd_tx_full_w, dat_rx_empties_w, dat_tx_fulls_w);
+			$fflush();
+		end
+		mon_buferrcnt_r <= (mon_buferrcnt_r + 1);
 	end
 end
 `endif
