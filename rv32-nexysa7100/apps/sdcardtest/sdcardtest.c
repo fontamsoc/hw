@@ -198,7 +198,8 @@ void main (void) {
 	}
 #endif
 	char s[16];
-	printf("💾 %s card | 🔌 %s mode | 📦 %u blocks (%sB) | ⚡ TRAN_SPEED 0x%02x @ %u bps%s | 🛡️ CRC %s | 🧹 pre-erase %s\n",
+	printf("💾 %s card | 🔌 %s mode | 📦 %u blocks (%sB)\n"
+		"⚡ TRAN_SPEED 0x%02x @ %u bps%s | 🛡️ CRC %s | 🧹 pre-erase %s\n",
 		((sd.flags & SDDRVM(FLAG_MMC)) ? "MMC" : (sd.flags & SDDRVM(FLAG_BLKADDR)) ? "SDHC/SDXC" :
 		 (sd.flags & SDDRVM(FLAG_SDV2)) ? "SDSC v2" : "SDSC v1"), (SDCARDTEST_MODE ? "SD" : "SPI"),
 		(unsigned)sd.blkcnt, hrstr(s, ((unsigned long long)sd.blkcnt * SDDRVM(BLKSZ))),
