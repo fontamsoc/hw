@@ -14,10 +14,10 @@
 // 	It must be greater than 1 and a power of 2.
 //
 // DATABITSZ:
-// 	Number of bits per data to transmit;
-// 	it must be at least 8, as the control bits
-// 	of a control data are the four least significant
-// 	bits of its first byte in transmission order.
+// 	Number of bits per data to transmit; it must be
+// 	at least 8, as the control bits of a control data
+// 	are the four, or five when GANG is non-null, least
+// 	significant bits of its first byte in transmission order.
 //
 // SCLKDIVLIMIT:
 // 	Limit below which the input "sclkdiv_i" must be set.
@@ -35,6 +35,13 @@
 // 	or a control data waiting for room in the receive buffer, is given up,
 // 	as described with the transmit buffer interface; a null value disables
 // 	giving up.
+//
+// GANG:
+// 	When non-null, the instance can be ganged with others, as described
+// 	with the gang interface, and the inverse of control bit 4 chains a
+// 	transmission to the next one, as described with the output "freeze_o";
+// 	when null, the inputs of the gang interface are ignored, its outputs
+// 	are null, and control bit 4 is reserved.
 
 // Ports.
 //
@@ -103,10 +110,10 @@
 // 	data: it configures that transmission instead of being transmitted,
 // 	and {DATABITSZ{1'b1}} is transmitted in its place. The data which
 // 	follow it within that transmission are transmitted as usual.
-// 	The control bits of a control data, numbered from 0, are the four
-// 	least significant bits of its first byte in transmission order, ie: of
-// 	its 8 most significant bits; for a DATABITSZ of 8, they are its four
-// 	least significant bits.
+// 	The control bits of a control data, numbered from 0, are the four, or
+// 	five when the parameter GANG is non-null, least significant bits of its
+// 	first byte in transmission order, ie: of its 8 most significant bits;
+// 	for a DATABITSZ of 8, they are its least significant bits.
 //
 // 	The inverse of control bit 0 enables waiting for a null bit sampled
 // 	from the input "miso_i" before counting the bits transmitted; until
@@ -140,10 +147,14 @@
 // 	or at BUFSZ when the next data was already waiting as the previous
 // 	one completed.
 //
+// 	The inverse of control bit 4, when the parameter GANG is non-null,
+// 	chains the transmission to the next one, as described with the output
+// 	"freeze_o".
+//
 // 	The remaining bits of a control data are reserved and expected 1'b1;
 // 	hence a control data of {DATABITSZ{1'b1}} configures a transmission
 // 	which neither waits for a null bit nor discards one, with "cs_o" low,
-// 	and without receive flow control.
+// 	without receive flow control, and not chained.
 //
 // 	Note that the transmission substituted for a control data also
 // 	yields a data in the receive buffer, which is where the response of
@@ -199,6 +210,47 @@
 // 	when both clocks are related as the documentation of the output
 // 	"usage_o" of lib/fifo.sv requires, and must otherwise be debounced
 // 	as it describes.
+//
+// freeze_i
+// start_i
+// freeze_o
+// startok_o
+// leading_o
+// trailing_o
+// 	Gang interface, in the clock domain of "clk_phy_i", used when the
+// 	parameter GANG is non-null and several instances share one "sclk_o",
+// 	as the lines of an SD bus do: every instance, or lane, of a gang is
+// 	given the same "clk_phy_i" and "sclkdiv_i", "freeze_i" is the OR of
+// 	their "freeze_o", and "start_i" is high when "freeze_i" is, or when
+// 	every lane has "startok_o" high. Their outputs "sclk_o" then have
+// 	their edges simultaneous, while each lane transmits and receives its
+// 	own data, and, for a CPOL of 0, the OR of the outputs "sclk_o" is the
+// 	clock of the gang.
+// 	The output "freeze_o" is high while the transmission is paused, and,
+// 	when chained, from the end of the transmission until the next one
+// 	begins; while "freeze_i" is high, the transmission in progress which
+// 	is not paused is frozen between two bits: "sclk_o" remains at its idle
+// 	level, nothing is clocked, and the next bit gets a full half-period
+// 	before its leading edge once thawed. Hence no lane is clocked while
+// 	another waits for a data, or for room in its receive buffer, and a
+// 	chained transmission is followed by the next one without "sclk_o"
+// 	having an edge in between, waiting for it as a pause does: once that
+// 	wait has lasted PAUSETIMEOUT clock cycles of "clk_phy_i", it is given
+// 	up as a pause is, which discards until the close.
+// 	The input "start_i" is the permission to begin a transmission: a
+// 	control data is taken only in a clock cycle where it is high; the
+// 	output "startok_o" is high while no transmission is in progress, or
+// 	in the clock cycle at the end of which "sclk_o" has a trailing edge,
+// 	hence a transmission begins either while the gang is frozen or idle,
+// 	or together with a trailing edge of the lanes which are clocked.
+// 	The outputs "leading_o" and "trailing_o" are high in the clock cycle
+// 	at the end of which "sclk_o" has a leading edge, and a trailing edge,
+// 	respectively, a return to its idle level which a reset causes being
+// 	reported only when it coincides with a trailing edge; hence, for a
+// 	CPOL of 0, a register which takes at every clock cycle the OR, over
+// 	the lanes, of "leading_o" and of "sclk_o" while "trailing_o" is low,
+// 	or null on a reset, equals the clock of the gang without depending on
+// 	itself, and can drive it with no logic between it and its pin.
 
 `include "lib/fifo.sv"
 
@@ -211,7 +263,8 @@ module spi_master (
 	sclkdiv_i,
 	write_i, data_i, near_full_o, full_o, usage_tx_o,
 	close_i,
-	read_i, data_o, empty_o, usage_rx_o
+	read_i, data_o, empty_o, usage_rx_o,
+	freeze_i, start_i, freeze_o, startok_o, leading_o, trailing_o
 );
 
 `include "lib/clog2.sv"
@@ -222,6 +275,7 @@ parameter SCLKDIVLIMIT = 2;
 parameter CPOL         = 0;
 parameter SYNCTIMEOUT  = 0;
 parameter PAUSETIMEOUT = 0;
+parameter GANG         = 0;
 
 localparam CLOG2BUFSZ        = clog2(BUFSZ);
 localparam CLOG2SCLKDIVLIMIT = clog2(SCLKDIVLIMIT);
@@ -250,11 +304,21 @@ output wire [DATABITSZ -1 : 0]       data_o;
 output wire                          empty_o;
 output wire [(CLOG2BUFSZ +1) -1 : 0] usage_rx_o;
 
+input  wire freeze_i;
+input  wire start_i;
+output wire freeze_o;
+output wire startok_o;
+output wire leading_o;
+output wire trailing_o;
+
 wire phy_rdy_w;
 wire phy_rcvd_w;
 wire phy_timeout_w;
 wire phy_idle_w;
 wire phy_hold_w;
+wire phy_paused_w;
+wire phy_trailing_w;
+wire phy_leading_w;
 
 wire [DATABITSZ -1 : 0] phy_data_w0;
 wire [DATABITSZ -1 : 0] phy_data_w1;
@@ -293,6 +357,7 @@ spi_master_phy #(
 	,.CPOL         (CPOL)
 	,.SYNCTIMEOUT  (SYNCTIMEOUT)
 	,.PAUSETIMEOUT (PAUSETIMEOUT)
+	,.GANG         (GANG)
 ) spi_phy (
 
 	 .rst_i (rst_i)
@@ -320,6 +385,11 @@ spi_master_phy #(
 	,.idle_o       (phy_idle_w)
 	,.hold_i       (phy_hold_w)
 	,.csKeepHigh_i (!fifo_tx_ctrl_w[2])
+
+	,.freeze_i   (freeze_i)
+	,.paused_o   (phy_paused_w)
+	,.trailing_o (phy_trailing_w)
+	,.leading_o  (phy_leading_w)
 );
 
 fifo #( // fifo for storing data received.
@@ -388,15 +458,29 @@ end
 // while the receive buffer lacks room for two data: the one the phy would
 // take, and the one whose reception it is completing, which it pushes in
 // the receive buffer in the clock cycle after it takes the next data.
-// While idle, the phy is to take a control data, whose own bit decides.
+// While idle, the phy is to take a control data, whose own bit decides;
+// in a gang, that control data also waits for "start_i", for at most a
+// bit, which is counted with the wait for room.
 wire phy_rxFlowCtrl_w = (phy_idle_w ? !fifo_tx_ctrl_w[3] : phy_rxFlowCtrl_r);
-assign phy_stb_w = (phy_stb_r && !(phy_rxFlowCtrl_w && fifo_rx_near_full_w));
+assign phy_stb_w = ((GANG != 0) ?
+	(phy_stb_r && !(phy_rxFlowCtrl_w && fifo_rx_near_full_w) && (start_i || !phy_idle_w)) :
+	(phy_stb_r && !(phy_rxFlowCtrl_w && fifo_rx_near_full_w)));
 wire phy_flowWait_w = (phy_stb_r && !phy_stb_w);
+
+// High while the next transmission is waited for after a chained one ended.
+wire phy_chainWait_w;
 
 // A transmission pauses instead of ending, unless a close takes effect;
 // and it pauses while a data held waits for room in the receive buffer,
 // a close notwithstanding, as that data was buffered before the close.
-assign phy_hold_w = ((!phy_idle_w && !closing_w) || phy_flowWait_w);
+// In a gang, the phy counts the wait for the transmission which follows a
+// chained one as it counts a pause, so that it gets given up after
+// PAUSETIMEOUT, until the clock cycle where its control data is presented,
+// which clears that count, as it would be counted by a wait for a null bit
+// which follows.
+assign phy_hold_w = ((GANG != 0) ?
+	((!phy_idle_w && !closing_w) || phy_flowWait_w || (phy_chainWait_w && !phy_stb_w)) :
+	((!phy_idle_w && !closing_w) || phy_flowWait_w));
 
 // A close is a level, pending until the transmission has ended, the
 // transmit buffer is empty, no data is held for the phy, and discarding
@@ -484,6 +568,29 @@ fifo #( // fifo for buffering data to transmit.
 // while a close is pending, so that the count becomes null only once the
 // transmission has ended, and a data buffered would begin a new one.
 assign usage_tx_o = (fifo_tx_usage_w + (phy_stb_r && !phy_rdy_w_negedge) + !phy_idle_w + close_r);
+
+// The chain, latched from a control data as the configuration is, and given
+// up with an abort, whether of the transmission chained or of the wait for
+// the next one; hence the gang is frozen from the end of a chained
+// transmission until the next one begins, the phy being idle meanwhile.
+generate if (GANG != 0) begin :gen_chain
+reg phy_chain_r;
+always_ff @(posedge clk_phy_i) begin
+	if (rst_i || phy_timeout_w)
+		phy_chain_r <= 1'b0;
+	else if (phy_idle_w && phy_stb_w)
+		phy_chain_r <= !fifo_tx_data_w[(DATABITSZ-8)+4];
+end
+assign phy_chainWait_w = (phy_chain_r && phy_idle_w);
+end else begin :gen_nochain
+assign phy_chainWait_w = 1'b0;
+end endgenerate
+
+// The outputs of the gang interface, null when GANG is null.
+assign freeze_o = ((GANG != 0) ? (phy_paused_w || phy_chainWait_w) : 1'b0);
+assign startok_o = ((GANG != 0) ? (phy_idle_w || phy_trailing_w) : 1'b0);
+assign leading_o = ((GANG != 0) ? phy_leading_w : 1'b0);
+assign trailing_o = ((GANG != 0) ? phy_trailing_w : 1'b0);
 
 endmodule
 

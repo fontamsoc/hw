@@ -28,6 +28,11 @@
 // 	input "hold_i" causes, is given up; a null value disables giving up.
 // 	The waits for a null bit and for a data exclude each other, hence
 // 	they share a counter, which only the greater of both timeouts sizes.
+//
+// GANG:
+// 	When non-null, the phy can be ganged with others, as described with
+// 	the input "freeze_i"; when null, that input is ignored, and the
+// 	outputs "paused_o", "trailing_o" and "leading_o" are null.
 
 // Ports.
 //
@@ -134,8 +139,9 @@
 // 	first bit lasts a full half-period of "sclk_o" before its leading edge,
 // 	as when a data begins a transmission.
 // 	While "idle_o" is high, it reports a data waiting outside of the phy
-// 	to begin a transmission, as the phy is not presented it through "stb_i"
-// 	meanwhile; that wait is then given up as a pause is.
+// 	to begin a transmission, or such a data being awaited, as the phy is
+// 	not presented it through "stb_i" meanwhile; that wait is then given up
+// 	as a pause is.
 //
 // csKeepHigh_i
 // 	This signal is sampled when the phy takes a data while "idle_o" is
@@ -143,6 +149,29 @@
 // 	transmission which that data begins, while "sclk_o" and "mosi_o"
 // 	behave as usual, hence the slave is sent clock cycles without being
 // 	selected.
+//
+// freeze_i
+// paused_o
+// trailing_o
+// leading_o
+// 	Used, when the parameter GANG is non-null, to gang phys which share
+// 	one "sclk_o", as the lines of an SD bus do, by keeping their edges
+// 	simultaneous.
+// 	While "freeze_i" is high, a transmission in progress which is not
+// 	paused is frozen between two bits: "sclk_o" remains at its idle
+// 	level, its leading edge being withheld, nothing is shifted, and the
+// 	half-period counter is held at its start, hence the next bit gets a
+// 	full half-period before its leading edge once thawed, as when a data
+// 	resumes a pause. It must rise only while "sclk_o" is at its idle
+// 	level, as it does in a gang, rising in the clock cycle which follows
+// 	a trailing edge, as "paused_o" does.
+// 	A wait for a null bit keeps counting its timeout while frozen, and is
+// 	given up on the first trailing edge after the freeze.
+// 	The output "paused_o" is high while the transmission is paused.
+// 	The outputs "trailing_o" and "leading_o" are high in the clock cycle
+// 	at the end of which "sclk_o" has a trailing edge, and a leading edge,
+// 	respectively; a return of "sclk_o" to its idle level which a reset
+// 	causes is reported only when it coincides with a trailing edge.
 
 module spi_master_phy (
 	rst_i, clk_i,
@@ -151,7 +180,8 @@ module spi_master_phy (
 	data_o, data_i,
 	misoSync_i, misoSkipSyncBit_i,
 	timeout_o,
-	idle_o, hold_i, csKeepHigh_i
+	idle_o, hold_i, csKeepHigh_i,
+	freeze_i, paused_o, trailing_o, leading_o
 );
 
 `include "lib/clog2.sv"
@@ -161,6 +191,7 @@ parameter SCLKDIVLIMIT = 2;
 parameter CPOL         = 0;
 parameter SYNCTIMEOUT  = 0;
 parameter PAUSETIMEOUT = 0;
+parameter GANG         = 0;
 
 localparam CLOG2DATABITSZ    = clog2(DATABITSZ);
 localparam CLOG2SCLKDIVLIMIT = clog2(SCLKDIVLIMIT);
@@ -196,6 +227,11 @@ output wire timeout_o;
 output reg  idle_o;
 input  wire hold_i;
 input  wire csKeepHigh_i;
+
+input  wire freeze_i;
+output wire paused_o;
+output wire trailing_o;
+output wire leading_o;
 
 wire misoIsLow = !data_o[0];
 
@@ -314,16 +350,26 @@ always_ff @(posedge clk_i) begin
 			rdy_o <= 1'b1;
 			inSync <= 1'b0;
 		end
-	end else if (cntrDone) begin
+	end else if ((GANG != 0) ? (cntrDone && !freeze_i) : cntrDone) begin
 		sclk_o <= ~(|CPOL);
 		data_o <= {data_o[(DATABITSZ-1)-1:0], miso_i};
 		rcvd_o <= 1'b0;
 		cntr <= 0;
 	end else begin
 		rcvd_o <= 1'b0;
-		cntr <= (cntr + 1'b1);
+		// While frozen, between two bits, the leading edge being withheld
+		// above, the half-period counter is held at its start.
+		cntr <= (((GANG != 0) ? freeze_i : 1'b0) ? {CLOG2SCLKDIVLIMIT{1'b0}} : (cntr + 1'b1));
 	end
 end
+
+// The outputs of the gang interface. Out of reset, "sclk_o" has a trailing
+// edge through the first branch above, which is taken while idle or paused
+// with "sclk_o" at its idle level, and otherwise at the end of a half-period
+// where "sclk_o" is not; and it has a leading edge through the next branch.
+assign paused_o = ((GANG != 0) ? paused : 1'b0);
+assign trailing_o = ((GANG != 0) ? (cntrDone && !sclkIsIdle) : 1'b0);
+assign leading_o = ((GANG != 0) ? (!rst_i && !(idle_o || paused) && sclkIsIdle && cntrDone && !freeze_i) : 1'b0);
 
 endmodule
 
