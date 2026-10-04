@@ -17,7 +17,7 @@ APPNAME ?= sdcardtest
 .PHONY: all
 all: ${APPNAME}.bin
 
-${APPNAME}.bin: ${APPNAME}.c hwdrvsdspi.h hwdrvchar.h hwdrvirqctrl.h
+${APPNAME}.bin: ${APPNAME}.c hwdrvsdsdio.h hwdrvsdspi.h hwdrvchar.h hwdrvirqctrl.h
 	${CC} ${CFLAGS} -I ./ -o ${APPNAME}.elf $<
 	${OBJCOPY} -O binary ${APPNAME}.elf $@
 	chmod -x ${APPNAME}.elf $@
