@@ -10,6 +10,14 @@
 // with a status line giving the bytes copied, the seconds taken and the rate, the
 // sizes being formatted as BusyBox dd does.
 //
+// When SDCARDTEST_VERIFY is non-null, the default, the CRC32 of the blocks,
+// computed as the first pass reads them, is compared with that of a last pass
+// reading them again after the writes, which were to leave them unchanged; a
+// status line gives it. The first pass being the reference, a block read wrong
+// by it and by the read before its write gets written back wrong unnoticed; but
+// it is the CRC32 of zlib, which python3 computes using zlib.crc32() over the
+// same blocks read on a PC, a reference which detects it.
+//
 // The drivers hwdrv*.h next to this file are copies of those of ftpu/sw, their
 // canonical location.
 //
@@ -58,6 +66,9 @@
 #endif
 #ifndef SDCARDTEST_PREERASE
 #define SDCARDTEST_PREERASE 0 // When non-null, writes pre-erase their blocks, as HWDRVSDSDIO_PREERASE and HWDRVSDSPI_PREERASE describe.
+#endif
+#ifndef SDCARDTEST_VERIFY
+#define SDCARDTEST_VERIFY 1 // When non-null, the blocks are read again after the writes, and their CRC32 compared with that of the first pass.
 #endif
 
 // The defines HWDRVSDSDIO_* and HWDRVSDSPI_* are to be defined before including
@@ -132,6 +143,30 @@ static SDDRV(t) sd = {
 
 // Word aligned, as the read and write of the driver require.
 static alignas(uintptr_t) uint8_t buf[SDCARDTEST_NBLK * SDDRVM(BLKSZ)];
+
+#if SDCARDTEST_VERIFY
+// Table of the CRC32 of zlib, filled by crc32init() rather than initialized,
+// which spares the binary its 1 KB.
+static uint32_t crc32tab[256];
+
+static void crc32init (void) {
+	for (unsigned i = 0; i < 256; ++i) {
+		uint32_t c = i;
+		for (unsigned k = 0; k < 8; ++k)
+			c = ((c >> 1) ^ ((c & 1) ? 0xedb88320 : 0));
+		crc32tab[i] = c;
+	}
+}
+
+// CRC32 of zlib of the n bytes at p, continuing the CRC32 crc
+// of the bytes before them, null when there are none.
+static uint32_t crc32 (uint32_t crc, uint8_t *p, uintptr_t n) {
+	crc = ~crc;
+	while (n--)
+		crc = (crc32tab[(crc ^ *p++) & 0xff] ^ (crc >> 8));
+	return ~crc;
+}
+#endif
 
 // Integer port of make_human_readable_str(val, 1, 0) of BusyBox,
 // which dd uses; ie: 8388608 gives "8.0M", 1000 gives "1000".
@@ -214,13 +249,27 @@ void main (void) {
 	// SDCARDTEST_BLKCNT is not a multiple of it; a call transferring r blocks of
 	// them failed at the block (i+r).
 	uintptr_t end = ((uintptr_t)SDCARDTEST_FIRSTBLK + SDCARDTEST_BLKCNT), i, n = 0, r = 0;
-	_date_t t = _clkcycles();
+#if SDCARDTEST_VERIFY
+	uint32_t crc[2] = {0, 0}; // CRC32 of the blocks read, by the first pass, then after the writes.
+	crc32init();
+#endif
+	// Each read is timed alone, the CRC32 being computed outside the time measured;
+	// as it reads the buffer, the data cache lines which a read dirtied get written
+	// back while it is computed rather than during the next read, which shortens the
+	// time measured: by about 0.2 ms per chunk after the first, with the 16 KB data
+	// cache of the Nexys A7 at 100 MHz, ie: 25 ms for 8 MiB.
+	_date_t t = 0;
 	for (i = SDCARDTEST_FIRSTBLK; i < end; i += n) {
 		n = (((end - i) < SDCARDTEST_NBLK) ? (end - i) : SDCARDTEST_NBLK);
-		if ((r = SDDRV(read)(&sd, buf, i, n)) != n)
+		_date_t t0 = _clkcycles();
+		r = SDDRV(read)(&sd, buf, i, n);
+		t += (_clkcycles() - t0);
+		if (r != n)
 			break;
+#if SDCARDTEST_VERIFY
+		crc[0] = crc32(crc[0], buf, (n * SDDRVM(BLKSZ)));
+#endif
 	}
-	t = (_clkcycles() - t);
 	if (i < end) {
 		failed("reading", (i + r));
 		goto done;
@@ -241,5 +290,22 @@ void main (void) {
 		}
 	}
 	report("📤 Write: ", t);
+#if SDCARDTEST_VERIFY
+	for (i = SDCARDTEST_FIRSTBLK; i < end; i += n) {
+		n = (((end - i) < SDCARDTEST_NBLK) ? (end - i) : SDCARDTEST_NBLK);
+		if ((r = SDDRV(read)(&sd, buf, i, n)) != n) {
+			failed("reading", (i + r));
+			goto done;
+		}
+		crc[1] = crc32(crc[1], buf, (n * SDDRVM(BLKSZ)));
+	}
+	if (crc[1] != crc[0])
+		printf("❌ ERROR: CRC32 0x%08x of the blocks read before the writes, 0x%08x after\n",
+			(unsigned)crc[0], (unsigned)crc[1]);
+	else
+		printf("🔍 Verify: %u B (%sB) read back | 🔢 CRC32 0x%08x | ✅ unchanged\n",
+			(unsigned)((unsigned long long)SDCARDTEST_BLKCNT * SDDRVM(BLKSZ)),
+			hrstr(s, ((unsigned long long)SDCARDTEST_BLKCNT * SDDRVM(BLKSZ))), (unsigned)crc[0]);
+#endif
 	done: printf("----\n");
 }
