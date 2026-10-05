@@ -11,12 +11,14 @@
 // sizes being formatted as BusyBox dd does.
 //
 // When SDCARDTEST_VERIFY is non-null, the default, the CRC32 of the blocks,
-// computed as the first pass reads them, is compared with that of a last pass
-// reading them again after the writes, which were to leave them unchanged; a
-// status line gives it. The first pass being the reference, a block read wrong
-// by it and by the read before its write gets written back wrong unnoticed; but
-// it is the CRC32 of zlib, which python3 computes using zlib.crc32() over the
-// same blocks read on a PC, a reference which detects it.
+// computed by a pass of its own reading them before the timed passes, is
+// compared with that of a last pass reading them again after the writes, which
+// were to leave them unchanged; a status line gives it. Both passes are untimed,
+// and the timed passes are as without SDCARDTEST_VERIFY. The pass before being
+// the reference, a block read wrong by it and by the read before its write gets
+// written back wrong unnoticed; but it is the CRC32 of zlib, which python3
+// computes using zlib.crc32() over the same blocks read on a PC, a reference
+// which detects it.
 //
 // The drivers hwdrv*.h next to this file are copies of those of ftpu/sw, their
 // canonical location.
@@ -68,7 +70,7 @@
 #define SDCARDTEST_PREERASE 0 // When non-null, writes pre-erase their blocks, as HWDRVSDSDIO_PREERASE and HWDRVSDSPI_PREERASE describe.
 #endif
 #ifndef SDCARDTEST_VERIFY
-#define SDCARDTEST_VERIFY 1 // When non-null, the blocks are read again after the writes, and their CRC32 compared with that of the first pass.
+#define SDCARDTEST_VERIFY 1 // When non-null, the CRC32 of the blocks read after the writes is compared with that of a pass reading them before the timed passes.
 #endif
 
 // The defines HWDRVSDSDIO_* and HWDRVSDSPI_* are to be defined before including
@@ -166,6 +168,21 @@ static uint32_t crc32 (uint32_t crc, uint8_t *p, uintptr_t n) {
 		crc = (crc32tab[(crc ^ *p++) & 0xff] ^ (crc >> 8));
 	return ~crc;
 }
+
+// Read the blocks, untimed, SDCARDTEST_NBLK at a time as the timed passes do, and
+// set *crc to their CRC32; return the block whose read failed, else the block
+// after the last.
+static uintptr_t crcpass (uint32_t *crc) {
+	uintptr_t end = ((uintptr_t)SDCARDTEST_FIRSTBLK + SDCARDTEST_BLKCNT), i, n, r;
+	*crc = 0;
+	for (i = SDCARDTEST_FIRSTBLK; i < end; i += n) {
+		n = (((end - i) < SDCARDTEST_NBLK) ? (end - i) : SDCARDTEST_NBLK);
+		if ((r = SDDRV(read)(&sd, buf, i, n)) != n)
+			return (i + r);
+		*crc = crc32(*crc, buf, (n * SDDRVM(BLKSZ)));
+	}
+	return end;
+}
 #endif
 
 // Integer port of make_human_readable_str(val, 1, 0) of BusyBox,
@@ -250,26 +267,20 @@ void main (void) {
 	// them failed at the block (i+r).
 	uintptr_t end = ((uintptr_t)SDCARDTEST_FIRSTBLK + SDCARDTEST_BLKCNT), i, n = 0, r = 0;
 #if SDCARDTEST_VERIFY
-	uint32_t crc[2] = {0, 0}; // CRC32 of the blocks read, by the first pass, then after the writes.
+	uint32_t crc[2]; // CRC32 of the blocks, before the timed passes, then after the writes.
 	crc32init();
+	if ((i = crcpass(&crc[0])) != end) {
+		failed("reading", i);
+		goto done;
+	}
 #endif
-	// Each read is timed alone, the CRC32 being computed outside the time measured;
-	// as it reads the buffer, the data cache lines which a read dirtied get written
-	// back while it is computed rather than during the next read, which shortens the
-	// time measured: by about 0.2 ms per chunk after the first, with the 16 KB data
-	// cache of the Nexys A7 at 100 MHz, ie: 25 ms for 8 MiB.
-	_date_t t = 0;
+	_date_t t = _clkcycles();
 	for (i = SDCARDTEST_FIRSTBLK; i < end; i += n) {
 		n = (((end - i) < SDCARDTEST_NBLK) ? (end - i) : SDCARDTEST_NBLK);
-		_date_t t0 = _clkcycles();
-		r = SDDRV(read)(&sd, buf, i, n);
-		t += (_clkcycles() - t0);
-		if (r != n)
+		if ((r = SDDRV(read)(&sd, buf, i, n)) != n)
 			break;
-#if SDCARDTEST_VERIFY
-		crc[0] = crc32(crc[0], buf, (n * SDDRVM(BLKSZ)));
-#endif
 	}
+	t = (_clkcycles() - t);
 	if (i < end) {
 		failed("reading", (i + r));
 		goto done;
@@ -291,13 +302,9 @@ void main (void) {
 	}
 	report("📤 Write: ", t);
 #if SDCARDTEST_VERIFY
-	for (i = SDCARDTEST_FIRSTBLK; i < end; i += n) {
-		n = (((end - i) < SDCARDTEST_NBLK) ? (end - i) : SDCARDTEST_NBLK);
-		if ((r = SDDRV(read)(&sd, buf, i, n)) != n) {
-			failed("reading", (i + r));
-			goto done;
-		}
-		crc[1] = crc32(crc[1], buf, (n * SDDRVM(BLKSZ)));
+	if ((i = crcpass(&crc[1])) != end) {
+		failed("reading", i);
+		goto done;
 	}
 	if (crc[1] != crc[0])
 		printf("❌ ERROR: CRC32 0x%08x of the blocks read before the writes, 0x%08x after\n",
