@@ -52,7 +52,7 @@
 #define SDCARDTEST_FIRSTBLK 0
 #endif
 #ifndef SDCARDTEST_BLKCNT
-#define SDCARDTEST_BLKCNT 16384 // 8 MiB.
+#define SDCARDTEST_BLKCNT 65536 // 32 MiB.
 #endif
 #ifndef SDCARDTEST_NBLK
 #define SDCARDTEST_NBLK 128 // Blocks per call of the read and write of the driver; 1 uses CMD17/CMD24.
@@ -226,7 +226,7 @@ static void failed (const char *op, uintptr_t idx) {
 }
 
 void main (void) {
-	printf("🚀 Starting SDCard test ...\n");
+	printf("🚀 Starting SD-card test ...\n");
 #if !SDCARDTEST_POLL
 	_irq_register(&sdirq);
 	_preempt_disable(); // Insure the irqctrl transaction is not interrupted.
