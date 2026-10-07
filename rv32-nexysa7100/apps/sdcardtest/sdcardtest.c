@@ -49,7 +49,7 @@
 #define SDCARDTEST_IRQ 2
 #endif
 #ifndef SDCARDTEST_FIRSTBLK
-#define SDCARDTEST_FIRSTBLK 0
+#define SDCARDTEST_FIRSTBLK 65536 // 32 MiB into the card.
 #endif
 #ifndef SDCARDTEST_BLKCNT
 #define SDCARDTEST_BLKCNT 65536 // 32 MiB.
