@@ -39,9 +39,9 @@ targeting the Digilent Arty A7-100T.**
 
 `artya7100.sv` is the top level of a compact RV32 SoC: one `ftpu` hart with private
 instruction and data caches, a Wishbone peripheral interconnect, an interrupt
-controller, a UART console, a SPI master on the ChipKit SPI header, 256 KB of
-on-chip SRAM and a *default device* that acknowledges and reports every access to
-an address no other device maps.
+controller, a UART console, a SPI master on the ChipKit SPI header, a second SPI
+master on the configuration flash, 256 KB of on-chip SRAM and a *default device*
+that acknowledges and reports every access to an address no other device maps.
 
 The program is baked into the SRAM at synthesis time via `$readmemh`, so the SoC
 boots straight into application code at `0x1000` with no bootloader.
@@ -51,7 +51,7 @@ boots straight into application code at `0x1000` with no bootloader.
 ## Block diagram
 
 <p align="center">
-  <img src=".README.md/block_diagram.svg" alt="Arty A7-100T SoC block diagram: FonTamPU core complex mastering a 32-bit Wishbone bus with irqctrl, serial_uart, sram, spi and dfltdev slaves; dfltdev, serial_uart and spi raise interrupt sources 0, 1 and 2 at irqctrl" width="960">
+  <img src=".README.md/block_diagram.svg" alt="Arty A7-100T SoC block diagram: FonTamPU core complex mastering a 32-bit Wishbone bus with irqctrl, serial_uart, sram, spi, spiflash and dfltdev slaves; dfltdev, serial_uart, spi and spiflash raise interrupt sources 0, 1, 2 and 3 at irqctrl" width="960">
 </p>
 
 <div align="center">
@@ -76,8 +76,9 @@ boots straight into application code at `0x1000` with no bootloader.
 | **RAM** | 256 KB on-chip BRAM (`SRAM_KBSIZE = 256`) |
 | **Console** | UART, 115200 8N1 by default, 2 KB RX + 2 KB TX buffers |
 | **SPI** | Master on the ChipKit SPI header, mode 0, 400 kbps at reset, up to 50 Mbps, 2 KB RX + 2 KB TX buffers |
+| **SPI flash** | Second SPI master on the configuration flash, a 16 MiB Spansion S25FL128S (or S25FL127S): `cs` high during control words, `miso` sampled on the falling edge, `sclk` through `STARTUPE2`, up to 50 Mbps, 2 KB RX + 2 KB TX buffers |
 | **Unmapped access** | Acknowledged by `dfltdev`: reads as `nop`, writes dropped, IRQ source 0 raised, address latched at `0xFFFFFFFC` |
-| **Interrupt sources** | 3 — `dfltdev` (0), `serial_uart` (1), `spi` (2) |
+| **Interrupt sources** | 4 — `dfltdev` (0), `serial_uart` (1), `spi` (2), `spiflash` (3) |
 | **Reset vector** | `0x00001000` |
 | **Initial `sp`** | `0x00041000` (end of RAM) |
 | **Toolchain** | Vivado 2020.2 · `riscv32-unknown-elf` GCC |
@@ -96,7 +97,8 @@ converts them to word indices internally.
 | 1 | UART console | `dev/serial_uart.sv` | `0x00000F80` | `0x00000F87` | 8 B (2 words) | no |
 | 2 | SRAM | `dev/sram.sv` | `0x00001000` | `0x00040FFF` | 256 KB | yes |
 | 3 | SPI | `dev/spi.sv` | `0x00000E00` | `0x00000E07` | 8 B (2 words) | no |
-| 4 | Default device | `dev/dfltdev.sv` | *every other address* | — | — | no |
+| 4 | SPI flash | `dev/spi.sv` | `0x00000E40` | `0x00000E47` | 8 B (2 words) | no |
+| 5 | Default device | `dev/dfltdev.sv` | *every other address* | — | — | no |
 | ↳ | Fault address register | `dev/dfltdev.sv` | `0xFFFFFFFC` | `0xFFFFFFFF` | 4 B (1 word) | no |
 
 ```
@@ -106,6 +108,11 @@ converts them to word indices internally.
             │   spi · 8 B                        │   0xE00 data · 0xE04 command
  0x00000E07 └────────────────────────────────────┘
  0x00000E08        · · · unmapped → dfltdev · · ·
+ 0x00000E3F
+ 0x00000E40 ┌────────────────────────────────────┐
+            │   spiflash · 8 B                   │   0xE40 data · 0xE44 command
+ 0x00000E47 └────────────────────────────────────┘
+ 0x00000E48        · · · unmapped → dfltdev · · ·
  0x00000EFF
  0x00000F00 ┌────────────────────────────────────┐
             │   irqctrl · 4 B                    │
@@ -136,7 +143,7 @@ address bus from that: only bits `[18:2]` of the byte address are carried, with
 bits `[31:19]` OR-reduced into a single extra "out of range" bit so
 **nothing aliases back into a real device** for any access at or above `0x80000`.
 
-Slave 4 (`dev/dfltdev.sv`) is the catch-all for every address the table does not
+Slave 5 (`dev/dfltdev.sv`) is the catch-all for every address the table does not
 claim. It never drives `bsy` and acknowledges every access on the following cycle,
 so **an unmapped access always completes**. A read returns the instruction `nop`
 (`0x00000013`) and a write is dropped. Both are faults: the address is latched in
@@ -151,10 +158,11 @@ outstanding acknowledgements have drained — restarts at entry 0 and advances o
 entry per cycle, holding the bus busy, until it finds the range containing the
 address or exhausts the table (which selects the default device). Back-to-back
 accesses within one device cost nothing extra; alternating between, say, the UART
-and the SRAM re-walks the table at every switch. The SPI device, although mapped
-below the others, is the entry after the SRAM, so that adding it left the walk to
-the interrupt controller, the UART and the SRAM as short as it was. The
-default-device selection is valid only for the address it was walked for: another
+and the SRAM re-walks the table at every switch. The SPI device and the SPI flash,
+although mapped below the others, are the entries after the SRAM, so that adding
+them left the walk to the interrupt controller, the UART and the SRAM as short as
+it was. The default-device selection is valid only for the address it was walked
+for: another
 address presented in that cycle restarts the walk rather than being handed the
 default device.
 
@@ -325,6 +333,36 @@ discard.
 > each access would move a whole word, and the reads beyond the words received would
 > wait for a word which, once nothing written remains to be received, never comes.
 
+### SPI flash — `0x00000E40`
+
+A second `dev/spi.sv`, `spiflash`, drives the configuration flash of the board, a
+Spansion S25FL128S of 16 MiB (or, on some boards, the S25FL127S, which shares the
+commands used), through single-bit commands. Its registers, commands, buffers, control word and transactions are those
+of the [SPI](#spi--0x00000e00) above, with these differences:
+
+| | |
+| :--- | :--- |
+| `CTRLCSHIGH = 1` | `cs` is **high** while the 32 ones are transmitted in place of the control word, and falls one clock cycle after their last falling edge of `sclk`, a full half-period before the next rising edge: the flash, which takes the first byte after the fall of its chip select for an instruction, is sent nothing before the command |
+| Byte 1 of the control word | The count of bytes, after the control word, during which `cs` is low: `cs` rises on the falling edge of `sclk` which ends the last of them, and stays high to the end, `sclk` and `mosi` going on; `0xFF`, the reserved value, keeps it low until the end, `0x00` never lets it fall. Hence `0xFFFF01FF` followed by `0xFFFFFF06` sends WRITE ENABLE alone, `cs` rising right after its eighth bit, as the flash requires, the other three bytes being clocked with `cs` high |
+| `LATESAMPLE = 1` | `miso` is sampled on the falling edge of `sclk` which ends each bit, instead of the rising edge which begins it: the flash changes its output on the falling edge, and at 50 Mbps the output delay of the pad, the clock-to-output of the flash and the input delay exceed the 10 ns of half a period, but typically not the 20 ns of a full one. It is not for an SD card in high speed mode, which changes its output on the rising edge |
+| Clock | `sclk` reaches the flash as the configuration clock `CCLK` (pin `E9`), a dedicated pin which no xdc places, through the `STARTUPE2` primitive; its first three cycles after configuration are not output (AMD answer record 52626), which the cycles of the first control word, `cs` high, absorb |
+| Control bit 0 | Must remain `1`: the wait for a `0` bit would happen with `cs` high, on a flash not selected, until the 100 ms timeout, and the bit would be sampled on the wrong edge |
+
+The driver `hwdrvspiflash.h` (in `ftpu/sw`) reads with READ (`03h`), writes with
+PAGE PROGRAM (`02h`), each page preceded by WRITE ENABLE (`06h`), and checks the
+status register with READ STATUS REGISTER (`05h`), sending WRITE DISABLE (`04h`)
+where a write is refused; it never erases. A page program only clears bits, so a
+write leaves null the bits which were null: write locations erased by other means,
+or data clearing bits only — writing back the data read leaves the flash unchanged,
+which `apps/spiflashtest` does, benchmarking the 4 MiB which follow the bitstream
+and checking them with CRC32s. On the S25FL, programming a 16-byte unit a second
+time disables its Automatic ECC until the unit is erased.
+
+> [!WARNING]
+> The bitstream occupies the beginning of the flash, about 3.65 MiB uncompressed
+> and less with the compression this project enables: a write there corrupts the
+> configuration, which then fails at the next power-up.
+
 ### Default device — every unmapped address
 
 `dev/dfltdev.sv` owns every address the table does not claim. It has one register,
@@ -367,7 +405,7 @@ Two details worth knowing:
 
 ## Interrupts
 
-The SoC instantiates `IRQSRCCOUNT = 3` sources and `IRQDSTCOUNT = CPU_COUNT = 1`
+The SoC instantiates `IRQSRCCOUNT = 4` sources and `IRQDSTCOUNT = CPU_COUNT = 1`
 destination.
 
 ### Sources
@@ -377,6 +415,7 @@ destination.
 | 0 | `dfltdev` | `IRQ_DFLTDEV` | Any access to an unmapped address, other than a read of the fault address register |
 | 1 | `serial_uart` | `IRQ_SERIAL` | RX buffer usage reaches the threshold set by `CMDSETINTERRUPT` |
 | 2 | `spi` | `IRQ_SPI` | RX buffer usage reaches the threshold set by `CMDSETINTERRUPT` |
+| 3 | `spiflash` | `IRQ_SPIFLASH` | RX buffer usage reaches the threshold set by `CMDSETINTERRUPT` |
 
 Source 0 is reserved for the default device by convention on every top in the
 repository, including `rv32-sim/` where it never fires.
@@ -412,9 +451,9 @@ Three behaviours worth coding around:
   one is acknowledged with `CMDACKIRQ` it cannot dispatch another.
 - **The UART and SPI interrupts disarm themselves.** Each is disabled at reset (so
   no spurious interrupt can fire immediately after release) and disabled again each
-  time a raised interrupt is acknowledged, so the handler must re-enable it. The
-  SPI's `CMDSETINTERRUPT 0` also closes the transmission in progress: disable its
-  interrupt within a transaction with a threshold of 2049 instead.
+  time a raised interrupt is acknowledged, so the handler must re-enable it. On
+  both SPI devices, `CMDSETINTERRUPT 0` also closes the transmission in progress:
+  disable the interrupt within a transaction with a threshold of 2049 instead.
 - **The fault interrupt is imprecise.** It arrives as an ordinary external
   interrupt, several instructions after the access that caused it, and that access
   has already completed — a load has consumed the word `0x00000013`, a store has
@@ -461,9 +500,9 @@ execution starts at the bottom of RAM with the stack pointer at the top of it.
 ## Clocking
 
 `lib/xc7pll_100_to_50_100_200.sv` turns the 100 MHz board oscillator into 50, 100
-and 200 MHz. The whole SoC — CPU, interconnect, UART and SPI PHYs — runs in the
-**100 MHz** domain, so there is no clock-domain crossing (`USEMEMCLKDOM` evaluates
-to 0 for a single hart with a D-cache).
+and 200 MHz. The whole SoC — CPU, interconnect, UART, SPI and SPI flash PHYs — runs
+in the **100 MHz** domain, so there is no clock-domain crossing (`USEMEMCLKDOM`
+evaluates to 0 for a single hart with a D-cache).
 
 > [!NOTE]
 > The 50 MHz and 200 MHz outputs and the PLL `locked` signal are generated but not
@@ -506,6 +545,17 @@ From `artya7100.xdc`:
 | `spi_mosi_o` | `H1` | LVCMOS33 | `ck_mosi` (ChipKit SPI header) |
 | `spi_miso_i` | `G1` | LVCMOS33, pull-up | `ck_miso` (ChipKit SPI header) |
 | `spi_cs_o` | `C1` | LVCMOS33 | `ck_ss` (ChipKit SPI header) |
+| `spiflash_cs_o` | `L13` | LVCMOS33 | `qspi_cs` (configuration flash) |
+| `spiflash_mosi_o` | `K17` | LVCMOS33 | `qspi_dq[0]` |
+| `spiflash_miso_i` | `K18` | LVCMOS33, pull-up | `qspi_dq[1]` |
+| `spiflash_wp_o` | `L14` | LVCMOS33, driven high | `qspi_dq[2]` (`W#`) |
+| `spiflash_hold_o` | `M14` | LVCMOS33, driven high | `qspi_dq[3]` (`HOLD#`) |
+
+The clock of the flash is the configuration clock `CCLK`, which `STARTUPE2` drives,
+hence no pin in the xdc; the registers driving `spiflash_cs_o` and
+`spiflash_mosi_o`, and the one sampling `spiflash_miso_i`, are packed in the I/O
+tiles (`IOB TRUE`). `W#` and `HOLD#` are held high, as single-bit commands use
+neither.
 
 Bitstream settings: compression enabled, `CONFIGRATE 33`, `CONFIG_MODE SPIx4`,
 `CFGBVS VCCO` at 3.3 V.
@@ -587,7 +637,8 @@ to reach the repository root.
 
 The default image is CoreMark. Any application under [`rv32-sim/apps/`](../rv32-sim/apps)
 — `helloworld`, `donut`, `tinyraytracer`, `isatests`, … — can be dropped in by
-pointing `SRAM_INITFILE` at its `*.32.hex`.
+pointing `SRAM_INITFILE` at its `*.32.hex`, as can [`apps/spiflashtest`](apps/spiflashtest),
+the benchmark of the SPI flash, with `../../../apps/spiflashtest/spiflashtest.32.hex`.
 
 To build your own, link at `0x1000` and emit a whitespace-separated list of 32-bit
 words:
@@ -618,6 +669,7 @@ for wider `XWORDBITSZ` builds, and this target uses a 32-bit bus.
 | `artya7100.sv` | SoC top level: build-time defaults, PLL, reset, core complex, interconnect, peripherals |
 | `artya7100.xdc` | Pin, clock and bitstream constraints |
 | `vivado/artya7100.xpr` | Vivado 2020.2 project: one synthesis run, 21 implementation runs, latch-is-an-error and unmatched-constraint-is-an-error rules |
+| `apps/spiflashtest/` | Benchmark and data check of the SPI flash, with copies of its drivers |
 | `.README.md/block_diagram.svg` | The block diagram above |
 
 Shared sources come from the repository root: [`cpu/`](../cpu) (core complex),
