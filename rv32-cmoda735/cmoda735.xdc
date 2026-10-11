@@ -89,11 +89,24 @@ set_property -dict { PACKAGE_PIN J17   IOSTANDARD LVCMOS33 } [get_ports { uart_r
 #set_property -dict { PACKAGE_PIN D17   IOSTANDARD LVCMOS33 } [get_ports { crypto_sda }]; #IO_0_14 Sch=crypto_sda
 
 ## QSPI
-#set_property -dict { PACKAGE_PIN K19   IOSTANDARD LVCMOS33 } [get_ports { qspi_cs    }]; #IO_L6P_T0_FCS_B_14 Sch=qspi_cs
-#set_property -dict { PACKAGE_PIN D18   IOSTANDARD LVCMOS33 } [get_ports { qspi_dq[0] }]; #IO_L1P_T0_D00_MOSI_14 Sch=qspi_dq[0]
-#set_property -dict { PACKAGE_PIN D19   IOSTANDARD LVCMOS33 } [get_ports { qspi_dq[1] }]; #IO_L1N_T0_D01_DIN_14 Sch=qspi_dq[1]
-#set_property -dict { PACKAGE_PIN G18   IOSTANDARD LVCMOS33 } [get_ports { qspi_dq[2] }]; #IO_L2P_T0_D02_14 Sch=qspi_dq[2]
-#set_property -dict { PACKAGE_PIN F18   IOSTANDARD LVCMOS33 } [get_ports { qspi_dq[3] }]; #IO_L2N_T0_D03_14 Sch=qspi_dq[3]
+## Used by the SPI peripheral spiflash, through single-bit commands; Digilent's
+## master xdc calls these ports qspi_cs and qspi_dq[3:0], and leaves out the
+## clock, which the board routes both to the configuration clock CCLK and to
+## the user pin E19 (Digilent forum topic 9323): the top drives it through E19,
+## CCLK being tri-stated after configuration. miso is pulled up, as the flash
+## drives it only while selected.
+set_property -dict { PACKAGE_PIN E19   IOSTANDARD LVCMOS33 } [get_ports { spiflash_sclk_o }]; #IO_L3N_T0_DQS_EMCCLK_14 Sch=qspi_sck
+set_property -dict { PACKAGE_PIN K19   IOSTANDARD LVCMOS33 } [get_ports { spiflash_cs_o   }]; #IO_L6P_T0_FCS_B_14 Sch=qspi_cs
+set_property -dict { PACKAGE_PIN D18   IOSTANDARD LVCMOS33 } [get_ports { spiflash_mosi_o }]; #IO_L1P_T0_D00_MOSI_14 Sch=qspi_dq[0]
+set_property -dict { PACKAGE_PIN D19   IOSTANDARD LVCMOS33 PULLUP TRUE } [get_ports { spiflash_miso_i }]; #IO_L1N_T0_D01_DIN_14 Sch=qspi_dq[1]
+set_property -dict { PACKAGE_PIN G18   IOSTANDARD LVCMOS33 } [get_ports { spiflash_wp_o   }]; #IO_L2P_T0_D02_14 Sch=qspi_dq[2]
+set_property -dict { PACKAGE_PIN F18   IOSTANDARD LVCMOS33 } [get_ports { spiflash_hold_o }]; #IO_L2N_T0_D03_14 Sch=qspi_dq[3]
+## The device drives cs and mosi each from a register, and samples miso into
+## a register, with no logic between that register and the pad: pack those
+## registers in the I/O tiles, for short pad delays which placement does not
+## change. The register driving sclk also feeds the logic of the device, hence
+## cannot be packed.
+set_property IOB TRUE [get_ports { spiflash_cs_o spiflash_mosi_o spiflash_miso_i }];
 
 ## SRAM -- 512 KB, 8-bit data bus, asynchronous (ISSI IS61WV5128BLL-10BLI).
 ## Digilent's master xdc calls these ports MemAdr[18:0], MemDB[7:0], RamOEn,
