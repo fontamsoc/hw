@@ -198,11 +198,20 @@ set_property -dict { PACKAGE_PIN C2    IOSTANDARD LVCMOS33 } [get_ports { rst_n 
 #set_property -dict { PACKAGE_PIN H17   IOSTANDARD LVCMOS33 } [get_ports { eth_txd[3] }]; #IO_L18P_T2_A24_15 Sch=eth_txd[3]
 
 ## Quad SPI Flash
-#set_property -dict { PACKAGE_PIN L13   IOSTANDARD LVCMOS33 } [get_ports { qspi_cs }]; #IO_L6P_T0_FCS_B_14 Sch=qspi_cs
-#set_property -dict { PACKAGE_PIN K17   IOSTANDARD LVCMOS33 } [get_ports { qspi_dq[0] }]; #IO_L1P_T0_D00_MOSI_14 Sch=qspi_dq[0]
-#set_property -dict { PACKAGE_PIN K18   IOSTANDARD LVCMOS33 } [get_ports { qspi_dq[1] }]; #IO_L1N_T0_D01_DIN_14 Sch=qspi_dq[1]
-#set_property -dict { PACKAGE_PIN L14   IOSTANDARD LVCMOS33 } [get_ports { qspi_dq[2] }]; #IO_L2P_T0_D02_14 Sch=qspi_dq[2]
-#set_property -dict { PACKAGE_PIN M14   IOSTANDARD LVCMOS33 } [get_ports { qspi_dq[3] }]; #IO_L2N_T0_D03_14 Sch=qspi_dq[3]
+## Used by the SPI peripheral spiflash, through single-bit commands; Digilent's
+## master xdc calls these ports qspi_cs and qspi_dq[3:0]. Its clock is the
+## configuration clock CCLK, which the top drives through STARTUPE2, hence no
+## pin here; miso is pulled up, as the flash drives it only while selected.
+set_property -dict { PACKAGE_PIN L13   IOSTANDARD LVCMOS33 } [get_ports { spiflash_cs_o }]; #IO_L6P_T0_FCS_B_14 Sch=qspi_cs
+set_property -dict { PACKAGE_PIN K17   IOSTANDARD LVCMOS33 } [get_ports { spiflash_mosi_o }]; #IO_L1P_T0_D00_MOSI_14 Sch=qspi_dq[0]
+set_property -dict { PACKAGE_PIN K18   IOSTANDARD LVCMOS33 PULLUP TRUE } [get_ports { spiflash_miso_i }]; #IO_L1N_T0_D01_DIN_14 Sch=qspi_dq[1]
+set_property -dict { PACKAGE_PIN L14   IOSTANDARD LVCMOS33 } [get_ports { spiflash_wp_o }]; #IO_L2P_T0_D02_14 Sch=qspi_dq[2]
+set_property -dict { PACKAGE_PIN M14   IOSTANDARD LVCMOS33 } [get_ports { spiflash_hold_o }]; #IO_L2N_T0_D03_14 Sch=qspi_dq[3]
+## The device drives cs and mosi each from a register, and samples miso into
+## a register, with no logic between that register and the pad: pack those
+## registers in the I/O tiles, for short pad delays which placement does not
+## change.
+set_property IOB TRUE [get_ports { spiflash_cs_o spiflash_mosi_o spiflash_miso_i }];
 
 ## Power Measurements
 #set_property -dict { PACKAGE_PIN B17   IOSTANDARD LVCMOS33     } [get_ports { vsnsvu_n }]; #IO_L7N_T1_AD2N_15 Sch=ad_n[2]
