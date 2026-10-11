@@ -33,6 +33,22 @@
 // 	When non-null, the phy can be ganged with others, as described with
 // 	the input "freeze_i"; when null, that input is ignored, and the
 // 	outputs "paused_o", "trailing_o" and "leading_o" are null.
+//
+// CTRLCSHIGH:
+// 	When non-null, the first data of a transmission, ie: the data taken
+// 	while "idle_o" is high, is transmitted with "cs_o" high, and a data
+// 	presented at its end is not taken there, but makes the transmission
+// 	pause, to be taken in the clock cycle which follows, at the earliest;
+// 	"cs_o" becomes low in that clock cycle, unless the input "csKeepHigh_i"
+// 	was high when the transmission began, or unless the transmission ends
+// 	there, and the input "csLowCnt_i" sets for how long, as described with
+// 	that input. Hence "cs_o" falls a clock cycle after a trailing edge of
+// 	"sclk_o", and a full half-period before the leading edge which follows,
+// 	as a slave which takes the first byte after the fall of its chip select
+// 	for a command, such as a SPI flash, requires.
+// 	It is not to be used with the parameter GANG, nor with the input
+// 	"misoSync_i", which would wait for a null bit from a slave which is not
+// 	selected, until given up; and DATABITSZ must be a multiple of 8.
 
 // Ports.
 //
@@ -49,7 +65,8 @@
 // cs_o
 // 	SPI master signals.
 // 	The output "cs_o" is low while a transmission is in progress,
-// 	unless the input "csKeepHigh_i" was high when it began.
+// 	unless the input "csKeepHigh_i" was high when it began, and as
+// 	described with the parameter CTRLCSHIGH.
 //
 // sclkdiv_i
 // 	This input is used to adjust the bitrate; it is the number of clock
@@ -69,7 +86,8 @@
 // 	It must be held high until transmission begins (ie: signal "rdy_o" negedge).
 // 	To prevent the transmission from pausing or ending between each data
 // 	transmitted, this signal must be set high as soon as the signal "rdy_o"
-// 	posedge.
+// 	posedge; when the parameter CTRLCSHIGH is non-null, the transmission
+// 	pauses after its first data regardless.
 //
 // rdy_o
 // 	This signal is high when ready to transmit "data_i".
@@ -134,7 +152,9 @@
 // 	high, the transmission pauses instead of ending, until a data presented
 // 	through "stb_i" resumes it, or until this signal is low, which ends it.
 // 	While paused, "sclk_o" remains at its idle level, "cs_o" keeps its
-// 	level, "rdy_o" remains high, and the synchronization to a null bit is
+// 	level, but in the pause which follows the first data when the parameter
+// 	CTRLCSHIGH is non-null, where it falls, "rdy_o" remains high, and the
+// 	synchronization to a null bit is
 // 	kept; the data which resumes the transmission continues it, and its
 // 	first bit lasts a full half-period of "sclk_o" before its leading edge,
 // 	as when a data begins a transmission.
@@ -149,6 +169,17 @@
 // 	transmission which that data begins, while "sclk_o" and "mosi_o"
 // 	behave as usual, hence the slave is sent clock cycles without being
 // 	selected.
+//
+// csLowCnt_i
+// 	Used when the parameter CTRLCSHIGH is non-null, and sampled as the
+// 	input "csKeepHigh_i" is: the count of bytes, transmitted after the
+// 	first data of the transmission, during which "cs_o" is low; "cs_o"
+// 	becomes high on the trailing edge of "sclk_o" which ends the last of
+// 	them, and remains high until the transmission ends, while "sclk_o" and
+// 	"mosi_o" behave as usual. A null count keeps "cs_o" high for the whole
+// 	transmission, and a count of 8'hff keeps it low until the transmission
+// 	ends. A pause keeps "cs_o" at its level, but the one which follows the
+// 	first data, where it falls.
 //
 // freeze_i
 // paused_o
@@ -180,7 +211,7 @@ module spi_master_phy (
 	data_o, data_i,
 	misoSync_i, misoSkipSyncBit_i,
 	timeout_o,
-	idle_o, hold_i, csKeepHigh_i,
+	idle_o, hold_i, csKeepHigh_i, csLowCnt_i,
 	freeze_i, paused_o, trailing_o, leading_o
 );
 
@@ -192,6 +223,7 @@ parameter CPOL         = 0;
 parameter SYNCTIMEOUT  = 0;
 parameter PAUSETIMEOUT = 0;
 parameter GANG         = 0;
+parameter CTRLCSHIGH   = 0;
 
 localparam CLOG2DATABITSZ    = clog2(DATABITSZ);
 localparam CLOG2SCLKDIVLIMIT = clog2(SCLKDIVLIMIT);
@@ -228,6 +260,8 @@ output reg  idle_o;
 input  wire hold_i;
 input  wire csKeepHigh_i;
 
+input  wire [8 -1 : 0] csLowCnt_i;
+
 input  wire freeze_i;
 output wire paused_o;
 output wire trailing_o;
@@ -240,6 +274,12 @@ reg inSync; // Relevant only if misoSync_i is true.
 // Latched from "csKeepHigh_i" when a transmission begins.
 reg csKeepHigh;
 
+// Used when CTRLCSHIGH is non-null: high while the first data of the
+// transmission is transmitted; and the count of bytes left to transmit
+// with "cs_o" low, latched from "csLowCnt_i" when a transmission begins.
+reg ctrlData;
+reg [8 -1 : 0] csLowCnt;
+
 // High while the transmission is paused at the end of a data,
 // no data having been presented while "hold_i" was high.
 reg paused;
@@ -250,11 +290,27 @@ assign mosi_o = mosibits[DATABITSZ-1];
 // Keep track of the number of bits left to transmit.
 reg [CLOG2DATABITSZ -1 : 0] bitcnt;
 wire bitcntNull = !bitcnt;
-wire bitcntNull_and_stbNull = (bitcntNull && !stb_i);
+
+// When CTRLCSHIGH is non-null, the end of the first data of a transmission
+// is a pause point: a data presented there is not taken, but makes the
+// transmission pause instead of ending, and is taken in the clock cycle
+// which follows, where "cs_o" becomes low; "stb" and "hold" are "stb_i" and
+// "hold_i" as the logic below sees them.
+wire ctrlEnd = ((CTRLCSHIGH != 0) && ctrlData && bitcntNull && !idle_o);
+wire stb = (stb_i && !ctrlEnd);
+wire hold = (hold_i || (stb_i && ctrlEnd));
+
+wire bitcntNull_and_stbNull = (bitcntNull && !stb);
 
 // At the end of a data, or while paused, the transmission ends when no
 // data is presented, unless "hold_i" makes it pause.
-wire ending = (bitcntNull_and_stbNull && (idle_o || !hold_i));
+wire ending = (bitcntNull_and_stbNull && (idle_o || !hold));
+
+// Used when CTRLCSHIGH is non-null: high on a trailing edge of "sclk_o"
+// which ends a byte transmitted after the first data of the transmission,
+// and on the one which ends the last of the bytes which "csLowCnt" counts.
+wire byteEnd = (!idle_o && !paused && !ctrlData && !(bitcnt & 3'd7));
+wire csLowEnd = (byteEnd && (csLowCnt == 1));
 
 // Keep track of the number of clock cycles within the current half-period.
 reg [CLOG2SCLKDIVLIMIT -1 : 0] cntr;
@@ -305,6 +361,7 @@ always_ff @(posedge clk_i) begin
 		idle_o <= 1'b1;
 		paused <= 1'b0;
 		csKeepHigh <= 1'b0;
+		ctrlData <= 1'b0;
 		rdy_o <= 1'b1;
 		rcvd_o <= 1'b0;
 		inSync <= 1'b0;
@@ -320,18 +377,38 @@ always_ff @(posedge clk_i) begin
 				inSync <= 1'b1;
 			end else if (timeout_o)
 				bitcnt <= 0;
-		end else if (stb_i) begin
+		end else if (stb) begin
 			bitcnt <= (DATABITSZ-1);
 			mosibits <= data_i;
 			if (idle_o)
 				csKeepHigh <= csKeepHigh_i;
-		end else if (idle_o || !hold_i)
+		end else if (idle_o || !hold)
 			inSync <= 1'b0; // A pause keeps the synchronization.
+		// When CTRLCSHIGH is non-null, the first data is transmitted with
+		// "cs_o" high, and the bytes which follow it with "cs_o" low until the
+		// count latched from "csLowCnt_i" has elapsed, a null count keeping
+		// "cs_o" high as "csKeepHigh_i" does; once elapsed, "cs_o" remains
+		// high until the transmission ends.
+		if (CTRLCSHIGH != 0) begin
+			if (idle_o && stb) begin
+				ctrlData <= 1'b1;
+				csLowCnt <= csLowCnt_i;
+				if (!csLowCnt_i)
+					csKeepHigh <= 1'b1;
+			end else if (ctrlEnd)
+				ctrlData <= 1'b0;
+			else if (byteEnd && (|csLowCnt) && !(&csLowCnt)) begin
+				csLowCnt <= (csLowCnt - 1'b1);
+				if (csLowEnd)
+					csKeepHigh <= 1'b1;
+			end
+		end
 		idle_o <= ending;
-		paused <= (bitcntNull_and_stbNull && !idle_o && hold_i);
+		paused <= (bitcntNull_and_stbNull && !idle_o && hold);
 		// A single register drives "cs_o", so that it cannot glitch;
 		// when a transmission begins, "csKeepHigh" is not latched yet.
-		cs_o <= (ending || (idle_o ? csKeepHigh_i : csKeepHigh));
+		cs_o <= (ending || (idle_o ? ((CTRLCSHIGH != 0) || csKeepHigh_i) :
+			(((CTRLCSHIGH != 0) && (ctrlData || csLowEnd)) || csKeepHigh)));
 		rdy_o <= (bitcntNull_and_stbNull || (bitcnt == 1));
 		// The data received is reported at the end of the data, and not
 		// again at each clock cycle of the pause which may follow it.

@@ -42,6 +42,21 @@
 // 	transmission to the next one, as described with the output "freeze_o";
 // 	when null, the inputs of the gang interface are ignored, its outputs
 // 	are null, and control bit 4 is reserved.
+//
+// CTRLCSHIGH:
+// 	When non-null, the output "cs_o" is high while {DATABITSZ{1'b1}} is
+// 	transmitted in place of a control data, and becomes low, unless control
+// 	bit 2 is null, or unless the transmission ends there, in the clock cycle
+// 	of "clk_phy_i" which follows its last trailing edge of "sclk_o", a full
+// 	half-period before the leading edge which follows, the transmission
+// 	pausing there at least that clock cycle; the second byte of the control
+// 	data in transmission order then sets for how many bytes, as described
+// 	with the transmit buffer interface. Hence a slave which takes the first
+// 	byte after the fall of its chip select for a command, such as a SPI
+// 	flash, is sent nothing before it. It is not to be used with the parameter GANG, nor
+// 	with control bit 0, which would wait for a null bit from a slave which
+// 	is not selected, until given up; and DATABITSZ must be a multiple of 8,
+// 	and at least 16 for that count to be used.
 
 // Ports.
 //
@@ -82,10 +97,11 @@
 // 	Fifo interface to buffer the data to transmit.
 // 	A transmission lasts until it is closed using the input "close_i";
 // 	when the transmit buffer runs empty before, the transmission pauses:
-// 	"sclk_o" remains at its idle level, "cs_o" keeps its level and nothing
-// 	is clocked, until the next data buffered resumes it. Hence the data of
-// 	a transmission can be buffered at any pace, and no data can begin a
-// 	new transmission before the previous one was closed.
+// 	"sclk_o" remains at its idle level, "cs_o" keeps its level, but as the
+// 	parameter CTRLCSHIGH describes, and nothing is clocked, until the next
+// 	data buffered resumes it. Hence the data of a transmission can be
+// 	buffered at any pace, and no data can begin a new transmission before
+// 	the previous one was closed.
 //
 // 	The input "close_i", when high on a posedge of "clk_i", requests the
 // 	end of the transmission, which happens once every data buffered before
@@ -150,6 +166,19 @@
 // 	The inverse of control bit 4, when the parameter GANG is non-null,
 // 	chains the transmission to the next one, as described with the output
 // 	"freeze_o".
+//
+// 	When the parameter CTRLCSHIGH is non-null, the second byte of a control
+// 	data in transmission order, ie: its bits [DATABITSZ-9:DATABITSZ-16],
+// 	is the count of bytes, transmitted after it, during which "cs_o" is
+// 	low: "cs_o" becomes high on the trailing edge of "sclk_o" which ends the
+// 	last of them, and remains high until the transmission ends, while
+// 	"sclk_o" and "mosi_o" behave as usual; a null count keeps "cs_o" high
+// 	as a null control bit 2 does, and a count of 8'hff, the value expected of
+// 	a reserved byte, keeps it low until the transmission ends. Hence a command of a byte,
+// 	which a slave executes only when its chip select rises right after its
+// 	eighth bit, such as the write enable of a SPI flash, can be followed by
+// 	the bytes which complete the data. When the parameter CTRLCSHIGH is null,
+// 	that byte is reserved.
 //
 // 	The remaining bits of a control data are reserved and expected 1'b1;
 // 	hence a control data of {DATABITSZ{1'b1}} configures a transmission
@@ -276,6 +305,7 @@ parameter CPOL         = 0;
 parameter SYNCTIMEOUT  = 0;
 parameter PAUSETIMEOUT = 0;
 parameter GANG         = 0;
+parameter CTRLCSHIGH   = 0;
 
 localparam CLOG2BUFSZ        = clog2(BUFSZ);
 localparam CLOG2SCLKDIVLIMIT = clog2(SCLKDIVLIMIT);
@@ -330,6 +360,16 @@ wire [DATABITSZ -1 : 0] fifo_tx_data_w;
 // in transmission order, ie: of its 8 most significant bits.
 wire [4 -1 : 0] fifo_tx_ctrl_w = fifo_tx_data_w[(DATABITSZ-8) +: 4];
 
+// The count of bytes with "cs_o" low, used when the parameter CTRLCSHIGH is
+// non-null: the second byte of the control data in transmission order, or
+// 8'hff, until the end, when a data has a single byte.
+wire [8 -1 : 0] fifo_tx_cslowcnt_w;
+generate if (DATABITSZ >= 16) begin :gen_cslowcnt
+assign fifo_tx_cslowcnt_w = fifo_tx_data_w[(DATABITSZ-16) +: 8];
+end else begin :gen_nocslowcnt
+assign fifo_tx_cslowcnt_w = 8'hff;
+end endgenerate
+
 reg phy_stb_r;
 
 // The data held, presented to the phy unless receive flow control holds it.
@@ -358,6 +398,7 @@ spi_master_phy #(
 	,.SYNCTIMEOUT  (SYNCTIMEOUT)
 	,.PAUSETIMEOUT (PAUSETIMEOUT)
 	,.GANG         (GANG)
+	,.CTRLCSHIGH   (CTRLCSHIGH)
 ) spi_phy (
 
 	 .rst_i (rst_i)
@@ -385,6 +426,7 @@ spi_master_phy #(
 	,.idle_o       (phy_idle_w)
 	,.hold_i       (phy_hold_w)
 	,.csKeepHigh_i (!fifo_tx_ctrl_w[2])
+	,.csLowCnt_i   (fifo_tx_cslowcnt_w)
 
 	,.freeze_i   (freeze_i)
 	,.paused_o   (phy_paused_w)

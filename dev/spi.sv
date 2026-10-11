@@ -132,6 +132,26 @@
 // than a word buffers a whole word, a byte which begins a transmission,
 // written at the address of the first word, makes a control word whose
 // least significant byte is that byte.
+// When the parameter CTRLCSHIGH is non-null, "cs_o" is high while ones are
+// transmitted in place of the control word, and becomes low, unless bit 2
+// is null, or unless the transmission ends there, a clock cycle of
+// "clk_phy_i" after their last trailing edge of "sclk_o", a full half-period
+// before the leading edge which follows, the transmission pausing there at
+// least that clock cycle, the one pause where "cs_o" changes; and
+// the second byte of the control word in transmission order, ie: its bits
+// 8 to 15, is the count of bytes, transmitted after it, during which "cs_o"
+// is low: "cs_o" becomes high on the trailing edge of "sclk_o" which ends
+// the last of them, and remains high until the transmission ends, while
+// "sclk_o" and "mosi_o" behave as usual. A null count keeps "cs_o" high as
+// a null bit 2 does, and a count of 0xff, the value expected of a reserved
+// byte, keeps it low until the transmission ends. Hence a SPI flash, which takes the first
+// byte after the fall of its chip select for a command, is sent nothing
+// before it; and a command of a byte which it executes only when its chip
+// select rises right after its eighth bit, such as its write enable, is
+// transmitted, for a WORDBITSZ of 32, using the control word 0xffff01ff
+// followed by a word whose least significant byte is that command, ie:
+// 0xffffff06. When the
+// parameter CTRLCSHIGH is null, the second byte is reserved.
 //
 // A close remains pending until the transmission has ended, and is counted
 // in the transmit buffer usage meanwhile; a word written while it is pending
@@ -248,6 +268,13 @@
 // 	the default PHYCLKFREQ. Its default of (PHYCLKFREQ/10) is 100 ms,
 // 	twice the 50 ms within which underLineOS resumes a preempted thread;
 // 	equal to SYNCTIMEOUT, it adds no counter bits.
+//
+// CTRLCSHIGH
+// 	When non-null, "cs_o" is high while ones are transmitted in place of
+// 	the control word, and the second byte of the control word is the count
+// 	of bytes after it during which "cs_o" is low, as described above; ie:
+// 	for a SPI flash. It is not to be used with bit 0 of the control word,
+// 	which would wait for a null bit from a slave which is not selected.
 
 // Ports:
 //
@@ -327,6 +354,7 @@ parameter BUFSZ          = 2;
 parameter CPOL           = 0;
 parameter SYNCTIMEOUT    = (PHYCLKFREQ/10);
 parameter PAUSETIMEOUT   = (PHYCLKFREQ/10);
+parameter CTRLCSHIGH     = 0;
 
 localparam CLOG2BUFSZ = clog2(BUFSZ);
 
@@ -542,6 +570,7 @@ spi_master #(
 	,.CPOL         (CPOL)
 	,.SYNCTIMEOUT  (SYNCTIMEOUT)
 	,.PAUSETIMEOUT (PAUSETIMEOUT)
+	,.CTRLCSHIGH   (CTRLCSHIGH)
 
 ) spi_master (
 
