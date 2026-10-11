@@ -211,11 +211,20 @@ set_property -dict { PACKAGE_PIN D4    IOSTANDARD LVCMOS33 } [get_ports { uart_t
 #set_property -dict { PACKAGE_PIN B8    IOSTANDARD LVCMOS33 } [get_ports { ETH_INTN }]; #IO_L12P_T1_MRCC_16 Sch=eth_intn
 
 ##Quad SPI Flash
-#set_property -dict { PACKAGE_PIN K17   IOSTANDARD LVCMOS33 } [get_ports { QSPI_DQ[0] }]; #IO_L1P_T0_D00_MOSI_14 Sch=qspi_dq[0]
-#set_property -dict { PACKAGE_PIN K18   IOSTANDARD LVCMOS33 } [get_ports { QSPI_DQ[1] }]; #IO_L1N_T0_D01_DIN_14 Sch=qspi_dq[1]
-#set_property -dict { PACKAGE_PIN L14   IOSTANDARD LVCMOS33 } [get_ports { QSPI_DQ[2] }]; #IO_L2P_T0_D02_14 Sch=qspi_dq[2]
-#set_property -dict { PACKAGE_PIN M14   IOSTANDARD LVCMOS33 } [get_ports { QSPI_DQ[3] }]; #IO_L2N_T0_D03_14 Sch=qspi_dq[3]
-#set_property -dict { PACKAGE_PIN L13   IOSTANDARD LVCMOS33 } [get_ports { QSPI_CSN }]; #IO_L6P_T0_FCS_B_14 Sch=qspi_csn
+## Used by the SPI peripheral spiflash, through single-bit commands; Digilent's
+## master xdc calls these ports QSPI_CSN and QSPI_DQ[3:0]. Its clock is the
+## configuration clock CCLK, which the top drives through STARTUPE2, hence no
+## pin here; miso is pulled up, as the flash drives it only while selected.
+set_property -dict { PACKAGE_PIN K17   IOSTANDARD LVCMOS33 } [get_ports { spiflash_mosi_o }]; #IO_L1P_T0_D00_MOSI_14 Sch=qspi_dq[0]
+set_property -dict { PACKAGE_PIN K18   IOSTANDARD LVCMOS33 PULLUP TRUE } [get_ports { spiflash_miso_i }]; #IO_L1N_T0_D01_DIN_14 Sch=qspi_dq[1]
+set_property -dict { PACKAGE_PIN L14   IOSTANDARD LVCMOS33 } [get_ports { spiflash_wp_o }]; #IO_L2P_T0_D02_14 Sch=qspi_dq[2]
+set_property -dict { PACKAGE_PIN M14   IOSTANDARD LVCMOS33 } [get_ports { spiflash_hold_o }]; #IO_L2N_T0_D03_14 Sch=qspi_dq[3]
+set_property -dict { PACKAGE_PIN L13   IOSTANDARD LVCMOS33 } [get_ports { spiflash_cs_o }]; #IO_L6P_T0_FCS_B_14 Sch=qspi_csn
+## The device drives cs and mosi each from a register, and samples miso into
+## a register, with no logic between that register and the pad: pack those
+## registers in the I/O tiles, for short pad delays which placement does not
+## change.
+set_property IOB TRUE [get_ports { spiflash_cs_o spiflash_mosi_o spiflash_miso_i }];
 
 ## Micron MT47H64M16HR-25E:H DDR2 SDRAM
 ## Generated from: https://github.com/litex-hub/litex-boards/blob/master/litex_boards/platforms/digilent_nexys4ddr.py
