@@ -275,6 +275,18 @@
 // 	of bytes after it during which "cs_o" is low, as described above; ie:
 // 	for a SPI flash. It is not to be used with bit 0 of the control word,
 // 	which would wait for a null bit from a slave which is not selected.
+//
+// LATESAMPLE
+// 	When non-null, "miso_i" is sampled on the trailing edge of "sclk_o"
+// 	which ends each bit, instead of the leading edge which begins it; hence
+// 	a slave which changes "miso_i" on the trailing edges, such as a SPI
+// 	flash in mode 0, which does on the falling edge, has a full period of
+// 	"sclk_o" for its output to reach the pin instead of half of it, which
+// 	the delays of the pads and of the slave exceed above about 25 Mbps. It
+// 	is not to be set for a slave which changes "miso_i" on the leading
+// 	edges, such as an SD card in high speed mode, as the next bit would
+// 	get sampled; nor used with bit 0 of the control word, which expects a
+// 	null bit sampled on a leading edge.
 
 // Ports:
 //
@@ -355,6 +367,7 @@ parameter CPOL           = 0;
 parameter SYNCTIMEOUT    = (PHYCLKFREQ/10);
 parameter PAUSETIMEOUT   = (PHYCLKFREQ/10);
 parameter CTRLCSHIGH     = 0;
+parameter LATESAMPLE     = 0;
 
 localparam CLOG2BUFSZ = clog2(BUFSZ);
 
@@ -571,6 +584,7 @@ spi_master #(
 	,.SYNCTIMEOUT  (SYNCTIMEOUT)
 	,.PAUSETIMEOUT (PAUSETIMEOUT)
 	,.CTRLCSHIGH   (CTRLCSHIGH)
+	,.LATESAMPLE   (LATESAMPLE)
 
 ) spi_master (
 

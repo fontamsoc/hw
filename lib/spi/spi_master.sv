@@ -57,6 +57,17 @@
 // 	with control bit 0, which would wait for a null bit from a slave which
 // 	is not selected, until given up; and DATABITSZ must be a multiple of 8,
 // 	and at least 16 for that count to be used.
+//
+// LATESAMPLE:
+// 	When non-null, "miso_i" is sampled on the trailing edge of "sclk_o"
+// 	which ends each bit, instead of the leading edge which begins it, hence
+// 	a slave which changes "miso_i" on the trailing edges has a full period of
+// 	"sclk_o" for its output to settle, instead of half of it; ie: a SPI
+// 	flash in mode 0, which changes its output on the falling edge. It is not
+// 	to be set for a slave which changes "miso_i" on the leading edges, such
+// 	as an SD card in high speed mode, as the next bit would get sampled; nor
+// 	with the parameter GANG or control bit 0, which expect a null bit
+// 	sampled on a leading edge.
 
 // Ports.
 //
@@ -306,6 +317,7 @@ parameter SYNCTIMEOUT  = 0;
 parameter PAUSETIMEOUT = 0;
 parameter GANG         = 0;
 parameter CTRLCSHIGH   = 0;
+parameter LATESAMPLE   = 0;
 
 localparam CLOG2BUFSZ        = clog2(BUFSZ);
 localparam CLOG2SCLKDIVLIMIT = clog2(SCLKDIVLIMIT);
@@ -399,6 +411,7 @@ spi_master_phy #(
 	,.PAUSETIMEOUT (PAUSETIMEOUT)
 	,.GANG         (GANG)
 	,.CTRLCSHIGH   (CTRLCSHIGH)
+	,.LATESAMPLE   (LATESAMPLE)
 ) spi_phy (
 
 	 .rst_i (rst_i)

@@ -49,6 +49,17 @@
 // 	It is not to be used with the parameter GANG, nor with the input
 // 	"misoSync_i", which would wait for a null bit from a slave which is not
 // 	selected, until given up; and DATABITSZ must be a multiple of 8.
+//
+// LATESAMPLE:
+// 	When non-null, "miso_i" is sampled on the trailing edge of "sclk_o"
+// 	which ends each bit, instead of the leading edge which begins it; hence
+// 	a slave which changes "miso_i" on the trailing edges has a full period
+// 	of "sclk_o", instead of half of it, for its output to settle, as a SPI
+// 	flash needs at high bitrates in mode 0, where it changes its output on
+// 	the falling edge. It is not to be set for a slave which changes "miso_i"
+// 	on the leading edges, such as an SD card in high speed mode, as the next
+// 	bit would get sampled; nor with the parameter GANG or the input
+// 	"misoSync_i", which expect a null bit sampled on a leading edge.
 
 // Ports.
 //
@@ -224,6 +235,7 @@ parameter SYNCTIMEOUT  = 0;
 parameter PAUSETIMEOUT = 0;
 parameter GANG         = 0;
 parameter CTRLCSHIGH   = 0;
+parameter LATESAMPLE   = 0;
 
 localparam CLOG2DATABITSZ    = clog2(DATABITSZ);
 localparam CLOG2SCLKDIVLIMIT = clog2(SCLKDIVLIMIT);
@@ -410,6 +422,12 @@ always_ff @(posedge clk_i) begin
 		cs_o <= (ending || (idle_o ? ((CTRLCSHIGH != 0) || csKeepHigh_i) :
 			(((CTRLCSHIGH != 0) && (ctrlData || csLowEnd)) || csKeepHigh)));
 		rdy_o <= (bitcntNull_and_stbNull || (bitcnt == 1));
+		// When LATESAMPLE is non-null, "miso_i" is sampled on the trailing
+		// edges, which are the iterations of this branch neither idle nor
+		// paused; the last bit of a data is thus sampled on the edge which
+		// reports it received below.
+		if ((LATESAMPLE != 0) && !idle_o && !paused)
+			data_o <= {data_o[(DATABITSZ-1)-1:0], miso_i};
 		// The data received is reported at the end of the data, and not
 		// again at each clock cycle of the pause which may follow it.
 		rcvd_o <= (bitcntNull && !idle_o && !paused);
@@ -429,7 +447,8 @@ always_ff @(posedge clk_i) begin
 		end
 	end else if ((GANG != 0) ? (cntrDone && !freeze_i) : cntrDone) begin
 		sclk_o <= ~(|CPOL);
-		data_o <= {data_o[(DATABITSZ-1)-1:0], miso_i};
+		if (LATESAMPLE == 0)
+			data_o <= {data_o[(DATABITSZ-1)-1:0], miso_i};
 		rcvd_o <= 1'b0;
 		cntr <= 0;
 	end else begin
