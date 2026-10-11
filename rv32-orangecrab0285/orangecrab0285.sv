@@ -77,6 +77,13 @@ module orangecrab0285 (
 	,led_red_n
 	,led_green_n
 	,led_blue_n
+
+	// SPI flash signals.
+	,spiflash_cs_o
+	,spiflash_mosi_o
+	,spiflash_miso_i
+	,spiflash_wp_o
+	,spiflash_hold_o
 );
 
 `include "lib/clog2.sv"
@@ -110,6 +117,19 @@ assign led_red_n = 1'b1;
 assign led_green_n = 1'b1;
 assign led_blue_n = 1'b1;
 
+// SPI flash signals; the clock of the flash is the configuration pin
+// MCLK, which USRMCLK drives.
+output wire spiflash_cs_o;
+output wire spiflash_mosi_o;
+input  wire spiflash_miso_i;
+// W# and HOLD#, active low, held high: the flash is used through single-bit
+// commands, hence neither protects nor pauses it whatever its QE bit, and an
+// unused-pin pull-down cannot fight its pull-up.
+output wire spiflash_wp_o;
+output wire spiflash_hold_o;
+assign spiflash_wp_o = 1'b1;
+assign spiflash_hold_o = 1'b1;
+
 localparam CLKFREQ24MHZ = 24000000;
 localparam CLKFREQ48MHZ = 48000000;
 localparam CLKFREQ96MHZ = 96000000;
@@ -139,24 +159,26 @@ localparam CPU_COUNT = `CPU_COUNT;
 localparam M_WBPI_CPU     = 0;
 localparam M_WBPI_LAST    = M_WBPI_CPU;
 
-localparam S_WBPI_IRQCTRL = 0;
-localparam S_WBPI_SERIAL  = (S_WBPI_IRQCTRL + 1);
-localparam S_WBPI_SRAM    = (S_WBPI_SERIAL + 1);
-localparam S_WBPI_SDSPI   = (S_WBPI_SRAM + 1);
-localparam S_WBPI_DEFAULT = (S_WBPI_SDSPI + 1);
+localparam S_WBPI_IRQCTRL  = 0;
+localparam S_WBPI_SERIAL   = (S_WBPI_IRQCTRL + 1);
+localparam S_WBPI_SRAM     = (S_WBPI_SERIAL + 1);
+localparam S_WBPI_SDSPI    = (S_WBPI_SRAM + 1);
+localparam S_WBPI_SPIFLASH = (S_WBPI_SDSPI + 1);
+localparam S_WBPI_DEFAULT  = (S_WBPI_SPIFLASH + 1);
 
 localparam WBPI_MDEVCOUNT = (M_WBPI_LAST + 1);
 localparam WBPI_SDEVCOUNT = (S_WBPI_DEFAULT + 1);
 
 localparam [0:(WBPI_SDEVCOUNT*2*32)-1] WBPI_SDEVS = {
-	/* S_WBPI_IRQCTRL */ 32'hf00,  32'(WORDBITSZ/8),
-	/* S_WBPI_SERIAL  */ 32'hf80,  32'(2*(WORDBITSZ/8)),
-	/* S_WBPI_SRAM    */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
-	/* S_WBPI_SDSPI   */ 32'he00,  32'(2*(WORDBITSZ/8)),
-	/* S_WBPI_DEFAULT */ 32'h0,    32'h0};
+	/* S_WBPI_IRQCTRL  */ 32'hf00,  32'(WORDBITSZ/8),
+	/* S_WBPI_SERIAL   */ 32'hf80,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_SRAM     */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
+	/* S_WBPI_SDSPI    */ 32'he00,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_SPIFLASH */ 32'he40,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_DEFAULT  */ 32'h0,    32'h0};
 
 localparam WBPI_MAXPENDINGACK     = 32;
-localparam WBPI_DNSIZR            = 5'b01011;
+localparam WBPI_DNSIZR            = 6'b011011;
 localparam WBPI_WORDBITSZ         = `XWORDBITSZ;
 localparam WBPI_CLOG2WORDBITSZBY8 = clog2(WBPI_WORDBITSZ/8);
 localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
@@ -190,8 +212,9 @@ wire wbpi_clk_w = clk48mhz_w;
 localparam IRQ_DFLTDEV = 0;
 localparam IRQ_SERIAL = (IRQ_DFLTDEV + 1);
 localparam IRQ_SDSPI = (IRQ_SERIAL + 1);
+localparam IRQ_SPIFLASH = (IRQ_SDSPI + 1);
 
-localparam IRQSRCCOUNT = (IRQ_SDSPI +1); // Number of interrupt sources.
+localparam IRQSRCCOUNT = (IRQ_SPIFLASH +1); // Number of interrupt sources.
 localparam IRQDSTCOUNT = CPU_COUNT; // Number of interrupt destinations.
 wire [IRQSRCCOUNT -1 : 0] irq_src_stb_w;
 wire [IRQSRCCOUNT -1 : 0] irq_src_rdy_w;
@@ -368,6 +391,48 @@ spi #(
 	,.mosi_o (sdspi_mosi_o)
 	,.miso_i (sdspi_miso_i)
 	,.cs_o   (sdspi_cs_o)
+);
+
+wire spiflash_sclk_w;
+
+spi #(
+	 .WORDBITSZ      (WORDBITSZ)
+	,.PHYCLKFREQ     (WBPI_CLKFREQ)
+	,.DEFAULTBITRATE (400000)
+	,.BUFSZ          (512)
+	,.CPOL           (0)
+	,.CTRLCSHIGH     (1)
+	,.LATESAMPLE     (1)
+) spiflash (
+
+	 .rst_i (wbpi_rst_w)
+
+	,.clk_i     (wbpi_clk_w)
+	,.clk_phy_i (wbpi_clk_w)
+
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_SPIFLASH])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_SPIFLASH])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_SPIFLASH])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_SPIFLASH])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_SPIFLASH])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_SPIFLASH])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SPIFLASH])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SPIFLASH])
+
+	,.irq_stb_o (irq_src_stb_w[IRQ_SPIFLASH])
+	,.irq_rdy_i (irq_src_rdy_w[IRQ_SPIFLASH])
+
+	,.sclk_o (spiflash_sclk_w)
+	,.mosi_o (spiflash_mosi_o)
+	,.miso_i (spiflash_miso_i)
+	,.cs_o   (spiflash_cs_o)
+);
+
+// The clock of the flash is the dedicated configuration pin MCLK, which user
+// logic drives after configuration only through USRMCLK.
+(* keep *) USRMCLK usrmclk (
+	 .USRMCLKI  (spiflash_sclk_w)
+	,.USRMCLKTS (1'b0)
 );
 
 // Catch invalid physical address space access.
