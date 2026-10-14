@@ -44,7 +44,9 @@ master on the configuration flash, 256 KB of on-chip SRAM and a *default device*
 that acknowledges and reports every access to an address no other device maps.
 
 The program is baked into the SRAM at synthesis time via `$readmemh`, so the SoC
-boots straight into application code at `0x1000` with no bootloader.
+boots straight into application code at `0x1000`. That program can be
+[`apps/bootldr`](apps/bootldr), a bootloader which loads the application from the
+SPI flash, so that the application changes without a new bitstream.
 
 ---
 
@@ -606,11 +608,13 @@ picocom -q --imap lfcrlf -b 115200 /dev/ttyUSB1     # or screen, minicom, ...
 
 ## Loading a program
 
-There is no bootloader. SRAM contents come from `$readmemh` at elaboration time, so on
-this top as committed — one console, no gdb channel — **changing the program means
-re-running synthesis and implementation.** The `examples/rv32-artya7100/serial_jtag`
-branch adds gdb channels through which a running underLineOS image can be replaced
-from gdb without a new bitstream; this section on that branch describes the procedure.
+SRAM contents come from `$readmemh` at elaboration time, so on this top as committed —
+one console, no gdb channel — **changing the program baked in means re-running
+synthesis and implementation**, unless that program is the bootloader
+[`apps/bootldr`](#from-the-spi-flash-appsbootldr), which loads the application from the
+SPI flash. The `examples/rv32-artya7100/serial_jtag` branch adds gdb channels through
+which a running underLineOS image can be replaced from gdb without a new bitstream;
+this section on that branch describes the procedure.
 
 The build knobs are `` `ifndef ``-guarded defaults at the top of `artya7100.sv`, so
 they can be overridden from the Vivado *Verilog options* (`verilog_define`) without
@@ -660,6 +664,58 @@ for wider `XWORDBITSZ` builds, and this target uses a 32-bit bus.
 > the address bus, and with it the window of addresses the fault address register
 > reports exactly.
 
+### From the SPI flash: `apps/bootldr`
+
+[`apps/bootldr`](apps/bootldr) is a bootloader baked into the SRAM in place of the
+application. Started by the first press of `RESET`, it reads the data at byte
+`0x400000` of the SPI flash, right past the 4 MiB kept for the bitstream, checks the
+CRC32 of the payload it holds, copies the payload to `0x1000`, and starts it with the
+system reset that `_sysreset()` also requests: the CPU, its caches and the devices
+restart, but the SRAM keeps its content.
+
+```
+🚀 Starting bootloader ...
+💾 SPI flash at 0xe40 | 📦 4194304 words (16.0MB) | ⚡ 50000000 bps
+📍 word 1048576 (4.0MB)
+📥 Loaded: 23552 B (23.0KB) | ⏱️ 0.003776 s | 📊 5.9MB/s | 🔢 CRC32 0xd10f4ecf ✅
+🔄 Resetting into the payload at 0x1000 | 📎 a1 null
+Hello World! 👋
+```
+
+1. Build the bitstream with `SRAM_INITFILE` set to `"../../../apps/bootldr/bootldr.32.hex"`.
+2. Format the application, a `.bin` linked at `0x1000`, with
+   [`tools/mkBootldrDat.py`](../tools/mkBootldrDat.py):
+   ```sh
+   tools/mkBootldrDat.py -o app.bldr.bin rv32-sim/apps/helloworld/helloworld.bin
+   ```
+   The data is the signature `"BLDR"`, the count of 32-bit words of the payload, the
+   payload, then its CRC32 (zlib's).
+3. Write the bitstream and the data to the flash: combine them into one configuration
+   file from the Vivado Tcl console, the project open in `rv32-artya7100/vivado` (the
+   bitstream being that of the implementation run used, `impl_1` here), then program the
+   configuration memory device (the S25FL128S, SPI x4) with it from the Hardware Manager.
+   ```tcl
+   write_cfgmem -force -format mcs -size 16 -interface SPIx4 \
+       -loadbit {up 0x00000000 artya7100.runs/impl_1/artya7100.bit} \
+       -loaddata {up 0x00400000 ../../app.bldr.bin} -file artya7100.mcs
+   ```
+
+The payload gets at most about 212 KiB of the 256 KiB. A failure, ie: no data, a CRC32
+mismatch or a payload too large, prints a line beginning with `❌ ERROR:` and stops, with
+nothing at `0x1000` changed, so holding `RESET` runs bootldr again. Once the application
+has started, it is what sits at `0x1000`: holding `RESET` restarts the application, and
+bootldr runs again only at the next configuration of the FPGA.
+
+bootldr's options are `BOOTLDR_*` defines, set through `CFLAGS` and described in the
+header of `bootldr.c`: the device and its driver (the SPI flash by default, or an SD card
+in SPI mode through `hwdrvsdspi.h`, ie: on the ChipKit SPI header), the word where the
+data lies or an MBR partition of a card, and a file of stack data, ie: a device tree blob,
+which bootldr embeds and stores right below the end of memory, register `a1` giving its
+address to the application; underLineOS's `crt0.S` ignores `a1`, and its copy of `.data`
+below the end of memory overwrites that data, so the application must handle `a1` itself.
+A board can also have functions run before the load, through `__bootldr_init_array`, ie:
+to initialize a DDR SDRAM, whose end it then gives in `__bootldr_ram_end`.
+
 ---
 
 ## Files
@@ -670,11 +726,14 @@ for wider `XWORDBITSZ` builds, and this target uses a 32-bit bus.
 | `artya7100.xdc` | Pin, clock and bitstream constraints |
 | `vivado/artya7100.xpr` | Vivado 2020.2 project: one synthesis run, 21 implementation runs, latch-is-an-error and unmatched-constraint-is-an-error rules |
 | `apps/spiflashtest/` | Benchmark and data check of the SPI flash, with copies of its drivers |
+| `apps/bootldr/` | Bootloader which loads the application from the SPI flash, with copies of its drivers |
 | `.README.md/block_diagram.svg` | The block diagram above |
 
 Shared sources come from the repository root: [`cpu/`](../cpu) (core complex),
 [`dev/`](../dev) (Wishbone peripherals, the default device included) and
-[`lib/`](../lib) (PLL, reset, FIFOs, interconnect, SPI master).
+[`lib/`](../lib) (PLL, reset, FIFOs, interconnect, SPI master);
+[`tools/mkBootldrDat.py`](../tools/mkBootldrDat.py) formats the data which
+`apps/bootldr` loads.
 
 ---
 
