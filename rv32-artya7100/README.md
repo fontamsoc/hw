@@ -683,22 +683,33 @@ Hello World! 👋
 ```
 
 1. Build the bitstream with `SRAM_INITFILE` set to `"../../../apps/bootldr/bootldr.32.hex"`.
-2. Format the application, a `.bin` linked at `0x1000`, with
-   [`tools/mkBootldrDat.py`](../tools/mkBootldrDat.py):
-   ```sh
-   tools/mkBootldrDat.py -o app.bldr.bin rv32-sim/apps/helloworld/helloworld.bin
+2. In the Vivado Tcl console, with the project open, set `run` to the implementation run
+   the bitstream came from. The paths below derive from `root`, the project directory
+   (`rv32-artya7100/vivado`), so they work whatever Vivado's working directory is:
+   ```tcl
+   set run  impl_1
+   set root [file normalize [get_property DIRECTORY [current_project]]]
    ```
+3. Format the application, a `.bin` linked at `0x1000`, into `$root/app.bldr.bin` with
+   [`tools/mkBootldrDat.py`](../tools/mkBootldrDat.py):
+   ```tcl
+   exec python $root/../../tools/mkBootldrDat.py -o $root/app.bldr.bin $root/../../rv32-sim/apps/helloworld/helloworld.bin
+   ```
+   If Python is not on Vivado's `PATH`, run it from a shell in `rv32-artya7100/vivado`
+   instead: `python ../../tools/mkBootldrDat.py -o app.bldr.bin ../../rv32-sim/apps/helloworld/helloworld.bin`.
    The data is the signature `"BLDR"`, the count of 32-bit words of the payload, the
    payload, then its CRC32 (zlib's).
-3. Write the bitstream and the data to the flash: combine them into one configuration
-   file from the Vivado Tcl console, the project open in `rv32-artya7100/vivado` (the
-   bitstream being that of the implementation run used, `impl_1` here), then program the
-   configuration memory device (the S25FL128S, SPI x4) with it from the Hardware Manager.
+4. Combine the bitstream and the data into one configuration file, the data at byte
+   `0x400000`:
    ```tcl
    write_cfgmem -force -format mcs -size 16 -interface SPIx4 \
-       -loadbit {up 0x00000000 artya7100.runs/impl_1/artya7100.bit} \
-       -loaddata {up 0x00400000 ../../app.bldr.bin} -file artya7100.mcs
+       -loadbit  "up 0x00000000 $root/artya7100.runs/$run/artya7100.bit" \
+       -loaddata "up 0x00400000 $root/app.bldr.bin" \
+       -file $root/artya7100_bootldr.mcs
    ```
+5. In the Hardware Manager, add the configuration memory device
+   `s25fl128sxxxxxx0-spi-x1_x2_x4`, then program it with `artya7100_bootldr.mcs`, keeping
+   the default address range, *Configuration File Only*.
 
 The payload gets at most about 212 KiB of the 256 KiB. A failure, ie: no data, a CRC32
 mismatch or a payload too large, prints a line beginning with `❌ ERROR:` and stops, with
