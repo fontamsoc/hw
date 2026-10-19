@@ -30,18 +30,19 @@
 // restarts every cpu, cache and device, the console included, save the serial_usb
 // of the OrangeCrab, but not the memories: the cpu 0 then runs the payload from
 // 0x1000, with register sp set to the end of memory, as at every reset, and
-// register a1 set by bootldr, a reset writing no register but sp. Register a1
-// holds the address below which the memory of the payload lies: that of the stack
-// data when there is some, else the end of the memory to use, described below,
-// when it is not the end of memory which the reset gives; otherwise a1 is null.
-// Hence a payload honoring it begins with "if (a1) sp = a1;". Register a1 is
-// meaningful only at the boot which bootldr starts: a later reset, ie: using the
-// button, _sysreset() or the load of gdb through the gdbstub, runs the payload
-// again, not bootldr, and leaves a1 as it was; hence a payload using the stack
-// data, or memory beyond the end of memory which the reset gives, is to keep what
-// it needs, ie: in its section .persistent. The crt0.S of underLineOS does not use
-// register a1, which it overwrites, and its copy of .data, below the end of
-// memory, overwrites the stack data stored there.
+// registers ra, a0 and a1 set by bootldr, a reset writing no register but sp.
+// Register a1 holds the address below which the memory of the payload lies: that
+// of the stack data when there is some, else the end of the memory to use,
+// described below, when it is not the end of memory which the reset gives;
+// otherwise a1 is null. Registers ra and a0, set to -1, which no link can be, and
+// null, tell that a1 is set by bootldr: a later reset, ie: using the button,
+// _sysreset() or the load of gdb through the gdbstub, runs the payload again,
+// not bootldr, and leaves those registers as they were. Hence a payload honoring
+// a1 begins with "if (ra == -1 && !a0 && a1) sp = a1;", and is to keep for its
+// later boots what it needs of a1, ie: in its section .persistent. The crt0.S of
+// underLineOS does so: its cold boot moves sp likewise, keeping that end of
+// memory in __rst_sp, from which its warm boots take it; the stack data, when
+// there is some, is then at __rst_sp, ie: extern uintptr_t __rst_sp;
 //
 // The stack data, when BOOTLDR_STACKDATA is defined, is the content of that
 // file, ie: a device tree blob, which #embed embeds in bootldr. Padded with null
@@ -79,7 +80,9 @@
 // a contiguous RAM, and the memory beyond the end of memory which the reset gives
 // must keep its content across the system reset, ie: its controller must not be
 // reset by the irqctrl, as the serial_usb of the OrangeCrab is not; otherwise the
-// reset wipes what bootldr stored in it.
+// reset wipes what bootldr stored in it. The warm boots of an underLineOS payload
+// which ends beyond the end of memory which the reset gives stop at the oops of
+// its crt0.S, which checks that end first.
 //
 // The payload is at most the memory from the heap of bootldr to 4 KiB below its
 // stack, or to the stack data when it lies lower, less the routine, 128 bytes,
@@ -327,20 +330,21 @@ static void drain (void) {
 // it is called, never returning, with a0 the address of the payload in the
 // buffer, a1 where the stack data goes, which is also the value of register a1
 // at reset, a2 the stack data, a3 its count of words, null without stack data,
-// a4 n, and a5 IRQCTRLADDR. It is position independent: norelax and pc-relative
-// branches only; an .org guards its size. It must access memory only using
-// atomic accesses, which go straight to memory, as crt0.S copies .data: an atomic
-// access reads the latest value of a word, whose dirty bytes the dcache writes
-// back or merges, and allocates no entry of the dcache, neither does it evict
-// one. An atomic access replacing a word wholly cached invalidates its entry,
-// but one partly cached, its bytes from a byte or halfword store, ie: of the
-// buffer of stdout, keeps a stale entry, possibly dirty; hence, from the first
-// copy to the reset, which discards the dirty entries of the dcache, no access
-// may write such an entry back over the payload: the routine makes none but
-// atomic accesses, and there is no fence before the reset, as a fence which
-// flushed the dcache would write them back. The .aqrl accesses, and wb_mux,
-// which grants the irqctrl once the writes to the SRAM before are acknowledged,
-// order the request of the reset after the copies.
+// a4 n, and a5 IRQCTRLADDR; it sets ra to -1 and a0 to null, their values at
+// reset. It is position independent: norelax and pc-relative branches only; an
+// .org guards its size. It must access memory only using atomic accesses, which
+// go straight to memory, as crt0.S copies .data: an atomic access reads the
+// latest value of a word, whose dirty bytes the dcache writes back or merges,
+// and allocates no entry of the dcache, neither does it evict one. An atomic
+// access replacing a word wholly cached invalidates its entry, but one partly
+// cached, its bytes from a byte or halfword store, ie: of the buffer of stdout,
+// keeps a stale entry, possibly dirty; hence, from the first copy to the reset,
+// which discards the dirty entries of the dcache, no access may write such an
+// entry back over the payload: the routine makes none but atomic accesses, and
+// there is no fence before the reset, as a fence which flushed the dcache would
+// write them back. The .aqrl accesses, and wb_mux, which grants the irqctrl once
+// the writes to the SRAM before are acknowledged, order the request of the reset
+// after the copies.
 extern const uintptr_t __bootldr_handoff[];
 __asm__ (
 	"	.pushsection .text.__bootldr_handoff,\"ax\",@progbits\n"
@@ -365,12 +369,14 @@ __asm__ (
 	"	addi	t2, t2, 4\n"
 	"	addi	a4, a4, -1\n"
 	"	bnez	a4, 3b\n"
+	"	li	ra, -1			# with a0 null, tells the payload that a1 is set by bootldr\n"
+	"	li	a0, 0\n"
 	"	li	t0, -6			# CMDINTDST targeting the destination -1: a system reset\n"
 	"4:	amoswap.w.aqrl	x0, zero, (a5)	# CMDDEVRDY closes any open transaction\n"
 	"	amoswap.w.aqrl	t1, t0, (a5)\n"
 	"	andi	t1, t1, 3		# accepted when the old word's cmd field is null\n"
 	"	bnez	t1, 4b\n"
-	"5:	wfi				# the reset follows; a1 is never written\n"
+	"5:	wfi				# the reset follows; ra, a0 and a1 are not written again\n"
 	"	j	5b\n"
 	"	.org __bootldr_handoff + " STR(HANDOFFSZ) "	# the build fails when the routine exceeds HANDOFFSZ\n"
 	"	.option pop\n"
