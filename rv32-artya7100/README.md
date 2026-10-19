@@ -722,8 +722,9 @@ header of `bootldr.c`: the device and its driver (the SPI flash by default, or a
 in SPI mode through `hwdrvsdspi.h`, ie: on the ChipKit SPI header), the word where the
 data lies or an MBR partition of a card, and a file of stack data, ie: a device tree blob,
 which bootldr embeds and stores right below the end of memory, register `a1` giving its
-address to the application; underLineOS's `crt0.S` ignores `a1`, and its copy of `.data`
-below the end of memory overwrites that data, so the application must handle `a1` itself.
+address to the application, with `ra` set to -1 and `a0` to 0, which tell it from what a
+later reset leaves in `a1`; underLineOS's `crt0.S` then ends memory at `a1`, at that boot
+and at the warm boots which follow, and the application finds the data at `__rst_sp`.
 A board can also have functions run before the load, through `__bootldr_init_array`, ie:
 to initialize a DDR SDRAM, whose end it then gives in `__bootldr_ram_end`.
 
