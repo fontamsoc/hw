@@ -59,6 +59,8 @@
 
 `include "dev/dfltdev.sv"
 
+`include "rv32-nexysa7100/dev/sdram_ddr2.v"
+
 module nexysa7100 (
 
 	 rst_n
@@ -84,6 +86,22 @@ module nexysa7100 (
 	,spiflash_miso_i
 	,spiflash_wp_o
 	,spiflash_hold_o
+
+	// DDR2 signals.
+	,ddr2_ck_p
+	,ddr2_ck_n
+	,ddr2_cke
+	,ddr2_odt
+	,ddr2_cs_n
+	,ddr2_ras_n
+	,ddr2_cas_n
+	,ddr2_we_n
+	,ddr2_ba
+	,ddr2_addr
+	,ddr2_dq
+	,ddr2_dm
+	,ddr2_dqs_p
+	,ddr2_dqs_n
 );
 
 `include "lib/clog2.sv"
@@ -130,6 +148,22 @@ output wire spiflash_hold_o;
 assign spiflash_wp_o = 1'b1;
 assign spiflash_hold_o = 1'b1;
 
+// DDR2 signals, of the MT47H64M16 of 128 MiB.
+output wire             ddr2_ck_p;
+output wire             ddr2_ck_n;
+output wire             ddr2_cke;
+output wire             ddr2_odt;
+output wire             ddr2_cs_n;
+output wire             ddr2_ras_n;
+output wire             ddr2_cas_n;
+output wire             ddr2_we_n;
+output wire [3 -1 : 0]  ddr2_ba;
+output wire [13 -1 : 0] ddr2_addr;
+inout  wire [16 -1 : 0] ddr2_dq;
+output wire [2 -1 : 0]  ddr2_dm;
+inout  wire [2 -1 : 0]  ddr2_dqs_p;
+inout  wire [2 -1 : 0]  ddr2_dqs_n;
+
 localparam CLKFREQ50MHZ  = 50000000;
 localparam CLKFREQ100MHZ = 100000000;
 localparam CLKFREQ200MHZ = 200000000;
@@ -142,13 +176,19 @@ xc7pll_100_to_50_100_200 pll (
 	,.clk200mhz_o (clk200mhz_w)
 );
 
+// Clock of the system, at 100 MHz, which litedram derives from clk100mhz_i
+// using its own PLL, as rv32-nexysa7100/dev/sdram_ddr2.v describes; and its
+// reset, which is high until that clock is stable.
+wire sdram_ddr2_clk_w;
+wire sdram_ddr2_rst_w;
+
 (* direct_reset = "true" *) wire rst_w;
 wire irqctrl_rst_rqst_w;
 rstctrl #(
 	 .RSTDURATION (CLKFREQ100MHZ/1000000) // 1us
 	,.RSTTHRESH   (4*CLKFREQ100MHZ) // 4s
 ) rstctrl (
-	 .clk_i (clk100mhz_w)
+	 .clk_i (sdram_ddr2_clk_w)
 	,.i     (~rst_n)
 	,.o     (rst_w)
 	,.rqst_i (irqctrl_rst_rqst_w)
@@ -159,33 +199,41 @@ localparam CPU_COUNT = `CPU_COUNT;
 localparam M_WBPI_CPU     = 0;
 localparam M_WBPI_LAST    = M_WBPI_CPU;
 
-localparam S_WBPI_IRQCTRL  = 0;
-localparam S_WBPI_SERIAL   = (S_WBPI_IRQCTRL + 1);
-localparam S_WBPI_SRAM     = (S_WBPI_SERIAL + 1);
-localparam S_WBPI_SDSDIO   = (S_WBPI_SRAM + 1);
-localparam S_WBPI_SPIFLASH = (S_WBPI_SDSDIO + 1);
-localparam S_WBPI_DEFAULT  = (S_WBPI_SPIFLASH + 1);
+localparam S_WBPI_IRQCTRL      = 0;
+localparam S_WBPI_SERIAL       = (S_WBPI_IRQCTRL + 1);
+localparam S_WBPI_SRAM         = (S_WBPI_SERIAL + 1);
+localparam S_WBPI_LITEDRAM     = (S_WBPI_SRAM + 1);
+localparam S_WBPI_LITEDRAMCTRL = (S_WBPI_LITEDRAM + 1);
+localparam S_WBPI_SDSDIO       = (S_WBPI_LITEDRAMCTRL + 1);
+localparam S_WBPI_SPIFLASH     = (S_WBPI_SDSDIO + 1);
+localparam S_WBPI_DEFAULT      = (S_WBPI_SPIFLASH + 1);
 
 localparam WBPI_MDEVCOUNT = (M_WBPI_LAST + 1);
 localparam WBPI_SDEVCOUNT = (S_WBPI_DEFAULT + 1);
 
+// The DDR2 SDRAM, and the registers of litedram which litedram_init() uses.
+localparam LITEDRAM_MAPSZ     = 'h8000000;
+localparam LITEDRAMCTRL_MAPSZ = 'h10000;
+
 localparam [0:(WBPI_SDEVCOUNT*2*32)-1] WBPI_SDEVS = {
-	/* S_WBPI_IRQCTRL  */ 32'hf00,  32'(WORDBITSZ/8),
-	/* S_WBPI_SERIAL   */ 32'hf80,  32'(2*(WORDBITSZ/8)),
-	/* S_WBPI_SRAM     */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
-	/* S_WBPI_SDSDIO   */ 32'he00,  32'(4*(WORDBITSZ/8)),
-	/* S_WBPI_SPIFLASH */ 32'he40,  32'(2*(WORDBITSZ/8)),
-	/* S_WBPI_DEFAULT  */ 32'h0,    32'h0};
+	/* S_WBPI_IRQCTRL      */ 32'hf00,  32'(WORDBITSZ/8),
+	/* S_WBPI_SERIAL       */ 32'hf80,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_SRAM         */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
+	/* S_WBPI_LITEDRAM     */ 32'('h1000+(`SRAM_KBSIZE*1024)), 32'(LITEDRAM_MAPSZ),
+	/* S_WBPI_LITEDRAMCTRL */ 32'('h1000+(`SRAM_KBSIZE*1024)+LITEDRAM_MAPSZ), 32'(LITEDRAMCTRL_MAPSZ),
+	/* S_WBPI_SDSDIO       */ 32'he00,  32'(4*(WORDBITSZ/8)),
+	/* S_WBPI_SPIFLASH     */ 32'he40,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_DEFAULT      */ 32'h0,    32'h0};
 
 localparam WBPI_MAXPENDINGACK     = 32;
-localparam WBPI_DNSIZR            = 6'b011011;
+localparam WBPI_DNSIZR            = 8'b01110011;
 localparam WBPI_WORDBITSZ         = `XWORDBITSZ;
 localparam WBPI_CLOG2WORDBITSZBY8 = clog2(WBPI_WORDBITSZ/8);
 localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
-localparam WBPI_ADDRLIMIT         = ('h1000+(`SRAM_KBSIZE*1024));
+localparam WBPI_ADDRLIMIT         = ('h1000+(`SRAM_KBSIZE*1024)+LITEDRAM_MAPSZ+LITEDRAMCTRL_MAPSZ);
 localparam WBPI_CLKFREQ           = CLKFREQ100MHZ;
-wire wbpi_rst_w = rst_w;
-wire wbpi_clk_w = clk100mhz_w;
+(* direct_reset = "true" *) wire wbpi_rst_w = (rst_w || sdram_ddr2_rst_w);
+wire wbpi_clk_w = sdram_ddr2_clk_w;
 // The peripheral interconnect is instantiated in a separate file to keep this file clean.
 // Master devices must use the following signals to plug onto the peripheral interconnect:
 // 	input                                          m_wbpi_stb_w  [WBPI_MDEVCOUNT];
@@ -355,6 +403,52 @@ sram #(
 	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SRAM])
 );
 
+sdram_ddr2 #(
+	 .WORDBITSZ (WBPI_WORDBITSZ)
+) sdram_ddr2 (
+
+	 .rst_i (wbpi_rst_w)
+
+	,.clk_i (clk100mhz_i)
+
+	,.clk_o (sdram_ddr2_clk_w)
+	,.rst_o (sdram_ddr2_rst_w)
+
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_LITEDRAM])
+	,.wb_lock_i  (s_wbpi_lock_w[S_WBPI_LITEDRAM])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_LITEDRAM])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_LITEDRAM])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_LITEDRAM])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_LITEDRAM])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_LITEDRAM])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_LITEDRAM])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_LITEDRAM])
+
+	,.wb_ctrl_stb_i   (s_wbpi_stb_w[S_WBPI_LITEDRAMCTRL])
+	,.wb_ctrl_we_i    (s_wbpi_we_w[S_WBPI_LITEDRAMCTRL])
+	,.wb_ctrl_addr_i  (s_wbpi_addr_w[S_WBPI_LITEDRAMCTRL])
+	,.wb_ctrl_sel_i   (s_wbpi_sel_w[S_WBPI_LITEDRAMCTRL])
+	,.wb_ctrl_dat_i   (s_wbpi_dato_w[S_WBPI_LITEDRAMCTRL])
+	,.wb_ctrl_bsy_o   (s_wbpi_bsy_w[S_WBPI_LITEDRAMCTRL])
+	,.wb_ctrl_ack_o   (s_wbpi_ack_w[S_WBPI_LITEDRAMCTRL])
+	,.wb_ctrl_dat_o   (s_wbpi_dati_w[S_WBPI_LITEDRAMCTRL])
+
+	,.ddr2_ck_p  (ddr2_ck_p)
+	,.ddr2_ck_n  (ddr2_ck_n)
+	,.ddr2_cke   (ddr2_cke)
+	,.ddr2_odt   (ddr2_odt)
+	,.ddr2_cs_n  (ddr2_cs_n)
+	,.ddr2_ras_n (ddr2_ras_n)
+	,.ddr2_cas_n (ddr2_cas_n)
+	,.ddr2_we_n  (ddr2_we_n)
+	,.ddr2_ba    (ddr2_ba)
+	,.ddr2_addr  (ddr2_addr)
+	,.ddr2_dm    (ddr2_dm)
+	,.ddr2_dq    (ddr2_dq)
+	,.ddr2_dqs_p (ddr2_dqs_p)
+	,.ddr2_dqs_n (ddr2_dqs_n)
+);
+
 wire            sdsdio_cmd_o_w;
 wire            sdsdio_cmd_e_w;
 wire [4 -1 : 0] sdsdio_dat_o_w;
@@ -498,7 +592,7 @@ generate for (
 	gen_cpu_dcache_miss_w_idx = gen_cpu_dcache_miss_w_idx + 1) begin :gen_cpu_dcache_miss_w
 	wire [(WBPI_WORDBITSZ-WBPI_MSBSZIGN) -1 : 0] addr_w = cpu_dcache_addr_w[(gen_cpu_dcache_miss_w_idx*(WBPI_WORDBITSZ-WBPI_MSBSZIGN))+:(WBPI_WORDBITSZ-WBPI_MSBSZIGN)];
 assign cpu_dcache_miss_w[gen_cpu_dcache_miss_w_idx] = (
-	(addr_w < 'h1000) || (addr_w >= ('h1000+(`SRAM_KBSIZE*1024))));
+	(addr_w < 'h1000) || (addr_w >= ('h1000+(`SRAM_KBSIZE*1024)+LITEDRAM_MAPSZ)));
 end endgenerate
 
 endmodule
