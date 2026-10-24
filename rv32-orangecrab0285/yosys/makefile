@@ -27,7 +27,7 @@ updsram: ${TOP}.sram.hex ${TOP}.bak.config
 %.out.config: %.json ../%.lpf
 	$(info # Running nextpnr-ecp5 ...)
 	@cntr=0; until \
-		nextpnr-ecp5 -r --ignore-rel-clk --json $< --textcfg $@ --85k --package CSFBGA285 --lpf ../${TOP}.lpf &>$*.pnr.log; \
+		nextpnr-ecp5 -r --ignore-rel-clk --json $< --textcfg $@ --85k --speed 8 --package CSFBGA285 --lpf ../${TOP}.lpf &>$*.pnr.log; \
 	do \
 		fgrep 'ERROR: Max frequency' $*.pnr.log; \
 		((cntr++)); [[ cntr -eq ${RETRY_COUNT} ]] && exit 1; \
