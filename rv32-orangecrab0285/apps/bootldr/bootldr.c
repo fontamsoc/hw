@@ -117,7 +117,12 @@
 // 16 MiB, holds foboot, its DFU bootloader, in its first 512 KiB, then the user
 // bitstream; the data is at 2 MiB, past it. Of the 256 KiB of SRAM, the payload
 // gets at most about 212 KiB, or about 203 KiB from the SD card, in SPI mode,
-// whose driver is larger.
+// whose driver is larger. The makefile of the OrangeCrab compiles
+// bootldr_init_array.c, whose litedram_init() raises the end of memory to
+// 0x20041000, the end of its DDR3 SDRAM, where the buffer then lies: the
+// payload is then bounded by its medium, ie: by the flash past 2 MiB, which
+// foboot writes up to 0xf80000, 13.5 MiB, or, from an SD card, by the 512 MiB
+// of the DDR3 SDRAM.
 #ifndef BOOTLDR_FIRSTU32
 #define BOOTLDR_FIRSTU32 524288 // 2 MiB into the flash.
 #endif
