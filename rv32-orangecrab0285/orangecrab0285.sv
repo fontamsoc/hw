@@ -56,6 +56,8 @@
 
 `include "dev/dfltdev.sv"
 
+`include "rv32-orangecrab0285/dev/sdram_ddr3.v"
+
 module orangecrab0285 (
 
 	 usr_btn_n
@@ -84,6 +86,23 @@ module orangecrab0285 (
 	,spiflash_miso_i
 	,spiflash_wp_o
 	,spiflash_hold_o
+
+	// DDR3 signals.
+	,ddr3l_clk_p
+	,ddr3l_cke
+	,ddr3l_odt
+	,ddr3l_cs_n
+	,ddr3l_ras_n
+	,ddr3l_cas_n
+	,ddr3l_we_n
+	,ddr3l_reset_n
+	,ddr3l_ba
+	,ddr3l_a
+	,ddr3l_dq
+	,ddr3l_dm
+	,ddr3l_dqs_p
+	,ddr3l_vccio
+	,ddr3l_gnd
 );
 
 `include "lib/clog2.sv"
@@ -130,6 +149,27 @@ output wire spiflash_hold_o;
 assign spiflash_wp_o = 1'b1;
 assign spiflash_hold_o = 1'b1;
 
+// DDR3 signals, of the MT41K256M16 of 512 MiB.
+output wire             ddr3l_clk_p;
+output wire             ddr3l_cke;
+output wire             ddr3l_odt;
+output wire             ddr3l_cs_n;
+output wire             ddr3l_ras_n;
+output wire             ddr3l_cas_n;
+output wire             ddr3l_we_n;
+output wire             ddr3l_reset_n;
+output wire [3 -1 : 0]  ddr3l_ba;
+output wire [15 -1 : 0] ddr3l_a;
+inout  wire [16 -1 : 0] ddr3l_dq;
+output wire [2 -1 : 0]  ddr3l_dm;
+inout  wire [2 -1 : 0]  ddr3l_dqs_p;
+// Pins which the OrangeCrab r0.2 requires driven high, and low, while its
+// DDR3 SDRAM is used, as litex-boards drives them.
+output wire [6 -1 : 0]  ddr3l_vccio;
+output wire [2 -1 : 0]  ddr3l_gnd;
+assign ddr3l_vccio = {6{1'b1}};
+assign ddr3l_gnd = {2{1'b0}};
+
 localparam CLKFREQ24MHZ = 24000000;
 localparam CLKFREQ48MHZ = 48000000;
 localparam CLKFREQ96MHZ = 96000000;
@@ -142,13 +182,21 @@ ecppll_48_to_24_48_96 pll (
 	,.clk96mhz_o (clk96mhz_w)
 );
 
+// Clock of the system, at 48 MHz, which litedram derives from clk48mhz_i
+// using its own PLL, as rv32-orangecrab0285/dev/sdram_ddr3.v describes; and
+// its reset, which is high until that clock is stable, and once more while
+// litedram initializes its PHY, stopping that clock. The outputs of the pll
+// above are left unused.
+wire sdram_ddr3_clk_w;
+wire sdram_ddr3_rst_w;
+
 wire rst_w;
 wire irqctrl_rst_rqst_w;
 rstctrl #(
 	 .RSTDURATION (CLKFREQ48MHZ/1000000) // 1us
 	,.RSTTHRESH   (4*CLKFREQ48MHZ) // 4s
 ) rstctrl (
-	 .clk_i (clk48mhz_w)
+	 .clk_i (sdram_ddr3_clk_w)
 	,.i     (~usr_btn_n)
 	,.o     (rst_w)
 	,.rqst_i (irqctrl_rst_rqst_w)
@@ -159,33 +207,41 @@ localparam CPU_COUNT = `CPU_COUNT;
 localparam M_WBPI_CPU     = 0;
 localparam M_WBPI_LAST    = M_WBPI_CPU;
 
-localparam S_WBPI_IRQCTRL  = 0;
-localparam S_WBPI_SERIAL   = (S_WBPI_IRQCTRL + 1);
-localparam S_WBPI_SRAM     = (S_WBPI_SERIAL + 1);
-localparam S_WBPI_SDSPI    = (S_WBPI_SRAM + 1);
-localparam S_WBPI_SPIFLASH = (S_WBPI_SDSPI + 1);
-localparam S_WBPI_DEFAULT  = (S_WBPI_SPIFLASH + 1);
+localparam S_WBPI_IRQCTRL      = 0;
+localparam S_WBPI_SERIAL       = (S_WBPI_IRQCTRL + 1);
+localparam S_WBPI_SRAM         = (S_WBPI_SERIAL + 1);
+localparam S_WBPI_LITEDRAM     = (S_WBPI_SRAM + 1);
+localparam S_WBPI_LITEDRAMCTRL = (S_WBPI_LITEDRAM + 1);
+localparam S_WBPI_SDSPI        = (S_WBPI_LITEDRAMCTRL + 1);
+localparam S_WBPI_SPIFLASH     = (S_WBPI_SDSPI + 1);
+localparam S_WBPI_DEFAULT      = (S_WBPI_SPIFLASH + 1);
 
 localparam WBPI_MDEVCOUNT = (M_WBPI_LAST + 1);
 localparam WBPI_SDEVCOUNT = (S_WBPI_DEFAULT + 1);
 
+// The DDR3 SDRAM, and the registers of litedram which litedram_init() uses.
+localparam LITEDRAM_MAPSZ     = 'h20000000;
+localparam LITEDRAMCTRL_MAPSZ = 'h10000;
+
 localparam [0:(WBPI_SDEVCOUNT*2*32)-1] WBPI_SDEVS = {
-	/* S_WBPI_IRQCTRL  */ 32'hf00,  32'(WORDBITSZ/8),
-	/* S_WBPI_SERIAL   */ 32'hf80,  32'(2*(WORDBITSZ/8)),
-	/* S_WBPI_SRAM     */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
-	/* S_WBPI_SDSPI    */ 32'he00,  32'(2*(WORDBITSZ/8)),
-	/* S_WBPI_SPIFLASH */ 32'he40,  32'(2*(WORDBITSZ/8)),
-	/* S_WBPI_DEFAULT  */ 32'h0,    32'h0};
+	/* S_WBPI_IRQCTRL      */ 32'hf00,  32'(WORDBITSZ/8),
+	/* S_WBPI_SERIAL       */ 32'hf80,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_SRAM         */ 32'h1000, 32'(`SRAM_KBSIZE*1024),
+	/* S_WBPI_LITEDRAM     */ 32'('h1000+(`SRAM_KBSIZE*1024)), 32'(LITEDRAM_MAPSZ),
+	/* S_WBPI_LITEDRAMCTRL */ 32'('h1000+(`SRAM_KBSIZE*1024)+LITEDRAM_MAPSZ), 32'(LITEDRAMCTRL_MAPSZ),
+	/* S_WBPI_SDSPI        */ 32'he00,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_SPIFLASH     */ 32'he40,  32'(2*(WORDBITSZ/8)),
+	/* S_WBPI_DEFAULT      */ 32'h0,    32'h0};
 
 localparam WBPI_MAXPENDINGACK     = 32;
-localparam WBPI_DNSIZR            = 6'b011011;
+localparam WBPI_DNSIZR            = 8'b01110011;
 localparam WBPI_WORDBITSZ         = `XWORDBITSZ;
 localparam WBPI_CLOG2WORDBITSZBY8 = clog2(WBPI_WORDBITSZ/8);
 localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
-localparam WBPI_ADDRLIMIT         = ('h1000+(`SRAM_KBSIZE*1024));
+localparam WBPI_ADDRLIMIT         = ('h1000+(`SRAM_KBSIZE*1024)+LITEDRAM_MAPSZ+LITEDRAMCTRL_MAPSZ);
 localparam WBPI_CLKFREQ           = CLKFREQ48MHZ;
-wire wbpi_rst_w = rst_w;
-wire wbpi_clk_w = clk48mhz_w;
+wire wbpi_rst_w = (rst_w || sdram_ddr3_rst_w);
+wire wbpi_clk_w = sdram_ddr3_clk_w;
 // The peripheral interconnect is instantiated in a separate file to keep this file clean.
 // Master devices must use the following signals to plug onto the peripheral interconnect:
 // 	input                                          m_wbpi_stb_w  [WBPI_MDEVCOUNT];
@@ -307,9 +363,16 @@ irqctrl #(
 	,.rst_rqst_o (irqctrl_rst_rqst_w)
 );
 
+// Power-on reset of serial_usb, on the clock of the system which litedram
+// outputs: high from the configuration of the FPGA until 255 cycles of that
+// clock after sdram_ddr3_rst_w was last high, which it is until that clock is
+// stable, and once more shortly after, while litedram initializes its PHY,
+// stopping that clock meanwhile.
 reg [7:0] serial_rst_r = -1;
-always_ff @(posedge clk48mhz_w) begin
-	if (serial_rst_r)
+always_ff @(posedge sdram_ddr3_clk_w) begin
+	if (sdram_ddr3_rst_w)
+		serial_rst_r <= -1;
+	else if (serial_rst_r)
 		serial_rst_r <= serial_rst_r - 1'b1;
 end
 
@@ -324,7 +387,7 @@ serial_usb #(
 		   resets break the usb connection */)
 
 	,.clk_i     (wbpi_clk_w)
-	,.clk_phy_i (clk48mhz_w)
+	,.clk_phy_i (sdram_ddr3_clk_w)
 
 	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_SERIAL])
 	,.wb_we_i    (s_wbpi_we_w[S_WBPI_SERIAL])
@@ -360,6 +423,51 @@ sram #(
 	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_SRAM])
 	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_SRAM])
 	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_SRAM])
+);
+
+sdram_ddr3 #(
+	 .WORDBITSZ (WBPI_WORDBITSZ)
+) sdram_ddr3 (
+
+	 .rst_i (wbpi_rst_w)
+
+	,.clk_i (clk48mhz_i)
+
+	,.clk_o (sdram_ddr3_clk_w)
+	,.rst_o (sdram_ddr3_rst_w)
+
+	,.wb_stb_i   (s_wbpi_stb_w[S_WBPI_LITEDRAM])
+	,.wb_lock_i  (s_wbpi_lock_w[S_WBPI_LITEDRAM])
+	,.wb_we_i    (s_wbpi_we_w[S_WBPI_LITEDRAM])
+	,.wb_addr_i  (s_wbpi_addr_w[S_WBPI_LITEDRAM])
+	,.wb_sel_i   (s_wbpi_sel_w[S_WBPI_LITEDRAM])
+	,.wb_dat_i   (s_wbpi_dato_w[S_WBPI_LITEDRAM])
+	,.wb_bsy_o   (s_wbpi_bsy_w[S_WBPI_LITEDRAM])
+	,.wb_ack_o   (s_wbpi_ack_w[S_WBPI_LITEDRAM])
+	,.wb_dat_o   (s_wbpi_dati_w[S_WBPI_LITEDRAM])
+
+	,.wb_ctrl_stb_i   (s_wbpi_stb_w[S_WBPI_LITEDRAMCTRL])
+	,.wb_ctrl_we_i    (s_wbpi_we_w[S_WBPI_LITEDRAMCTRL])
+	,.wb_ctrl_addr_i  (s_wbpi_addr_w[S_WBPI_LITEDRAMCTRL])
+	,.wb_ctrl_sel_i   (s_wbpi_sel_w[S_WBPI_LITEDRAMCTRL])
+	,.wb_ctrl_dat_i   (s_wbpi_dato_w[S_WBPI_LITEDRAMCTRL])
+	,.wb_ctrl_bsy_o   (s_wbpi_bsy_w[S_WBPI_LITEDRAMCTRL])
+	,.wb_ctrl_ack_o   (s_wbpi_ack_w[S_WBPI_LITEDRAMCTRL])
+	,.wb_ctrl_dat_o   (s_wbpi_dati_w[S_WBPI_LITEDRAMCTRL])
+
+	,.ddr3l_clk_p   (ddr3l_clk_p)
+	,.ddr3l_cke     (ddr3l_cke)
+	,.ddr3l_odt     (ddr3l_odt)
+	,.ddr3l_cs_n    (ddr3l_cs_n)
+	,.ddr3l_ras_n   (ddr3l_ras_n)
+	,.ddr3l_cas_n   (ddr3l_cas_n)
+	,.ddr3l_we_n    (ddr3l_we_n)
+	,.ddr3l_reset_n (ddr3l_reset_n)
+	,.ddr3l_ba      (ddr3l_ba)
+	,.ddr3l_a       (ddr3l_a)
+	,.ddr3l_dm      (ddr3l_dm)
+	,.ddr3l_dq      (ddr3l_dq)
+	,.ddr3l_dqs_p   (ddr3l_dqs_p)
 );
 
 spi #(
@@ -465,7 +573,7 @@ generate for (
 	gen_cpu_dcache_miss_w_idx = gen_cpu_dcache_miss_w_idx + 1) begin :gen_cpu_dcache_miss_w
 	wire [(WBPI_WORDBITSZ-WBPI_MSBSZIGN) -1 : 0] addr_w = cpu_dcache_addr_w[(gen_cpu_dcache_miss_w_idx*(WBPI_WORDBITSZ-WBPI_MSBSZIGN))+:(WBPI_WORDBITSZ-WBPI_MSBSZIGN)];
 assign cpu_dcache_miss_w[gen_cpu_dcache_miss_w_idx] = (
-	(addr_w < 'h1000) || (addr_w >= ('h1000+(`SRAM_KBSIZE*1024))));
+	(addr_w < 'h1000) || (addr_w >= ('h1000+(`SRAM_KBSIZE*1024)+LITEDRAM_MAPSZ)));
 end endgenerate
 
 endmodule
