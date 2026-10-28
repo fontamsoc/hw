@@ -36,9 +36,16 @@
 // every write which the memory interface accepts reaches the DDR2 SDRAM, and
 // "wb_lock_i" is unused.
 //
-// litedram acknowledges no access to the DDR2 SDRAM until its initialization
-// is done, ie: until litedram_init() sets init_done; an access made earlier
-// hangs until then.
+// The user port of litedram is not gated by its initialization: litedram is
+// generated with "block_until_ready" false, so it accepts an access whatever
+// init_done, and completes it on the DDR2 SDRAM as it is; the control
+// interface is unaffected. The SoC relies on bootldr initializing and
+// calibrating the DDR2 SDRAM before any access to the memory interface:
+// litedram_init() fails, setting init_error, when the read leveling finds no
+// read window for a module, which stops bootldr. A reset of litedram, ie:
+// after a loss of the lock of its PLL, resets the system and the bitslips of
+// its PHY, which nothing calibrates again: the next accesses complete on the
+// uncalibrated DDR2 SDRAM.
 //
 // The data cache is dCache of cpu/dcache.sv: direct-mapped, write-back, and
 // write-allocate, with a word of 64 bits per set, which is the width of the
