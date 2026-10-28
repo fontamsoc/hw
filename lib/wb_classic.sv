@@ -11,9 +11,9 @@
 // "s_wb_stb_o" high, its other signals stable, until the slave acknowledges
 // it through "s_wb_ack_i", which it may do in the clock cycle the request is
 // presented; the request is not to be withdrawn before, as the slave may
-// have consumed a part of it, ie: litedram consumes the command and the
-// write data of a request in different clock cycles, and forgets what it
-// consumed only once it acknowledges the request.
+// have consumed it, ie: litedram takes the command and the write data of a
+// request in one clock cycle, then completes the access whether the request
+// is still presented or not, acknowledging it only if it remained so.
 //
 // The bridge takes one request at a time: it accepts the request of the
 // master in the clock cycle "m_wb_stb_i" is high while "m_wb_bsy_o" is low,
@@ -41,16 +41,6 @@
 // accepts a new request as soon as the slave has acknowledged the request
 // which was presented to it. Hence the acknowledgements which the master
 // gets after a reset are those of the requests it made after that reset.
-//
-// litedram acknowledges no request on its user port until its
-// initialization is done, ie: until litedram_init() sets init_done; a request
-// presented earlier remains so, the bridge being busy meanwhile, and is made
-// once the initialization is done. A loss of the lock of the PLL of litedram
-// resets its controller, which also clears init_done, while the bridge keeps
-// presenting its request; the controller takes it anew once its reset is
-// over, and acknowledges it once its initialization is done again; the
-// reset of the system includes the "user_rst" of litedram, hence that
-// acknowledgement is dropped.
 
 // Parameters:
 //
