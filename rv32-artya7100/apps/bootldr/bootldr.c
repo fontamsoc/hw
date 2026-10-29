@@ -117,7 +117,11 @@
 // flash: an S25FL128S of 16 MiB (or an S25FL127S), holding the bitstream in its
 // first 4 MiB; the data is at the 4 MiB which follow. Of the 256 KiB of SRAM, the
 // payload gets at most about 212 KiB, or with the larger driver of a card,
-// about 206 KiB in SD mode and 203 KiB in SPI mode.
+// about 206 KiB in SD mode and 203 KiB in SPI mode. The makefile of the Arty A7
+// compiles bootldr_init_array.c, whose litedram_init() raises the end of memory
+// to 0x10041000, the end of its DDR3 SDRAM, where the buffer then lies: the
+// payload is then bounded by its medium, ie: by the 12 MiB of the flash which
+// follow its first 4 MiB, or, from an SD card, by the 256 MiB of the DDR3 SDRAM.
 #ifndef BOOTLDR_FIRSTU32
 #define BOOTLDR_FIRSTU32 1048576 // 4 MiB into the flash.
 #endif

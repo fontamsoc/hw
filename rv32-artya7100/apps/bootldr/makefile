@@ -15,7 +15,9 @@ CFLAGS += -Wl,-z,max-page-size=4
 APPNAME ?= bootldr
 
 # Other sources compiled with the app, ie: the one of a board defining __bootldr_init_array.
-SRCS ?=
+# The Arty A7 initializes its DDR3 SDRAM using litedram_init(), which
+# bootldr_init_array.c puts in __bootldr_init_array; "SRCS= make" leaves it out.
+SRCS ?= bootldr_init_array.c ../../litedram/litedram.c
 
 .PHONY: all
 all: ${APPNAME}.bin
