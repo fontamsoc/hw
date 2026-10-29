@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1208 710" width="100%" height="100%" version="1.1">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1376 710" width="100%" height="100%" version="1.1">
   <defs>
     <filter id="glow-shadow" x="-30%" y="-30%" width="160%" height="160%">
       <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#000000" flood-opacity="0.55"/>
@@ -10,7 +10,7 @@
   </defs>
   <rect width="100%" height="100%" fill="#FFFFFF"/>
   <!-- FPGA enclosure -->
-  <polygon points="60,120 1112,120 1148,156 1148,622 96,622 60,586" fill="#F2F2F2" stroke="#7C7C7C" stroke-width="1.5" filter="url(#outer-glow-shadow)"/>
+  <polygon points="60,120 1280,120 1316,156 1316,622 96,622 60,586" fill="#F2F2F2" stroke="#7C7C7C" stroke-width="1.5" filter="url(#outer-glow-shadow)"/>
   <text x="100" y="592" text-anchor="start" font-family="'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace" font-size="24" font-weight="400" fill="#4A4A4A">Arty A7-100T SoC</text>
   <text x="100" y="610" text-anchor="start" font-family="'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace" font-size="13" font-weight="400" fill="#4A4A4A">xc7a100tcsg324-1</text>
   <!-- FPGA pins -->
@@ -23,16 +23,19 @@
   <polygon points="288,638 427,638 438,649 438,692 299,692 288,681" fill="#FFFFFF" stroke="#7C7C7C" stroke-width="1.2" filter="url(#glow-shadow)"/>
   <text x="363" y="662.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#000000">uart_tx / uart_rx</text>
   <text x="363" y="681.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#4A4A4A">pin D10 / pin A9</text>
-  <polygon points="624,638 763,638 774,649 774,692 635,692 624,681" fill="#FFFFFF" stroke="#7C7C7C" stroke-width="1.2" filter="url(#glow-shadow)"/>
-  <text x="699" y="662.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#000000">ChipKit SPI</text>
-  <text x="699" y="681.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#4A4A4A">pins F1 · H1 · G1 · C1</text>
   <polygon points="792,638 931,638 942,649 942,692 803,692 792,681" fill="#FFFFFF" stroke="#7C7C7C" stroke-width="1.2" filter="url(#glow-shadow)"/>
-  <text x="867" y="662.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#000000">SPI flash</text>
-  <text x="867" y="681.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#4A4A4A">pins E9 · K17 · K18 · L13</text>
+  <text x="867" y="662.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#000000">ChipKit SPI</text>
+  <text x="867" y="681.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#4A4A4A">pins F1 · H1 · G1 · C1</text>
+  <polygon points="960,638 1099,638 1110,649 1110,692 971,692 960,681" fill="#FFFFFF" stroke="#7C7C7C" stroke-width="1.2" filter="url(#glow-shadow)"/>
+  <text x="1035" y="662.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#000000">SPI flash</text>
+  <text x="1035" y="681.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#4A4A4A">pins E9 · K17 · K18 · L13</text>
+  <polygon points="624,638 763,638 774,649 774,692 635,692 624,681" fill="#FFFFFF" stroke="#7C7C7C" stroke-width="1.2" filter="url(#glow-shadow)"/>
+  <text x="699" y="662.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#000000">DDR3L SDRAM</text>
+  <text x="699" y="681.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#4A4A4A">256 MiB · bank 34</text>
   <!-- clocking and reset -->
   <polygon points="590,142 741,142 755,156 755,214 604,214 590,200" fill="#FFFFFF" stroke="#7C7C7C" stroke-width="1.2" filter="url(#glow-shadow)"/>
-  <text x="672.5" y="175.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#000000">xc7pll</text>
-  <text x="672.5" y="194.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#4A4A4A">50 / 100 / 200 MHz</text>
+  <text x="672.5" y="175.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#000000">litedram PLL</text>
+  <text x="672.5" y="194.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#4A4A4A">100 / 200 / 400 MHz</text>
   <polygon points="780,142 931,142 945,156 945,214 794,214 780,200" fill="#FFFFFF" stroke="#7C7C7C" stroke-width="1.2" filter="url(#glow-shadow)"/>
   <text x="862.5" y="175.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#000000">rstctrl</text>
   <text x="862.5" y="194.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#4A4A4A">1 µs pulse · 4 s hold</text>
@@ -58,7 +61,7 @@
   <line x1="862" y1="325" x2="561" y2="325" stroke="#595959" stroke-width="1.2"/>
   <polygon points="555,325 561,321.28 561,328.72" fill="#595959"/>
   <!-- wishbone bus -->
-  <line x1="195" y1="410" x2="1035" y2="410" stroke="#595959" stroke-width="1.5"/>
+  <line x1="195" y1="410" x2="1203" y2="410" stroke="#595959" stroke-width="1.5"/>
   <text x="755" y="384" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#000000">Wishbone Bus · 32-bit</text>
   <text x="755" y="401" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#4A4A4A">lib/wb_mux.sv · address decode</text>
   <line x1="315" y1="350" x2="315" y2="410" stroke="#595959" stroke-width="1.2"/>
@@ -69,6 +72,7 @@
   <line x1="699" y1="410" x2="699" y2="450" stroke="#595959" stroke-width="1.2"/>
   <line x1="867" y1="410" x2="867" y2="450" stroke="#595959" stroke-width="1.2"/>
   <line x1="1035" y1="410" x2="1035" y2="450" stroke="#595959" stroke-width="1.2"/>
+  <line x1="1203" y1="410" x2="1203" y2="450" stroke="#595959" stroke-width="1.2"/>
   <!-- slaves -->
   <polygon points="118,450 258,450 272,464 272,530 132,530 118,516" fill="#FFFFFF" stroke="#7C7C7C" stroke-width="1.2" filter="url(#glow-shadow)"/>
   <text x="195" y="487.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#000000">irqctrl</text>
@@ -79,36 +83,40 @@
   <polygon points="454,450 594,450 608,464 608,530 468,530 454,516" fill="#FFFFFF" stroke="#7C7C7C" stroke-width="1.2" filter="url(#glow-shadow)"/>
   <text x="531" y="487.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#000000">sram · 256 KB</text>
   <text x="531" y="506.0" text-anchor="middle" font-family="'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="400" fill="#4A4A4A">0x00001000</text>
-  <polygon points="622,450 762,450 776,464 776,530 636,530 622,516" fill="#FFFFFF" stroke="#7C7C7C" stroke-width="1.2" filter="url(#glow-shadow)"/>
-  <text x="699" y="487.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#000000">spi</text>
-  <text x="699" y="506.0" text-anchor="middle" font-family="'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="400" fill="#4A4A4A">0x00000E00</text>
   <polygon points="790,450 930,450 944,464 944,530 804,530 790,516" fill="#FFFFFF" stroke="#7C7C7C" stroke-width="1.2" filter="url(#glow-shadow)"/>
-  <text x="867" y="487.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#000000">spiflash</text>
-  <text x="867" y="506.0" text-anchor="middle" font-family="'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="400" fill="#4A4A4A">0x00000E40</text>
+  <text x="867" y="487.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#000000">spi</text>
+  <text x="867" y="506.0" text-anchor="middle" font-family="'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="400" fill="#4A4A4A">0x00000E00</text>
   <polygon points="958,450 1098,450 1112,464 1112,530 972,530 958,516" fill="#FFFFFF" stroke="#7C7C7C" stroke-width="1.2" filter="url(#glow-shadow)"/>
-  <text x="1035" y="487.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#000000">dfltdev</text>
-  <text x="1035" y="506.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#4A4A4A">any unmapped address</text>
+  <text x="1035" y="487.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#000000">spiflash</text>
+  <text x="1035" y="506.0" text-anchor="middle" font-family="'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="400" fill="#4A4A4A">0x00000E40</text>
+  <polygon points="1126,450 1266,450 1280,464 1280,530 1140,530 1126,516" fill="#FFFFFF" stroke="#7C7C7C" stroke-width="1.2" filter="url(#glow-shadow)"/>
+  <text x="1203" y="487.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#000000">dfltdev</text>
+  <text x="1203" y="506.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#4A4A4A">any unmapped address</text>
+  <polygon points="622,450 762,450 776,464 776,530 636,530 622,516" fill="#FFFFFF" stroke="#7C7C7C" stroke-width="1.2" filter="url(#glow-shadow)"/>
+  <text x="699" y="481.0" text-anchor="middle" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#000000">sdram_ddr3</text>
+  <text x="699" y="499.0" text-anchor="middle" font-family="'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="400" fill="#4A4A4A">0x00041000</text>
+  <text x="699" y="516.0" text-anchor="middle" font-family="'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace" font-size="11" font-weight="400" fill="#4A4A4A">regs 0x10041000</text>
   <!-- interrupt paths -->
   <line x1="320" y1="530" x2="320" y2="544" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
   <line x1="320" y1="544" x2="245" y2="544" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
   <line x1="245" y1="544" x2="245" y2="536" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
   <polygon points="245,530 241.28,536 248.72,536" fill="#595959"/>
   <text x="327" y="542" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#4A4A4A">IRQ src 1</text>
-  <line x1="656" y1="530" x2="656" y2="552" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
-  <line x1="656" y1="552" x2="220" y2="552" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <line x1="824" y1="530" x2="824" y2="552" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <line x1="824" y1="552" x2="220" y2="552" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
   <line x1="220" y1="552" x2="220" y2="536" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
   <polygon points="220,530 216.28,536 223.72,536" fill="#595959"/>
-  <text x="663" y="546" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#4A4A4A">IRQ src 2</text>
-  <line x1="824" y1="530" x2="824" y2="560" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
-  <line x1="824" y1="560" x2="195" y2="560" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text x="831" y="546" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#4A4A4A">IRQ src 2</text>
+  <line x1="992" y1="530" x2="992" y2="560" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <line x1="992" y1="560" x2="195" y2="560" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
   <line x1="195" y1="560" x2="195" y2="536" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
   <polygon points="195,530 191.28,536 198.72,536" fill="#595959"/>
-  <text x="831" y="546" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#4A4A4A">IRQ src 3</text>
-  <line x1="1048" y1="530" x2="1048" y2="568" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
-  <line x1="1048" y1="568" x2="170" y2="568" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text x="999" y="546" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#4A4A4A">IRQ src 3</text>
+  <line x1="1216" y1="530" x2="1216" y2="568" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <line x1="1216" y1="568" x2="170" y2="568" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
   <line x1="170" y1="568" x2="170" y2="536" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
   <polygon points="170,530 166.28,536 173.72,536" fill="#595959"/>
-  <text x="1055" y="546" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#4A4A4A">IRQ src 0</text>
+  <text x="1223" y="546" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#4A4A4A">IRQ src 0</text>
   <line x1="118" y1="475" x2="92" y2="475" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
   <line x1="92" y1="475" x2="92" y2="255" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
   <line x1="92" y1="255" x2="109" y2="255" stroke="#595959" stroke-width="1.2" stroke-dasharray="5 4"/>
@@ -117,10 +125,13 @@
   <path d="M410,536 L410,546 A14,14 0 0 1 410,574 L410,632" fill="none" stroke="#595959" stroke-width="1.2"/>
   <polygon points="410,530 406.28,536 413.72,536" fill="#595959"/>
   <polygon points="410,638 406.28,632 413.72,632" fill="#595959"/>
-  <path d="M740,536 L740,554 A10,10 0 0 1 740,574 L740,632" fill="none" stroke="#595959" stroke-width="1.2"/>
-  <polygon points="740,530 736.28,536 743.72,536" fill="#595959"/>
-  <polygon points="740,638 736.28,632 743.72,632" fill="#595959"/>
-  <path d="M908,536 L908,562 A6,6 0 0 1 908,574 L908,632" fill="none" stroke="#595959" stroke-width="1.2"/>
+  <path d="M908,536 L908,554 A10,10 0 0 1 908,574 L908,632" fill="none" stroke="#595959" stroke-width="1.2"/>
   <polygon points="908,530 904.28,536 911.72,536" fill="#595959"/>
   <polygon points="908,638 904.28,632 911.72,632" fill="#595959"/>
+  <path d="M1076,536 L1076,562 A6,6 0 0 1 1076,574 L1076,632" fill="none" stroke="#595959" stroke-width="1.2"/>
+  <polygon points="1076,530 1072.28,536 1079.72,536" fill="#595959"/>
+  <polygon points="1076,638 1072.28,632 1079.72,632" fill="#595959"/>
+  <path d="M740,536 L740,546 A14,14 0 0 1 740,574 L740,632" fill="none" stroke="#595959" stroke-width="1.2"/>
+  <polygon points="740,530 736.28,536 743.72,536" fill="#595959"/>
+  <polygon points="740,638 736.28,632 743.72,632" fill="#595959"/>
 </svg>

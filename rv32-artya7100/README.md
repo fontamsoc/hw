@@ -40,20 +40,22 @@ targeting the Digilent Arty A7-100T.**
 `artya7100.sv` is the top level of a compact RV32 SoC: one `ftpu` hart with private
 instruction and data caches, a Wishbone peripheral interconnect, an interrupt
 controller, a UART console, a SPI master on the ChipKit SPI header, a second SPI
-master on the configuration flash, 256 KB of on-chip SRAM and a *default device*
-that acknowledges and reports every access to an address no other device maps.
+master on the configuration flash, 256 KB of on-chip SRAM, the 256 MiB DDR3L SDRAM
+of the board through a LiteDRAM controller, and a *default device* that
+acknowledges and reports every access to an address no other device maps.
 
 The program is baked into the SRAM at synthesis time via `$readmemh`, so the SoC
 boots straight into application code at `0x1000`. That program can be
-[`apps/bootldr`](apps/bootldr), a bootloader which loads the application from the
-SPI flash, so that the application changes without a new bitstream.
+[`apps/bootldr`](apps/bootldr), a bootloader which initializes and calibrates the
+DDR3 SDRAM, then loads the application from the SPI flash, so that the application
+changes without a new bitstream and can use the DDR3 SDRAM.
 
 ---
 
 ## Block diagram
 
 <p align="center">
-  <img src=".README.md/block_diagram.svg" alt="Arty A7-100T SoC block diagram: FonTamPU core complex mastering a 32-bit Wishbone bus with irqctrl, serial_uart, sram, spi, spiflash and dfltdev slaves; dfltdev, serial_uart, spi and spiflash raise interrupt sources 0, 1, 2 and 3 at irqctrl" width="960">
+  <img src=".README.md/block_diagram.svg" alt="Arty A7-100T SoC block diagram: FonTamPU core complex mastering a 32-bit Wishbone bus with irqctrl, serial_uart, sram, sdram_ddr3, spi, spiflash and dfltdev slaves; the PLL of the DDR3 controller clocks the SoC; dfltdev, serial_uart, spi and spiflash raise interrupt sources 0, 1, 2 and 3 at irqctrl" width="960">
 </p>
 
 <div align="center">
@@ -72,17 +74,18 @@ SPI flash, so that the application changes without a new bitstream.
 | **Harts** | 1 (`CPU_COUNT = 1`) |
 | **ISA** | RV32IMA + Zicsr, Machine and Supervisor privilege |
 | **Pipeline** | 4-stage in-order, single issue, branch / JAL / RET prediction |
-| **Core & bus clock** | 100 MHz |
+| **Core & bus clock** | 100 MHz, from the PLL of the DDR3 controller |
 | **Bus** | Wishbone, 32-bit data (`XWORDBITSZ = 32`), single master |
 | **Caches** | 16 KB I-cache + 16 KB D-cache, direct-mapped |
-| **RAM** | 256 KB on-chip BRAM (`SRAM_KBSIZE = 256`) |
+| **RAM** | 256 KB on-chip BRAM (`SRAM_KBSIZE = 256`) and 256 MiB of DDR3L SDRAM |
+| **DDR3 SDRAM** | Micron MT41K128M16, 256 MiB at `0x00041000`, through LiteDRAM (A7DDRPHY at 400 MHz, DDR3-800); initialized and calibrated by `apps/bootldr` |
 | **Console** | UART, 115200 8N1 by default, 2 KB RX + 2 KB TX buffers |
 | **SPI** | Master on the ChipKit SPI header, mode 0, 400 kbps at reset, up to 50 Mbps, 2 KB RX + 2 KB TX buffers |
 | **SPI flash** | Second SPI master on the configuration flash, a 16 MiB Spansion S25FL128S (or S25FL127S): `cs` high during control words, `miso` sampled on the falling edge, `sclk` through `STARTUPE2`, up to 50 Mbps, 2 KB RX + 2 KB TX buffers |
 | **Unmapped access** | Acknowledged by `dfltdev`: reads as `nop`, writes dropped, IRQ source 0 raised, address latched at `0xFFFFFFFC` |
 | **Interrupt sources** | 4 — `dfltdev` (0), `serial_uart` (1), `spi` (2), `spiflash` (3) |
 | **Reset vector** | `0x00001000` |
-| **Initial `sp`** | `0x00041000` (end of RAM) |
+| **Initial `sp`** | `0x00041000` (end of the SRAM); bootldr gives its payload the end of the DDR3 SDRAM, `0x10041000`, in `a1` |
 | **Toolchain** | Vivado 2020.2 · `riscv32-unknown-elf` GCC |
 
 ---
@@ -98,9 +101,11 @@ converts them to word indices internally.
 | 0 | Interrupt controller | `dev/irqctrl.sv` | `0x00000F00` | `0x00000F03` | 4 B (1 word) | no |
 | 1 | UART console | `dev/serial_uart.sv` | `0x00000F80` | `0x00000F87` | 8 B (2 words) | no |
 | 2 | SRAM | `dev/sram.sv` | `0x00001000` | `0x00040FFF` | 256 KB | yes |
-| 3 | SPI | `dev/spi.sv` | `0x00000E00` | `0x00000E07` | 8 B (2 words) | no |
-| 4 | SPI flash | `dev/spi.sv` | `0x00000E40` | `0x00000E47` | 8 B (2 words) | no |
-| 5 | Default device | `dev/dfltdev.sv` | *every other address* | — | — | no |
+| 3 | DDR3 SDRAM | `rv32-artya7100/dev/sdram_ddr3.v` | `0x00041000` | `0x10040FFF` | 256 MiB | yes |
+| 4 | DDR3 controller registers | `rv32-artya7100/dev/sdram_ddr3.v` | `0x10041000` | `0x10050FFF` | 64 KiB | no |
+| 5 | SPI | `dev/spi.sv` | `0x00000E00` | `0x00000E07` | 8 B (2 words) | no |
+| 6 | SPI flash | `dev/spi.sv` | `0x00000E40` | `0x00000E47` | 8 B (2 words) | no |
+| 7 | Default device | `dev/dfltdev.sv` | *every other address* | — | — | no |
 | ↳ | Fault address register | `dev/dfltdev.sv` | `0xFFFFFFFC` | `0xFFFFFFFF` | 4 B (1 word) | no |
 
 ```
@@ -131,7 +136,15 @@ converts them to word indices internally.
             │   SRAM · 256 KB · cacheable        │   .text .data .bss
             │                                    │
  0x00040FFF └────────────────────────────────────┘   sp starts at 0x00041000
- 0x00041000        · · · unmapped → dfltdev · · ·
+ 0x00041000 ┌────────────────────────────────────┐
+            │                                    │
+            │   DDR3 SDRAM · 256 MiB · cacheable │   once bootldr initialized it
+            │                                    │
+ 0x10040FFF └────────────────────────────────────┘   a1 from bootldr: 0x10041000
+ 0x10041000 ┌────────────────────────────────────┐
+            │   litedram registers · 64 KiB      │   litedram_init()
+ 0x10050FFF └────────────────────────────────────┘
+ 0x10051000        · · · unmapped → dfltdev · · ·
  0xFFFFFFFB
  0xFFFFFFFC ┌────────────────────────────────────┐
             │   dfltdev · fault address · 4 B    │   read OK · write faults
@@ -140,12 +153,12 @@ converts them to word indices internally.
 
 ### How the decode works
 
-`WBPI_ADDRLIMIT` is `0x1000 + 256 KB = 0x41000`, and the interconnect sizes its
-address bus from that: only bits `[18:2]` of the byte address are carried, with
-bits `[31:19]` OR-reduced into a single extra "out of range" bit so
-**nothing aliases back into a real device** for any access at or above `0x80000`.
+`WBPI_ADDRLIMIT` is `0x1000 + 256 KB + 256 MiB + 64 KiB = 0x10051000`, and the
+interconnect sizes its address bus from that: only bits `[28:2]` of the byte address
+are carried, with bits `[31:29]` OR-reduced into a single extra "out of range" bit so
+**nothing aliases back into a real device** for any access at or above `0x20000000`.
 
-Slave 5 (`dev/dfltdev.sv`) is the catch-all for every address the table does not
+Slave 7 (`dev/dfltdev.sv`) is the catch-all for every address the table does not
 claim. It never drives `bsy` and acknowledges every access on the following cycle,
 so **an unmapped access always completes**. A read returns the instruction `nop`
 (`0x00000013`) and a write is dropped. Both are faults: the address is latched in
@@ -160,19 +173,19 @@ outstanding acknowledgements have drained — restarts at entry 0 and advances o
 entry per cycle, holding the bus busy, until it finds the range containing the
 address or exhausts the table (which selects the default device). Back-to-back
 accesses within one device cost nothing extra; alternating between, say, the UART
-and the SRAM re-walks the table at every switch. The SPI device and the SPI flash,
-although mapped below the others, are the entries after the SRAM, so that adding
-them left the walk to the interrupt controller, the UART and the SRAM as short as
-it was. The default-device selection is valid only for the address it was walked
-for: another
+and the SRAM re-walks the table at every switch. The DDR3 SDRAM and the registers of
+its controller are the entries right after the SRAM; the SPI device and the SPI
+flash, although mapped below the others, come last, so that adding them left the
+walk to the interrupt controller, the UART and the SRAM as short as it was. The
+default-device selection is valid only for the address it was walked for: another
 address presented in that cycle restarts the walk rather than being handed the
 default device.
 
 > [!NOTE]
-> The core marks everything outside `[0x1000, 0x41000)` as non-cacheable
-> (`cpu_dcache_miss_w`), so device registers — the fault address register
-> included — are always accessed straight through the bus and never sit stale in
-> the D-cache.
+> The core marks everything outside `[0x1000, 0x10041000)`, the SRAM and the DDR3
+> SDRAM, as non-cacheable (`cpu_dcache_miss_w`), so device registers — those of the
+> DDR3 controller and the fault address register included — are always accessed
+> straight through the bus and never sit stale in the D-cache.
 
 > [!NOTE]
 > The Verilator simulator (`rv32-sim/`) has no default device: its default slave
@@ -365,6 +378,28 @@ time disables its Automatic ECC until the unit is erased.
 > and less with the compression this project enables: a write there corrupts the
 > configuration, which then fails at the next power-up.
 
+### DDR3 SDRAM — `0x00041000`
+
+`rv32-artya7100/dev/sdram_ddr3.v` maps the DDR3L SDRAM of the board, a Micron
+MT41K128M16 of 256 MiB, at `0x00041000` – `0x10040FFF`, and the registers of its
+controller at `0x10041000` – `0x10050FFF`. The controller is LiteDRAM, which LiteX
+generated in `litedram/litedram.v` from LiteDRAM's `examples/arty.yml` (its header
+holds that configuration): its A7DDRPHY runs the DDR3 SDRAM at 400 MHz (DDR3-800,
+CL 6), and its user port, 128 bits wide, takes one access at a time from the 32-bit
+bus through `lib/wb_upsizr.sv` and `lib/wb_classic.sv`. The D-cache of the core caches
+the DDR3 SDRAM as it does the SRAM; `sdram_ddr3.v` can put a data cache of 32 KiB of
+its own in front of the controller (`USECACHE`), which the top leaves out.
+
+The DDR3 SDRAM must be initialized and calibrated before it is used:
+`litedram_init()` of `litedram/litedram.c`, which `apps/bootldr` calls before it loads
+the application, does so through those registers, printing its read leveling, and
+fails when it finds no read window, which stops bootldr. An access made before is
+not held: the controller completes it on the DDR3 SDRAM uninitialized. The
+reset of the system (`RESET`, `_sysreset()`) does not reset the controller, so that
+the DDR3 SDRAM keeps its content across it; a configuration of the FPGA does not, and
+neither does a loss of the lock of the PLL of the controller, which resets the
+controller and the DDR3 SDRAM, which nothing initializes again.
+
 ### Default device — every unmapped address
 
 `dev/dfltdev.sv` owns every address the table does not claim. It has one register,
@@ -383,24 +418,24 @@ separately, save one landing in the very cycle of the acknowledgement, which rai
 a fresh request. The register can also simply be polled — the address is latched
 whether or not source 0 is enabled.
 
-The value read is the address **as seen on the bus**, sign-extended: bits `[18:2]`
-are exact, bit `19` is the OR of bits `[31:19]` of the faulting address and is
-replicated into bits `[31:20]`, and bits `[1:0]` always read zero (the bus carries
+The value read is the address **as seen on the bus**, sign-extended: bits `[28:2]`
+are exact, bit `29` is the OR of bits `[31:29]` of the faulting address and is
+replicated into bits `[31:30]`, and bits `[1:0]` always read zero (the bus carries
 word addresses, so the byte offset of the access is lost). Hence:
 
 | Faulting address | Reads back as |
 | :--- | :--- |
-| below `0x00080000` (fits the address bus) | exactly |
-| `0xFFF80000` – `0xFFFFFFFF` (a small negative pointer) | exactly |
-| anything else | a negative value whose bits `[18:2]` are the faulting address's — the exact address is not recoverable |
+| below `0x20000000` (fits the address bus) | exactly |
+| `0xE0000000` – `0xFFFFFFFF` (a small negative pointer) | exactly |
+| anything else | a negative value whose bits `[28:2]` are the faulting address's — the exact address is not recoverable |
 
 Two details worth knowing:
 
 - The register is **not cleared** by the read: it keeps the last latched address
   (`0` after reset) until the next fault overwrites it.
-- Because only bits `[18:2]` and the OR bit travel on the bus, `0xFFFFFFFC` is the
+- Because only bits `[28:2]` and the OR bit travel on the bus, `0xFFFFFFFC` is the
   canonical address of the register but not the only one that reaches it: any
-  address whose bits `[18:2]` are all ones and whose bits `[31:19]` are not all zero
+  address whose bits `[28:2]` are all ones and whose bits `[31:29]` are not all zero
   does. Use `(uintptr_t)-4`.
 
 ---
@@ -495,20 +530,24 @@ the pipelined multiplier accepts a new multiply while results queue for
 write-back, so a second instance would buy no cycles.
 
 The core is reset with `rstaddr_i = rstaddr2_i = 0x1000` and `spval_i = 0x41000`, so
-execution starts at the bottom of RAM with the stack pointer at the top of it.
+execution starts at the bottom of the SRAM with the stack pointer at the top of it,
+the DDR3 SDRAM being uninitialized at reset.
 
 ---
 
 ## Clocking
 
-`lib/xc7pll_100_to_50_100_200.sv` turns the 100 MHz board oscillator into 50, 100
-and 200 MHz. The whole SoC — CPU, interconnect, UART, SPI and SPI flash PHYs — runs
-in the **100 MHz** domain, so there is no clock-domain crossing (`USEMEMCLKDOM`
-evaluates to 0 for a single hart with a D-cache).
+The PLL of the DDR3 controller turns the 100 MHz board oscillator into the 100 MHz
+clock of the controller, the 200 MHz reference of its input delays, and the 400 MHz
+clocks of its PHY. Its 100 MHz is the clock of the whole SoC — CPU, interconnect,
+UART, SPI and SPI flash PHYs — which runs in that single **100 MHz** domain, so there
+is no clock-domain crossing (`USEMEMCLKDOM` evaluates to 0 for a single hart with a
+D-cache).
 
 > [!NOTE]
-> The 50 MHz and 200 MHz outputs and the PLL `locked` signal are generated but not
-> currently consumed. They are there for peripherals that need them.
+> `lib/xc7pll_100_to_50_100_200.sv` is still instantiated, but none of its outputs is
+> used, hence synthesis removes it; it is there for peripherals that need its 50, 100
+> or 200 MHz.
 
 ---
 
@@ -525,6 +564,12 @@ Its behaviour is deliberate and surprising the first time:
 | Short press afterwards | **Ignored** |
 | Press held ≥ 4 s | Asserts a fresh 1 µs reset pulse |
 | Software request (`_sysreset()`, ie: `CMDINTDST` with the destination `-1`) | Asserts a fresh 1 µs reset pulse at once, no button hold needed |
+
+The reset of the SoC also lasts until the PLL of the DDR3 controller is locked. The
+DDR3 controller is not reset by the reset of the SoC, so that the DDR3 SDRAM keeps its
+content across a press of `RESET` and `_sysreset()`; it is reset only at the
+configuration of the FPGA, or when its PLL loses its lock, which also resets the DDR3
+SDRAM, whose content is then lost.
 
 > [!TIP]
 > If the board appears dead after programming, press `RESET` once — that is the
@@ -558,6 +603,13 @@ hence no pin in the xdc; the registers driving `spiflash_cs_o` and
 `spiflash_mosi_o`, and the one sampling `spiflash_miso_i`, are packed in the I/O
 tiles (`IOB TRUE`). `W#` and `HOLD#` are held high, as single-bit commands use
 neither.
+
+The 48 pins of the DDR3 SDRAM, `ddr3_*`, all in bank 34 at 1.35 V, are those of the
+`digilent_arty.py` platform of litex-boards: `SSTL135`, `DIFF_SSTL135` for the
+strobes `ddr3_dqs_p/n` and the clock `ddr3_ck_p/n`, `SLEW FAST`, an
+`IN_TERM UNTUNED_SPLIT_40` termination on the data and the strobes, and the internal
+VREF of the bank at 0.675 V. The xdc also constrains the reset synchronizers of the
+DDR3 controller as LiteX does.
 
 Bitstream settings: compression enabled, `CONFIGRATE 33`, `CONFIG_MODE SPIx4`,
 `CFGBVS VCCO` at 3.3 V.
@@ -596,7 +648,10 @@ Three things the project does beyond the defaults:
 - **Twenty-one implementation runs.** `impl_1` builds on the default strategy;
   `impl_2` … `impl_21` each apply one of Vivado's *Performance_\** / *Congestion_\**
   strategies off the same `synth_1`. Launching them all is how timing closure at
-  100 MHz is swept; for a routine build, `impl_1` is enough.
+  100 MHz is swept. The default strategy no longer meets it since the DDR3 SDRAM was
+  added; in the sweep which followed, `impl_16` (*Performance_HighUtilSLRs*) met it
+  with the most margin, as did `impl_4`, `impl_21` and `impl_5`: a routine build can
+  use `impl_16`, until a change of the design reshuffles the strategies.
 
 Open a console on the board's USB-UART bridge at **115200 8N1**:
 
@@ -662,25 +717,65 @@ for wider `XWORDBITSZ` builds, and this target uses a 32-bit bus.
 > it `WBPI_ADDRLIMIT`, the initial stack pointer and the cacheable window — all of
 > which are derived from it automatically. Widening `WBPI_ADDRLIMIT` also widens
 > the address bus, and with it the window of addresses the fault address register
-> reports exactly.
+> reports exactly. It also moves the DDR3 SDRAM and the registers of its controller,
+> which follow the SRAM, but not their address in `litedram/litedram.c`: build
+> `apps/bootldr` with `-DLITEDRAM_BASE=` the new end of the SRAM, its default being
+> `0x41000`, ie: `make clean && CFLAGS=-DLITEDRAM_BASE=0x81000 make` for 512 KB.
 
 ### From the SPI flash: `apps/bootldr`
 
 [`apps/bootldr`](apps/bootldr) is a bootloader baked into the SRAM in place of the
-application. Started by the first press of `RESET`, it reads the data at byte
-`0x400000` of the SPI flash, right past the 4 MiB kept for the bitstream, checks the
-CRC32 of the payload it holds, copies the payload to `0x1000`, and starts it with the
-system reset that `_sysreset()` also requests: the CPU, its caches and the devices
-restart, but the SRAM keeps its content.
+application. Started by the first press of `RESET`, it initializes and calibrates the
+DDR3 SDRAM, then reads the data at byte `0x400000` of the SPI flash, right past the
+4 MiB kept for the bitstream, into the DDR3 SDRAM, checks the CRC32 of the payload it
+holds, copies the payload to `0x1000`, and starts it with the system reset that
+`_sysreset()` also requests: the CPU, its caches and the devices restart, but the SRAM
+and the DDR3 SDRAM keep their content. The payload gets the end of the DDR3 SDRAM,
+`0x10041000`, in register `a1`, which underLineOS's `crt0.S` takes for its end of
+memory. Here, on the board, with [`rv32-sim/apps/memtest`](../rv32-sim/apps/memtest)
+as the payload, which then tests the memory from its heap to its stack:
 
 ```
 🚀 Starting bootloader ...
+Initializing SDRAM @ 0x41000...
+Switching SDRAM to software control.
+Read leveling:
+  m0, b00: |00000000000000000000000000000000| delays: -
+  m0, b01: |00000000000000000000000000000000| delays: -
+  m0, b02: |11111111111100000000000000000000| delays: 05+-05
+  m0, b03: |00000000000000111111111111000000| delays: 20+-06
+  m0, b04: |00000000000000000000000000000011| delays: 30+-00
+  m0, b05: |00000000000000000000000000000000| delays: -
+  m0, b06: |00000000000000000000000000000000| delays: -
+  m0, b07: |00000000000000000000000000000000| delays: -
+  best: m0, b03 delays: 20+-06
+  m1, b00: |00000000000000000000000000000000| delays: -
+  m1, b01: |00000000000000000000000000000000| delays: -
+  m1, b02: |11111111111100000000000000000000| delays: 05+-05
+  m1, b03: |00000000000000111111111111100000| delays: 20+-06
+  m1, b04: |00000000000000000000000000000011| delays: 30+-00
+  m1, b05: |00000000000000000000000000000000| delays: -
+  m1, b06: |00000000000000000000000000000000| delays: -
+  m1, b07: |00000000000000000000000000000000| delays: -
+  best: m1, b03 delays: 20+-05
+Switching SDRAM to hardware control.
 💾 SPI flash at 0xe40 | 📦 4194304 words (16.0MB) | ⚡ 50000000 bps
 📍 word 1048576 (4.0MB)
-📥 Loaded: 23552 B (23.0KB) | ⏱️ 0.003776 s | 📊 5.9MB/s | 🔢 CRC32 0xd10f4ecf ✅
-🔄 Resetting into the payload at 0x1000 | 📎 a1 null
-Hello World! 👋
+📥 Loaded: 18240 B (17.8KB) | ⏱️ 0.002928 s | 📊 5.9MB/s | 🔢 CRC32 0x1cb6430c ✅
+🔄 Resetting into the payload at 0x1000 | 📎 a1 0x10041000: end of memory raised
+🚀 Starting memory tests ...
+👉 Test 1/2: writing and verifying sequence pattern ...
+⏳👍⏳👍⏳👍⏳👍⏳👍⏳👍⏳👍⏳👍⏳👍⏳👍⏳👍⏳👍⏳👍⏳👍⏳👍⏳👍⏳👍⏳👍⏳👍
+👉 Test 2/2: writing and verifying alternating pattern ... ⏳👍
+✅ SUCCESS: all tests passed in 1156530 ms!
 ```
+
+The read leveling scans, for each byte lane `m0` and `m1` of the DDR3 SDRAM and each
+of the 8 bitslips of its input serializers, the 32 taps of its input delays, a `1`
+marking a tap at which a pattern written then read back matched; `best:` gives the
+bitslip kept and the center of its window, which a separate scan measures. A lane
+without a window makes `litedram_init()` fail: bootldr then prints
+`❌ ERROR: __bootldr_init_array[0] failed` and stops.
 
 1. Build the bitstream with `SRAM_INITFILE` set to `"../../../apps/bootldr/bootldr.32.hex"`.
 2. In the Vivado Tcl console, with the project open, set `run` to the implementation run
@@ -711,11 +806,13 @@ Hello World! 👋
    `s25fl128sxxxxxx0-spi-x1_x2_x4`, then program it with `artya7100_bootldr.mcs`, keeping
    the default address range, *Configuration File Only*.
 
-The payload gets at most about 212 KiB of the 256 KiB. A failure, ie: no data, a CRC32
-mismatch or a payload too large, prints a line beginning with `❌ ERROR:` and stops, with
-nothing at `0x1000` changed, so holding `RESET` runs bootldr again. Once the application
-has started, it is what sits at `0x1000`: holding `RESET` restarts the application, and
-bootldr runs again only at the next configuration of the FPGA.
+The payload, read into the DDR3 SDRAM, is bounded by its medium: the 12 MiB of the flash
+which follow its first 4 MiB. A failure, ie: a calibration of the DDR3 SDRAM which found
+no read window, no data, a CRC32 mismatch or a payload too large, prints a line
+beginning with `❌ ERROR:` and stops, with nothing at `0x1000` changed, so holding
+`RESET` runs bootldr again. Once the application has started, it is what sits at
+`0x1000`: holding `RESET` restarts the application, and bootldr runs again only at the
+next configuration of the FPGA.
 
 bootldr's options are `BOOTLDR_*` defines, set through `CFLAGS` and described in the
 header of `bootldr.c`: the device and its driver (the SPI flash by default, or an SD card
@@ -725,8 +822,11 @@ which bootldr embeds and stores right below the end of memory, register `a1` giv
 address to the application, with `ra` set to -1 and `a0` to 0, which tell it from what a
 later reset leaves in `a1`; underLineOS's `crt0.S` then ends memory at `a1`, at that boot
 and at the warm boots which follow, and the application finds the data at `__rst_sp`.
-A board can also have functions run before the load, through `__bootldr_init_array`, ie:
-to initialize a DDR SDRAM, whose end it then gives in `__bootldr_ram_end`.
+Functions run before the load are those of `__bootldr_init_array`: by default of its
+`SRCS`, the makefile compiles `bootldr_init_array.c` and `../../litedram/litedram.c`,
+which put `litedram_init()` in that array; it raises `__bootldr_ram_end`, the end of
+memory given to the payload, to the end of the DDR3 SDRAM. `SRCS= make` leaves the DDR3
+SDRAM out, the payload then getting at most about 212 KiB of the SRAM.
 
 ---
 
@@ -735,15 +835,18 @@ to initialize a DDR SDRAM, whose end it then gives in `__bootldr_ram_end`.
 | Path | Description |
 | :--- | :--- |
 | `artya7100.sv` | SoC top level: build-time defaults, PLL, reset, core complex, interconnect, peripherals |
-| `artya7100.xdc` | Pin, clock and bitstream constraints |
+| `artya7100.xdc` | Pin, clock and bitstream constraints, and those of the reset synchronizers of the DDR3 controller |
 | `vivado/artya7100.xpr` | Vivado 2020.2 project: one synthesis run, 21 implementation runs, latch-is-an-error and unmatched-constraint-is-an-error rules |
 | `apps/spiflashtest/` | Benchmark and data check of the SPI flash, with copies of its drivers |
-| `apps/bootldr/` | Bootloader which loads the application from the SPI flash, with copies of its drivers |
+| `dev/sdram_ddr3.v` | The DDR3 SDRAM and the registers of its controller, LiteDRAM, behind `lib/wb_upsizr.sv` and `lib/wb_classic.sv`, with an optional data cache (`USECACHE`) |
+| `litedram/` | LiteDRAM as LiteX generated it for the DDR3 SDRAM (`litedram.v`, with its configuration in its header, and `csr.h`, `sdram_phy.h`, `soc.h`), and `litedram.c`, whose `litedram_init()` initializes and calibrates it, with its headers |
+| `apps/bootldr/` | Bootloader which initializes the DDR3 SDRAM and loads the application from the SPI flash, with copies of its drivers |
 | `.README.md/block_diagram.svg` | The block diagram above |
 
 Shared sources come from the repository root: [`cpu/`](../cpu) (core complex),
 [`dev/`](../dev) (Wishbone peripherals, the default device included) and
-[`lib/`](../lib) (PLL, reset, FIFOs, interconnect, SPI master);
+[`lib/`](../lib) (PLL, reset, FIFOs, interconnect, SPI master, the Wishbone bridges to the
+DDR3 controller);
 [`tools/mkBootldrDat.py`](../tools/mkBootldrDat.py) formats the data which
 `apps/bootldr` loads.
 
@@ -752,6 +855,10 @@ Shared sources come from the repository root: [`cpu/`](../cpu) (core complex),
 ## Notes and gotchas
 
 - **Press `RESET` once after programming** — the SoC is held in reset until you do.
+- **The DDR3 SDRAM needs `litedram_init()` first.** bootldr calls it; a program baked
+  straight into the SRAM, ie: CoreMark, the default `SRAM_INITFILE`, must call it
+  itself before it touches `0x00041000` – `0x10040FFF`, else its accesses complete on
+  the DDR3 SDRAM uninitialized.
 - **Unmapped accesses are reported, not trapped.** `dfltdev` acknowledges them: a
   read returns `nop`, a write vanishes, interrupt source 0 is raised and the
   address is latched at `0xFFFFFFFC`. A program that never enables source 0
