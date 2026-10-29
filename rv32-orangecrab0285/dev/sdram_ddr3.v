@@ -50,8 +50,8 @@
 // litedram_init() fails, setting init_error, when the read leveling finds no
 // read window for a module, which stops bootldr. A reset of litedram, ie:
 // after a loss of the lock of its PLL or a new lock of the DLL of its PHY,
-// resets the system and the delays and bitslips of its PHY, which nothing
-// calibrates again: the next accesses complete on the uncalibrated DDR3 SDRAM.
+// resets the system, the delays and bitslips of its PHY, and the DDR3 SDRAM,
+// whose reset it holds low: the next accesses complete on it uninitialized.
 //
 // The data cache is dCache of cpu/dcache.sv: direct-mapped, write-back, and
 // write-allocate, with a word of 128 bits per set, which is the width of the
