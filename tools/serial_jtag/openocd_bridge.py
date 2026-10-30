@@ -60,11 +60,11 @@ class OpenOCD:
 def scan_frames(ocd, tap, frames):
 	# One drscan per protocol scan: one 10-bit field per frame plus
 	# the 1-bit padding field; the response is hex per field.
-	fields = " ".join("10 0x%x" % f for f in frames)
-	resp = ocd.cmd("drscan %s %s 1 0x0" % (tap, fields))
+	fields = " ".join(f"10 0x{f:x}" for f in frames)
+	resp = ocd.cmd(f"drscan {tap} {fields} 1 0x0")
 	vals = [int(x, 16) for x in resp.split()]
 	if len(vals) != (len(frames) + 1):
-		raise ValueError("unexpected drscan response: %r" % resp)
+		raise ValueError(f"unexpected drscan response: {resp!r}")
 	return vals[:-1] # Drop the padding field.
 
 
@@ -88,8 +88,8 @@ class Channel:
 		# Raw, so the line discipline passes bytes through unmangled
 		# until a terminal program attaches and sets its own modes.
 		tty.setraw(sfd)
-		print("serial_jtag bridge: ir 0x%02x pty at %s"
-			% (self.ir, os.ttyname(sfd)), file=sys.stderr)
+		print(f"serial_jtag bridge: ir 0x{self.ir:02x} pty at {os.ttyname(sfd)}",
+			file=sys.stderr)
 		self.sfd = sfd # Kept open so the pty persists.
 
 
@@ -163,7 +163,7 @@ def main():
 			activity = False
 			for ch in serve:
 				if cur_ir != ch.ir:
-					ocd.cmd("irscan %s 0x%x" % (args.tap, ch.ir))
+					ocd.cmd(f"irscan {args.tap} 0x{ch.ir:x}")
 					cur_ir = ch.ir
 				nsend = min(len(ch.pending), args.burst)
 				n = max(nsend, MINPOLL)

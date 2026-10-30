@@ -65,7 +65,8 @@ def main():
 			with open(args.o, "wb") as f:
 				f.write(out)
 	except OSError as e:
-		sys.exit("mkBootldrDat.py: %s%s" % ((("%s: " % e.filename) if e.filename else ""), e.strerror))
+		where = (f"{e.filename}: " if e.filename else "")
+		sys.exit(f"mkBootldrDat.py: {where}{e.strerror}")
 
 
 if __name__ == "__main__":

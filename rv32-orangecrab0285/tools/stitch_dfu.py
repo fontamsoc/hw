@@ -73,32 +73,32 @@ def main():
 		gw_end = (args.base + len(gateware))
 		fw_end = (args.addr + len(firmware))
 		if offset < 0:
-			sys.exit("error: --addr %#x is below --base %#x" % (args.addr, args.base))
+			sys.exit(f"error: --addr {args.addr:#x} is below --base {args.base:#x}")
 		if gw_end > args.addr:
-			sys.exit("error: image is %#x bytes and runs to %#x, past %#x; "
-				"it must be at most %#x bytes (try ecppack --compress)"
-				% (len(gateware), gw_end, args.addr, offset))
+			sys.exit(f"error: image is {len(gateware):#x} bytes and runs to {gw_end:#x}, past {args.addr:#x}; "
+				f"it must be at most {offset:#x} bytes (try ecppack --compress)")
 		if fw_end > FLASH_MAX_ADDR:
-			sys.exit("error: firmware would end at %#x; the bootloader stops at %#x" % (fw_end, FLASH_MAX_ADDR))
+			sys.exit(f"error: firmware would end at {fw_end:#x}; the bootloader stops at {FLASH_MAX_ADDR:#x}")
 
 		payload = (gateware + (b"\xff" * (offset - len(gateware))) + firmware)
 
 		if ids is None:
-			print("note: input has no DFU suffix; using VID:PID %04x:%04x" % (DEFAULT_VID, DEFAULT_PID),
+			print(f"note: input has no DFU suffix; using VID:PID {DEFAULT_VID:04x}:{DEFAULT_PID:04x}",
 				file=sys.stderr)
 			ids = (0xFFFF, DEFAULT_PID, DEFAULT_VID, 0x0100)
 		with open(args.output, "wb") as f:
 			f.write(add_suffix(payload, *ids))
 
-		print("%#08x-%#08x  %s (%d bytes)" % (args.base, gw_end, args.image, len(gateware)))
-		print("%#08x-%#08x  0xFF padding (%d bytes)" % (gw_end, args.addr, (offset - len(gateware))))
-		print("%#08x-%#08x  %s (%d bytes)" % (args.addr, fw_end, args.firmware, len(firmware)))
-		print("VID:PID %04x:%04x  ->  %s" % (ids[2], ids[1], args.output))
+		print(f"{args.base:#08x}-{gw_end:#08x}  {args.image} ({len(gateware)} bytes)")
+		print(f"{gw_end:#08x}-{args.addr:#08x}  0xFF padding ({(offset - len(gateware))} bytes)")
+		print(f"{args.addr:#08x}-{fw_end:#08x}  {args.firmware} ({len(firmware)} bytes)")
+		print(f"VID:PID {ids[2]:04x}:{ids[1]:04x}  ->  {args.output}")
 		alt = ALT_BASES.get(args.base)
 		if alt is not None:
-			print("flash with: dfu-util --alt %d -D %s" % (alt, args.output))
+			print(f"flash with: dfu-util --alt {alt} -D {args.output}")
 	except OSError as e:
-		sys.exit("error: %s%s" % ((("%s: " % e.filename) if e.filename else ""), e.strerror))
+		where = (f"{e.filename}: " if e.filename else "")
+		sys.exit(f"error: {where}{e.strerror}")
 
 
 if __name__ == "__main__":
