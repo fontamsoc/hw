@@ -24,17 +24,18 @@
 //
 // litedram is not reset by "rst_i", the reset of the system, so that the
 // content of the DDR2 SDRAM survives it: nothing resets litedram but its
-// power-on reset, and the loss of the lock of its PLL. A request presented to
-// litedram while "rst_i" goes high is completed, and its acknowledgement is
-// dropped, as lib/wb_classic.sv describes. Every other logic of this module
-// is reset by "rst_i", the data cache included, which discards its content,
-// dirty data included; hence, with the data cache, data meant to survive the
-// reset of the system are to be written using atomic memory operations: the
-// data cache carries the bus lock, and forwards to litedram the locked access
-// and the access which follows it, ie: the read and the write of an atomic
-// memory operation, hence it writes them through. Without the data cache,
-// every write which the memory interface accepts reaches the DDR2 SDRAM, and
-// "wb_lock_i" is unused.
+// power-on reset, and the loss of the lock of its PLL. The accesses which the
+// memory interface has accepted when "rst_i" goes high are completed, and
+// their acknowledgements dropped, as lib/wb_litedram.sv describes; those of
+// the control interface as lib/wb_classic.sv describes. Every other logic of
+// this module is reset by "rst_i", the data cache included, which discards
+// its content, dirty data included; hence, with the data cache, data meant to
+// survive the reset of the system are to be written using atomic memory
+// operations: the data cache carries the bus lock, and forwards to litedram
+// the locked access and the access which follows it, ie: the read and the
+// write of an atomic memory operation, hence it writes them through. Without
+// the data cache, every write which the memory interface accepts reaches the
+// DDR2 SDRAM, unless litedram is reset meanwhile, and "wb_lock_i" is unused.
 //
 // The user port of litedram is not gated by its initialization: litedram is
 // generated with "block_until_ready" false, so it accepts an access whatever
@@ -45,7 +46,9 @@
 // read window for a module, which stops bootldr. A reset of litedram, ie:
 // after a loss of the lock of its PLL, resets the system and the bitslips of
 // its PHY, which nothing calibrates again: the next accesses complete on the
-// uncalibrated DDR2 SDRAM.
+// uncalibrated DDR2 SDRAM, while those which litedram and lib/wb_litedram.sv
+// held are discarded, unacknowledged, their masters being reset with the
+// system.
 //
 // The data cache is dCache of cpu/dcache.sv: direct-mapped, write-back, and
 // write-allocate, with a word of 64 bits per set, which is the width of the
@@ -61,11 +64,14 @@
 // of the data cache, which is combinational from its tag compare, does not
 // reach the interconnect; without it, neither is instantiated: the busy
 // signal of the memory interface is then from registers only, those of
-// lib/wb_upsizr.sv and lib/wb_classic.sv, which takes one access at a time.
-// Without the data cache, the orphan gating of lib/wb_classic.sv is what
-// keeps an acknowledgement from litedram, after a reset, from the
-// interconnect; with it, the cache also ignores one during the walk which
-// invalidates its sets after a reset.
+// lib/wb_upsizr.sv and lib/wb_litedram.sv, which hold up to DRAMMAXPENDINGACK
+// accesses: 8, the depth of the command buffer of each bank of litedram, its
+// "cmd_buffer_depth", which they thus never fill, so that litedram takes
+// their commands as they come, but while it holds commands for another bank.
+// The orphan count of lib/wb_litedram.sv keeps the acknowledgements from
+// litedram, after a reset, from the data cache or the interconnect, whose
+// counts of pending acknowledgements a stray one would corrupt, the data cache
+// not ignoring one during the walk which invalidates its sets after a reset.
 
 // Parameters:
 //
@@ -120,6 +126,7 @@
 
 `include "lib/wb_skidbuf.sv"
 `include "lib/wb_upsizr.sv"
+`include "lib/wb_litedram.sv"
 `include "lib/wb_classic.sv"
 `include "cpu/dcache.sv"
 
@@ -189,6 +196,10 @@ localparam DRAMWORDBITSZ = 64;
 localparam CLOG2DRAMWORDBITSZBY8 = clog2(DRAMWORDBITSZ/8);
 localparam DRAMADDRBITSZ = (DRAMWORDBITSZ-CLOG2DRAMWORDBITSZBY8);
 localparam DRAMMSBSZIGN = (DRAMWORDBITSZ-clog2(MAPSZ)-1);
+
+// The accesses which lib/wb_upsizr.sv and lib/wb_litedram.sv hold at most:
+// the cmd_buffer_depth of litedram.
+localparam DRAMMAXPENDINGACK = 8;
 
 localparam DRAMCACHESETCNT = 4096; // 32 KiB.
 
@@ -319,7 +330,7 @@ wb_upsizr #(
 	 .MWORDBITSZ    (WORDBITSZ)
 	,.SWORDBITSZ    (DRAMWORDBITSZ)
 	,.ADDRLIMIT     (MAPSZ)
-	,.MAXPENDINGACK (4)
+	,.MAXPENDINGACK (DRAMMAXPENDINGACK)
 	,.USEFWFTFIFO   (1)
 ) wb_upsizr (
 
@@ -348,21 +359,21 @@ wb_upsizr #(
 	,.s_wb_dat_i  (dcache_dat_w_)
 );
 
-wire                                       classic_stb_w;
-wire                                       classic_we_w;
-wire [(DRAMADDRBITSZ-DRAMMSBSZIGN) -1 : 0] classic_addr_w;
-wire [(DRAMWORDBITSZ/8) -1 : 0]            classic_sel_w;
-wire [DRAMWORDBITSZ -1 : 0]                classic_dat_w;
-wire                                       classic_bsy_w;
-wire                                       classic_ack_w;
-wire [DRAMWORDBITSZ -1 : 0]                classic_dat_w_;
+wire                                       bridge_stb_w;
+wire                                       bridge_we_w;
+wire [(DRAMADDRBITSZ-DRAMMSBSZIGN) -1 : 0] bridge_addr_w;
+wire [(DRAMWORDBITSZ/8) -1 : 0]            bridge_sel_w;
+wire [DRAMWORDBITSZ -1 : 0]                bridge_dat_w;
+wire                                       bridge_bsy_w;
+wire                                       bridge_ack_w;
+wire [DRAMWORDBITSZ -1 : 0]                bridge_dat_w_;
 
 generate if (USECACHE) begin :gen_dcache
 
 // The data cache acknowledges its master from registers, as its acknowledgement
 // is otherwise combinational from its tag compare; the acknowledgement and the
-// data read from litedram are registered by lib/wb_classic.sv; and it makes one
-// access at a time, as lib/wb_classic.sv takes one at a time.
+// data read from litedram are registered by lib/wb_litedram.sv. It posts its
+// writes: its count of pending acknowledgements covers what the bridge holds.
 dCache #(
 	 .WORDBITSZ     (DRAMWORDBITSZ)
 	,.ADDRLIMIT     (MAPSZ)
@@ -370,7 +381,7 @@ dCache #(
 	,.CACHEWAYCNT   (1)
 	,.REGMSTOUTPUT  (1)
 	,.REGSLVINPUT   (0)
-	,.MAXPENDINGACK (0)
+	,.MAXPENDINGACK (DRAMMAXPENDINGACK)
 ) dcache (
 
 	 .rst_i (rst_i)
@@ -390,15 +401,15 @@ dCache #(
 	,.m_wb_ack_o  (dcache_ack_w)
 	,.m_wb_dat_o  (dcache_dat_w_)
 
-	,.s_wb_stb_o  (classic_stb_w)
+	,.s_wb_stb_o  (bridge_stb_w)
 	,.s_wb_lock_o ()
-	,.s_wb_we_o   (classic_we_w)
-	,.s_wb_addr_o (classic_addr_w)
-	,.s_wb_sel_o  (classic_sel_w)
-	,.s_wb_dat_o  (classic_dat_w)
-	,.s_wb_bsy_i  (classic_bsy_w)
-	,.s_wb_ack_i  (classic_ack_w)
-	,.s_wb_dat_i  (classic_dat_w_)
+	,.s_wb_we_o   (bridge_we_w)
+	,.s_wb_addr_o (bridge_addr_w)
+	,.s_wb_sel_o  (bridge_sel_w)
+	,.s_wb_dat_o  (bridge_dat_w)
+	,.s_wb_bsy_i  (bridge_bsy_w)
+	,.s_wb_ack_i  (bridge_ack_w)
+	,.s_wb_dat_i  (bridge_dat_w_)
 
 	,.coherency_en_i (1'b0)
 
@@ -423,53 +434,63 @@ dCache #(
 
 end else begin :gen_nodcache
 
-// lib/wb_classic.sv straight behind lib/wb_upsizr.sv; the bus lock is unused.
-assign classic_stb_w = dcache_stb_w;
-assign classic_we_w = dcache_we_w;
-assign classic_addr_w = dcache_addr_w;
-assign classic_sel_w = dcache_sel_w;
-assign classic_dat_w = dcache_dat_w;
-assign dcache_bsy_w = classic_bsy_w;
-assign dcache_ack_w = classic_ack_w;
-assign dcache_dat_w_ = classic_dat_w_;
+// lib/wb_litedram.sv straight behind lib/wb_upsizr.sv; the bus lock is unused.
+assign bridge_stb_w = dcache_stb_w;
+assign bridge_we_w = dcache_we_w;
+assign bridge_addr_w = dcache_addr_w;
+assign bridge_sel_w = dcache_sel_w;
+assign bridge_dat_w = dcache_dat_w;
+assign dcache_bsy_w = bridge_bsy_w;
+assign dcache_ack_w = bridge_ack_w;
+assign dcache_dat_w_ = bridge_dat_w_;
 
 end endgenerate
 
-wire                                       dram_cyc_w;
-wire                                       dram_stb_w;
-wire                                       dram_we_w;
-wire [(DRAMADDRBITSZ-DRAMMSBSZIGN) -1 : 0] dram_addr_w;
-wire [(DRAMWORDBITSZ/8) -1 : 0]            dram_sel_w;
-wire [DRAMWORDBITSZ -1 : 0]                dram_dat_w;
-wire                                       dram_ack_w;
-wire [DRAMWORDBITSZ -1 : 0]                dram_dat_w_;
+wire                                       dram_cmd_valid_w;
+wire                                       dram_cmd_ready_w;
+wire                                       dram_cmd_we_w;
+wire [(DRAMADDRBITSZ-DRAMMSBSZIGN) -1 : 0] dram_cmd_addr_w;
+wire                                       dram_wdata_valid_w;
+wire                                       dram_wdata_ready_w;
+wire [(DRAMWORDBITSZ/8) -1 : 0]            dram_wdata_we_w;
+wire [DRAMWORDBITSZ -1 : 0]                dram_wdata_data_w;
+wire                                       dram_rdata_valid_w;
+wire                                       dram_rdata_ready_w;
+wire [DRAMWORDBITSZ -1 : 0]                dram_rdata_data_w;
 
-wb_classic #(
-	 .WORDBITSZ (DRAMWORDBITSZ)
-	,.ADDRLIMIT (MAPSZ)
-) wb_classic (
+// "rst_o", the reset of litedram, which discards the commands litedram holds,
+// discards those which the bridge holds too.
+wb_litedram #(
+	 .WORDBITSZ     (DRAMWORDBITSZ)
+	,.ADDRLIMIT     (MAPSZ)
+	,.MAXPENDINGACK (DRAMMAXPENDINGACK)
+) wb_litedram (
 
-	 .rst_i (rst_i)
+	 .rst_i   (rst_i)
+	,.s_rst_i (rst_o)
 
 	,.clk_i (clk_o)
 
-	,.m_wb_stb_i  (classic_stb_w)
-	,.m_wb_we_i   (classic_we_w)
-	,.m_wb_addr_i (classic_addr_w)
-	,.m_wb_sel_i  (classic_sel_w)
-	,.m_wb_dat_i  (classic_dat_w)
-	,.m_wb_bsy_o  (classic_bsy_w)
-	,.m_wb_ack_o  (classic_ack_w)
-	,.m_wb_dat_o  (classic_dat_w_)
+	,.m_wb_stb_i  (bridge_stb_w)
+	,.m_wb_we_i   (bridge_we_w)
+	,.m_wb_addr_i (bridge_addr_w)
+	,.m_wb_sel_i  (bridge_sel_w)
+	,.m_wb_dat_i  (bridge_dat_w)
+	,.m_wb_bsy_o  (bridge_bsy_w)
+	,.m_wb_ack_o  (bridge_ack_w)
+	,.m_wb_dat_o  (bridge_dat_w_)
 
-	,.s_wb_cyc_o  (dram_cyc_w)
-	,.s_wb_stb_o  (dram_stb_w)
-	,.s_wb_we_o   (dram_we_w)
-	,.s_wb_addr_o (dram_addr_w)
-	,.s_wb_sel_o  (dram_sel_w)
-	,.s_wb_dat_o  (dram_dat_w)
-	,.s_wb_ack_i  (dram_ack_w)
-	,.s_wb_dat_i  (dram_dat_w_)
+	,.s_cmd_valid_o   (dram_cmd_valid_w)
+	,.s_cmd_ready_i   (dram_cmd_ready_w)
+	,.s_cmd_we_o      (dram_cmd_we_w)
+	,.s_cmd_addr_o    (dram_cmd_addr_w)
+	,.s_wdata_valid_o (dram_wdata_valid_w)
+	,.s_wdata_ready_i (dram_wdata_ready_w)
+	,.s_wdata_we_o    (dram_wdata_we_w)
+	,.s_wdata_data_o  (dram_wdata_data_w)
+	,.s_rdata_valid_i (dram_rdata_valid_w)
+	,.s_rdata_ready_o (dram_rdata_ready_w)
+	,.s_rdata_data_i  (dram_rdata_data_w)
 );
 
 wire                                       ctrl_cyc_w;
@@ -548,15 +569,17 @@ litedram litedram (
 	,.user_clk (clk_o)
 	,.user_rst (rst_o)
 
-	,.user_port_wishbone_0_cyc   (dram_cyc_w)
-	,.user_port_wishbone_0_stb   (dram_stb_w)
-	,.user_port_wishbone_0_we    (dram_we_w)
-	,.user_port_wishbone_0_adr   (dram_addr_w[24 -1 : 0])
-	,.user_port_wishbone_0_sel   (dram_sel_w)
-	,.user_port_wishbone_0_dat_w (dram_dat_w)
-	,.user_port_wishbone_0_ack   (dram_ack_w)
-	,.user_port_wishbone_0_dat_r (dram_dat_w_)
-	,.user_port_wishbone_0_err   ()
+	,.user_port_native_0_cmd_valid   (dram_cmd_valid_w)
+	,.user_port_native_0_cmd_ready   (dram_cmd_ready_w)
+	,.user_port_native_0_cmd_we      (dram_cmd_we_w)
+	,.user_port_native_0_cmd_addr    (dram_cmd_addr_w[24 -1 : 0])
+	,.user_port_native_0_wdata_valid (dram_wdata_valid_w)
+	,.user_port_native_0_wdata_ready (dram_wdata_ready_w)
+	,.user_port_native_0_wdata_we    (dram_wdata_we_w)
+	,.user_port_native_0_wdata_data  (dram_wdata_data_w)
+	,.user_port_native_0_rdata_valid (dram_rdata_valid_w)
+	,.user_port_native_0_rdata_ready (dram_rdata_ready_w)
+	,.user_port_native_0_rdata_data  (dram_rdata_data_w)
 
 	,.wb_ctrl_cyc   (ctrl_cyc_w)
 	,.wb_ctrl_stb   (ctrl_stb_w)
