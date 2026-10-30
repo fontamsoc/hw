@@ -385,10 +385,11 @@ MT41K128M16 of 256 MiB, at `0x00041000` – `0x10040FFF`, and the registers of i
 controller at `0x10041000` – `0x10050FFF`. The controller is LiteDRAM, which LiteX
 generated in `litedram/litedram.v` from LiteDRAM's `examples/arty.yml` (its header
 holds that configuration): its A7DDRPHY runs the DDR3 SDRAM at 400 MHz (DDR3-800,
-CL 6), and its user port, 128 bits wide, takes one access at a time from the 32-bit
-bus through `lib/wb_upsizr.sv` and `lib/wb_classic.sv`. The D-cache of the core caches
-the DDR3 SDRAM as it does the SRAM; `sdram_ddr3.v` can put a data cache of 32 KiB of
-its own in front of the controller (`USECACHE`), which the top leaves out.
+CL 6), and its native user port, 128 bits wide, takes up to 8 accesses at a time from
+the 32-bit bus through `lib/wb_upsizr.sv` and `lib/wb_litedram.sv`, its registers
+through `lib/wb_classic.sv`. The D-cache of the core caches the DDR3 SDRAM as it does
+the SRAM; `sdram_ddr3.v` can put a data cache of 32 KiB of its own in front of the
+controller (`USECACHE`), which the top leaves out.
 
 The DDR3 SDRAM must be initialized and calibrated before it is used:
 `litedram_init()` of `litedram/litedram.c`, which `apps/bootldr` calls before it loads
@@ -838,7 +839,7 @@ SDRAM out, the payload then getting at most about 212 KiB of the SRAM.
 | `artya7100.xdc` | Pin, clock and bitstream constraints, and those of the reset synchronizers of the DDR3 controller |
 | `vivado/artya7100.xpr` | Vivado 2020.2 project: one synthesis run, 21 implementation runs, latch-is-an-error and unmatched-constraint-is-an-error rules |
 | `apps/spiflashtest/` | Benchmark and data check of the SPI flash, with copies of its drivers |
-| `dev/sdram_ddr3.v` | The DDR3 SDRAM and the registers of its controller, LiteDRAM, behind `lib/wb_upsizr.sv` and `lib/wb_classic.sv`, with an optional data cache (`USECACHE`) |
+| `dev/sdram_ddr3.v` | The DDR3 SDRAM, behind `lib/wb_upsizr.sv` and `lib/wb_litedram.sv`, and the registers of its controller, LiteDRAM, behind `lib/wb_classic.sv`, with an optional data cache (`USECACHE`) |
 | `litedram/` | LiteDRAM as LiteX generated it for the DDR3 SDRAM (`litedram.v`, with its configuration in its header, and `csr.h`, `sdram_phy.h`, `soc.h`), and `litedram.c`, whose `litedram_init()` initializes and calibrates it, with its headers |
 | `apps/bootldr/` | Bootloader which initializes the DDR3 SDRAM and loads the application from the SPI flash, with copies of its drivers |
 | `.README.md/block_diagram.svg` | The block diagram above |
