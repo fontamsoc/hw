@@ -34,12 +34,12 @@
     "iodelay_clk_freq": 200e6, # IODELAYs reference clock frequency
 
     # Core ---------------------------------------------------------------------
-    "cmd_buffer_depth": 1, # Depth of the command buffer
+    "cmd_buffer_depth": 8, # Depth of the command buffer
 
     # User Ports ---------------------------------------------------------------
     "user_ports": {
-        "wishbone_0" : {
-            "type":  "wishbone",
+        "native_0" : {
+            "type": "native",
             "block_until_ready": False,
         },
     },
@@ -70,15 +70,17 @@ module litedram (
     output wire          pll_locked,
     input  wire          rst,
     output wire          user_clk,
-    output wire          user_port_wishbone_0_ack,
-    input  wire   [23:0] user_port_wishbone_0_adr,
-    input  wire          user_port_wishbone_0_cyc,
-    output wire  [127:0] user_port_wishbone_0_dat_r,
-    input  wire  [127:0] user_port_wishbone_0_dat_w,
-    output wire          user_port_wishbone_0_err,
-    input  wire   [15:0] user_port_wishbone_0_sel,
-    input  wire          user_port_wishbone_0_stb,
-    input  wire          user_port_wishbone_0_we,
+    input  wire   [23:0] user_port_native_0_cmd_addr,
+    output wire          user_port_native_0_cmd_ready,
+    input  wire          user_port_native_0_cmd_valid,
+    input  wire          user_port_native_0_cmd_we,
+    output wire  [127:0] user_port_native_0_rdata_data,
+    input  wire          user_port_native_0_rdata_ready,
+    output wire          user_port_native_0_rdata_valid,
+    input  wire  [127:0] user_port_native_0_wdata_data,
+    output wire          user_port_native_0_wdata_ready,
+    input  wire          user_port_native_0_wdata_valid,
+    input  wire   [15:0] user_port_native_0_wdata_we,
     output wire          user_rst,
     output wire          wb_ctrl_ack,
     input  wire   [29:0] wb_ctrl_adr,
@@ -169,7 +171,6 @@ LiteDRAMCore
 │    ├── bitslip_35 (BitSlip) [Gen]
 │    ├── tappeddelayline_2 (TappedDelayLine) [Gen]
 │    ├── tappeddelayline_3 (TappedDelayLine) [Gen]
-│    ├── [BB:ISERDESE2]
 │    ├── [BB:IDELAYE2]
 │    ├── [BB:IOBUF]
 │    ├── [BB:OSERDESE2]
@@ -192,24 +193,6 @@ LiteDRAMCore
 │    ├── [BB:ISERDESE2]
 │    ├── [BB:IDELAYE2]
 │    ├── [BB:IOBUF]
-│    ├── [BB:OSERDESE2]
-│    ├── [BB:ISERDESE2]
-│    ├── [BB:IDELAYE2]
-│    ├── [BB:IOBUF]
-│    ├── [BB:OSERDESE2]
-│    ├── [BB:ISERDESE2]
-│    ├── [BB:IDELAYE2]
-│    ├── [BB:IOBUF]
-│    ├── [BB:OSERDESE2]
-│    ├── [BB:ISERDESE2]
-│    ├── [BB:IDELAYE2]
-│    ├── [BB:IOBUF]
-│    ├── [BB:OSERDESE2]
-│    ├── [BB:ISERDESE2]
-│    ├── [BB:IDELAYE2]
-│    ├── [BB:IOBUF]
-│    ├── [BB:OSERDESE2]
-│    ├── [BB:OSERDESE2]
 │    ├── [BB:OSERDESE2]
 │    ├── [BB:OBUFDS]
 │    ├── [BB:OSERDESE2]
@@ -228,15 +211,32 @@ LiteDRAMCore
 │    ├── [BB:OSERDESE2]
 │    ├── [BB:OSERDESE2]
 │    ├── [BB:OSERDESE2]
+│    ├── [BB:OSERDESE2]
+│    ├── [BB:OSERDESE2]
 │    ├── [BB:IOBUFDS]
 │    ├── [BB:OSERDESE2]
 │    ├── [BB:IOBUFDS]
 │    ├── [BB:OSERDESE2]
 │    ├── [BB:OSERDESE2]
 │    ├── [BB:OSERDESE2]
+│    ├── [BB:IDELAYE2]
+│    ├── [BB:IOBUF]
 │    ├── [BB:OSERDESE2]
 │    ├── [BB:ISERDESE2]
 │    ├── [BB:IDELAYE2]
+│    ├── [BB:IOBUF]
+│    ├── [BB:OSERDESE2]
+│    ├── [BB:ISERDESE2]
+│    ├── [BB:IDELAYE2]
+│    ├── [BB:IOBUF]
+│    ├── [BB:OSERDESE2]
+│    ├── [BB:ISERDESE2]
+│    ├── [BB:IDELAYE2]
+│    ├── [BB:IOBUF]
+│    ├── [BB:OSERDESE2]
+│    ├── [BB:ISERDESE2]
+│    ├── [BB:IDELAYE2]
+│    ├── [BB:IOBUF]
 │    ├── [BB:OSERDESE2]
 │    ├── [BB:ISERDESE2]
 │    ├── [BB:IDELAYE2]
@@ -258,12 +258,14 @@ LiteDRAMCore
 │    ├── [BB:IDELAYE2]
 │    ├── [BB:IOBUF]
 │    ├── [BB:OSERDESE2]
+│    ├── [BB:ISERDESE2]
 │    ├── [BB:OSERDESE2]
 │    ├── [BB:OSERDESE2]
 │    ├── [BB:OSERDESE2]
 │    ├── [BB:OSERDESE2]
+│    ├── [BB:ISERDESE2]
 │    ├── [BB:OSERDESE2]
-│    ├── [BB:IOBUF]
+│    ├── [BB:OSERDESE2]
 │    └── [BB:OSERDESE2]
 ├── sdram (LiteDRAMCore)
 │    ├── dfii (DFIInjector)
@@ -282,9 +284,7 @@ LiteDRAMCore
 │    │    │    └── fsm (FSM)
 │    │    ├── bankmachine_0 (BankMachine) [Gen]
 │    │    │    ├── syncfifo_0 (SyncFIFO) [Gen]
-│    │    │    │    └── buffer_0 (Buffer) [Gen]
-│    │    │    │         ├── pipe_valid (PipeValid)
-│    │    │    │         └── pipeline (Pipeline)
+│    │    │    │    └── fifo (SyncFIFO)
 │    │    │    ├── buffer_0 (Buffer) [Gen]
 │    │    │    │    ├── pipe_valid (PipeValid)
 │    │    │    │    └── pipeline (Pipeline)
@@ -294,9 +294,7 @@ LiteDRAMCore
 │    │    │    └── fsm (FSM)
 │    │    ├── bankmachine_1 (BankMachine) [Gen]
 │    │    │    ├── syncfifo_0 (SyncFIFO) [Gen]
-│    │    │    │    └── buffer_0 (Buffer) [Gen]
-│    │    │    │         ├── pipe_valid (PipeValid)
-│    │    │    │         └── pipeline (Pipeline)
+│    │    │    │    └── fifo (SyncFIFO)
 │    │    │    ├── buffer_0 (Buffer) [Gen]
 │    │    │    │    ├── pipe_valid (PipeValid)
 │    │    │    │    └── pipeline (Pipeline)
@@ -306,9 +304,7 @@ LiteDRAMCore
 │    │    │    └── fsm (FSM)
 │    │    ├── bankmachine_2 (BankMachine) [Gen]
 │    │    │    ├── syncfifo_0 (SyncFIFO) [Gen]
-│    │    │    │    └── buffer_0 (Buffer) [Gen]
-│    │    │    │         ├── pipe_valid (PipeValid)
-│    │    │    │         └── pipeline (Pipeline)
+│    │    │    │    └── fifo (SyncFIFO)
 │    │    │    ├── buffer_0 (Buffer) [Gen]
 │    │    │    │    ├── pipe_valid (PipeValid)
 │    │    │    │    └── pipeline (Pipeline)
@@ -318,9 +314,7 @@ LiteDRAMCore
 │    │    │    └── fsm (FSM)
 │    │    ├── bankmachine_3 (BankMachine) [Gen]
 │    │    │    ├── syncfifo_0 (SyncFIFO) [Gen]
-│    │    │    │    └── buffer_0 (Buffer) [Gen]
-│    │    │    │         ├── pipe_valid (PipeValid)
-│    │    │    │         └── pipeline (Pipeline)
+│    │    │    │    └── fifo (SyncFIFO)
 │    │    │    ├── buffer_0 (Buffer) [Gen]
 │    │    │    │    ├── pipe_valid (PipeValid)
 │    │    │    │    └── pipeline (Pipeline)
@@ -330,9 +324,7 @@ LiteDRAMCore
 │    │    │    └── fsm (FSM)
 │    │    ├── bankmachine_4 (BankMachine) [Gen]
 │    │    │    ├── syncfifo_0 (SyncFIFO) [Gen]
-│    │    │    │    └── buffer_0 (Buffer) [Gen]
-│    │    │    │         ├── pipe_valid (PipeValid)
-│    │    │    │         └── pipeline (Pipeline)
+│    │    │    │    └── fifo (SyncFIFO)
 │    │    │    ├── buffer_0 (Buffer) [Gen]
 │    │    │    │    ├── pipe_valid (PipeValid)
 │    │    │    │    └── pipeline (Pipeline)
@@ -342,9 +334,7 @@ LiteDRAMCore
 │    │    │    └── fsm (FSM)
 │    │    ├── bankmachine_5 (BankMachine) [Gen]
 │    │    │    ├── syncfifo_0 (SyncFIFO) [Gen]
-│    │    │    │    └── buffer_0 (Buffer) [Gen]
-│    │    │    │         ├── pipe_valid (PipeValid)
-│    │    │    │         └── pipeline (Pipeline)
+│    │    │    │    └── fifo (SyncFIFO)
 │    │    │    ├── buffer_0 (Buffer) [Gen]
 │    │    │    │    ├── pipe_valid (PipeValid)
 │    │    │    │    └── pipeline (Pipeline)
@@ -354,9 +344,7 @@ LiteDRAMCore
 │    │    │    └── fsm (FSM)
 │    │    ├── bankmachine_6 (BankMachine) [Gen]
 │    │    │    ├── syncfifo_0 (SyncFIFO) [Gen]
-│    │    │    │    └── buffer_0 (Buffer) [Gen]
-│    │    │    │         ├── pipe_valid (PipeValid)
-│    │    │    │         └── pipeline (Pipeline)
+│    │    │    │    └── fifo (SyncFIFO)
 │    │    │    ├── buffer_0 (Buffer) [Gen]
 │    │    │    │    ├── pipe_valid (PipeValid)
 │    │    │    │    └── pipeline (Pipeline)
@@ -366,9 +354,7 @@ LiteDRAMCore
 │    │    │    └── fsm (FSM)
 │    │    ├── bankmachine_7 (BankMachine) [Gen]
 │    │    │    ├── syncfifo_0 (SyncFIFO) [Gen]
-│    │    │    │    └── buffer_0 (Buffer) [Gen]
-│    │    │    │         ├── pipe_valid (PipeValid)
-│    │    │    │         └── pipeline (Pipeline)
+│    │    │    │    └── fifo (SyncFIFO)
 │    │    │    ├── buffer_0 (Buffer) [Gen]
 │    │    │    │    ├── pipe_valid (PipeValid)
 │    │    │    │    └── pipeline (Pipeline)
@@ -397,8 +383,6 @@ LiteDRAMCore
 │         ├── roundrobin_6 (RoundRobin) [Gen]
 │         └── roundrobin_7 (RoundRobin) [Gen]
 ├── ddrctrl (LiteDRAMCoreControl)
-├── litedramwishbone2native_0 (LiteDRAMWishbone2Native) [Gen]
-│    └── fsm (FSM)
 ├── csr_bridge (Wishbone2CSR)
 │    └── fsm (FSM)
 ├── csr_bankarray (CSRBankArray)
@@ -614,8 +598,8 @@ wire    [3:0] builder_interface0_sel;
 wire          builder_interface0_stb;
 wire          builder_interface0_we;
 reg    [13:0] builder_interface1_adr = 14'd0;
-reg    [13:0] builder_interface1_adr_wishbone2csr_next_value2 = 14'd0;
-reg           builder_interface1_adr_wishbone2csr_next_value_ce2 = 1'd0;
+reg    [13:0] builder_interface1_adr_next_value2 = 14'd0;
+reg           builder_interface1_adr_next_value_ce2 = 1'd0;
 wire   [13:0] builder_interface1_bank_bus_adr;
 reg    [31:0] builder_interface1_bank_bus_dat_r = 32'd0;
 wire   [31:0] builder_interface1_bank_bus_dat_w;
@@ -623,21 +607,19 @@ wire          builder_interface1_bank_bus_re;
 wire          builder_interface1_bank_bus_we;
 wire   [31:0] builder_interface1_dat_r;
 reg    [31:0] builder_interface1_dat_w = 32'd0;
-reg    [31:0] builder_interface1_dat_w_wishbone2csr_next_value0 = 32'd0;
-reg           builder_interface1_dat_w_wishbone2csr_next_value_ce0 = 1'd0;
+reg    [31:0] builder_interface1_dat_w_next_value0 = 32'd0;
+reg           builder_interface1_dat_w_next_value_ce0 = 1'd0;
 reg           builder_interface1_re = 1'd0;
-reg           builder_interface1_re_wishbone2csr_next_value3 = 1'd0;
-reg           builder_interface1_re_wishbone2csr_next_value_ce3 = 1'd0;
+reg           builder_interface1_re_next_value3 = 1'd0;
+reg           builder_interface1_re_next_value_ce3 = 1'd0;
 reg           builder_interface1_we = 1'd0;
-reg           builder_interface1_we_wishbone2csr_next_value4 = 1'd0;
-reg           builder_interface1_we_wishbone2csr_next_value_ce4 = 1'd0;
+reg           builder_interface1_we_next_value4 = 1'd0;
+reg           builder_interface1_we_next_value_ce4 = 1'd0;
 wire   [13:0] builder_interface2_bank_bus_adr;
 reg    [31:0] builder_interface2_bank_bus_dat_r = 32'd0;
 wire   [31:0] builder_interface2_bank_bus_dat_w;
 wire          builder_interface2_bank_bus_re;
 wire          builder_interface2_bank_bus_we;
-reg     [1:0] builder_litedramwishbone2native_next_state = 2'd0;
-reg     [1:0] builder_litedramwishbone2native_state = 2'd0;
 reg           builder_locked0 = 1'd0;
 reg           builder_locked1 = 1'd0;
 reg           builder_locked2 = 1'd0;
@@ -659,6 +641,7 @@ reg           builder_new_master_rdata_valid7 = 1'd0;
 reg           builder_new_master_rdata_valid8 = 1'd0;
 reg           builder_new_master_wdata_ready0 = 1'd0;
 reg           builder_new_master_wdata_ready1 = 1'd0;
+reg     [1:0] builder_next_state = 2'd0;
 wire          builder_pll_fb;
 wire          builder_re;
 reg     [1:0] builder_refresher_next_state = 2'd0;
@@ -741,8 +724,8 @@ wire          builder_roundrobin7_ce;
 wire          builder_roundrobin7_grant;
 wire          builder_roundrobin7_request;
 reg           builder_selected_r = 1'd0;
-reg           builder_selected_r_wishbone2csr_next_value1 = 1'd0;
-reg           builder_selected_r_wishbone2csr_next_value_ce1 = 1'd0;
+reg           builder_selected_r_next_value1 = 1'd0;
+reg           builder_selected_r_next_value_ce1 = 1'd0;
 reg     [2:0] builder_self0 = 3'd0;
 reg    [13:0] builder_self1 = 14'd0;
 reg           builder_self10 = 1'd0;
@@ -784,6 +767,7 @@ wire          builder_shared_stb;
 wire          builder_shared_we;
 wire          builder_slave_sel;
 reg           builder_slave_sel_r = 1'd0;
+reg     [1:0] builder_state = 2'd0;
 reg           builder_t_self0 = 1'd0;
 reg           builder_t_self1 = 1'd0;
 reg           builder_t_self2 = 1'd0;
@@ -792,8 +776,6 @@ reg           builder_t_self4 = 1'd0;
 reg           builder_t_self5 = 1'd0;
 wire          builder_wait;
 wire          builder_we;
-reg     [1:0] builder_wishbone2csr_next_state = 2'd0;
-reg     [1:0] builder_wishbone2csr_state = 2'd0;
 wire          builder_xilinxasyncresetsynchronizerimpl0_async_reset;
 wire          builder_xilinxasyncresetsynchronizerimpl0_rst_meta;
 wire          builder_xilinxasyncresetsynchronizerimpl1_async_reset;
@@ -1131,9 +1113,6 @@ reg           main_a7ddrphy_wrdata_en_tappeddelayline1 = 1'd0;
 reg           main_a7ddrphy_wrdata_en_tappeddelayline2 = 1'd0;
 reg     [1:0] main_a7ddrphy_wrphase_storage = 2'd3;
 reg           main_a7ddrphy_wrphase_wr_stb = 1'd0;
-reg           main_aborted = 1'd0;
-reg           main_aborted_litedramwishbone2native_next_value2 = 1'd0;
-reg           main_aborted_litedramwishbone2native_next_value_ce2 = 1'd0;
 wire          main_clkin_signal;
 wire          main_clkout0;
 wire          main_clkout1;
@@ -1149,55 +1128,6 @@ reg           main_init_done_wr_stb = 1'd0;
 reg           main_init_error_storage = 1'd0;
 reg           main_init_error_wr_stb = 1'd0;
 reg           main_litedramcore_bankmachine0_auto_precharge = 1'd0;
-wire          main_litedramcore_bankmachine0_cmd_buffer_lookahead_level;
-wire          main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_sink_first;
-wire          main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_sink_last;
-wire   [20:0] main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_sink_payload_addr;
-wire          main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_sink_payload_we;
-wire          main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_sink_ready;
-wire          main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_sink_valid;
-reg           main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_first = 1'd0;
-reg           main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_last = 1'd0;
-reg    [20:0] main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_payload_addr = 21'd0;
-reg           main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_payload_we = 1'd0;
-wire          main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_ready;
-reg           main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_valid = 1'd0;
-reg           main_litedramcore_bankmachine0_cmd_buffer_lookahead_sink_sink_first = 1'd0;
-reg           main_litedramcore_bankmachine0_cmd_buffer_lookahead_sink_sink_last = 1'd0;
-wire   [20:0] main_litedramcore_bankmachine0_cmd_buffer_lookahead_sink_sink_payload_addr;
-wire          main_litedramcore_bankmachine0_cmd_buffer_lookahead_sink_sink_payload_we;
-wire          main_litedramcore_bankmachine0_cmd_buffer_lookahead_sink_sink_ready;
-wire          main_litedramcore_bankmachine0_cmd_buffer_lookahead_sink_sink_valid;
-wire          main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_first;
-wire          main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_last;
-wire   [20:0] main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_payload_addr;
-wire          main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_payload_we;
-wire          main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_ready;
-wire          main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_valid;
-wire          main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_sink_first;
-wire          main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_sink_last;
-wire   [20:0] main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_sink_payload_addr;
-wire          main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_sink_payload_we;
-wire          main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_sink_ready;
-wire          main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_sink_valid;
-reg           main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_first = 1'd0;
-reg           main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_last = 1'd0;
-reg    [20:0] main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_payload_addr = 21'd0;
-reg           main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_payload_we = 1'd0;
-wire          main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_ready;
-reg           main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_valid = 1'd0;
-wire          main_litedramcore_bankmachine0_cmd_buffer_sink_sink_first;
-wire          main_litedramcore_bankmachine0_cmd_buffer_sink_sink_last;
-wire   [20:0] main_litedramcore_bankmachine0_cmd_buffer_sink_sink_payload_addr;
-wire          main_litedramcore_bankmachine0_cmd_buffer_sink_sink_payload_we;
-wire          main_litedramcore_bankmachine0_cmd_buffer_sink_sink_ready;
-wire          main_litedramcore_bankmachine0_cmd_buffer_sink_sink_valid;
-wire          main_litedramcore_bankmachine0_cmd_buffer_source_source_first;
-wire          main_litedramcore_bankmachine0_cmd_buffer_source_source_last;
-wire   [20:0] main_litedramcore_bankmachine0_cmd_buffer_source_source_payload_addr;
-wire          main_litedramcore_bankmachine0_cmd_buffer_source_source_payload_we;
-wire          main_litedramcore_bankmachine0_cmd_buffer_source_source_ready;
-wire          main_litedramcore_bankmachine0_cmd_buffer_source_source_valid;
 reg    [13:0] main_litedramcore_bankmachine0_cmd_payload_a = 14'd0;
 wire    [2:0] main_litedramcore_bankmachine0_cmd_payload_ba;
 reg           main_litedramcore_bankmachine0_cmd_payload_cas = 1'd0;
@@ -1208,8 +1138,35 @@ reg           main_litedramcore_bankmachine0_cmd_payload_ras = 1'd0;
 reg           main_litedramcore_bankmachine0_cmd_payload_we = 1'd0;
 reg           main_litedramcore_bankmachine0_cmd_ready = 1'd0;
 reg           main_litedramcore_bankmachine0_cmd_valid = 1'd0;
+reg     [2:0] main_litedramcore_bankmachine0_consume = 3'd0;
+wire          main_litedramcore_bankmachine0_do_read;
+wire          main_litedramcore_bankmachine0_fifo_in_first;
+wire          main_litedramcore_bankmachine0_fifo_in_last;
+wire   [20:0] main_litedramcore_bankmachine0_fifo_in_payload_addr;
+wire          main_litedramcore_bankmachine0_fifo_in_payload_we;
+wire          main_litedramcore_bankmachine0_fifo_out_first;
+wire          main_litedramcore_bankmachine0_fifo_out_last;
+wire   [20:0] main_litedramcore_bankmachine0_fifo_out_payload_addr;
+wire          main_litedramcore_bankmachine0_fifo_out_payload_we;
+reg     [3:0] main_litedramcore_bankmachine0_level = 4'd0;
+wire          main_litedramcore_bankmachine0_pipe_valid_sink_first;
+wire          main_litedramcore_bankmachine0_pipe_valid_sink_last;
+wire   [20:0] main_litedramcore_bankmachine0_pipe_valid_sink_payload_addr;
+wire          main_litedramcore_bankmachine0_pipe_valid_sink_payload_we;
+wire          main_litedramcore_bankmachine0_pipe_valid_sink_ready;
+wire          main_litedramcore_bankmachine0_pipe_valid_sink_valid;
+reg           main_litedramcore_bankmachine0_pipe_valid_source_first = 1'd0;
+reg           main_litedramcore_bankmachine0_pipe_valid_source_last = 1'd0;
+reg    [20:0] main_litedramcore_bankmachine0_pipe_valid_source_payload_addr = 21'd0;
+reg           main_litedramcore_bankmachine0_pipe_valid_source_payload_we = 1'd0;
+wire          main_litedramcore_bankmachine0_pipe_valid_source_ready;
+reg           main_litedramcore_bankmachine0_pipe_valid_source_valid = 1'd0;
+reg     [2:0] main_litedramcore_bankmachine0_produce = 3'd0;
+wire    [2:0] main_litedramcore_bankmachine0_rdport_adr;
+wire   [23:0] main_litedramcore_bankmachine0_rdport_dat_r;
 reg           main_litedramcore_bankmachine0_refresh_gnt = 1'd0;
 wire          main_litedramcore_bankmachine0_refresh_req;
+reg           main_litedramcore_bankmachine0_replace = 1'd0;
 wire   [20:0] main_litedramcore_bankmachine0_req_addr;
 wire          main_litedramcore_bankmachine0_req_lock;
 reg           main_litedramcore_bankmachine0_req_rdata_valid = 1'd0;
@@ -1223,6 +1180,36 @@ reg           main_litedramcore_bankmachine0_row_col_n_addr_sel = 1'd0;
 wire          main_litedramcore_bankmachine0_row_hit;
 reg           main_litedramcore_bankmachine0_row_open = 1'd0;
 reg           main_litedramcore_bankmachine0_row_opened = 1'd0;
+reg           main_litedramcore_bankmachine0_sink_first = 1'd0;
+reg           main_litedramcore_bankmachine0_sink_last = 1'd0;
+wire   [20:0] main_litedramcore_bankmachine0_sink_payload_addr;
+wire          main_litedramcore_bankmachine0_sink_payload_we;
+wire          main_litedramcore_bankmachine0_sink_ready;
+wire          main_litedramcore_bankmachine0_sink_sink_first;
+wire          main_litedramcore_bankmachine0_sink_sink_last;
+wire   [20:0] main_litedramcore_bankmachine0_sink_sink_payload_addr;
+wire          main_litedramcore_bankmachine0_sink_sink_payload_we;
+wire          main_litedramcore_bankmachine0_sink_sink_ready;
+wire          main_litedramcore_bankmachine0_sink_sink_valid;
+wire          main_litedramcore_bankmachine0_sink_valid;
+wire          main_litedramcore_bankmachine0_source_first;
+wire          main_litedramcore_bankmachine0_source_last;
+wire   [20:0] main_litedramcore_bankmachine0_source_payload_addr;
+wire          main_litedramcore_bankmachine0_source_payload_we;
+wire          main_litedramcore_bankmachine0_source_ready;
+wire          main_litedramcore_bankmachine0_source_source_first;
+wire          main_litedramcore_bankmachine0_source_source_last;
+wire   [20:0] main_litedramcore_bankmachine0_source_source_payload_addr;
+wire          main_litedramcore_bankmachine0_source_source_payload_we;
+wire          main_litedramcore_bankmachine0_source_source_ready;
+wire          main_litedramcore_bankmachine0_source_source_valid;
+wire          main_litedramcore_bankmachine0_source_valid;
+wire   [23:0] main_litedramcore_bankmachine0_syncfifo0_din;
+wire   [23:0] main_litedramcore_bankmachine0_syncfifo0_dout;
+wire          main_litedramcore_bankmachine0_syncfifo0_re;
+wire          main_litedramcore_bankmachine0_syncfifo0_readable;
+wire          main_litedramcore_bankmachine0_syncfifo0_we;
+wire          main_litedramcore_bankmachine0_syncfifo0_writable;
 reg     [2:0] main_litedramcore_bankmachine0_trascon_count = 3'd0;
 (* dont_touch = "true" *)
 reg           main_litedramcore_bankmachine0_trascon_ready = 1'd0;
@@ -1235,56 +1222,11 @@ reg     [2:0] main_litedramcore_bankmachine0_twtpcon_count = 3'd0;
 (* dont_touch = "true" *)
 reg           main_litedramcore_bankmachine0_twtpcon_ready = 1'd0;
 wire          main_litedramcore_bankmachine0_twtpcon_valid;
+reg     [2:0] main_litedramcore_bankmachine0_wrport_adr = 3'd0;
+wire   [23:0] main_litedramcore_bankmachine0_wrport_dat_r;
+wire   [23:0] main_litedramcore_bankmachine0_wrport_dat_w;
+wire          main_litedramcore_bankmachine0_wrport_we;
 reg           main_litedramcore_bankmachine1_auto_precharge = 1'd0;
-wire          main_litedramcore_bankmachine1_cmd_buffer_lookahead_level;
-wire          main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_sink_first;
-wire          main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_sink_last;
-wire   [20:0] main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_sink_payload_addr;
-wire          main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_sink_payload_we;
-wire          main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_sink_ready;
-wire          main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_sink_valid;
-reg           main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_first = 1'd0;
-reg           main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_last = 1'd0;
-reg    [20:0] main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_payload_addr = 21'd0;
-reg           main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_payload_we = 1'd0;
-wire          main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_ready;
-reg           main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_valid = 1'd0;
-reg           main_litedramcore_bankmachine1_cmd_buffer_lookahead_sink_sink_first = 1'd0;
-reg           main_litedramcore_bankmachine1_cmd_buffer_lookahead_sink_sink_last = 1'd0;
-wire   [20:0] main_litedramcore_bankmachine1_cmd_buffer_lookahead_sink_sink_payload_addr;
-wire          main_litedramcore_bankmachine1_cmd_buffer_lookahead_sink_sink_payload_we;
-wire          main_litedramcore_bankmachine1_cmd_buffer_lookahead_sink_sink_ready;
-wire          main_litedramcore_bankmachine1_cmd_buffer_lookahead_sink_sink_valid;
-wire          main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_first;
-wire          main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_last;
-wire   [20:0] main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_payload_addr;
-wire          main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_payload_we;
-wire          main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_ready;
-wire          main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_valid;
-wire          main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_sink_first;
-wire          main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_sink_last;
-wire   [20:0] main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_sink_payload_addr;
-wire          main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_sink_payload_we;
-wire          main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_sink_ready;
-wire          main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_sink_valid;
-reg           main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_first = 1'd0;
-reg           main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_last = 1'd0;
-reg    [20:0] main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_payload_addr = 21'd0;
-reg           main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_payload_we = 1'd0;
-wire          main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_ready;
-reg           main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_valid = 1'd0;
-wire          main_litedramcore_bankmachine1_cmd_buffer_sink_sink_first;
-wire          main_litedramcore_bankmachine1_cmd_buffer_sink_sink_last;
-wire   [20:0] main_litedramcore_bankmachine1_cmd_buffer_sink_sink_payload_addr;
-wire          main_litedramcore_bankmachine1_cmd_buffer_sink_sink_payload_we;
-wire          main_litedramcore_bankmachine1_cmd_buffer_sink_sink_ready;
-wire          main_litedramcore_bankmachine1_cmd_buffer_sink_sink_valid;
-wire          main_litedramcore_bankmachine1_cmd_buffer_source_source_first;
-wire          main_litedramcore_bankmachine1_cmd_buffer_source_source_last;
-wire   [20:0] main_litedramcore_bankmachine1_cmd_buffer_source_source_payload_addr;
-wire          main_litedramcore_bankmachine1_cmd_buffer_source_source_payload_we;
-wire          main_litedramcore_bankmachine1_cmd_buffer_source_source_ready;
-wire          main_litedramcore_bankmachine1_cmd_buffer_source_source_valid;
 reg    [13:0] main_litedramcore_bankmachine1_cmd_payload_a = 14'd0;
 wire    [2:0] main_litedramcore_bankmachine1_cmd_payload_ba;
 reg           main_litedramcore_bankmachine1_cmd_payload_cas = 1'd0;
@@ -1295,8 +1237,35 @@ reg           main_litedramcore_bankmachine1_cmd_payload_ras = 1'd0;
 reg           main_litedramcore_bankmachine1_cmd_payload_we = 1'd0;
 reg           main_litedramcore_bankmachine1_cmd_ready = 1'd0;
 reg           main_litedramcore_bankmachine1_cmd_valid = 1'd0;
+reg     [2:0] main_litedramcore_bankmachine1_consume = 3'd0;
+wire          main_litedramcore_bankmachine1_do_read;
+wire          main_litedramcore_bankmachine1_fifo_in_first;
+wire          main_litedramcore_bankmachine1_fifo_in_last;
+wire   [20:0] main_litedramcore_bankmachine1_fifo_in_payload_addr;
+wire          main_litedramcore_bankmachine1_fifo_in_payload_we;
+wire          main_litedramcore_bankmachine1_fifo_out_first;
+wire          main_litedramcore_bankmachine1_fifo_out_last;
+wire   [20:0] main_litedramcore_bankmachine1_fifo_out_payload_addr;
+wire          main_litedramcore_bankmachine1_fifo_out_payload_we;
+reg     [3:0] main_litedramcore_bankmachine1_level = 4'd0;
+wire          main_litedramcore_bankmachine1_pipe_valid_sink_first;
+wire          main_litedramcore_bankmachine1_pipe_valid_sink_last;
+wire   [20:0] main_litedramcore_bankmachine1_pipe_valid_sink_payload_addr;
+wire          main_litedramcore_bankmachine1_pipe_valid_sink_payload_we;
+wire          main_litedramcore_bankmachine1_pipe_valid_sink_ready;
+wire          main_litedramcore_bankmachine1_pipe_valid_sink_valid;
+reg           main_litedramcore_bankmachine1_pipe_valid_source_first = 1'd0;
+reg           main_litedramcore_bankmachine1_pipe_valid_source_last = 1'd0;
+reg    [20:0] main_litedramcore_bankmachine1_pipe_valid_source_payload_addr = 21'd0;
+reg           main_litedramcore_bankmachine1_pipe_valid_source_payload_we = 1'd0;
+wire          main_litedramcore_bankmachine1_pipe_valid_source_ready;
+reg           main_litedramcore_bankmachine1_pipe_valid_source_valid = 1'd0;
+reg     [2:0] main_litedramcore_bankmachine1_produce = 3'd0;
+wire    [2:0] main_litedramcore_bankmachine1_rdport_adr;
+wire   [23:0] main_litedramcore_bankmachine1_rdport_dat_r;
 reg           main_litedramcore_bankmachine1_refresh_gnt = 1'd0;
 wire          main_litedramcore_bankmachine1_refresh_req;
+reg           main_litedramcore_bankmachine1_replace = 1'd0;
 wire   [20:0] main_litedramcore_bankmachine1_req_addr;
 wire          main_litedramcore_bankmachine1_req_lock;
 reg           main_litedramcore_bankmachine1_req_rdata_valid = 1'd0;
@@ -1310,6 +1279,36 @@ reg           main_litedramcore_bankmachine1_row_col_n_addr_sel = 1'd0;
 wire          main_litedramcore_bankmachine1_row_hit;
 reg           main_litedramcore_bankmachine1_row_open = 1'd0;
 reg           main_litedramcore_bankmachine1_row_opened = 1'd0;
+reg           main_litedramcore_bankmachine1_sink_first = 1'd0;
+reg           main_litedramcore_bankmachine1_sink_last = 1'd0;
+wire   [20:0] main_litedramcore_bankmachine1_sink_payload_addr;
+wire          main_litedramcore_bankmachine1_sink_payload_we;
+wire          main_litedramcore_bankmachine1_sink_ready;
+wire          main_litedramcore_bankmachine1_sink_sink_first;
+wire          main_litedramcore_bankmachine1_sink_sink_last;
+wire   [20:0] main_litedramcore_bankmachine1_sink_sink_payload_addr;
+wire          main_litedramcore_bankmachine1_sink_sink_payload_we;
+wire          main_litedramcore_bankmachine1_sink_sink_ready;
+wire          main_litedramcore_bankmachine1_sink_sink_valid;
+wire          main_litedramcore_bankmachine1_sink_valid;
+wire          main_litedramcore_bankmachine1_source_first;
+wire          main_litedramcore_bankmachine1_source_last;
+wire   [20:0] main_litedramcore_bankmachine1_source_payload_addr;
+wire          main_litedramcore_bankmachine1_source_payload_we;
+wire          main_litedramcore_bankmachine1_source_ready;
+wire          main_litedramcore_bankmachine1_source_source_first;
+wire          main_litedramcore_bankmachine1_source_source_last;
+wire   [20:0] main_litedramcore_bankmachine1_source_source_payload_addr;
+wire          main_litedramcore_bankmachine1_source_source_payload_we;
+wire          main_litedramcore_bankmachine1_source_source_ready;
+wire          main_litedramcore_bankmachine1_source_source_valid;
+wire          main_litedramcore_bankmachine1_source_valid;
+wire   [23:0] main_litedramcore_bankmachine1_syncfifo1_din;
+wire   [23:0] main_litedramcore_bankmachine1_syncfifo1_dout;
+wire          main_litedramcore_bankmachine1_syncfifo1_re;
+wire          main_litedramcore_bankmachine1_syncfifo1_readable;
+wire          main_litedramcore_bankmachine1_syncfifo1_we;
+wire          main_litedramcore_bankmachine1_syncfifo1_writable;
 reg     [2:0] main_litedramcore_bankmachine1_trascon_count = 3'd0;
 (* dont_touch = "true" *)
 reg           main_litedramcore_bankmachine1_trascon_ready = 1'd0;
@@ -1322,56 +1321,11 @@ reg     [2:0] main_litedramcore_bankmachine1_twtpcon_count = 3'd0;
 (* dont_touch = "true" *)
 reg           main_litedramcore_bankmachine1_twtpcon_ready = 1'd0;
 wire          main_litedramcore_bankmachine1_twtpcon_valid;
+reg     [2:0] main_litedramcore_bankmachine1_wrport_adr = 3'd0;
+wire   [23:0] main_litedramcore_bankmachine1_wrport_dat_r;
+wire   [23:0] main_litedramcore_bankmachine1_wrport_dat_w;
+wire          main_litedramcore_bankmachine1_wrport_we;
 reg           main_litedramcore_bankmachine2_auto_precharge = 1'd0;
-wire          main_litedramcore_bankmachine2_cmd_buffer_lookahead_level;
-wire          main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_sink_first;
-wire          main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_sink_last;
-wire   [20:0] main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_sink_payload_addr;
-wire          main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_sink_payload_we;
-wire          main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_sink_ready;
-wire          main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_sink_valid;
-reg           main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_first = 1'd0;
-reg           main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_last = 1'd0;
-reg    [20:0] main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_payload_addr = 21'd0;
-reg           main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_payload_we = 1'd0;
-wire          main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_ready;
-reg           main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_valid = 1'd0;
-reg           main_litedramcore_bankmachine2_cmd_buffer_lookahead_sink_sink_first = 1'd0;
-reg           main_litedramcore_bankmachine2_cmd_buffer_lookahead_sink_sink_last = 1'd0;
-wire   [20:0] main_litedramcore_bankmachine2_cmd_buffer_lookahead_sink_sink_payload_addr;
-wire          main_litedramcore_bankmachine2_cmd_buffer_lookahead_sink_sink_payload_we;
-wire          main_litedramcore_bankmachine2_cmd_buffer_lookahead_sink_sink_ready;
-wire          main_litedramcore_bankmachine2_cmd_buffer_lookahead_sink_sink_valid;
-wire          main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_first;
-wire          main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_last;
-wire   [20:0] main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_payload_addr;
-wire          main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_payload_we;
-wire          main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_ready;
-wire          main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_valid;
-wire          main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_sink_first;
-wire          main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_sink_last;
-wire   [20:0] main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_sink_payload_addr;
-wire          main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_sink_payload_we;
-wire          main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_sink_ready;
-wire          main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_sink_valid;
-reg           main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_first = 1'd0;
-reg           main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_last = 1'd0;
-reg    [20:0] main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_payload_addr = 21'd0;
-reg           main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_payload_we = 1'd0;
-wire          main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_ready;
-reg           main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_valid = 1'd0;
-wire          main_litedramcore_bankmachine2_cmd_buffer_sink_sink_first;
-wire          main_litedramcore_bankmachine2_cmd_buffer_sink_sink_last;
-wire   [20:0] main_litedramcore_bankmachine2_cmd_buffer_sink_sink_payload_addr;
-wire          main_litedramcore_bankmachine2_cmd_buffer_sink_sink_payload_we;
-wire          main_litedramcore_bankmachine2_cmd_buffer_sink_sink_ready;
-wire          main_litedramcore_bankmachine2_cmd_buffer_sink_sink_valid;
-wire          main_litedramcore_bankmachine2_cmd_buffer_source_source_first;
-wire          main_litedramcore_bankmachine2_cmd_buffer_source_source_last;
-wire   [20:0] main_litedramcore_bankmachine2_cmd_buffer_source_source_payload_addr;
-wire          main_litedramcore_bankmachine2_cmd_buffer_source_source_payload_we;
-wire          main_litedramcore_bankmachine2_cmd_buffer_source_source_ready;
-wire          main_litedramcore_bankmachine2_cmd_buffer_source_source_valid;
 reg    [13:0] main_litedramcore_bankmachine2_cmd_payload_a = 14'd0;
 wire    [2:0] main_litedramcore_bankmachine2_cmd_payload_ba;
 reg           main_litedramcore_bankmachine2_cmd_payload_cas = 1'd0;
@@ -1382,8 +1336,35 @@ reg           main_litedramcore_bankmachine2_cmd_payload_ras = 1'd0;
 reg           main_litedramcore_bankmachine2_cmd_payload_we = 1'd0;
 reg           main_litedramcore_bankmachine2_cmd_ready = 1'd0;
 reg           main_litedramcore_bankmachine2_cmd_valid = 1'd0;
+reg     [2:0] main_litedramcore_bankmachine2_consume = 3'd0;
+wire          main_litedramcore_bankmachine2_do_read;
+wire          main_litedramcore_bankmachine2_fifo_in_first;
+wire          main_litedramcore_bankmachine2_fifo_in_last;
+wire   [20:0] main_litedramcore_bankmachine2_fifo_in_payload_addr;
+wire          main_litedramcore_bankmachine2_fifo_in_payload_we;
+wire          main_litedramcore_bankmachine2_fifo_out_first;
+wire          main_litedramcore_bankmachine2_fifo_out_last;
+wire   [20:0] main_litedramcore_bankmachine2_fifo_out_payload_addr;
+wire          main_litedramcore_bankmachine2_fifo_out_payload_we;
+reg     [3:0] main_litedramcore_bankmachine2_level = 4'd0;
+wire          main_litedramcore_bankmachine2_pipe_valid_sink_first;
+wire          main_litedramcore_bankmachine2_pipe_valid_sink_last;
+wire   [20:0] main_litedramcore_bankmachine2_pipe_valid_sink_payload_addr;
+wire          main_litedramcore_bankmachine2_pipe_valid_sink_payload_we;
+wire          main_litedramcore_bankmachine2_pipe_valid_sink_ready;
+wire          main_litedramcore_bankmachine2_pipe_valid_sink_valid;
+reg           main_litedramcore_bankmachine2_pipe_valid_source_first = 1'd0;
+reg           main_litedramcore_bankmachine2_pipe_valid_source_last = 1'd0;
+reg    [20:0] main_litedramcore_bankmachine2_pipe_valid_source_payload_addr = 21'd0;
+reg           main_litedramcore_bankmachine2_pipe_valid_source_payload_we = 1'd0;
+wire          main_litedramcore_bankmachine2_pipe_valid_source_ready;
+reg           main_litedramcore_bankmachine2_pipe_valid_source_valid = 1'd0;
+reg     [2:0] main_litedramcore_bankmachine2_produce = 3'd0;
+wire    [2:0] main_litedramcore_bankmachine2_rdport_adr;
+wire   [23:0] main_litedramcore_bankmachine2_rdport_dat_r;
 reg           main_litedramcore_bankmachine2_refresh_gnt = 1'd0;
 wire          main_litedramcore_bankmachine2_refresh_req;
+reg           main_litedramcore_bankmachine2_replace = 1'd0;
 wire   [20:0] main_litedramcore_bankmachine2_req_addr;
 wire          main_litedramcore_bankmachine2_req_lock;
 reg           main_litedramcore_bankmachine2_req_rdata_valid = 1'd0;
@@ -1397,6 +1378,36 @@ reg           main_litedramcore_bankmachine2_row_col_n_addr_sel = 1'd0;
 wire          main_litedramcore_bankmachine2_row_hit;
 reg           main_litedramcore_bankmachine2_row_open = 1'd0;
 reg           main_litedramcore_bankmachine2_row_opened = 1'd0;
+reg           main_litedramcore_bankmachine2_sink_first = 1'd0;
+reg           main_litedramcore_bankmachine2_sink_last = 1'd0;
+wire   [20:0] main_litedramcore_bankmachine2_sink_payload_addr;
+wire          main_litedramcore_bankmachine2_sink_payload_we;
+wire          main_litedramcore_bankmachine2_sink_ready;
+wire          main_litedramcore_bankmachine2_sink_sink_first;
+wire          main_litedramcore_bankmachine2_sink_sink_last;
+wire   [20:0] main_litedramcore_bankmachine2_sink_sink_payload_addr;
+wire          main_litedramcore_bankmachine2_sink_sink_payload_we;
+wire          main_litedramcore_bankmachine2_sink_sink_ready;
+wire          main_litedramcore_bankmachine2_sink_sink_valid;
+wire          main_litedramcore_bankmachine2_sink_valid;
+wire          main_litedramcore_bankmachine2_source_first;
+wire          main_litedramcore_bankmachine2_source_last;
+wire   [20:0] main_litedramcore_bankmachine2_source_payload_addr;
+wire          main_litedramcore_bankmachine2_source_payload_we;
+wire          main_litedramcore_bankmachine2_source_ready;
+wire          main_litedramcore_bankmachine2_source_source_first;
+wire          main_litedramcore_bankmachine2_source_source_last;
+wire   [20:0] main_litedramcore_bankmachine2_source_source_payload_addr;
+wire          main_litedramcore_bankmachine2_source_source_payload_we;
+wire          main_litedramcore_bankmachine2_source_source_ready;
+wire          main_litedramcore_bankmachine2_source_source_valid;
+wire          main_litedramcore_bankmachine2_source_valid;
+wire   [23:0] main_litedramcore_bankmachine2_syncfifo2_din;
+wire   [23:0] main_litedramcore_bankmachine2_syncfifo2_dout;
+wire          main_litedramcore_bankmachine2_syncfifo2_re;
+wire          main_litedramcore_bankmachine2_syncfifo2_readable;
+wire          main_litedramcore_bankmachine2_syncfifo2_we;
+wire          main_litedramcore_bankmachine2_syncfifo2_writable;
 reg     [2:0] main_litedramcore_bankmachine2_trascon_count = 3'd0;
 (* dont_touch = "true" *)
 reg           main_litedramcore_bankmachine2_trascon_ready = 1'd0;
@@ -1409,56 +1420,11 @@ reg     [2:0] main_litedramcore_bankmachine2_twtpcon_count = 3'd0;
 (* dont_touch = "true" *)
 reg           main_litedramcore_bankmachine2_twtpcon_ready = 1'd0;
 wire          main_litedramcore_bankmachine2_twtpcon_valid;
+reg     [2:0] main_litedramcore_bankmachine2_wrport_adr = 3'd0;
+wire   [23:0] main_litedramcore_bankmachine2_wrport_dat_r;
+wire   [23:0] main_litedramcore_bankmachine2_wrport_dat_w;
+wire          main_litedramcore_bankmachine2_wrport_we;
 reg           main_litedramcore_bankmachine3_auto_precharge = 1'd0;
-wire          main_litedramcore_bankmachine3_cmd_buffer_lookahead_level;
-wire          main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_sink_first;
-wire          main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_sink_last;
-wire   [20:0] main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_sink_payload_addr;
-wire          main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_sink_payload_we;
-wire          main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_sink_ready;
-wire          main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_sink_valid;
-reg           main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_first = 1'd0;
-reg           main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_last = 1'd0;
-reg    [20:0] main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_payload_addr = 21'd0;
-reg           main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_payload_we = 1'd0;
-wire          main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_ready;
-reg           main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_valid = 1'd0;
-reg           main_litedramcore_bankmachine3_cmd_buffer_lookahead_sink_sink_first = 1'd0;
-reg           main_litedramcore_bankmachine3_cmd_buffer_lookahead_sink_sink_last = 1'd0;
-wire   [20:0] main_litedramcore_bankmachine3_cmd_buffer_lookahead_sink_sink_payload_addr;
-wire          main_litedramcore_bankmachine3_cmd_buffer_lookahead_sink_sink_payload_we;
-wire          main_litedramcore_bankmachine3_cmd_buffer_lookahead_sink_sink_ready;
-wire          main_litedramcore_bankmachine3_cmd_buffer_lookahead_sink_sink_valid;
-wire          main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_first;
-wire          main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_last;
-wire   [20:0] main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_payload_addr;
-wire          main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_payload_we;
-wire          main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_ready;
-wire          main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_valid;
-wire          main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_sink_first;
-wire          main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_sink_last;
-wire   [20:0] main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_sink_payload_addr;
-wire          main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_sink_payload_we;
-wire          main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_sink_ready;
-wire          main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_sink_valid;
-reg           main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_first = 1'd0;
-reg           main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_last = 1'd0;
-reg    [20:0] main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_payload_addr = 21'd0;
-reg           main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_payload_we = 1'd0;
-wire          main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_ready;
-reg           main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_valid = 1'd0;
-wire          main_litedramcore_bankmachine3_cmd_buffer_sink_sink_first;
-wire          main_litedramcore_bankmachine3_cmd_buffer_sink_sink_last;
-wire   [20:0] main_litedramcore_bankmachine3_cmd_buffer_sink_sink_payload_addr;
-wire          main_litedramcore_bankmachine3_cmd_buffer_sink_sink_payload_we;
-wire          main_litedramcore_bankmachine3_cmd_buffer_sink_sink_ready;
-wire          main_litedramcore_bankmachine3_cmd_buffer_sink_sink_valid;
-wire          main_litedramcore_bankmachine3_cmd_buffer_source_source_first;
-wire          main_litedramcore_bankmachine3_cmd_buffer_source_source_last;
-wire   [20:0] main_litedramcore_bankmachine3_cmd_buffer_source_source_payload_addr;
-wire          main_litedramcore_bankmachine3_cmd_buffer_source_source_payload_we;
-wire          main_litedramcore_bankmachine3_cmd_buffer_source_source_ready;
-wire          main_litedramcore_bankmachine3_cmd_buffer_source_source_valid;
 reg    [13:0] main_litedramcore_bankmachine3_cmd_payload_a = 14'd0;
 wire    [2:0] main_litedramcore_bankmachine3_cmd_payload_ba;
 reg           main_litedramcore_bankmachine3_cmd_payload_cas = 1'd0;
@@ -1469,8 +1435,35 @@ reg           main_litedramcore_bankmachine3_cmd_payload_ras = 1'd0;
 reg           main_litedramcore_bankmachine3_cmd_payload_we = 1'd0;
 reg           main_litedramcore_bankmachine3_cmd_ready = 1'd0;
 reg           main_litedramcore_bankmachine3_cmd_valid = 1'd0;
+reg     [2:0] main_litedramcore_bankmachine3_consume = 3'd0;
+wire          main_litedramcore_bankmachine3_do_read;
+wire          main_litedramcore_bankmachine3_fifo_in_first;
+wire          main_litedramcore_bankmachine3_fifo_in_last;
+wire   [20:0] main_litedramcore_bankmachine3_fifo_in_payload_addr;
+wire          main_litedramcore_bankmachine3_fifo_in_payload_we;
+wire          main_litedramcore_bankmachine3_fifo_out_first;
+wire          main_litedramcore_bankmachine3_fifo_out_last;
+wire   [20:0] main_litedramcore_bankmachine3_fifo_out_payload_addr;
+wire          main_litedramcore_bankmachine3_fifo_out_payload_we;
+reg     [3:0] main_litedramcore_bankmachine3_level = 4'd0;
+wire          main_litedramcore_bankmachine3_pipe_valid_sink_first;
+wire          main_litedramcore_bankmachine3_pipe_valid_sink_last;
+wire   [20:0] main_litedramcore_bankmachine3_pipe_valid_sink_payload_addr;
+wire          main_litedramcore_bankmachine3_pipe_valid_sink_payload_we;
+wire          main_litedramcore_bankmachine3_pipe_valid_sink_ready;
+wire          main_litedramcore_bankmachine3_pipe_valid_sink_valid;
+reg           main_litedramcore_bankmachine3_pipe_valid_source_first = 1'd0;
+reg           main_litedramcore_bankmachine3_pipe_valid_source_last = 1'd0;
+reg    [20:0] main_litedramcore_bankmachine3_pipe_valid_source_payload_addr = 21'd0;
+reg           main_litedramcore_bankmachine3_pipe_valid_source_payload_we = 1'd0;
+wire          main_litedramcore_bankmachine3_pipe_valid_source_ready;
+reg           main_litedramcore_bankmachine3_pipe_valid_source_valid = 1'd0;
+reg     [2:0] main_litedramcore_bankmachine3_produce = 3'd0;
+wire    [2:0] main_litedramcore_bankmachine3_rdport_adr;
+wire   [23:0] main_litedramcore_bankmachine3_rdport_dat_r;
 reg           main_litedramcore_bankmachine3_refresh_gnt = 1'd0;
 wire          main_litedramcore_bankmachine3_refresh_req;
+reg           main_litedramcore_bankmachine3_replace = 1'd0;
 wire   [20:0] main_litedramcore_bankmachine3_req_addr;
 wire          main_litedramcore_bankmachine3_req_lock;
 reg           main_litedramcore_bankmachine3_req_rdata_valid = 1'd0;
@@ -1484,6 +1477,36 @@ reg           main_litedramcore_bankmachine3_row_col_n_addr_sel = 1'd0;
 wire          main_litedramcore_bankmachine3_row_hit;
 reg           main_litedramcore_bankmachine3_row_open = 1'd0;
 reg           main_litedramcore_bankmachine3_row_opened = 1'd0;
+reg           main_litedramcore_bankmachine3_sink_first = 1'd0;
+reg           main_litedramcore_bankmachine3_sink_last = 1'd0;
+wire   [20:0] main_litedramcore_bankmachine3_sink_payload_addr;
+wire          main_litedramcore_bankmachine3_sink_payload_we;
+wire          main_litedramcore_bankmachine3_sink_ready;
+wire          main_litedramcore_bankmachine3_sink_sink_first;
+wire          main_litedramcore_bankmachine3_sink_sink_last;
+wire   [20:0] main_litedramcore_bankmachine3_sink_sink_payload_addr;
+wire          main_litedramcore_bankmachine3_sink_sink_payload_we;
+wire          main_litedramcore_bankmachine3_sink_sink_ready;
+wire          main_litedramcore_bankmachine3_sink_sink_valid;
+wire          main_litedramcore_bankmachine3_sink_valid;
+wire          main_litedramcore_bankmachine3_source_first;
+wire          main_litedramcore_bankmachine3_source_last;
+wire   [20:0] main_litedramcore_bankmachine3_source_payload_addr;
+wire          main_litedramcore_bankmachine3_source_payload_we;
+wire          main_litedramcore_bankmachine3_source_ready;
+wire          main_litedramcore_bankmachine3_source_source_first;
+wire          main_litedramcore_bankmachine3_source_source_last;
+wire   [20:0] main_litedramcore_bankmachine3_source_source_payload_addr;
+wire          main_litedramcore_bankmachine3_source_source_payload_we;
+wire          main_litedramcore_bankmachine3_source_source_ready;
+wire          main_litedramcore_bankmachine3_source_source_valid;
+wire          main_litedramcore_bankmachine3_source_valid;
+wire   [23:0] main_litedramcore_bankmachine3_syncfifo3_din;
+wire   [23:0] main_litedramcore_bankmachine3_syncfifo3_dout;
+wire          main_litedramcore_bankmachine3_syncfifo3_re;
+wire          main_litedramcore_bankmachine3_syncfifo3_readable;
+wire          main_litedramcore_bankmachine3_syncfifo3_we;
+wire          main_litedramcore_bankmachine3_syncfifo3_writable;
 reg     [2:0] main_litedramcore_bankmachine3_trascon_count = 3'd0;
 (* dont_touch = "true" *)
 reg           main_litedramcore_bankmachine3_trascon_ready = 1'd0;
@@ -1496,56 +1519,11 @@ reg     [2:0] main_litedramcore_bankmachine3_twtpcon_count = 3'd0;
 (* dont_touch = "true" *)
 reg           main_litedramcore_bankmachine3_twtpcon_ready = 1'd0;
 wire          main_litedramcore_bankmachine3_twtpcon_valid;
+reg     [2:0] main_litedramcore_bankmachine3_wrport_adr = 3'd0;
+wire   [23:0] main_litedramcore_bankmachine3_wrport_dat_r;
+wire   [23:0] main_litedramcore_bankmachine3_wrport_dat_w;
+wire          main_litedramcore_bankmachine3_wrport_we;
 reg           main_litedramcore_bankmachine4_auto_precharge = 1'd0;
-wire          main_litedramcore_bankmachine4_cmd_buffer_lookahead_level;
-wire          main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_sink_first;
-wire          main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_sink_last;
-wire   [20:0] main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_sink_payload_addr;
-wire          main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_sink_payload_we;
-wire          main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_sink_ready;
-wire          main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_sink_valid;
-reg           main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_first = 1'd0;
-reg           main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_last = 1'd0;
-reg    [20:0] main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_payload_addr = 21'd0;
-reg           main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_payload_we = 1'd0;
-wire          main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_ready;
-reg           main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_valid = 1'd0;
-reg           main_litedramcore_bankmachine4_cmd_buffer_lookahead_sink_sink_first = 1'd0;
-reg           main_litedramcore_bankmachine4_cmd_buffer_lookahead_sink_sink_last = 1'd0;
-wire   [20:0] main_litedramcore_bankmachine4_cmd_buffer_lookahead_sink_sink_payload_addr;
-wire          main_litedramcore_bankmachine4_cmd_buffer_lookahead_sink_sink_payload_we;
-wire          main_litedramcore_bankmachine4_cmd_buffer_lookahead_sink_sink_ready;
-wire          main_litedramcore_bankmachine4_cmd_buffer_lookahead_sink_sink_valid;
-wire          main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_first;
-wire          main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_last;
-wire   [20:0] main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_payload_addr;
-wire          main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_payload_we;
-wire          main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_ready;
-wire          main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_valid;
-wire          main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_sink_first;
-wire          main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_sink_last;
-wire   [20:0] main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_sink_payload_addr;
-wire          main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_sink_payload_we;
-wire          main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_sink_ready;
-wire          main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_sink_valid;
-reg           main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_first = 1'd0;
-reg           main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_last = 1'd0;
-reg    [20:0] main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_payload_addr = 21'd0;
-reg           main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_payload_we = 1'd0;
-wire          main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_ready;
-reg           main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_valid = 1'd0;
-wire          main_litedramcore_bankmachine4_cmd_buffer_sink_sink_first;
-wire          main_litedramcore_bankmachine4_cmd_buffer_sink_sink_last;
-wire   [20:0] main_litedramcore_bankmachine4_cmd_buffer_sink_sink_payload_addr;
-wire          main_litedramcore_bankmachine4_cmd_buffer_sink_sink_payload_we;
-wire          main_litedramcore_bankmachine4_cmd_buffer_sink_sink_ready;
-wire          main_litedramcore_bankmachine4_cmd_buffer_sink_sink_valid;
-wire          main_litedramcore_bankmachine4_cmd_buffer_source_source_first;
-wire          main_litedramcore_bankmachine4_cmd_buffer_source_source_last;
-wire   [20:0] main_litedramcore_bankmachine4_cmd_buffer_source_source_payload_addr;
-wire          main_litedramcore_bankmachine4_cmd_buffer_source_source_payload_we;
-wire          main_litedramcore_bankmachine4_cmd_buffer_source_source_ready;
-wire          main_litedramcore_bankmachine4_cmd_buffer_source_source_valid;
 reg    [13:0] main_litedramcore_bankmachine4_cmd_payload_a = 14'd0;
 wire    [2:0] main_litedramcore_bankmachine4_cmd_payload_ba;
 reg           main_litedramcore_bankmachine4_cmd_payload_cas = 1'd0;
@@ -1556,8 +1534,35 @@ reg           main_litedramcore_bankmachine4_cmd_payload_ras = 1'd0;
 reg           main_litedramcore_bankmachine4_cmd_payload_we = 1'd0;
 reg           main_litedramcore_bankmachine4_cmd_ready = 1'd0;
 reg           main_litedramcore_bankmachine4_cmd_valid = 1'd0;
+reg     [2:0] main_litedramcore_bankmachine4_consume = 3'd0;
+wire          main_litedramcore_bankmachine4_do_read;
+wire          main_litedramcore_bankmachine4_fifo_in_first;
+wire          main_litedramcore_bankmachine4_fifo_in_last;
+wire   [20:0] main_litedramcore_bankmachine4_fifo_in_payload_addr;
+wire          main_litedramcore_bankmachine4_fifo_in_payload_we;
+wire          main_litedramcore_bankmachine4_fifo_out_first;
+wire          main_litedramcore_bankmachine4_fifo_out_last;
+wire   [20:0] main_litedramcore_bankmachine4_fifo_out_payload_addr;
+wire          main_litedramcore_bankmachine4_fifo_out_payload_we;
+reg     [3:0] main_litedramcore_bankmachine4_level = 4'd0;
+wire          main_litedramcore_bankmachine4_pipe_valid_sink_first;
+wire          main_litedramcore_bankmachine4_pipe_valid_sink_last;
+wire   [20:0] main_litedramcore_bankmachine4_pipe_valid_sink_payload_addr;
+wire          main_litedramcore_bankmachine4_pipe_valid_sink_payload_we;
+wire          main_litedramcore_bankmachine4_pipe_valid_sink_ready;
+wire          main_litedramcore_bankmachine4_pipe_valid_sink_valid;
+reg           main_litedramcore_bankmachine4_pipe_valid_source_first = 1'd0;
+reg           main_litedramcore_bankmachine4_pipe_valid_source_last = 1'd0;
+reg    [20:0] main_litedramcore_bankmachine4_pipe_valid_source_payload_addr = 21'd0;
+reg           main_litedramcore_bankmachine4_pipe_valid_source_payload_we = 1'd0;
+wire          main_litedramcore_bankmachine4_pipe_valid_source_ready;
+reg           main_litedramcore_bankmachine4_pipe_valid_source_valid = 1'd0;
+reg     [2:0] main_litedramcore_bankmachine4_produce = 3'd0;
+wire    [2:0] main_litedramcore_bankmachine4_rdport_adr;
+wire   [23:0] main_litedramcore_bankmachine4_rdport_dat_r;
 reg           main_litedramcore_bankmachine4_refresh_gnt = 1'd0;
 wire          main_litedramcore_bankmachine4_refresh_req;
+reg           main_litedramcore_bankmachine4_replace = 1'd0;
 wire   [20:0] main_litedramcore_bankmachine4_req_addr;
 wire          main_litedramcore_bankmachine4_req_lock;
 reg           main_litedramcore_bankmachine4_req_rdata_valid = 1'd0;
@@ -1571,6 +1576,36 @@ reg           main_litedramcore_bankmachine4_row_col_n_addr_sel = 1'd0;
 wire          main_litedramcore_bankmachine4_row_hit;
 reg           main_litedramcore_bankmachine4_row_open = 1'd0;
 reg           main_litedramcore_bankmachine4_row_opened = 1'd0;
+reg           main_litedramcore_bankmachine4_sink_first = 1'd0;
+reg           main_litedramcore_bankmachine4_sink_last = 1'd0;
+wire   [20:0] main_litedramcore_bankmachine4_sink_payload_addr;
+wire          main_litedramcore_bankmachine4_sink_payload_we;
+wire          main_litedramcore_bankmachine4_sink_ready;
+wire          main_litedramcore_bankmachine4_sink_sink_first;
+wire          main_litedramcore_bankmachine4_sink_sink_last;
+wire   [20:0] main_litedramcore_bankmachine4_sink_sink_payload_addr;
+wire          main_litedramcore_bankmachine4_sink_sink_payload_we;
+wire          main_litedramcore_bankmachine4_sink_sink_ready;
+wire          main_litedramcore_bankmachine4_sink_sink_valid;
+wire          main_litedramcore_bankmachine4_sink_valid;
+wire          main_litedramcore_bankmachine4_source_first;
+wire          main_litedramcore_bankmachine4_source_last;
+wire   [20:0] main_litedramcore_bankmachine4_source_payload_addr;
+wire          main_litedramcore_bankmachine4_source_payload_we;
+wire          main_litedramcore_bankmachine4_source_ready;
+wire          main_litedramcore_bankmachine4_source_source_first;
+wire          main_litedramcore_bankmachine4_source_source_last;
+wire   [20:0] main_litedramcore_bankmachine4_source_source_payload_addr;
+wire          main_litedramcore_bankmachine4_source_source_payload_we;
+wire          main_litedramcore_bankmachine4_source_source_ready;
+wire          main_litedramcore_bankmachine4_source_source_valid;
+wire          main_litedramcore_bankmachine4_source_valid;
+wire   [23:0] main_litedramcore_bankmachine4_syncfifo4_din;
+wire   [23:0] main_litedramcore_bankmachine4_syncfifo4_dout;
+wire          main_litedramcore_bankmachine4_syncfifo4_re;
+wire          main_litedramcore_bankmachine4_syncfifo4_readable;
+wire          main_litedramcore_bankmachine4_syncfifo4_we;
+wire          main_litedramcore_bankmachine4_syncfifo4_writable;
 reg     [2:0] main_litedramcore_bankmachine4_trascon_count = 3'd0;
 (* dont_touch = "true" *)
 reg           main_litedramcore_bankmachine4_trascon_ready = 1'd0;
@@ -1583,56 +1618,11 @@ reg     [2:0] main_litedramcore_bankmachine4_twtpcon_count = 3'd0;
 (* dont_touch = "true" *)
 reg           main_litedramcore_bankmachine4_twtpcon_ready = 1'd0;
 wire          main_litedramcore_bankmachine4_twtpcon_valid;
+reg     [2:0] main_litedramcore_bankmachine4_wrport_adr = 3'd0;
+wire   [23:0] main_litedramcore_bankmachine4_wrport_dat_r;
+wire   [23:0] main_litedramcore_bankmachine4_wrport_dat_w;
+wire          main_litedramcore_bankmachine4_wrport_we;
 reg           main_litedramcore_bankmachine5_auto_precharge = 1'd0;
-wire          main_litedramcore_bankmachine5_cmd_buffer_lookahead_level;
-wire          main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_sink_first;
-wire          main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_sink_last;
-wire   [20:0] main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_sink_payload_addr;
-wire          main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_sink_payload_we;
-wire          main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_sink_ready;
-wire          main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_sink_valid;
-reg           main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_first = 1'd0;
-reg           main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_last = 1'd0;
-reg    [20:0] main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_payload_addr = 21'd0;
-reg           main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_payload_we = 1'd0;
-wire          main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_ready;
-reg           main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_valid = 1'd0;
-reg           main_litedramcore_bankmachine5_cmd_buffer_lookahead_sink_sink_first = 1'd0;
-reg           main_litedramcore_bankmachine5_cmd_buffer_lookahead_sink_sink_last = 1'd0;
-wire   [20:0] main_litedramcore_bankmachine5_cmd_buffer_lookahead_sink_sink_payload_addr;
-wire          main_litedramcore_bankmachine5_cmd_buffer_lookahead_sink_sink_payload_we;
-wire          main_litedramcore_bankmachine5_cmd_buffer_lookahead_sink_sink_ready;
-wire          main_litedramcore_bankmachine5_cmd_buffer_lookahead_sink_sink_valid;
-wire          main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_first;
-wire          main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_last;
-wire   [20:0] main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_payload_addr;
-wire          main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_payload_we;
-wire          main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_ready;
-wire          main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_valid;
-wire          main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_sink_first;
-wire          main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_sink_last;
-wire   [20:0] main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_sink_payload_addr;
-wire          main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_sink_payload_we;
-wire          main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_sink_ready;
-wire          main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_sink_valid;
-reg           main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_first = 1'd0;
-reg           main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_last = 1'd0;
-reg    [20:0] main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_payload_addr = 21'd0;
-reg           main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_payload_we = 1'd0;
-wire          main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_ready;
-reg           main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_valid = 1'd0;
-wire          main_litedramcore_bankmachine5_cmd_buffer_sink_sink_first;
-wire          main_litedramcore_bankmachine5_cmd_buffer_sink_sink_last;
-wire   [20:0] main_litedramcore_bankmachine5_cmd_buffer_sink_sink_payload_addr;
-wire          main_litedramcore_bankmachine5_cmd_buffer_sink_sink_payload_we;
-wire          main_litedramcore_bankmachine5_cmd_buffer_sink_sink_ready;
-wire          main_litedramcore_bankmachine5_cmd_buffer_sink_sink_valid;
-wire          main_litedramcore_bankmachine5_cmd_buffer_source_source_first;
-wire          main_litedramcore_bankmachine5_cmd_buffer_source_source_last;
-wire   [20:0] main_litedramcore_bankmachine5_cmd_buffer_source_source_payload_addr;
-wire          main_litedramcore_bankmachine5_cmd_buffer_source_source_payload_we;
-wire          main_litedramcore_bankmachine5_cmd_buffer_source_source_ready;
-wire          main_litedramcore_bankmachine5_cmd_buffer_source_source_valid;
 reg    [13:0] main_litedramcore_bankmachine5_cmd_payload_a = 14'd0;
 wire    [2:0] main_litedramcore_bankmachine5_cmd_payload_ba;
 reg           main_litedramcore_bankmachine5_cmd_payload_cas = 1'd0;
@@ -1643,8 +1633,35 @@ reg           main_litedramcore_bankmachine5_cmd_payload_ras = 1'd0;
 reg           main_litedramcore_bankmachine5_cmd_payload_we = 1'd0;
 reg           main_litedramcore_bankmachine5_cmd_ready = 1'd0;
 reg           main_litedramcore_bankmachine5_cmd_valid = 1'd0;
+reg     [2:0] main_litedramcore_bankmachine5_consume = 3'd0;
+wire          main_litedramcore_bankmachine5_do_read;
+wire          main_litedramcore_bankmachine5_fifo_in_first;
+wire          main_litedramcore_bankmachine5_fifo_in_last;
+wire   [20:0] main_litedramcore_bankmachine5_fifo_in_payload_addr;
+wire          main_litedramcore_bankmachine5_fifo_in_payload_we;
+wire          main_litedramcore_bankmachine5_fifo_out_first;
+wire          main_litedramcore_bankmachine5_fifo_out_last;
+wire   [20:0] main_litedramcore_bankmachine5_fifo_out_payload_addr;
+wire          main_litedramcore_bankmachine5_fifo_out_payload_we;
+reg     [3:0] main_litedramcore_bankmachine5_level = 4'd0;
+wire          main_litedramcore_bankmachine5_pipe_valid_sink_first;
+wire          main_litedramcore_bankmachine5_pipe_valid_sink_last;
+wire   [20:0] main_litedramcore_bankmachine5_pipe_valid_sink_payload_addr;
+wire          main_litedramcore_bankmachine5_pipe_valid_sink_payload_we;
+wire          main_litedramcore_bankmachine5_pipe_valid_sink_ready;
+wire          main_litedramcore_bankmachine5_pipe_valid_sink_valid;
+reg           main_litedramcore_bankmachine5_pipe_valid_source_first = 1'd0;
+reg           main_litedramcore_bankmachine5_pipe_valid_source_last = 1'd0;
+reg    [20:0] main_litedramcore_bankmachine5_pipe_valid_source_payload_addr = 21'd0;
+reg           main_litedramcore_bankmachine5_pipe_valid_source_payload_we = 1'd0;
+wire          main_litedramcore_bankmachine5_pipe_valid_source_ready;
+reg           main_litedramcore_bankmachine5_pipe_valid_source_valid = 1'd0;
+reg     [2:0] main_litedramcore_bankmachine5_produce = 3'd0;
+wire    [2:0] main_litedramcore_bankmachine5_rdport_adr;
+wire   [23:0] main_litedramcore_bankmachine5_rdport_dat_r;
 reg           main_litedramcore_bankmachine5_refresh_gnt = 1'd0;
 wire          main_litedramcore_bankmachine5_refresh_req;
+reg           main_litedramcore_bankmachine5_replace = 1'd0;
 wire   [20:0] main_litedramcore_bankmachine5_req_addr;
 wire          main_litedramcore_bankmachine5_req_lock;
 reg           main_litedramcore_bankmachine5_req_rdata_valid = 1'd0;
@@ -1658,6 +1675,36 @@ reg           main_litedramcore_bankmachine5_row_col_n_addr_sel = 1'd0;
 wire          main_litedramcore_bankmachine5_row_hit;
 reg           main_litedramcore_bankmachine5_row_open = 1'd0;
 reg           main_litedramcore_bankmachine5_row_opened = 1'd0;
+reg           main_litedramcore_bankmachine5_sink_first = 1'd0;
+reg           main_litedramcore_bankmachine5_sink_last = 1'd0;
+wire   [20:0] main_litedramcore_bankmachine5_sink_payload_addr;
+wire          main_litedramcore_bankmachine5_sink_payload_we;
+wire          main_litedramcore_bankmachine5_sink_ready;
+wire          main_litedramcore_bankmachine5_sink_sink_first;
+wire          main_litedramcore_bankmachine5_sink_sink_last;
+wire   [20:0] main_litedramcore_bankmachine5_sink_sink_payload_addr;
+wire          main_litedramcore_bankmachine5_sink_sink_payload_we;
+wire          main_litedramcore_bankmachine5_sink_sink_ready;
+wire          main_litedramcore_bankmachine5_sink_sink_valid;
+wire          main_litedramcore_bankmachine5_sink_valid;
+wire          main_litedramcore_bankmachine5_source_first;
+wire          main_litedramcore_bankmachine5_source_last;
+wire   [20:0] main_litedramcore_bankmachine5_source_payload_addr;
+wire          main_litedramcore_bankmachine5_source_payload_we;
+wire          main_litedramcore_bankmachine5_source_ready;
+wire          main_litedramcore_bankmachine5_source_source_first;
+wire          main_litedramcore_bankmachine5_source_source_last;
+wire   [20:0] main_litedramcore_bankmachine5_source_source_payload_addr;
+wire          main_litedramcore_bankmachine5_source_source_payload_we;
+wire          main_litedramcore_bankmachine5_source_source_ready;
+wire          main_litedramcore_bankmachine5_source_source_valid;
+wire          main_litedramcore_bankmachine5_source_valid;
+wire   [23:0] main_litedramcore_bankmachine5_syncfifo5_din;
+wire   [23:0] main_litedramcore_bankmachine5_syncfifo5_dout;
+wire          main_litedramcore_bankmachine5_syncfifo5_re;
+wire          main_litedramcore_bankmachine5_syncfifo5_readable;
+wire          main_litedramcore_bankmachine5_syncfifo5_we;
+wire          main_litedramcore_bankmachine5_syncfifo5_writable;
 reg     [2:0] main_litedramcore_bankmachine5_trascon_count = 3'd0;
 (* dont_touch = "true" *)
 reg           main_litedramcore_bankmachine5_trascon_ready = 1'd0;
@@ -1670,56 +1717,11 @@ reg     [2:0] main_litedramcore_bankmachine5_twtpcon_count = 3'd0;
 (* dont_touch = "true" *)
 reg           main_litedramcore_bankmachine5_twtpcon_ready = 1'd0;
 wire          main_litedramcore_bankmachine5_twtpcon_valid;
+reg     [2:0] main_litedramcore_bankmachine5_wrport_adr = 3'd0;
+wire   [23:0] main_litedramcore_bankmachine5_wrport_dat_r;
+wire   [23:0] main_litedramcore_bankmachine5_wrport_dat_w;
+wire          main_litedramcore_bankmachine5_wrport_we;
 reg           main_litedramcore_bankmachine6_auto_precharge = 1'd0;
-wire          main_litedramcore_bankmachine6_cmd_buffer_lookahead_level;
-wire          main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_sink_first;
-wire          main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_sink_last;
-wire   [20:0] main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_sink_payload_addr;
-wire          main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_sink_payload_we;
-wire          main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_sink_ready;
-wire          main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_sink_valid;
-reg           main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_first = 1'd0;
-reg           main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_last = 1'd0;
-reg    [20:0] main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_payload_addr = 21'd0;
-reg           main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_payload_we = 1'd0;
-wire          main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_ready;
-reg           main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_valid = 1'd0;
-reg           main_litedramcore_bankmachine6_cmd_buffer_lookahead_sink_sink_first = 1'd0;
-reg           main_litedramcore_bankmachine6_cmd_buffer_lookahead_sink_sink_last = 1'd0;
-wire   [20:0] main_litedramcore_bankmachine6_cmd_buffer_lookahead_sink_sink_payload_addr;
-wire          main_litedramcore_bankmachine6_cmd_buffer_lookahead_sink_sink_payload_we;
-wire          main_litedramcore_bankmachine6_cmd_buffer_lookahead_sink_sink_ready;
-wire          main_litedramcore_bankmachine6_cmd_buffer_lookahead_sink_sink_valid;
-wire          main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_first;
-wire          main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_last;
-wire   [20:0] main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_payload_addr;
-wire          main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_payload_we;
-wire          main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_ready;
-wire          main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_valid;
-wire          main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_sink_first;
-wire          main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_sink_last;
-wire   [20:0] main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_sink_payload_addr;
-wire          main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_sink_payload_we;
-wire          main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_sink_ready;
-wire          main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_sink_valid;
-reg           main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_first = 1'd0;
-reg           main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_last = 1'd0;
-reg    [20:0] main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_payload_addr = 21'd0;
-reg           main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_payload_we = 1'd0;
-wire          main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_ready;
-reg           main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_valid = 1'd0;
-wire          main_litedramcore_bankmachine6_cmd_buffer_sink_sink_first;
-wire          main_litedramcore_bankmachine6_cmd_buffer_sink_sink_last;
-wire   [20:0] main_litedramcore_bankmachine6_cmd_buffer_sink_sink_payload_addr;
-wire          main_litedramcore_bankmachine6_cmd_buffer_sink_sink_payload_we;
-wire          main_litedramcore_bankmachine6_cmd_buffer_sink_sink_ready;
-wire          main_litedramcore_bankmachine6_cmd_buffer_sink_sink_valid;
-wire          main_litedramcore_bankmachine6_cmd_buffer_source_source_first;
-wire          main_litedramcore_bankmachine6_cmd_buffer_source_source_last;
-wire   [20:0] main_litedramcore_bankmachine6_cmd_buffer_source_source_payload_addr;
-wire          main_litedramcore_bankmachine6_cmd_buffer_source_source_payload_we;
-wire          main_litedramcore_bankmachine6_cmd_buffer_source_source_ready;
-wire          main_litedramcore_bankmachine6_cmd_buffer_source_source_valid;
 reg    [13:0] main_litedramcore_bankmachine6_cmd_payload_a = 14'd0;
 wire    [2:0] main_litedramcore_bankmachine6_cmd_payload_ba;
 reg           main_litedramcore_bankmachine6_cmd_payload_cas = 1'd0;
@@ -1730,8 +1732,35 @@ reg           main_litedramcore_bankmachine6_cmd_payload_ras = 1'd0;
 reg           main_litedramcore_bankmachine6_cmd_payload_we = 1'd0;
 reg           main_litedramcore_bankmachine6_cmd_ready = 1'd0;
 reg           main_litedramcore_bankmachine6_cmd_valid = 1'd0;
+reg     [2:0] main_litedramcore_bankmachine6_consume = 3'd0;
+wire          main_litedramcore_bankmachine6_do_read;
+wire          main_litedramcore_bankmachine6_fifo_in_first;
+wire          main_litedramcore_bankmachine6_fifo_in_last;
+wire   [20:0] main_litedramcore_bankmachine6_fifo_in_payload_addr;
+wire          main_litedramcore_bankmachine6_fifo_in_payload_we;
+wire          main_litedramcore_bankmachine6_fifo_out_first;
+wire          main_litedramcore_bankmachine6_fifo_out_last;
+wire   [20:0] main_litedramcore_bankmachine6_fifo_out_payload_addr;
+wire          main_litedramcore_bankmachine6_fifo_out_payload_we;
+reg     [3:0] main_litedramcore_bankmachine6_level = 4'd0;
+wire          main_litedramcore_bankmachine6_pipe_valid_sink_first;
+wire          main_litedramcore_bankmachine6_pipe_valid_sink_last;
+wire   [20:0] main_litedramcore_bankmachine6_pipe_valid_sink_payload_addr;
+wire          main_litedramcore_bankmachine6_pipe_valid_sink_payload_we;
+wire          main_litedramcore_bankmachine6_pipe_valid_sink_ready;
+wire          main_litedramcore_bankmachine6_pipe_valid_sink_valid;
+reg           main_litedramcore_bankmachine6_pipe_valid_source_first = 1'd0;
+reg           main_litedramcore_bankmachine6_pipe_valid_source_last = 1'd0;
+reg    [20:0] main_litedramcore_bankmachine6_pipe_valid_source_payload_addr = 21'd0;
+reg           main_litedramcore_bankmachine6_pipe_valid_source_payload_we = 1'd0;
+wire          main_litedramcore_bankmachine6_pipe_valid_source_ready;
+reg           main_litedramcore_bankmachine6_pipe_valid_source_valid = 1'd0;
+reg     [2:0] main_litedramcore_bankmachine6_produce = 3'd0;
+wire    [2:0] main_litedramcore_bankmachine6_rdport_adr;
+wire   [23:0] main_litedramcore_bankmachine6_rdport_dat_r;
 reg           main_litedramcore_bankmachine6_refresh_gnt = 1'd0;
 wire          main_litedramcore_bankmachine6_refresh_req;
+reg           main_litedramcore_bankmachine6_replace = 1'd0;
 wire   [20:0] main_litedramcore_bankmachine6_req_addr;
 wire          main_litedramcore_bankmachine6_req_lock;
 reg           main_litedramcore_bankmachine6_req_rdata_valid = 1'd0;
@@ -1745,6 +1774,36 @@ reg           main_litedramcore_bankmachine6_row_col_n_addr_sel = 1'd0;
 wire          main_litedramcore_bankmachine6_row_hit;
 reg           main_litedramcore_bankmachine6_row_open = 1'd0;
 reg           main_litedramcore_bankmachine6_row_opened = 1'd0;
+reg           main_litedramcore_bankmachine6_sink_first = 1'd0;
+reg           main_litedramcore_bankmachine6_sink_last = 1'd0;
+wire   [20:0] main_litedramcore_bankmachine6_sink_payload_addr;
+wire          main_litedramcore_bankmachine6_sink_payload_we;
+wire          main_litedramcore_bankmachine6_sink_ready;
+wire          main_litedramcore_bankmachine6_sink_sink_first;
+wire          main_litedramcore_bankmachine6_sink_sink_last;
+wire   [20:0] main_litedramcore_bankmachine6_sink_sink_payload_addr;
+wire          main_litedramcore_bankmachine6_sink_sink_payload_we;
+wire          main_litedramcore_bankmachine6_sink_sink_ready;
+wire          main_litedramcore_bankmachine6_sink_sink_valid;
+wire          main_litedramcore_bankmachine6_sink_valid;
+wire          main_litedramcore_bankmachine6_source_first;
+wire          main_litedramcore_bankmachine6_source_last;
+wire   [20:0] main_litedramcore_bankmachine6_source_payload_addr;
+wire          main_litedramcore_bankmachine6_source_payload_we;
+wire          main_litedramcore_bankmachine6_source_ready;
+wire          main_litedramcore_bankmachine6_source_source_first;
+wire          main_litedramcore_bankmachine6_source_source_last;
+wire   [20:0] main_litedramcore_bankmachine6_source_source_payload_addr;
+wire          main_litedramcore_bankmachine6_source_source_payload_we;
+wire          main_litedramcore_bankmachine6_source_source_ready;
+wire          main_litedramcore_bankmachine6_source_source_valid;
+wire          main_litedramcore_bankmachine6_source_valid;
+wire   [23:0] main_litedramcore_bankmachine6_syncfifo6_din;
+wire   [23:0] main_litedramcore_bankmachine6_syncfifo6_dout;
+wire          main_litedramcore_bankmachine6_syncfifo6_re;
+wire          main_litedramcore_bankmachine6_syncfifo6_readable;
+wire          main_litedramcore_bankmachine6_syncfifo6_we;
+wire          main_litedramcore_bankmachine6_syncfifo6_writable;
 reg     [2:0] main_litedramcore_bankmachine6_trascon_count = 3'd0;
 (* dont_touch = "true" *)
 reg           main_litedramcore_bankmachine6_trascon_ready = 1'd0;
@@ -1757,56 +1816,11 @@ reg     [2:0] main_litedramcore_bankmachine6_twtpcon_count = 3'd0;
 (* dont_touch = "true" *)
 reg           main_litedramcore_bankmachine6_twtpcon_ready = 1'd0;
 wire          main_litedramcore_bankmachine6_twtpcon_valid;
+reg     [2:0] main_litedramcore_bankmachine6_wrport_adr = 3'd0;
+wire   [23:0] main_litedramcore_bankmachine6_wrport_dat_r;
+wire   [23:0] main_litedramcore_bankmachine6_wrport_dat_w;
+wire          main_litedramcore_bankmachine6_wrport_we;
 reg           main_litedramcore_bankmachine7_auto_precharge = 1'd0;
-wire          main_litedramcore_bankmachine7_cmd_buffer_lookahead_level;
-wire          main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_sink_first;
-wire          main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_sink_last;
-wire   [20:0] main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_sink_payload_addr;
-wire          main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_sink_payload_we;
-wire          main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_sink_ready;
-wire          main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_sink_valid;
-reg           main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_first = 1'd0;
-reg           main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_last = 1'd0;
-reg    [20:0] main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_payload_addr = 21'd0;
-reg           main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_payload_we = 1'd0;
-wire          main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_ready;
-reg           main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_valid = 1'd0;
-reg           main_litedramcore_bankmachine7_cmd_buffer_lookahead_sink_sink_first = 1'd0;
-reg           main_litedramcore_bankmachine7_cmd_buffer_lookahead_sink_sink_last = 1'd0;
-wire   [20:0] main_litedramcore_bankmachine7_cmd_buffer_lookahead_sink_sink_payload_addr;
-wire          main_litedramcore_bankmachine7_cmd_buffer_lookahead_sink_sink_payload_we;
-wire          main_litedramcore_bankmachine7_cmd_buffer_lookahead_sink_sink_ready;
-wire          main_litedramcore_bankmachine7_cmd_buffer_lookahead_sink_sink_valid;
-wire          main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_first;
-wire          main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_last;
-wire   [20:0] main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_payload_addr;
-wire          main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_payload_we;
-wire          main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_ready;
-wire          main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_valid;
-wire          main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_sink_first;
-wire          main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_sink_last;
-wire   [20:0] main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_sink_payload_addr;
-wire          main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_sink_payload_we;
-wire          main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_sink_ready;
-wire          main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_sink_valid;
-reg           main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_first = 1'd0;
-reg           main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_last = 1'd0;
-reg    [20:0] main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_payload_addr = 21'd0;
-reg           main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_payload_we = 1'd0;
-wire          main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_ready;
-reg           main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_valid = 1'd0;
-wire          main_litedramcore_bankmachine7_cmd_buffer_sink_sink_first;
-wire          main_litedramcore_bankmachine7_cmd_buffer_sink_sink_last;
-wire   [20:0] main_litedramcore_bankmachine7_cmd_buffer_sink_sink_payload_addr;
-wire          main_litedramcore_bankmachine7_cmd_buffer_sink_sink_payload_we;
-wire          main_litedramcore_bankmachine7_cmd_buffer_sink_sink_ready;
-wire          main_litedramcore_bankmachine7_cmd_buffer_sink_sink_valid;
-wire          main_litedramcore_bankmachine7_cmd_buffer_source_source_first;
-wire          main_litedramcore_bankmachine7_cmd_buffer_source_source_last;
-wire   [20:0] main_litedramcore_bankmachine7_cmd_buffer_source_source_payload_addr;
-wire          main_litedramcore_bankmachine7_cmd_buffer_source_source_payload_we;
-wire          main_litedramcore_bankmachine7_cmd_buffer_source_source_ready;
-wire          main_litedramcore_bankmachine7_cmd_buffer_source_source_valid;
 reg    [13:0] main_litedramcore_bankmachine7_cmd_payload_a = 14'd0;
 wire    [2:0] main_litedramcore_bankmachine7_cmd_payload_ba;
 reg           main_litedramcore_bankmachine7_cmd_payload_cas = 1'd0;
@@ -1817,8 +1831,35 @@ reg           main_litedramcore_bankmachine7_cmd_payload_ras = 1'd0;
 reg           main_litedramcore_bankmachine7_cmd_payload_we = 1'd0;
 reg           main_litedramcore_bankmachine7_cmd_ready = 1'd0;
 reg           main_litedramcore_bankmachine7_cmd_valid = 1'd0;
+reg     [2:0] main_litedramcore_bankmachine7_consume = 3'd0;
+wire          main_litedramcore_bankmachine7_do_read;
+wire          main_litedramcore_bankmachine7_fifo_in_first;
+wire          main_litedramcore_bankmachine7_fifo_in_last;
+wire   [20:0] main_litedramcore_bankmachine7_fifo_in_payload_addr;
+wire          main_litedramcore_bankmachine7_fifo_in_payload_we;
+wire          main_litedramcore_bankmachine7_fifo_out_first;
+wire          main_litedramcore_bankmachine7_fifo_out_last;
+wire   [20:0] main_litedramcore_bankmachine7_fifo_out_payload_addr;
+wire          main_litedramcore_bankmachine7_fifo_out_payload_we;
+reg     [3:0] main_litedramcore_bankmachine7_level = 4'd0;
+wire          main_litedramcore_bankmachine7_pipe_valid_sink_first;
+wire          main_litedramcore_bankmachine7_pipe_valid_sink_last;
+wire   [20:0] main_litedramcore_bankmachine7_pipe_valid_sink_payload_addr;
+wire          main_litedramcore_bankmachine7_pipe_valid_sink_payload_we;
+wire          main_litedramcore_bankmachine7_pipe_valid_sink_ready;
+wire          main_litedramcore_bankmachine7_pipe_valid_sink_valid;
+reg           main_litedramcore_bankmachine7_pipe_valid_source_first = 1'd0;
+reg           main_litedramcore_bankmachine7_pipe_valid_source_last = 1'd0;
+reg    [20:0] main_litedramcore_bankmachine7_pipe_valid_source_payload_addr = 21'd0;
+reg           main_litedramcore_bankmachine7_pipe_valid_source_payload_we = 1'd0;
+wire          main_litedramcore_bankmachine7_pipe_valid_source_ready;
+reg           main_litedramcore_bankmachine7_pipe_valid_source_valid = 1'd0;
+reg     [2:0] main_litedramcore_bankmachine7_produce = 3'd0;
+wire    [2:0] main_litedramcore_bankmachine7_rdport_adr;
+wire   [23:0] main_litedramcore_bankmachine7_rdport_dat_r;
 reg           main_litedramcore_bankmachine7_refresh_gnt = 1'd0;
 wire          main_litedramcore_bankmachine7_refresh_req;
+reg           main_litedramcore_bankmachine7_replace = 1'd0;
 wire   [20:0] main_litedramcore_bankmachine7_req_addr;
 wire          main_litedramcore_bankmachine7_req_lock;
 reg           main_litedramcore_bankmachine7_req_rdata_valid = 1'd0;
@@ -1832,6 +1873,36 @@ reg           main_litedramcore_bankmachine7_row_col_n_addr_sel = 1'd0;
 wire          main_litedramcore_bankmachine7_row_hit;
 reg           main_litedramcore_bankmachine7_row_open = 1'd0;
 reg           main_litedramcore_bankmachine7_row_opened = 1'd0;
+reg           main_litedramcore_bankmachine7_sink_first = 1'd0;
+reg           main_litedramcore_bankmachine7_sink_last = 1'd0;
+wire   [20:0] main_litedramcore_bankmachine7_sink_payload_addr;
+wire          main_litedramcore_bankmachine7_sink_payload_we;
+wire          main_litedramcore_bankmachine7_sink_ready;
+wire          main_litedramcore_bankmachine7_sink_sink_first;
+wire          main_litedramcore_bankmachine7_sink_sink_last;
+wire   [20:0] main_litedramcore_bankmachine7_sink_sink_payload_addr;
+wire          main_litedramcore_bankmachine7_sink_sink_payload_we;
+wire          main_litedramcore_bankmachine7_sink_sink_ready;
+wire          main_litedramcore_bankmachine7_sink_sink_valid;
+wire          main_litedramcore_bankmachine7_sink_valid;
+wire          main_litedramcore_bankmachine7_source_first;
+wire          main_litedramcore_bankmachine7_source_last;
+wire   [20:0] main_litedramcore_bankmachine7_source_payload_addr;
+wire          main_litedramcore_bankmachine7_source_payload_we;
+wire          main_litedramcore_bankmachine7_source_ready;
+wire          main_litedramcore_bankmachine7_source_source_first;
+wire          main_litedramcore_bankmachine7_source_source_last;
+wire   [20:0] main_litedramcore_bankmachine7_source_source_payload_addr;
+wire          main_litedramcore_bankmachine7_source_source_payload_we;
+wire          main_litedramcore_bankmachine7_source_source_ready;
+wire          main_litedramcore_bankmachine7_source_source_valid;
+wire          main_litedramcore_bankmachine7_source_valid;
+wire   [23:0] main_litedramcore_bankmachine7_syncfifo7_din;
+wire   [23:0] main_litedramcore_bankmachine7_syncfifo7_dout;
+wire          main_litedramcore_bankmachine7_syncfifo7_re;
+wire          main_litedramcore_bankmachine7_syncfifo7_readable;
+wire          main_litedramcore_bankmachine7_syncfifo7_we;
+wire          main_litedramcore_bankmachine7_syncfifo7_writable;
 reg     [2:0] main_litedramcore_bankmachine7_trascon_count = 3'd0;
 (* dont_touch = "true" *)
 reg           main_litedramcore_bankmachine7_trascon_ready = 1'd0;
@@ -1844,6 +1915,10 @@ reg     [2:0] main_litedramcore_bankmachine7_twtpcon_count = 3'd0;
 (* dont_touch = "true" *)
 reg           main_litedramcore_bankmachine7_twtpcon_ready = 1'd0;
 wire          main_litedramcore_bankmachine7_twtpcon_valid;
+reg     [2:0] main_litedramcore_bankmachine7_wrport_adr = 3'd0;
+wire   [23:0] main_litedramcore_bankmachine7_wrport_dat_r;
+wire   [23:0] main_litedramcore_bankmachine7_wrport_dat_w;
+wire          main_litedramcore_bankmachine7_wrport_we;
 wire          main_litedramcore_cas_allowed;
 wire          main_litedramcore_choose_cmd_ce;
 wire   [13:0] main_litedramcore_choose_cmd_cmd_payload_a;
@@ -2454,19 +2529,17 @@ wire          main_reset;
 reg     [3:0] main_reset_counter = 4'd15;
 reg           main_rst = 1'd0;
 wire          main_user_enable;
-wire          main_user_port_cmd_last;
 wire   [23:0] main_user_port_cmd_payload_addr;
 wire          main_user_port_cmd_payload_we;
 wire          main_user_port_cmd_ready;
-reg           main_user_port_cmd_valid = 1'd0;
-wire          main_user_port_flush;
+wire          main_user_port_cmd_valid;
 wire  [127:0] main_user_port_rdata_payload_data;
 wire          main_user_port_rdata_ready;
 wire          main_user_port_rdata_valid;
 wire  [127:0] main_user_port_wdata_payload_data;
 wire   [15:0] main_user_port_wdata_payload_we;
 wire          main_user_port_wdata_ready;
-reg           main_user_port_wdata_valid = 1'd0;
+wire          main_user_port_wdata_valid;
 wire          main_wb_bus_ack;
 wire   [29:0] main_wb_bus_adr;
 wire    [1:0] main_wb_bus_bte;
@@ -2478,21 +2551,6 @@ wire          main_wb_bus_err;
 wire    [3:0] main_wb_bus_sel;
 wire          main_wb_bus_stb;
 wire          main_wb_bus_we;
-reg           main_wb_port_ack = 1'd0;
-wire   [23:0] main_wb_port_adr;
-wire          main_wb_port_cyc;
-reg   [127:0] main_wb_port_dat_r = 128'd0;
-wire  [127:0] main_wb_port_dat_w;
-reg           main_wb_port_err = 1'd0;
-wire   [15:0] main_wb_port_sel;
-wire          main_wb_port_stb;
-wire          main_wb_port_we;
-reg   [127:0] main_wdata_data = 128'd0;
-reg   [127:0] main_wdata_data_litedramwishbone2native_next_value0 = 128'd0;
-reg           main_wdata_data_litedramwishbone2native_next_value_ce0 = 1'd0;
-reg    [15:0] main_wdata_we = 16'd0;
-reg    [15:0] main_wdata_we_litedramwishbone2native_next_value1 = 16'd0;
-reg           main_wdata_we_litedramwishbone2native_next_value_ce1 = 1'd0;
 wire          sys4x_clk;
 wire          sys4x_dqs_clk;
 wire          sys_clk;
@@ -2518,15 +2576,17 @@ assign wb_ctrl_err = main_wb_bus_err;
 assign user_clk = sys_clk;
 assign user_rst = sys_rst;
 assign main_user_enable = 1'd1;
-assign main_wb_port_adr = user_port_wishbone_0_adr;
-assign main_wb_port_dat_w = user_port_wishbone_0_dat_w;
-assign user_port_wishbone_0_dat_r = main_wb_port_dat_r;
-assign main_wb_port_sel = user_port_wishbone_0_sel;
-assign main_wb_port_cyc = (user_port_wishbone_0_cyc & main_user_enable);
-assign main_wb_port_stb = (user_port_wishbone_0_stb & main_user_enable);
-assign user_port_wishbone_0_ack = (main_wb_port_ack & main_user_enable);
-assign main_wb_port_we = user_port_wishbone_0_we;
-assign user_port_wishbone_0_err = main_wb_port_err;
+assign main_user_port_cmd_valid = (user_port_native_0_cmd_valid & main_user_enable);
+assign user_port_native_0_cmd_ready = (main_user_port_cmd_ready & main_user_enable);
+assign main_user_port_cmd_payload_we = user_port_native_0_cmd_we;
+assign main_user_port_cmd_payload_addr = user_port_native_0_cmd_addr;
+assign main_user_port_wdata_valid = (user_port_native_0_wdata_valid & main_user_enable);
+assign user_port_native_0_wdata_ready = (main_user_port_wdata_ready & main_user_enable);
+assign main_user_port_wdata_payload_we = user_port_native_0_wdata_we;
+assign main_user_port_wdata_payload_data = user_port_native_0_wdata_data;
+assign user_port_native_0_rdata_valid = (main_user_port_rdata_valid & main_user_enable);
+assign main_user_port_rdata_ready = (user_port_native_0_rdata_ready & main_user_enable);
+assign user_port_native_0_rdata_data = main_user_port_rdata_payload_data;
 assign builder_shared_adr = builder_rhs_self0;
 assign builder_shared_dat_w = builder_rhs_self1;
 assign builder_shared_sel = builder_rhs_self2;
@@ -4457,26 +4517,26 @@ always @(*) begin
         end
     endcase
 end
-assign main_litedramcore_bankmachine0_cmd_buffer_lookahead_sink_sink_valid = main_litedramcore_bankmachine0_req_valid;
-assign main_litedramcore_bankmachine0_req_ready = main_litedramcore_bankmachine0_cmd_buffer_lookahead_sink_sink_ready;
-assign main_litedramcore_bankmachine0_cmd_buffer_lookahead_sink_sink_payload_we = main_litedramcore_bankmachine0_req_we;
-assign main_litedramcore_bankmachine0_cmd_buffer_lookahead_sink_sink_payload_addr = main_litedramcore_bankmachine0_req_addr;
-assign main_litedramcore_bankmachine0_cmd_buffer_sink_sink_valid = main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_valid;
-assign main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_ready = main_litedramcore_bankmachine0_cmd_buffer_sink_sink_ready;
-assign main_litedramcore_bankmachine0_cmd_buffer_sink_sink_first = main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_first;
-assign main_litedramcore_bankmachine0_cmd_buffer_sink_sink_last = main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_last;
-assign main_litedramcore_bankmachine0_cmd_buffer_sink_sink_payload_we = main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_payload_we;
-assign main_litedramcore_bankmachine0_cmd_buffer_sink_sink_payload_addr = main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_payload_addr;
-assign main_litedramcore_bankmachine0_cmd_buffer_source_source_ready = (main_litedramcore_bankmachine0_req_wdata_ready | main_litedramcore_bankmachine0_req_rdata_valid);
-assign main_litedramcore_bankmachine0_req_lock = (main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_valid | main_litedramcore_bankmachine0_cmd_buffer_source_source_valid);
-assign main_litedramcore_bankmachine0_row_hit = (main_litedramcore_bankmachine0_row == main_litedramcore_bankmachine0_cmd_buffer_source_source_payload_addr[20:7]);
+assign main_litedramcore_bankmachine0_sink_valid = main_litedramcore_bankmachine0_req_valid;
+assign main_litedramcore_bankmachine0_req_ready = main_litedramcore_bankmachine0_sink_ready;
+assign main_litedramcore_bankmachine0_sink_payload_we = main_litedramcore_bankmachine0_req_we;
+assign main_litedramcore_bankmachine0_sink_payload_addr = main_litedramcore_bankmachine0_req_addr;
+assign main_litedramcore_bankmachine0_sink_sink_valid = main_litedramcore_bankmachine0_source_valid;
+assign main_litedramcore_bankmachine0_source_ready = main_litedramcore_bankmachine0_sink_sink_ready;
+assign main_litedramcore_bankmachine0_sink_sink_first = main_litedramcore_bankmachine0_source_first;
+assign main_litedramcore_bankmachine0_sink_sink_last = main_litedramcore_bankmachine0_source_last;
+assign main_litedramcore_bankmachine0_sink_sink_payload_we = main_litedramcore_bankmachine0_source_payload_we;
+assign main_litedramcore_bankmachine0_sink_sink_payload_addr = main_litedramcore_bankmachine0_source_payload_addr;
+assign main_litedramcore_bankmachine0_source_source_ready = (main_litedramcore_bankmachine0_req_wdata_ready | main_litedramcore_bankmachine0_req_rdata_valid);
+assign main_litedramcore_bankmachine0_req_lock = (main_litedramcore_bankmachine0_source_valid | main_litedramcore_bankmachine0_source_source_valid);
+assign main_litedramcore_bankmachine0_row_hit = (main_litedramcore_bankmachine0_row == main_litedramcore_bankmachine0_source_source_payload_addr[20:7]);
 assign main_litedramcore_bankmachine0_cmd_payload_ba = 1'd0;
 always @(*) begin
     main_litedramcore_bankmachine0_cmd_payload_a = 14'd0;
     if (main_litedramcore_bankmachine0_row_col_n_addr_sel) begin
-        main_litedramcore_bankmachine0_cmd_payload_a = main_litedramcore_bankmachine0_cmd_buffer_source_source_payload_addr[20:7];
+        main_litedramcore_bankmachine0_cmd_payload_a = main_litedramcore_bankmachine0_source_source_payload_addr[20:7];
     end else begin
-        main_litedramcore_bankmachine0_cmd_payload_a = ((main_litedramcore_bankmachine0_auto_precharge <<< 4'd10) | {main_litedramcore_bankmachine0_cmd_buffer_source_source_payload_addr[6:0], {3{1'd0}}});
+        main_litedramcore_bankmachine0_cmd_payload_a = ((main_litedramcore_bankmachine0_auto_precharge <<< 4'd10) | {main_litedramcore_bankmachine0_source_source_payload_addr[6:0], {3{1'd0}}});
     end
 end
 assign main_litedramcore_bankmachine0_twtpcon_valid = ((main_litedramcore_bankmachine0_cmd_valid & main_litedramcore_bankmachine0_cmd_ready) & main_litedramcore_bankmachine0_cmd_payload_is_write);
@@ -4484,39 +4544,54 @@ assign main_litedramcore_bankmachine0_trccon_valid = ((main_litedramcore_bankmac
 assign main_litedramcore_bankmachine0_trascon_valid = ((main_litedramcore_bankmachine0_cmd_valid & main_litedramcore_bankmachine0_cmd_ready) & main_litedramcore_bankmachine0_row_open);
 always @(*) begin
     main_litedramcore_bankmachine0_auto_precharge = 1'd0;
-    if ((main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_valid & main_litedramcore_bankmachine0_cmd_buffer_source_source_valid)) begin
-        if ((main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_payload_addr[20:7] != main_litedramcore_bankmachine0_cmd_buffer_source_source_payload_addr[20:7])) begin
+    if ((main_litedramcore_bankmachine0_source_valid & main_litedramcore_bankmachine0_source_source_valid)) begin
+        if ((main_litedramcore_bankmachine0_source_payload_addr[20:7] != main_litedramcore_bankmachine0_source_source_payload_addr[20:7])) begin
             main_litedramcore_bankmachine0_auto_precharge = (main_litedramcore_bankmachine0_row_close == 1'd0);
         end
     end
 end
-assign main_litedramcore_bankmachine0_cmd_buffer_lookahead_level = main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_valid;
-assign main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_valid) | main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_ready);
-assign main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_sink_valid = main_litedramcore_bankmachine0_cmd_buffer_lookahead_sink_sink_valid;
-assign main_litedramcore_bankmachine0_cmd_buffer_lookahead_sink_sink_ready = main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_sink_ready;
-assign main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_sink_first = main_litedramcore_bankmachine0_cmd_buffer_lookahead_sink_sink_first;
-assign main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_sink_last = main_litedramcore_bankmachine0_cmd_buffer_lookahead_sink_sink_last;
-assign main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_sink_payload_we = main_litedramcore_bankmachine0_cmd_buffer_lookahead_sink_sink_payload_we;
-assign main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine0_cmd_buffer_lookahead_sink_sink_payload_addr;
-assign main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_valid = main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_valid;
-assign main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_ready = main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_ready;
-assign main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_first = main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_first;
-assign main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_last = main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_last;
-assign main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_payload_we = main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_payload_we;
-assign main_litedramcore_bankmachine0_cmd_buffer_lookahead_source_source_payload_addr = main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_payload_addr;
-assign main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_valid) | main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_ready);
-assign main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_sink_valid = main_litedramcore_bankmachine0_cmd_buffer_sink_sink_valid;
-assign main_litedramcore_bankmachine0_cmd_buffer_sink_sink_ready = main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_sink_ready;
-assign main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_sink_first = main_litedramcore_bankmachine0_cmd_buffer_sink_sink_first;
-assign main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_sink_last = main_litedramcore_bankmachine0_cmd_buffer_sink_sink_last;
-assign main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_sink_payload_we = main_litedramcore_bankmachine0_cmd_buffer_sink_sink_payload_we;
-assign main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine0_cmd_buffer_sink_sink_payload_addr;
-assign main_litedramcore_bankmachine0_cmd_buffer_source_source_valid = main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_valid;
-assign main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_ready = main_litedramcore_bankmachine0_cmd_buffer_source_source_ready;
-assign main_litedramcore_bankmachine0_cmd_buffer_source_source_first = main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_first;
-assign main_litedramcore_bankmachine0_cmd_buffer_source_source_last = main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_last;
-assign main_litedramcore_bankmachine0_cmd_buffer_source_source_payload_we = main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_payload_we;
-assign main_litedramcore_bankmachine0_cmd_buffer_source_source_payload_addr = main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_payload_addr;
+assign main_litedramcore_bankmachine0_syncfifo0_din = {main_litedramcore_bankmachine0_fifo_in_last, main_litedramcore_bankmachine0_fifo_in_first, main_litedramcore_bankmachine0_fifo_in_payload_addr, main_litedramcore_bankmachine0_fifo_in_payload_we};
+assign {main_litedramcore_bankmachine0_fifo_out_last, main_litedramcore_bankmachine0_fifo_out_first, main_litedramcore_bankmachine0_fifo_out_payload_addr, main_litedramcore_bankmachine0_fifo_out_payload_we} = main_litedramcore_bankmachine0_syncfifo0_dout;
+assign main_litedramcore_bankmachine0_sink_ready = main_litedramcore_bankmachine0_syncfifo0_writable;
+assign main_litedramcore_bankmachine0_syncfifo0_we = main_litedramcore_bankmachine0_sink_valid;
+assign main_litedramcore_bankmachine0_fifo_in_first = main_litedramcore_bankmachine0_sink_first;
+assign main_litedramcore_bankmachine0_fifo_in_last = main_litedramcore_bankmachine0_sink_last;
+assign main_litedramcore_bankmachine0_fifo_in_payload_we = main_litedramcore_bankmachine0_sink_payload_we;
+assign main_litedramcore_bankmachine0_fifo_in_payload_addr = main_litedramcore_bankmachine0_sink_payload_addr;
+assign main_litedramcore_bankmachine0_source_valid = main_litedramcore_bankmachine0_syncfifo0_readable;
+assign main_litedramcore_bankmachine0_source_first = main_litedramcore_bankmachine0_fifo_out_first;
+assign main_litedramcore_bankmachine0_source_last = main_litedramcore_bankmachine0_fifo_out_last;
+assign main_litedramcore_bankmachine0_source_payload_we = main_litedramcore_bankmachine0_fifo_out_payload_we;
+assign main_litedramcore_bankmachine0_source_payload_addr = main_litedramcore_bankmachine0_fifo_out_payload_addr;
+assign main_litedramcore_bankmachine0_syncfifo0_re = main_litedramcore_bankmachine0_source_ready;
+always @(*) begin
+    main_litedramcore_bankmachine0_wrport_adr = 3'd0;
+    if (main_litedramcore_bankmachine0_replace) begin
+        main_litedramcore_bankmachine0_wrport_adr = (main_litedramcore_bankmachine0_produce - 1'd1);
+    end else begin
+        main_litedramcore_bankmachine0_wrport_adr = main_litedramcore_bankmachine0_produce;
+    end
+end
+assign main_litedramcore_bankmachine0_wrport_dat_w = main_litedramcore_bankmachine0_syncfifo0_din;
+assign main_litedramcore_bankmachine0_wrport_we = (main_litedramcore_bankmachine0_syncfifo0_we & (main_litedramcore_bankmachine0_syncfifo0_writable | main_litedramcore_bankmachine0_replace));
+assign main_litedramcore_bankmachine0_do_read = (main_litedramcore_bankmachine0_syncfifo0_readable & main_litedramcore_bankmachine0_syncfifo0_re);
+assign main_litedramcore_bankmachine0_rdport_adr = main_litedramcore_bankmachine0_consume;
+assign main_litedramcore_bankmachine0_syncfifo0_dout = main_litedramcore_bankmachine0_rdport_dat_r;
+assign main_litedramcore_bankmachine0_syncfifo0_writable = (main_litedramcore_bankmachine0_level != 4'd8);
+assign main_litedramcore_bankmachine0_syncfifo0_readable = (main_litedramcore_bankmachine0_level != 1'd0);
+assign main_litedramcore_bankmachine0_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine0_pipe_valid_source_valid) | main_litedramcore_bankmachine0_pipe_valid_source_ready);
+assign main_litedramcore_bankmachine0_pipe_valid_sink_valid = main_litedramcore_bankmachine0_sink_sink_valid;
+assign main_litedramcore_bankmachine0_sink_sink_ready = main_litedramcore_bankmachine0_pipe_valid_sink_ready;
+assign main_litedramcore_bankmachine0_pipe_valid_sink_first = main_litedramcore_bankmachine0_sink_sink_first;
+assign main_litedramcore_bankmachine0_pipe_valid_sink_last = main_litedramcore_bankmachine0_sink_sink_last;
+assign main_litedramcore_bankmachine0_pipe_valid_sink_payload_we = main_litedramcore_bankmachine0_sink_sink_payload_we;
+assign main_litedramcore_bankmachine0_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine0_sink_sink_payload_addr;
+assign main_litedramcore_bankmachine0_source_source_valid = main_litedramcore_bankmachine0_pipe_valid_source_valid;
+assign main_litedramcore_bankmachine0_pipe_valid_source_ready = main_litedramcore_bankmachine0_source_source_ready;
+assign main_litedramcore_bankmachine0_source_source_first = main_litedramcore_bankmachine0_pipe_valid_source_first;
+assign main_litedramcore_bankmachine0_source_source_last = main_litedramcore_bankmachine0_pipe_valid_source_last;
+assign main_litedramcore_bankmachine0_source_source_payload_we = main_litedramcore_bankmachine0_pipe_valid_source_payload_we;
+assign main_litedramcore_bankmachine0_source_source_payload_addr = main_litedramcore_bankmachine0_pipe_valid_source_payload_addr;
 always @(*) begin
     builder_bankmachine0_next_state = 4'd0;
     main_litedramcore_bankmachine0_cmd_payload_cas = 1'd0;
@@ -4590,11 +4665,11 @@ always @(*) begin
             if (main_litedramcore_bankmachine0_refresh_req) begin
                 builder_bankmachine0_next_state = 3'd4;
             end else begin
-                if (main_litedramcore_bankmachine0_cmd_buffer_source_source_valid) begin
+                if (main_litedramcore_bankmachine0_source_source_valid) begin
                     if (main_litedramcore_bankmachine0_row_opened) begin
                         if (main_litedramcore_bankmachine0_row_hit) begin
                             main_litedramcore_bankmachine0_cmd_valid = 1'd1;
-                            if (main_litedramcore_bankmachine0_cmd_buffer_source_source_payload_we) begin
+                            if (main_litedramcore_bankmachine0_source_source_payload_we) begin
                                 main_litedramcore_bankmachine0_req_wdata_ready = main_litedramcore_bankmachine0_cmd_ready;
                                 main_litedramcore_bankmachine0_cmd_payload_is_write = 1'd1;
                                 main_litedramcore_bankmachine0_cmd_payload_we = 1'd1;
@@ -4617,26 +4692,26 @@ always @(*) begin
         end
     endcase
 end
-assign main_litedramcore_bankmachine1_cmd_buffer_lookahead_sink_sink_valid = main_litedramcore_bankmachine1_req_valid;
-assign main_litedramcore_bankmachine1_req_ready = main_litedramcore_bankmachine1_cmd_buffer_lookahead_sink_sink_ready;
-assign main_litedramcore_bankmachine1_cmd_buffer_lookahead_sink_sink_payload_we = main_litedramcore_bankmachine1_req_we;
-assign main_litedramcore_bankmachine1_cmd_buffer_lookahead_sink_sink_payload_addr = main_litedramcore_bankmachine1_req_addr;
-assign main_litedramcore_bankmachine1_cmd_buffer_sink_sink_valid = main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_valid;
-assign main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_ready = main_litedramcore_bankmachine1_cmd_buffer_sink_sink_ready;
-assign main_litedramcore_bankmachine1_cmd_buffer_sink_sink_first = main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_first;
-assign main_litedramcore_bankmachine1_cmd_buffer_sink_sink_last = main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_last;
-assign main_litedramcore_bankmachine1_cmd_buffer_sink_sink_payload_we = main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_payload_we;
-assign main_litedramcore_bankmachine1_cmd_buffer_sink_sink_payload_addr = main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_payload_addr;
-assign main_litedramcore_bankmachine1_cmd_buffer_source_source_ready = (main_litedramcore_bankmachine1_req_wdata_ready | main_litedramcore_bankmachine1_req_rdata_valid);
-assign main_litedramcore_bankmachine1_req_lock = (main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_valid | main_litedramcore_bankmachine1_cmd_buffer_source_source_valid);
-assign main_litedramcore_bankmachine1_row_hit = (main_litedramcore_bankmachine1_row == main_litedramcore_bankmachine1_cmd_buffer_source_source_payload_addr[20:7]);
+assign main_litedramcore_bankmachine1_sink_valid = main_litedramcore_bankmachine1_req_valid;
+assign main_litedramcore_bankmachine1_req_ready = main_litedramcore_bankmachine1_sink_ready;
+assign main_litedramcore_bankmachine1_sink_payload_we = main_litedramcore_bankmachine1_req_we;
+assign main_litedramcore_bankmachine1_sink_payload_addr = main_litedramcore_bankmachine1_req_addr;
+assign main_litedramcore_bankmachine1_sink_sink_valid = main_litedramcore_bankmachine1_source_valid;
+assign main_litedramcore_bankmachine1_source_ready = main_litedramcore_bankmachine1_sink_sink_ready;
+assign main_litedramcore_bankmachine1_sink_sink_first = main_litedramcore_bankmachine1_source_first;
+assign main_litedramcore_bankmachine1_sink_sink_last = main_litedramcore_bankmachine1_source_last;
+assign main_litedramcore_bankmachine1_sink_sink_payload_we = main_litedramcore_bankmachine1_source_payload_we;
+assign main_litedramcore_bankmachine1_sink_sink_payload_addr = main_litedramcore_bankmachine1_source_payload_addr;
+assign main_litedramcore_bankmachine1_source_source_ready = (main_litedramcore_bankmachine1_req_wdata_ready | main_litedramcore_bankmachine1_req_rdata_valid);
+assign main_litedramcore_bankmachine1_req_lock = (main_litedramcore_bankmachine1_source_valid | main_litedramcore_bankmachine1_source_source_valid);
+assign main_litedramcore_bankmachine1_row_hit = (main_litedramcore_bankmachine1_row == main_litedramcore_bankmachine1_source_source_payload_addr[20:7]);
 assign main_litedramcore_bankmachine1_cmd_payload_ba = 1'd1;
 always @(*) begin
     main_litedramcore_bankmachine1_cmd_payload_a = 14'd0;
     if (main_litedramcore_bankmachine1_row_col_n_addr_sel) begin
-        main_litedramcore_bankmachine1_cmd_payload_a = main_litedramcore_bankmachine1_cmd_buffer_source_source_payload_addr[20:7];
+        main_litedramcore_bankmachine1_cmd_payload_a = main_litedramcore_bankmachine1_source_source_payload_addr[20:7];
     end else begin
-        main_litedramcore_bankmachine1_cmd_payload_a = ((main_litedramcore_bankmachine1_auto_precharge <<< 4'd10) | {main_litedramcore_bankmachine1_cmd_buffer_source_source_payload_addr[6:0], {3{1'd0}}});
+        main_litedramcore_bankmachine1_cmd_payload_a = ((main_litedramcore_bankmachine1_auto_precharge <<< 4'd10) | {main_litedramcore_bankmachine1_source_source_payload_addr[6:0], {3{1'd0}}});
     end
 end
 assign main_litedramcore_bankmachine1_twtpcon_valid = ((main_litedramcore_bankmachine1_cmd_valid & main_litedramcore_bankmachine1_cmd_ready) & main_litedramcore_bankmachine1_cmd_payload_is_write);
@@ -4644,39 +4719,54 @@ assign main_litedramcore_bankmachine1_trccon_valid = ((main_litedramcore_bankmac
 assign main_litedramcore_bankmachine1_trascon_valid = ((main_litedramcore_bankmachine1_cmd_valid & main_litedramcore_bankmachine1_cmd_ready) & main_litedramcore_bankmachine1_row_open);
 always @(*) begin
     main_litedramcore_bankmachine1_auto_precharge = 1'd0;
-    if ((main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_valid & main_litedramcore_bankmachine1_cmd_buffer_source_source_valid)) begin
-        if ((main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_payload_addr[20:7] != main_litedramcore_bankmachine1_cmd_buffer_source_source_payload_addr[20:7])) begin
+    if ((main_litedramcore_bankmachine1_source_valid & main_litedramcore_bankmachine1_source_source_valid)) begin
+        if ((main_litedramcore_bankmachine1_source_payload_addr[20:7] != main_litedramcore_bankmachine1_source_source_payload_addr[20:7])) begin
             main_litedramcore_bankmachine1_auto_precharge = (main_litedramcore_bankmachine1_row_close == 1'd0);
         end
     end
 end
-assign main_litedramcore_bankmachine1_cmd_buffer_lookahead_level = main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_valid;
-assign main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_valid) | main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_ready);
-assign main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_sink_valid = main_litedramcore_bankmachine1_cmd_buffer_lookahead_sink_sink_valid;
-assign main_litedramcore_bankmachine1_cmd_buffer_lookahead_sink_sink_ready = main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_sink_ready;
-assign main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_sink_first = main_litedramcore_bankmachine1_cmd_buffer_lookahead_sink_sink_first;
-assign main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_sink_last = main_litedramcore_bankmachine1_cmd_buffer_lookahead_sink_sink_last;
-assign main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_sink_payload_we = main_litedramcore_bankmachine1_cmd_buffer_lookahead_sink_sink_payload_we;
-assign main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine1_cmd_buffer_lookahead_sink_sink_payload_addr;
-assign main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_valid = main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_valid;
-assign main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_ready = main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_ready;
-assign main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_first = main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_first;
-assign main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_last = main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_last;
-assign main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_payload_we = main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_payload_we;
-assign main_litedramcore_bankmachine1_cmd_buffer_lookahead_source_source_payload_addr = main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_payload_addr;
-assign main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_valid) | main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_ready);
-assign main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_sink_valid = main_litedramcore_bankmachine1_cmd_buffer_sink_sink_valid;
-assign main_litedramcore_bankmachine1_cmd_buffer_sink_sink_ready = main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_sink_ready;
-assign main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_sink_first = main_litedramcore_bankmachine1_cmd_buffer_sink_sink_first;
-assign main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_sink_last = main_litedramcore_bankmachine1_cmd_buffer_sink_sink_last;
-assign main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_sink_payload_we = main_litedramcore_bankmachine1_cmd_buffer_sink_sink_payload_we;
-assign main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine1_cmd_buffer_sink_sink_payload_addr;
-assign main_litedramcore_bankmachine1_cmd_buffer_source_source_valid = main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_valid;
-assign main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_ready = main_litedramcore_bankmachine1_cmd_buffer_source_source_ready;
-assign main_litedramcore_bankmachine1_cmd_buffer_source_source_first = main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_first;
-assign main_litedramcore_bankmachine1_cmd_buffer_source_source_last = main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_last;
-assign main_litedramcore_bankmachine1_cmd_buffer_source_source_payload_we = main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_payload_we;
-assign main_litedramcore_bankmachine1_cmd_buffer_source_source_payload_addr = main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_payload_addr;
+assign main_litedramcore_bankmachine1_syncfifo1_din = {main_litedramcore_bankmachine1_fifo_in_last, main_litedramcore_bankmachine1_fifo_in_first, main_litedramcore_bankmachine1_fifo_in_payload_addr, main_litedramcore_bankmachine1_fifo_in_payload_we};
+assign {main_litedramcore_bankmachine1_fifo_out_last, main_litedramcore_bankmachine1_fifo_out_first, main_litedramcore_bankmachine1_fifo_out_payload_addr, main_litedramcore_bankmachine1_fifo_out_payload_we} = main_litedramcore_bankmachine1_syncfifo1_dout;
+assign main_litedramcore_bankmachine1_sink_ready = main_litedramcore_bankmachine1_syncfifo1_writable;
+assign main_litedramcore_bankmachine1_syncfifo1_we = main_litedramcore_bankmachine1_sink_valid;
+assign main_litedramcore_bankmachine1_fifo_in_first = main_litedramcore_bankmachine1_sink_first;
+assign main_litedramcore_bankmachine1_fifo_in_last = main_litedramcore_bankmachine1_sink_last;
+assign main_litedramcore_bankmachine1_fifo_in_payload_we = main_litedramcore_bankmachine1_sink_payload_we;
+assign main_litedramcore_bankmachine1_fifo_in_payload_addr = main_litedramcore_bankmachine1_sink_payload_addr;
+assign main_litedramcore_bankmachine1_source_valid = main_litedramcore_bankmachine1_syncfifo1_readable;
+assign main_litedramcore_bankmachine1_source_first = main_litedramcore_bankmachine1_fifo_out_first;
+assign main_litedramcore_bankmachine1_source_last = main_litedramcore_bankmachine1_fifo_out_last;
+assign main_litedramcore_bankmachine1_source_payload_we = main_litedramcore_bankmachine1_fifo_out_payload_we;
+assign main_litedramcore_bankmachine1_source_payload_addr = main_litedramcore_bankmachine1_fifo_out_payload_addr;
+assign main_litedramcore_bankmachine1_syncfifo1_re = main_litedramcore_bankmachine1_source_ready;
+always @(*) begin
+    main_litedramcore_bankmachine1_wrport_adr = 3'd0;
+    if (main_litedramcore_bankmachine1_replace) begin
+        main_litedramcore_bankmachine1_wrport_adr = (main_litedramcore_bankmachine1_produce - 1'd1);
+    end else begin
+        main_litedramcore_bankmachine1_wrport_adr = main_litedramcore_bankmachine1_produce;
+    end
+end
+assign main_litedramcore_bankmachine1_wrport_dat_w = main_litedramcore_bankmachine1_syncfifo1_din;
+assign main_litedramcore_bankmachine1_wrport_we = (main_litedramcore_bankmachine1_syncfifo1_we & (main_litedramcore_bankmachine1_syncfifo1_writable | main_litedramcore_bankmachine1_replace));
+assign main_litedramcore_bankmachine1_do_read = (main_litedramcore_bankmachine1_syncfifo1_readable & main_litedramcore_bankmachine1_syncfifo1_re);
+assign main_litedramcore_bankmachine1_rdport_adr = main_litedramcore_bankmachine1_consume;
+assign main_litedramcore_bankmachine1_syncfifo1_dout = main_litedramcore_bankmachine1_rdport_dat_r;
+assign main_litedramcore_bankmachine1_syncfifo1_writable = (main_litedramcore_bankmachine1_level != 4'd8);
+assign main_litedramcore_bankmachine1_syncfifo1_readable = (main_litedramcore_bankmachine1_level != 1'd0);
+assign main_litedramcore_bankmachine1_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine1_pipe_valid_source_valid) | main_litedramcore_bankmachine1_pipe_valid_source_ready);
+assign main_litedramcore_bankmachine1_pipe_valid_sink_valid = main_litedramcore_bankmachine1_sink_sink_valid;
+assign main_litedramcore_bankmachine1_sink_sink_ready = main_litedramcore_bankmachine1_pipe_valid_sink_ready;
+assign main_litedramcore_bankmachine1_pipe_valid_sink_first = main_litedramcore_bankmachine1_sink_sink_first;
+assign main_litedramcore_bankmachine1_pipe_valid_sink_last = main_litedramcore_bankmachine1_sink_sink_last;
+assign main_litedramcore_bankmachine1_pipe_valid_sink_payload_we = main_litedramcore_bankmachine1_sink_sink_payload_we;
+assign main_litedramcore_bankmachine1_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine1_sink_sink_payload_addr;
+assign main_litedramcore_bankmachine1_source_source_valid = main_litedramcore_bankmachine1_pipe_valid_source_valid;
+assign main_litedramcore_bankmachine1_pipe_valid_source_ready = main_litedramcore_bankmachine1_source_source_ready;
+assign main_litedramcore_bankmachine1_source_source_first = main_litedramcore_bankmachine1_pipe_valid_source_first;
+assign main_litedramcore_bankmachine1_source_source_last = main_litedramcore_bankmachine1_pipe_valid_source_last;
+assign main_litedramcore_bankmachine1_source_source_payload_we = main_litedramcore_bankmachine1_pipe_valid_source_payload_we;
+assign main_litedramcore_bankmachine1_source_source_payload_addr = main_litedramcore_bankmachine1_pipe_valid_source_payload_addr;
 always @(*) begin
     builder_bankmachine1_next_state = 4'd0;
     main_litedramcore_bankmachine1_cmd_payload_cas = 1'd0;
@@ -4750,11 +4840,11 @@ always @(*) begin
             if (main_litedramcore_bankmachine1_refresh_req) begin
                 builder_bankmachine1_next_state = 3'd4;
             end else begin
-                if (main_litedramcore_bankmachine1_cmd_buffer_source_source_valid) begin
+                if (main_litedramcore_bankmachine1_source_source_valid) begin
                     if (main_litedramcore_bankmachine1_row_opened) begin
                         if (main_litedramcore_bankmachine1_row_hit) begin
                             main_litedramcore_bankmachine1_cmd_valid = 1'd1;
-                            if (main_litedramcore_bankmachine1_cmd_buffer_source_source_payload_we) begin
+                            if (main_litedramcore_bankmachine1_source_source_payload_we) begin
                                 main_litedramcore_bankmachine1_req_wdata_ready = main_litedramcore_bankmachine1_cmd_ready;
                                 main_litedramcore_bankmachine1_cmd_payload_is_write = 1'd1;
                                 main_litedramcore_bankmachine1_cmd_payload_we = 1'd1;
@@ -4777,26 +4867,26 @@ always @(*) begin
         end
     endcase
 end
-assign main_litedramcore_bankmachine2_cmd_buffer_lookahead_sink_sink_valid = main_litedramcore_bankmachine2_req_valid;
-assign main_litedramcore_bankmachine2_req_ready = main_litedramcore_bankmachine2_cmd_buffer_lookahead_sink_sink_ready;
-assign main_litedramcore_bankmachine2_cmd_buffer_lookahead_sink_sink_payload_we = main_litedramcore_bankmachine2_req_we;
-assign main_litedramcore_bankmachine2_cmd_buffer_lookahead_sink_sink_payload_addr = main_litedramcore_bankmachine2_req_addr;
-assign main_litedramcore_bankmachine2_cmd_buffer_sink_sink_valid = main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_valid;
-assign main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_ready = main_litedramcore_bankmachine2_cmd_buffer_sink_sink_ready;
-assign main_litedramcore_bankmachine2_cmd_buffer_sink_sink_first = main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_first;
-assign main_litedramcore_bankmachine2_cmd_buffer_sink_sink_last = main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_last;
-assign main_litedramcore_bankmachine2_cmd_buffer_sink_sink_payload_we = main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_payload_we;
-assign main_litedramcore_bankmachine2_cmd_buffer_sink_sink_payload_addr = main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_payload_addr;
-assign main_litedramcore_bankmachine2_cmd_buffer_source_source_ready = (main_litedramcore_bankmachine2_req_wdata_ready | main_litedramcore_bankmachine2_req_rdata_valid);
-assign main_litedramcore_bankmachine2_req_lock = (main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_valid | main_litedramcore_bankmachine2_cmd_buffer_source_source_valid);
-assign main_litedramcore_bankmachine2_row_hit = (main_litedramcore_bankmachine2_row == main_litedramcore_bankmachine2_cmd_buffer_source_source_payload_addr[20:7]);
+assign main_litedramcore_bankmachine2_sink_valid = main_litedramcore_bankmachine2_req_valid;
+assign main_litedramcore_bankmachine2_req_ready = main_litedramcore_bankmachine2_sink_ready;
+assign main_litedramcore_bankmachine2_sink_payload_we = main_litedramcore_bankmachine2_req_we;
+assign main_litedramcore_bankmachine2_sink_payload_addr = main_litedramcore_bankmachine2_req_addr;
+assign main_litedramcore_bankmachine2_sink_sink_valid = main_litedramcore_bankmachine2_source_valid;
+assign main_litedramcore_bankmachine2_source_ready = main_litedramcore_bankmachine2_sink_sink_ready;
+assign main_litedramcore_bankmachine2_sink_sink_first = main_litedramcore_bankmachine2_source_first;
+assign main_litedramcore_bankmachine2_sink_sink_last = main_litedramcore_bankmachine2_source_last;
+assign main_litedramcore_bankmachine2_sink_sink_payload_we = main_litedramcore_bankmachine2_source_payload_we;
+assign main_litedramcore_bankmachine2_sink_sink_payload_addr = main_litedramcore_bankmachine2_source_payload_addr;
+assign main_litedramcore_bankmachine2_source_source_ready = (main_litedramcore_bankmachine2_req_wdata_ready | main_litedramcore_bankmachine2_req_rdata_valid);
+assign main_litedramcore_bankmachine2_req_lock = (main_litedramcore_bankmachine2_source_valid | main_litedramcore_bankmachine2_source_source_valid);
+assign main_litedramcore_bankmachine2_row_hit = (main_litedramcore_bankmachine2_row == main_litedramcore_bankmachine2_source_source_payload_addr[20:7]);
 assign main_litedramcore_bankmachine2_cmd_payload_ba = 2'd2;
 always @(*) begin
     main_litedramcore_bankmachine2_cmd_payload_a = 14'd0;
     if (main_litedramcore_bankmachine2_row_col_n_addr_sel) begin
-        main_litedramcore_bankmachine2_cmd_payload_a = main_litedramcore_bankmachine2_cmd_buffer_source_source_payload_addr[20:7];
+        main_litedramcore_bankmachine2_cmd_payload_a = main_litedramcore_bankmachine2_source_source_payload_addr[20:7];
     end else begin
-        main_litedramcore_bankmachine2_cmd_payload_a = ((main_litedramcore_bankmachine2_auto_precharge <<< 4'd10) | {main_litedramcore_bankmachine2_cmd_buffer_source_source_payload_addr[6:0], {3{1'd0}}});
+        main_litedramcore_bankmachine2_cmd_payload_a = ((main_litedramcore_bankmachine2_auto_precharge <<< 4'd10) | {main_litedramcore_bankmachine2_source_source_payload_addr[6:0], {3{1'd0}}});
     end
 end
 assign main_litedramcore_bankmachine2_twtpcon_valid = ((main_litedramcore_bankmachine2_cmd_valid & main_litedramcore_bankmachine2_cmd_ready) & main_litedramcore_bankmachine2_cmd_payload_is_write);
@@ -4804,39 +4894,54 @@ assign main_litedramcore_bankmachine2_trccon_valid = ((main_litedramcore_bankmac
 assign main_litedramcore_bankmachine2_trascon_valid = ((main_litedramcore_bankmachine2_cmd_valid & main_litedramcore_bankmachine2_cmd_ready) & main_litedramcore_bankmachine2_row_open);
 always @(*) begin
     main_litedramcore_bankmachine2_auto_precharge = 1'd0;
-    if ((main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_valid & main_litedramcore_bankmachine2_cmd_buffer_source_source_valid)) begin
-        if ((main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_payload_addr[20:7] != main_litedramcore_bankmachine2_cmd_buffer_source_source_payload_addr[20:7])) begin
+    if ((main_litedramcore_bankmachine2_source_valid & main_litedramcore_bankmachine2_source_source_valid)) begin
+        if ((main_litedramcore_bankmachine2_source_payload_addr[20:7] != main_litedramcore_bankmachine2_source_source_payload_addr[20:7])) begin
             main_litedramcore_bankmachine2_auto_precharge = (main_litedramcore_bankmachine2_row_close == 1'd0);
         end
     end
 end
-assign main_litedramcore_bankmachine2_cmd_buffer_lookahead_level = main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_valid;
-assign main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_valid) | main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_ready);
-assign main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_sink_valid = main_litedramcore_bankmachine2_cmd_buffer_lookahead_sink_sink_valid;
-assign main_litedramcore_bankmachine2_cmd_buffer_lookahead_sink_sink_ready = main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_sink_ready;
-assign main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_sink_first = main_litedramcore_bankmachine2_cmd_buffer_lookahead_sink_sink_first;
-assign main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_sink_last = main_litedramcore_bankmachine2_cmd_buffer_lookahead_sink_sink_last;
-assign main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_sink_payload_we = main_litedramcore_bankmachine2_cmd_buffer_lookahead_sink_sink_payload_we;
-assign main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine2_cmd_buffer_lookahead_sink_sink_payload_addr;
-assign main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_valid = main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_valid;
-assign main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_ready = main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_ready;
-assign main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_first = main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_first;
-assign main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_last = main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_last;
-assign main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_payload_we = main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_payload_we;
-assign main_litedramcore_bankmachine2_cmd_buffer_lookahead_source_source_payload_addr = main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_payload_addr;
-assign main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_valid) | main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_ready);
-assign main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_sink_valid = main_litedramcore_bankmachine2_cmd_buffer_sink_sink_valid;
-assign main_litedramcore_bankmachine2_cmd_buffer_sink_sink_ready = main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_sink_ready;
-assign main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_sink_first = main_litedramcore_bankmachine2_cmd_buffer_sink_sink_first;
-assign main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_sink_last = main_litedramcore_bankmachine2_cmd_buffer_sink_sink_last;
-assign main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_sink_payload_we = main_litedramcore_bankmachine2_cmd_buffer_sink_sink_payload_we;
-assign main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine2_cmd_buffer_sink_sink_payload_addr;
-assign main_litedramcore_bankmachine2_cmd_buffer_source_source_valid = main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_valid;
-assign main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_ready = main_litedramcore_bankmachine2_cmd_buffer_source_source_ready;
-assign main_litedramcore_bankmachine2_cmd_buffer_source_source_first = main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_first;
-assign main_litedramcore_bankmachine2_cmd_buffer_source_source_last = main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_last;
-assign main_litedramcore_bankmachine2_cmd_buffer_source_source_payload_we = main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_payload_we;
-assign main_litedramcore_bankmachine2_cmd_buffer_source_source_payload_addr = main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_payload_addr;
+assign main_litedramcore_bankmachine2_syncfifo2_din = {main_litedramcore_bankmachine2_fifo_in_last, main_litedramcore_bankmachine2_fifo_in_first, main_litedramcore_bankmachine2_fifo_in_payload_addr, main_litedramcore_bankmachine2_fifo_in_payload_we};
+assign {main_litedramcore_bankmachine2_fifo_out_last, main_litedramcore_bankmachine2_fifo_out_first, main_litedramcore_bankmachine2_fifo_out_payload_addr, main_litedramcore_bankmachine2_fifo_out_payload_we} = main_litedramcore_bankmachine2_syncfifo2_dout;
+assign main_litedramcore_bankmachine2_sink_ready = main_litedramcore_bankmachine2_syncfifo2_writable;
+assign main_litedramcore_bankmachine2_syncfifo2_we = main_litedramcore_bankmachine2_sink_valid;
+assign main_litedramcore_bankmachine2_fifo_in_first = main_litedramcore_bankmachine2_sink_first;
+assign main_litedramcore_bankmachine2_fifo_in_last = main_litedramcore_bankmachine2_sink_last;
+assign main_litedramcore_bankmachine2_fifo_in_payload_we = main_litedramcore_bankmachine2_sink_payload_we;
+assign main_litedramcore_bankmachine2_fifo_in_payload_addr = main_litedramcore_bankmachine2_sink_payload_addr;
+assign main_litedramcore_bankmachine2_source_valid = main_litedramcore_bankmachine2_syncfifo2_readable;
+assign main_litedramcore_bankmachine2_source_first = main_litedramcore_bankmachine2_fifo_out_first;
+assign main_litedramcore_bankmachine2_source_last = main_litedramcore_bankmachine2_fifo_out_last;
+assign main_litedramcore_bankmachine2_source_payload_we = main_litedramcore_bankmachine2_fifo_out_payload_we;
+assign main_litedramcore_bankmachine2_source_payload_addr = main_litedramcore_bankmachine2_fifo_out_payload_addr;
+assign main_litedramcore_bankmachine2_syncfifo2_re = main_litedramcore_bankmachine2_source_ready;
+always @(*) begin
+    main_litedramcore_bankmachine2_wrport_adr = 3'd0;
+    if (main_litedramcore_bankmachine2_replace) begin
+        main_litedramcore_bankmachine2_wrport_adr = (main_litedramcore_bankmachine2_produce - 1'd1);
+    end else begin
+        main_litedramcore_bankmachine2_wrport_adr = main_litedramcore_bankmachine2_produce;
+    end
+end
+assign main_litedramcore_bankmachine2_wrport_dat_w = main_litedramcore_bankmachine2_syncfifo2_din;
+assign main_litedramcore_bankmachine2_wrport_we = (main_litedramcore_bankmachine2_syncfifo2_we & (main_litedramcore_bankmachine2_syncfifo2_writable | main_litedramcore_bankmachine2_replace));
+assign main_litedramcore_bankmachine2_do_read = (main_litedramcore_bankmachine2_syncfifo2_readable & main_litedramcore_bankmachine2_syncfifo2_re);
+assign main_litedramcore_bankmachine2_rdport_adr = main_litedramcore_bankmachine2_consume;
+assign main_litedramcore_bankmachine2_syncfifo2_dout = main_litedramcore_bankmachine2_rdport_dat_r;
+assign main_litedramcore_bankmachine2_syncfifo2_writable = (main_litedramcore_bankmachine2_level != 4'd8);
+assign main_litedramcore_bankmachine2_syncfifo2_readable = (main_litedramcore_bankmachine2_level != 1'd0);
+assign main_litedramcore_bankmachine2_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine2_pipe_valid_source_valid) | main_litedramcore_bankmachine2_pipe_valid_source_ready);
+assign main_litedramcore_bankmachine2_pipe_valid_sink_valid = main_litedramcore_bankmachine2_sink_sink_valid;
+assign main_litedramcore_bankmachine2_sink_sink_ready = main_litedramcore_bankmachine2_pipe_valid_sink_ready;
+assign main_litedramcore_bankmachine2_pipe_valid_sink_first = main_litedramcore_bankmachine2_sink_sink_first;
+assign main_litedramcore_bankmachine2_pipe_valid_sink_last = main_litedramcore_bankmachine2_sink_sink_last;
+assign main_litedramcore_bankmachine2_pipe_valid_sink_payload_we = main_litedramcore_bankmachine2_sink_sink_payload_we;
+assign main_litedramcore_bankmachine2_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine2_sink_sink_payload_addr;
+assign main_litedramcore_bankmachine2_source_source_valid = main_litedramcore_bankmachine2_pipe_valid_source_valid;
+assign main_litedramcore_bankmachine2_pipe_valid_source_ready = main_litedramcore_bankmachine2_source_source_ready;
+assign main_litedramcore_bankmachine2_source_source_first = main_litedramcore_bankmachine2_pipe_valid_source_first;
+assign main_litedramcore_bankmachine2_source_source_last = main_litedramcore_bankmachine2_pipe_valid_source_last;
+assign main_litedramcore_bankmachine2_source_source_payload_we = main_litedramcore_bankmachine2_pipe_valid_source_payload_we;
+assign main_litedramcore_bankmachine2_source_source_payload_addr = main_litedramcore_bankmachine2_pipe_valid_source_payload_addr;
 always @(*) begin
     builder_bankmachine2_next_state = 4'd0;
     main_litedramcore_bankmachine2_cmd_payload_cas = 1'd0;
@@ -4910,11 +5015,11 @@ always @(*) begin
             if (main_litedramcore_bankmachine2_refresh_req) begin
                 builder_bankmachine2_next_state = 3'd4;
             end else begin
-                if (main_litedramcore_bankmachine2_cmd_buffer_source_source_valid) begin
+                if (main_litedramcore_bankmachine2_source_source_valid) begin
                     if (main_litedramcore_bankmachine2_row_opened) begin
                         if (main_litedramcore_bankmachine2_row_hit) begin
                             main_litedramcore_bankmachine2_cmd_valid = 1'd1;
-                            if (main_litedramcore_bankmachine2_cmd_buffer_source_source_payload_we) begin
+                            if (main_litedramcore_bankmachine2_source_source_payload_we) begin
                                 main_litedramcore_bankmachine2_req_wdata_ready = main_litedramcore_bankmachine2_cmd_ready;
                                 main_litedramcore_bankmachine2_cmd_payload_is_write = 1'd1;
                                 main_litedramcore_bankmachine2_cmd_payload_we = 1'd1;
@@ -4937,26 +5042,26 @@ always @(*) begin
         end
     endcase
 end
-assign main_litedramcore_bankmachine3_cmd_buffer_lookahead_sink_sink_valid = main_litedramcore_bankmachine3_req_valid;
-assign main_litedramcore_bankmachine3_req_ready = main_litedramcore_bankmachine3_cmd_buffer_lookahead_sink_sink_ready;
-assign main_litedramcore_bankmachine3_cmd_buffer_lookahead_sink_sink_payload_we = main_litedramcore_bankmachine3_req_we;
-assign main_litedramcore_bankmachine3_cmd_buffer_lookahead_sink_sink_payload_addr = main_litedramcore_bankmachine3_req_addr;
-assign main_litedramcore_bankmachine3_cmd_buffer_sink_sink_valid = main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_valid;
-assign main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_ready = main_litedramcore_bankmachine3_cmd_buffer_sink_sink_ready;
-assign main_litedramcore_bankmachine3_cmd_buffer_sink_sink_first = main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_first;
-assign main_litedramcore_bankmachine3_cmd_buffer_sink_sink_last = main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_last;
-assign main_litedramcore_bankmachine3_cmd_buffer_sink_sink_payload_we = main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_payload_we;
-assign main_litedramcore_bankmachine3_cmd_buffer_sink_sink_payload_addr = main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_payload_addr;
-assign main_litedramcore_bankmachine3_cmd_buffer_source_source_ready = (main_litedramcore_bankmachine3_req_wdata_ready | main_litedramcore_bankmachine3_req_rdata_valid);
-assign main_litedramcore_bankmachine3_req_lock = (main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_valid | main_litedramcore_bankmachine3_cmd_buffer_source_source_valid);
-assign main_litedramcore_bankmachine3_row_hit = (main_litedramcore_bankmachine3_row == main_litedramcore_bankmachine3_cmd_buffer_source_source_payload_addr[20:7]);
+assign main_litedramcore_bankmachine3_sink_valid = main_litedramcore_bankmachine3_req_valid;
+assign main_litedramcore_bankmachine3_req_ready = main_litedramcore_bankmachine3_sink_ready;
+assign main_litedramcore_bankmachine3_sink_payload_we = main_litedramcore_bankmachine3_req_we;
+assign main_litedramcore_bankmachine3_sink_payload_addr = main_litedramcore_bankmachine3_req_addr;
+assign main_litedramcore_bankmachine3_sink_sink_valid = main_litedramcore_bankmachine3_source_valid;
+assign main_litedramcore_bankmachine3_source_ready = main_litedramcore_bankmachine3_sink_sink_ready;
+assign main_litedramcore_bankmachine3_sink_sink_first = main_litedramcore_bankmachine3_source_first;
+assign main_litedramcore_bankmachine3_sink_sink_last = main_litedramcore_bankmachine3_source_last;
+assign main_litedramcore_bankmachine3_sink_sink_payload_we = main_litedramcore_bankmachine3_source_payload_we;
+assign main_litedramcore_bankmachine3_sink_sink_payload_addr = main_litedramcore_bankmachine3_source_payload_addr;
+assign main_litedramcore_bankmachine3_source_source_ready = (main_litedramcore_bankmachine3_req_wdata_ready | main_litedramcore_bankmachine3_req_rdata_valid);
+assign main_litedramcore_bankmachine3_req_lock = (main_litedramcore_bankmachine3_source_valid | main_litedramcore_bankmachine3_source_source_valid);
+assign main_litedramcore_bankmachine3_row_hit = (main_litedramcore_bankmachine3_row == main_litedramcore_bankmachine3_source_source_payload_addr[20:7]);
 assign main_litedramcore_bankmachine3_cmd_payload_ba = 2'd3;
 always @(*) begin
     main_litedramcore_bankmachine3_cmd_payload_a = 14'd0;
     if (main_litedramcore_bankmachine3_row_col_n_addr_sel) begin
-        main_litedramcore_bankmachine3_cmd_payload_a = main_litedramcore_bankmachine3_cmd_buffer_source_source_payload_addr[20:7];
+        main_litedramcore_bankmachine3_cmd_payload_a = main_litedramcore_bankmachine3_source_source_payload_addr[20:7];
     end else begin
-        main_litedramcore_bankmachine3_cmd_payload_a = ((main_litedramcore_bankmachine3_auto_precharge <<< 4'd10) | {main_litedramcore_bankmachine3_cmd_buffer_source_source_payload_addr[6:0], {3{1'd0}}});
+        main_litedramcore_bankmachine3_cmd_payload_a = ((main_litedramcore_bankmachine3_auto_precharge <<< 4'd10) | {main_litedramcore_bankmachine3_source_source_payload_addr[6:0], {3{1'd0}}});
     end
 end
 assign main_litedramcore_bankmachine3_twtpcon_valid = ((main_litedramcore_bankmachine3_cmd_valid & main_litedramcore_bankmachine3_cmd_ready) & main_litedramcore_bankmachine3_cmd_payload_is_write);
@@ -4964,39 +5069,54 @@ assign main_litedramcore_bankmachine3_trccon_valid = ((main_litedramcore_bankmac
 assign main_litedramcore_bankmachine3_trascon_valid = ((main_litedramcore_bankmachine3_cmd_valid & main_litedramcore_bankmachine3_cmd_ready) & main_litedramcore_bankmachine3_row_open);
 always @(*) begin
     main_litedramcore_bankmachine3_auto_precharge = 1'd0;
-    if ((main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_valid & main_litedramcore_bankmachine3_cmd_buffer_source_source_valid)) begin
-        if ((main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_payload_addr[20:7] != main_litedramcore_bankmachine3_cmd_buffer_source_source_payload_addr[20:7])) begin
+    if ((main_litedramcore_bankmachine3_source_valid & main_litedramcore_bankmachine3_source_source_valid)) begin
+        if ((main_litedramcore_bankmachine3_source_payload_addr[20:7] != main_litedramcore_bankmachine3_source_source_payload_addr[20:7])) begin
             main_litedramcore_bankmachine3_auto_precharge = (main_litedramcore_bankmachine3_row_close == 1'd0);
         end
     end
 end
-assign main_litedramcore_bankmachine3_cmd_buffer_lookahead_level = main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_valid;
-assign main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_valid) | main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_ready);
-assign main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_sink_valid = main_litedramcore_bankmachine3_cmd_buffer_lookahead_sink_sink_valid;
-assign main_litedramcore_bankmachine3_cmd_buffer_lookahead_sink_sink_ready = main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_sink_ready;
-assign main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_sink_first = main_litedramcore_bankmachine3_cmd_buffer_lookahead_sink_sink_first;
-assign main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_sink_last = main_litedramcore_bankmachine3_cmd_buffer_lookahead_sink_sink_last;
-assign main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_sink_payload_we = main_litedramcore_bankmachine3_cmd_buffer_lookahead_sink_sink_payload_we;
-assign main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine3_cmd_buffer_lookahead_sink_sink_payload_addr;
-assign main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_valid = main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_valid;
-assign main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_ready = main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_ready;
-assign main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_first = main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_first;
-assign main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_last = main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_last;
-assign main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_payload_we = main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_payload_we;
-assign main_litedramcore_bankmachine3_cmd_buffer_lookahead_source_source_payload_addr = main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_payload_addr;
-assign main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_valid) | main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_ready);
-assign main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_sink_valid = main_litedramcore_bankmachine3_cmd_buffer_sink_sink_valid;
-assign main_litedramcore_bankmachine3_cmd_buffer_sink_sink_ready = main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_sink_ready;
-assign main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_sink_first = main_litedramcore_bankmachine3_cmd_buffer_sink_sink_first;
-assign main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_sink_last = main_litedramcore_bankmachine3_cmd_buffer_sink_sink_last;
-assign main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_sink_payload_we = main_litedramcore_bankmachine3_cmd_buffer_sink_sink_payload_we;
-assign main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine3_cmd_buffer_sink_sink_payload_addr;
-assign main_litedramcore_bankmachine3_cmd_buffer_source_source_valid = main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_valid;
-assign main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_ready = main_litedramcore_bankmachine3_cmd_buffer_source_source_ready;
-assign main_litedramcore_bankmachine3_cmd_buffer_source_source_first = main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_first;
-assign main_litedramcore_bankmachine3_cmd_buffer_source_source_last = main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_last;
-assign main_litedramcore_bankmachine3_cmd_buffer_source_source_payload_we = main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_payload_we;
-assign main_litedramcore_bankmachine3_cmd_buffer_source_source_payload_addr = main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_payload_addr;
+assign main_litedramcore_bankmachine3_syncfifo3_din = {main_litedramcore_bankmachine3_fifo_in_last, main_litedramcore_bankmachine3_fifo_in_first, main_litedramcore_bankmachine3_fifo_in_payload_addr, main_litedramcore_bankmachine3_fifo_in_payload_we};
+assign {main_litedramcore_bankmachine3_fifo_out_last, main_litedramcore_bankmachine3_fifo_out_first, main_litedramcore_bankmachine3_fifo_out_payload_addr, main_litedramcore_bankmachine3_fifo_out_payload_we} = main_litedramcore_bankmachine3_syncfifo3_dout;
+assign main_litedramcore_bankmachine3_sink_ready = main_litedramcore_bankmachine3_syncfifo3_writable;
+assign main_litedramcore_bankmachine3_syncfifo3_we = main_litedramcore_bankmachine3_sink_valid;
+assign main_litedramcore_bankmachine3_fifo_in_first = main_litedramcore_bankmachine3_sink_first;
+assign main_litedramcore_bankmachine3_fifo_in_last = main_litedramcore_bankmachine3_sink_last;
+assign main_litedramcore_bankmachine3_fifo_in_payload_we = main_litedramcore_bankmachine3_sink_payload_we;
+assign main_litedramcore_bankmachine3_fifo_in_payload_addr = main_litedramcore_bankmachine3_sink_payload_addr;
+assign main_litedramcore_bankmachine3_source_valid = main_litedramcore_bankmachine3_syncfifo3_readable;
+assign main_litedramcore_bankmachine3_source_first = main_litedramcore_bankmachine3_fifo_out_first;
+assign main_litedramcore_bankmachine3_source_last = main_litedramcore_bankmachine3_fifo_out_last;
+assign main_litedramcore_bankmachine3_source_payload_we = main_litedramcore_bankmachine3_fifo_out_payload_we;
+assign main_litedramcore_bankmachine3_source_payload_addr = main_litedramcore_bankmachine3_fifo_out_payload_addr;
+assign main_litedramcore_bankmachine3_syncfifo3_re = main_litedramcore_bankmachine3_source_ready;
+always @(*) begin
+    main_litedramcore_bankmachine3_wrport_adr = 3'd0;
+    if (main_litedramcore_bankmachine3_replace) begin
+        main_litedramcore_bankmachine3_wrport_adr = (main_litedramcore_bankmachine3_produce - 1'd1);
+    end else begin
+        main_litedramcore_bankmachine3_wrport_adr = main_litedramcore_bankmachine3_produce;
+    end
+end
+assign main_litedramcore_bankmachine3_wrport_dat_w = main_litedramcore_bankmachine3_syncfifo3_din;
+assign main_litedramcore_bankmachine3_wrport_we = (main_litedramcore_bankmachine3_syncfifo3_we & (main_litedramcore_bankmachine3_syncfifo3_writable | main_litedramcore_bankmachine3_replace));
+assign main_litedramcore_bankmachine3_do_read = (main_litedramcore_bankmachine3_syncfifo3_readable & main_litedramcore_bankmachine3_syncfifo3_re);
+assign main_litedramcore_bankmachine3_rdport_adr = main_litedramcore_bankmachine3_consume;
+assign main_litedramcore_bankmachine3_syncfifo3_dout = main_litedramcore_bankmachine3_rdport_dat_r;
+assign main_litedramcore_bankmachine3_syncfifo3_writable = (main_litedramcore_bankmachine3_level != 4'd8);
+assign main_litedramcore_bankmachine3_syncfifo3_readable = (main_litedramcore_bankmachine3_level != 1'd0);
+assign main_litedramcore_bankmachine3_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine3_pipe_valid_source_valid) | main_litedramcore_bankmachine3_pipe_valid_source_ready);
+assign main_litedramcore_bankmachine3_pipe_valid_sink_valid = main_litedramcore_bankmachine3_sink_sink_valid;
+assign main_litedramcore_bankmachine3_sink_sink_ready = main_litedramcore_bankmachine3_pipe_valid_sink_ready;
+assign main_litedramcore_bankmachine3_pipe_valid_sink_first = main_litedramcore_bankmachine3_sink_sink_first;
+assign main_litedramcore_bankmachine3_pipe_valid_sink_last = main_litedramcore_bankmachine3_sink_sink_last;
+assign main_litedramcore_bankmachine3_pipe_valid_sink_payload_we = main_litedramcore_bankmachine3_sink_sink_payload_we;
+assign main_litedramcore_bankmachine3_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine3_sink_sink_payload_addr;
+assign main_litedramcore_bankmachine3_source_source_valid = main_litedramcore_bankmachine3_pipe_valid_source_valid;
+assign main_litedramcore_bankmachine3_pipe_valid_source_ready = main_litedramcore_bankmachine3_source_source_ready;
+assign main_litedramcore_bankmachine3_source_source_first = main_litedramcore_bankmachine3_pipe_valid_source_first;
+assign main_litedramcore_bankmachine3_source_source_last = main_litedramcore_bankmachine3_pipe_valid_source_last;
+assign main_litedramcore_bankmachine3_source_source_payload_we = main_litedramcore_bankmachine3_pipe_valid_source_payload_we;
+assign main_litedramcore_bankmachine3_source_source_payload_addr = main_litedramcore_bankmachine3_pipe_valid_source_payload_addr;
 always @(*) begin
     builder_bankmachine3_next_state = 4'd0;
     main_litedramcore_bankmachine3_cmd_payload_cas = 1'd0;
@@ -5070,11 +5190,11 @@ always @(*) begin
             if (main_litedramcore_bankmachine3_refresh_req) begin
                 builder_bankmachine3_next_state = 3'd4;
             end else begin
-                if (main_litedramcore_bankmachine3_cmd_buffer_source_source_valid) begin
+                if (main_litedramcore_bankmachine3_source_source_valid) begin
                     if (main_litedramcore_bankmachine3_row_opened) begin
                         if (main_litedramcore_bankmachine3_row_hit) begin
                             main_litedramcore_bankmachine3_cmd_valid = 1'd1;
-                            if (main_litedramcore_bankmachine3_cmd_buffer_source_source_payload_we) begin
+                            if (main_litedramcore_bankmachine3_source_source_payload_we) begin
                                 main_litedramcore_bankmachine3_req_wdata_ready = main_litedramcore_bankmachine3_cmd_ready;
                                 main_litedramcore_bankmachine3_cmd_payload_is_write = 1'd1;
                                 main_litedramcore_bankmachine3_cmd_payload_we = 1'd1;
@@ -5097,26 +5217,26 @@ always @(*) begin
         end
     endcase
 end
-assign main_litedramcore_bankmachine4_cmd_buffer_lookahead_sink_sink_valid = main_litedramcore_bankmachine4_req_valid;
-assign main_litedramcore_bankmachine4_req_ready = main_litedramcore_bankmachine4_cmd_buffer_lookahead_sink_sink_ready;
-assign main_litedramcore_bankmachine4_cmd_buffer_lookahead_sink_sink_payload_we = main_litedramcore_bankmachine4_req_we;
-assign main_litedramcore_bankmachine4_cmd_buffer_lookahead_sink_sink_payload_addr = main_litedramcore_bankmachine4_req_addr;
-assign main_litedramcore_bankmachine4_cmd_buffer_sink_sink_valid = main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_valid;
-assign main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_ready = main_litedramcore_bankmachine4_cmd_buffer_sink_sink_ready;
-assign main_litedramcore_bankmachine4_cmd_buffer_sink_sink_first = main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_first;
-assign main_litedramcore_bankmachine4_cmd_buffer_sink_sink_last = main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_last;
-assign main_litedramcore_bankmachine4_cmd_buffer_sink_sink_payload_we = main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_payload_we;
-assign main_litedramcore_bankmachine4_cmd_buffer_sink_sink_payload_addr = main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_payload_addr;
-assign main_litedramcore_bankmachine4_cmd_buffer_source_source_ready = (main_litedramcore_bankmachine4_req_wdata_ready | main_litedramcore_bankmachine4_req_rdata_valid);
-assign main_litedramcore_bankmachine4_req_lock = (main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_valid | main_litedramcore_bankmachine4_cmd_buffer_source_source_valid);
-assign main_litedramcore_bankmachine4_row_hit = (main_litedramcore_bankmachine4_row == main_litedramcore_bankmachine4_cmd_buffer_source_source_payload_addr[20:7]);
+assign main_litedramcore_bankmachine4_sink_valid = main_litedramcore_bankmachine4_req_valid;
+assign main_litedramcore_bankmachine4_req_ready = main_litedramcore_bankmachine4_sink_ready;
+assign main_litedramcore_bankmachine4_sink_payload_we = main_litedramcore_bankmachine4_req_we;
+assign main_litedramcore_bankmachine4_sink_payload_addr = main_litedramcore_bankmachine4_req_addr;
+assign main_litedramcore_bankmachine4_sink_sink_valid = main_litedramcore_bankmachine4_source_valid;
+assign main_litedramcore_bankmachine4_source_ready = main_litedramcore_bankmachine4_sink_sink_ready;
+assign main_litedramcore_bankmachine4_sink_sink_first = main_litedramcore_bankmachine4_source_first;
+assign main_litedramcore_bankmachine4_sink_sink_last = main_litedramcore_bankmachine4_source_last;
+assign main_litedramcore_bankmachine4_sink_sink_payload_we = main_litedramcore_bankmachine4_source_payload_we;
+assign main_litedramcore_bankmachine4_sink_sink_payload_addr = main_litedramcore_bankmachine4_source_payload_addr;
+assign main_litedramcore_bankmachine4_source_source_ready = (main_litedramcore_bankmachine4_req_wdata_ready | main_litedramcore_bankmachine4_req_rdata_valid);
+assign main_litedramcore_bankmachine4_req_lock = (main_litedramcore_bankmachine4_source_valid | main_litedramcore_bankmachine4_source_source_valid);
+assign main_litedramcore_bankmachine4_row_hit = (main_litedramcore_bankmachine4_row == main_litedramcore_bankmachine4_source_source_payload_addr[20:7]);
 assign main_litedramcore_bankmachine4_cmd_payload_ba = 3'd4;
 always @(*) begin
     main_litedramcore_bankmachine4_cmd_payload_a = 14'd0;
     if (main_litedramcore_bankmachine4_row_col_n_addr_sel) begin
-        main_litedramcore_bankmachine4_cmd_payload_a = main_litedramcore_bankmachine4_cmd_buffer_source_source_payload_addr[20:7];
+        main_litedramcore_bankmachine4_cmd_payload_a = main_litedramcore_bankmachine4_source_source_payload_addr[20:7];
     end else begin
-        main_litedramcore_bankmachine4_cmd_payload_a = ((main_litedramcore_bankmachine4_auto_precharge <<< 4'd10) | {main_litedramcore_bankmachine4_cmd_buffer_source_source_payload_addr[6:0], {3{1'd0}}});
+        main_litedramcore_bankmachine4_cmd_payload_a = ((main_litedramcore_bankmachine4_auto_precharge <<< 4'd10) | {main_litedramcore_bankmachine4_source_source_payload_addr[6:0], {3{1'd0}}});
     end
 end
 assign main_litedramcore_bankmachine4_twtpcon_valid = ((main_litedramcore_bankmachine4_cmd_valid & main_litedramcore_bankmachine4_cmd_ready) & main_litedramcore_bankmachine4_cmd_payload_is_write);
@@ -5124,39 +5244,54 @@ assign main_litedramcore_bankmachine4_trccon_valid = ((main_litedramcore_bankmac
 assign main_litedramcore_bankmachine4_trascon_valid = ((main_litedramcore_bankmachine4_cmd_valid & main_litedramcore_bankmachine4_cmd_ready) & main_litedramcore_bankmachine4_row_open);
 always @(*) begin
     main_litedramcore_bankmachine4_auto_precharge = 1'd0;
-    if ((main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_valid & main_litedramcore_bankmachine4_cmd_buffer_source_source_valid)) begin
-        if ((main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_payload_addr[20:7] != main_litedramcore_bankmachine4_cmd_buffer_source_source_payload_addr[20:7])) begin
+    if ((main_litedramcore_bankmachine4_source_valid & main_litedramcore_bankmachine4_source_source_valid)) begin
+        if ((main_litedramcore_bankmachine4_source_payload_addr[20:7] != main_litedramcore_bankmachine4_source_source_payload_addr[20:7])) begin
             main_litedramcore_bankmachine4_auto_precharge = (main_litedramcore_bankmachine4_row_close == 1'd0);
         end
     end
 end
-assign main_litedramcore_bankmachine4_cmd_buffer_lookahead_level = main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_valid;
-assign main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_valid) | main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_ready);
-assign main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_sink_valid = main_litedramcore_bankmachine4_cmd_buffer_lookahead_sink_sink_valid;
-assign main_litedramcore_bankmachine4_cmd_buffer_lookahead_sink_sink_ready = main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_sink_ready;
-assign main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_sink_first = main_litedramcore_bankmachine4_cmd_buffer_lookahead_sink_sink_first;
-assign main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_sink_last = main_litedramcore_bankmachine4_cmd_buffer_lookahead_sink_sink_last;
-assign main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_sink_payload_we = main_litedramcore_bankmachine4_cmd_buffer_lookahead_sink_sink_payload_we;
-assign main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine4_cmd_buffer_lookahead_sink_sink_payload_addr;
-assign main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_valid = main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_valid;
-assign main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_ready = main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_ready;
-assign main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_first = main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_first;
-assign main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_last = main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_last;
-assign main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_payload_we = main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_payload_we;
-assign main_litedramcore_bankmachine4_cmd_buffer_lookahead_source_source_payload_addr = main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_payload_addr;
-assign main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_valid) | main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_ready);
-assign main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_sink_valid = main_litedramcore_bankmachine4_cmd_buffer_sink_sink_valid;
-assign main_litedramcore_bankmachine4_cmd_buffer_sink_sink_ready = main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_sink_ready;
-assign main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_sink_first = main_litedramcore_bankmachine4_cmd_buffer_sink_sink_first;
-assign main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_sink_last = main_litedramcore_bankmachine4_cmd_buffer_sink_sink_last;
-assign main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_sink_payload_we = main_litedramcore_bankmachine4_cmd_buffer_sink_sink_payload_we;
-assign main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine4_cmd_buffer_sink_sink_payload_addr;
-assign main_litedramcore_bankmachine4_cmd_buffer_source_source_valid = main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_valid;
-assign main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_ready = main_litedramcore_bankmachine4_cmd_buffer_source_source_ready;
-assign main_litedramcore_bankmachine4_cmd_buffer_source_source_first = main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_first;
-assign main_litedramcore_bankmachine4_cmd_buffer_source_source_last = main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_last;
-assign main_litedramcore_bankmachine4_cmd_buffer_source_source_payload_we = main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_payload_we;
-assign main_litedramcore_bankmachine4_cmd_buffer_source_source_payload_addr = main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_payload_addr;
+assign main_litedramcore_bankmachine4_syncfifo4_din = {main_litedramcore_bankmachine4_fifo_in_last, main_litedramcore_bankmachine4_fifo_in_first, main_litedramcore_bankmachine4_fifo_in_payload_addr, main_litedramcore_bankmachine4_fifo_in_payload_we};
+assign {main_litedramcore_bankmachine4_fifo_out_last, main_litedramcore_bankmachine4_fifo_out_first, main_litedramcore_bankmachine4_fifo_out_payload_addr, main_litedramcore_bankmachine4_fifo_out_payload_we} = main_litedramcore_bankmachine4_syncfifo4_dout;
+assign main_litedramcore_bankmachine4_sink_ready = main_litedramcore_bankmachine4_syncfifo4_writable;
+assign main_litedramcore_bankmachine4_syncfifo4_we = main_litedramcore_bankmachine4_sink_valid;
+assign main_litedramcore_bankmachine4_fifo_in_first = main_litedramcore_bankmachine4_sink_first;
+assign main_litedramcore_bankmachine4_fifo_in_last = main_litedramcore_bankmachine4_sink_last;
+assign main_litedramcore_bankmachine4_fifo_in_payload_we = main_litedramcore_bankmachine4_sink_payload_we;
+assign main_litedramcore_bankmachine4_fifo_in_payload_addr = main_litedramcore_bankmachine4_sink_payload_addr;
+assign main_litedramcore_bankmachine4_source_valid = main_litedramcore_bankmachine4_syncfifo4_readable;
+assign main_litedramcore_bankmachine4_source_first = main_litedramcore_bankmachine4_fifo_out_first;
+assign main_litedramcore_bankmachine4_source_last = main_litedramcore_bankmachine4_fifo_out_last;
+assign main_litedramcore_bankmachine4_source_payload_we = main_litedramcore_bankmachine4_fifo_out_payload_we;
+assign main_litedramcore_bankmachine4_source_payload_addr = main_litedramcore_bankmachine4_fifo_out_payload_addr;
+assign main_litedramcore_bankmachine4_syncfifo4_re = main_litedramcore_bankmachine4_source_ready;
+always @(*) begin
+    main_litedramcore_bankmachine4_wrport_adr = 3'd0;
+    if (main_litedramcore_bankmachine4_replace) begin
+        main_litedramcore_bankmachine4_wrport_adr = (main_litedramcore_bankmachine4_produce - 1'd1);
+    end else begin
+        main_litedramcore_bankmachine4_wrport_adr = main_litedramcore_bankmachine4_produce;
+    end
+end
+assign main_litedramcore_bankmachine4_wrport_dat_w = main_litedramcore_bankmachine4_syncfifo4_din;
+assign main_litedramcore_bankmachine4_wrport_we = (main_litedramcore_bankmachine4_syncfifo4_we & (main_litedramcore_bankmachine4_syncfifo4_writable | main_litedramcore_bankmachine4_replace));
+assign main_litedramcore_bankmachine4_do_read = (main_litedramcore_bankmachine4_syncfifo4_readable & main_litedramcore_bankmachine4_syncfifo4_re);
+assign main_litedramcore_bankmachine4_rdport_adr = main_litedramcore_bankmachine4_consume;
+assign main_litedramcore_bankmachine4_syncfifo4_dout = main_litedramcore_bankmachine4_rdport_dat_r;
+assign main_litedramcore_bankmachine4_syncfifo4_writable = (main_litedramcore_bankmachine4_level != 4'd8);
+assign main_litedramcore_bankmachine4_syncfifo4_readable = (main_litedramcore_bankmachine4_level != 1'd0);
+assign main_litedramcore_bankmachine4_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine4_pipe_valid_source_valid) | main_litedramcore_bankmachine4_pipe_valid_source_ready);
+assign main_litedramcore_bankmachine4_pipe_valid_sink_valid = main_litedramcore_bankmachine4_sink_sink_valid;
+assign main_litedramcore_bankmachine4_sink_sink_ready = main_litedramcore_bankmachine4_pipe_valid_sink_ready;
+assign main_litedramcore_bankmachine4_pipe_valid_sink_first = main_litedramcore_bankmachine4_sink_sink_first;
+assign main_litedramcore_bankmachine4_pipe_valid_sink_last = main_litedramcore_bankmachine4_sink_sink_last;
+assign main_litedramcore_bankmachine4_pipe_valid_sink_payload_we = main_litedramcore_bankmachine4_sink_sink_payload_we;
+assign main_litedramcore_bankmachine4_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine4_sink_sink_payload_addr;
+assign main_litedramcore_bankmachine4_source_source_valid = main_litedramcore_bankmachine4_pipe_valid_source_valid;
+assign main_litedramcore_bankmachine4_pipe_valid_source_ready = main_litedramcore_bankmachine4_source_source_ready;
+assign main_litedramcore_bankmachine4_source_source_first = main_litedramcore_bankmachine4_pipe_valid_source_first;
+assign main_litedramcore_bankmachine4_source_source_last = main_litedramcore_bankmachine4_pipe_valid_source_last;
+assign main_litedramcore_bankmachine4_source_source_payload_we = main_litedramcore_bankmachine4_pipe_valid_source_payload_we;
+assign main_litedramcore_bankmachine4_source_source_payload_addr = main_litedramcore_bankmachine4_pipe_valid_source_payload_addr;
 always @(*) begin
     builder_bankmachine4_next_state = 4'd0;
     main_litedramcore_bankmachine4_cmd_payload_cas = 1'd0;
@@ -5230,11 +5365,11 @@ always @(*) begin
             if (main_litedramcore_bankmachine4_refresh_req) begin
                 builder_bankmachine4_next_state = 3'd4;
             end else begin
-                if (main_litedramcore_bankmachine4_cmd_buffer_source_source_valid) begin
+                if (main_litedramcore_bankmachine4_source_source_valid) begin
                     if (main_litedramcore_bankmachine4_row_opened) begin
                         if (main_litedramcore_bankmachine4_row_hit) begin
                             main_litedramcore_bankmachine4_cmd_valid = 1'd1;
-                            if (main_litedramcore_bankmachine4_cmd_buffer_source_source_payload_we) begin
+                            if (main_litedramcore_bankmachine4_source_source_payload_we) begin
                                 main_litedramcore_bankmachine4_req_wdata_ready = main_litedramcore_bankmachine4_cmd_ready;
                                 main_litedramcore_bankmachine4_cmd_payload_is_write = 1'd1;
                                 main_litedramcore_bankmachine4_cmd_payload_we = 1'd1;
@@ -5257,26 +5392,26 @@ always @(*) begin
         end
     endcase
 end
-assign main_litedramcore_bankmachine5_cmd_buffer_lookahead_sink_sink_valid = main_litedramcore_bankmachine5_req_valid;
-assign main_litedramcore_bankmachine5_req_ready = main_litedramcore_bankmachine5_cmd_buffer_lookahead_sink_sink_ready;
-assign main_litedramcore_bankmachine5_cmd_buffer_lookahead_sink_sink_payload_we = main_litedramcore_bankmachine5_req_we;
-assign main_litedramcore_bankmachine5_cmd_buffer_lookahead_sink_sink_payload_addr = main_litedramcore_bankmachine5_req_addr;
-assign main_litedramcore_bankmachine5_cmd_buffer_sink_sink_valid = main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_valid;
-assign main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_ready = main_litedramcore_bankmachine5_cmd_buffer_sink_sink_ready;
-assign main_litedramcore_bankmachine5_cmd_buffer_sink_sink_first = main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_first;
-assign main_litedramcore_bankmachine5_cmd_buffer_sink_sink_last = main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_last;
-assign main_litedramcore_bankmachine5_cmd_buffer_sink_sink_payload_we = main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_payload_we;
-assign main_litedramcore_bankmachine5_cmd_buffer_sink_sink_payload_addr = main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_payload_addr;
-assign main_litedramcore_bankmachine5_cmd_buffer_source_source_ready = (main_litedramcore_bankmachine5_req_wdata_ready | main_litedramcore_bankmachine5_req_rdata_valid);
-assign main_litedramcore_bankmachine5_req_lock = (main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_valid | main_litedramcore_bankmachine5_cmd_buffer_source_source_valid);
-assign main_litedramcore_bankmachine5_row_hit = (main_litedramcore_bankmachine5_row == main_litedramcore_bankmachine5_cmd_buffer_source_source_payload_addr[20:7]);
+assign main_litedramcore_bankmachine5_sink_valid = main_litedramcore_bankmachine5_req_valid;
+assign main_litedramcore_bankmachine5_req_ready = main_litedramcore_bankmachine5_sink_ready;
+assign main_litedramcore_bankmachine5_sink_payload_we = main_litedramcore_bankmachine5_req_we;
+assign main_litedramcore_bankmachine5_sink_payload_addr = main_litedramcore_bankmachine5_req_addr;
+assign main_litedramcore_bankmachine5_sink_sink_valid = main_litedramcore_bankmachine5_source_valid;
+assign main_litedramcore_bankmachine5_source_ready = main_litedramcore_bankmachine5_sink_sink_ready;
+assign main_litedramcore_bankmachine5_sink_sink_first = main_litedramcore_bankmachine5_source_first;
+assign main_litedramcore_bankmachine5_sink_sink_last = main_litedramcore_bankmachine5_source_last;
+assign main_litedramcore_bankmachine5_sink_sink_payload_we = main_litedramcore_bankmachine5_source_payload_we;
+assign main_litedramcore_bankmachine5_sink_sink_payload_addr = main_litedramcore_bankmachine5_source_payload_addr;
+assign main_litedramcore_bankmachine5_source_source_ready = (main_litedramcore_bankmachine5_req_wdata_ready | main_litedramcore_bankmachine5_req_rdata_valid);
+assign main_litedramcore_bankmachine5_req_lock = (main_litedramcore_bankmachine5_source_valid | main_litedramcore_bankmachine5_source_source_valid);
+assign main_litedramcore_bankmachine5_row_hit = (main_litedramcore_bankmachine5_row == main_litedramcore_bankmachine5_source_source_payload_addr[20:7]);
 assign main_litedramcore_bankmachine5_cmd_payload_ba = 3'd5;
 always @(*) begin
     main_litedramcore_bankmachine5_cmd_payload_a = 14'd0;
     if (main_litedramcore_bankmachine5_row_col_n_addr_sel) begin
-        main_litedramcore_bankmachine5_cmd_payload_a = main_litedramcore_bankmachine5_cmd_buffer_source_source_payload_addr[20:7];
+        main_litedramcore_bankmachine5_cmd_payload_a = main_litedramcore_bankmachine5_source_source_payload_addr[20:7];
     end else begin
-        main_litedramcore_bankmachine5_cmd_payload_a = ((main_litedramcore_bankmachine5_auto_precharge <<< 4'd10) | {main_litedramcore_bankmachine5_cmd_buffer_source_source_payload_addr[6:0], {3{1'd0}}});
+        main_litedramcore_bankmachine5_cmd_payload_a = ((main_litedramcore_bankmachine5_auto_precharge <<< 4'd10) | {main_litedramcore_bankmachine5_source_source_payload_addr[6:0], {3{1'd0}}});
     end
 end
 assign main_litedramcore_bankmachine5_twtpcon_valid = ((main_litedramcore_bankmachine5_cmd_valid & main_litedramcore_bankmachine5_cmd_ready) & main_litedramcore_bankmachine5_cmd_payload_is_write);
@@ -5284,39 +5419,54 @@ assign main_litedramcore_bankmachine5_trccon_valid = ((main_litedramcore_bankmac
 assign main_litedramcore_bankmachine5_trascon_valid = ((main_litedramcore_bankmachine5_cmd_valid & main_litedramcore_bankmachine5_cmd_ready) & main_litedramcore_bankmachine5_row_open);
 always @(*) begin
     main_litedramcore_bankmachine5_auto_precharge = 1'd0;
-    if ((main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_valid & main_litedramcore_bankmachine5_cmd_buffer_source_source_valid)) begin
-        if ((main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_payload_addr[20:7] != main_litedramcore_bankmachine5_cmd_buffer_source_source_payload_addr[20:7])) begin
+    if ((main_litedramcore_bankmachine5_source_valid & main_litedramcore_bankmachine5_source_source_valid)) begin
+        if ((main_litedramcore_bankmachine5_source_payload_addr[20:7] != main_litedramcore_bankmachine5_source_source_payload_addr[20:7])) begin
             main_litedramcore_bankmachine5_auto_precharge = (main_litedramcore_bankmachine5_row_close == 1'd0);
         end
     end
 end
-assign main_litedramcore_bankmachine5_cmd_buffer_lookahead_level = main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_valid;
-assign main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_valid) | main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_ready);
-assign main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_sink_valid = main_litedramcore_bankmachine5_cmd_buffer_lookahead_sink_sink_valid;
-assign main_litedramcore_bankmachine5_cmd_buffer_lookahead_sink_sink_ready = main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_sink_ready;
-assign main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_sink_first = main_litedramcore_bankmachine5_cmd_buffer_lookahead_sink_sink_first;
-assign main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_sink_last = main_litedramcore_bankmachine5_cmd_buffer_lookahead_sink_sink_last;
-assign main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_sink_payload_we = main_litedramcore_bankmachine5_cmd_buffer_lookahead_sink_sink_payload_we;
-assign main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine5_cmd_buffer_lookahead_sink_sink_payload_addr;
-assign main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_valid = main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_valid;
-assign main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_ready = main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_ready;
-assign main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_first = main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_first;
-assign main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_last = main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_last;
-assign main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_payload_we = main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_payload_we;
-assign main_litedramcore_bankmachine5_cmd_buffer_lookahead_source_source_payload_addr = main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_payload_addr;
-assign main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_valid) | main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_ready);
-assign main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_sink_valid = main_litedramcore_bankmachine5_cmd_buffer_sink_sink_valid;
-assign main_litedramcore_bankmachine5_cmd_buffer_sink_sink_ready = main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_sink_ready;
-assign main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_sink_first = main_litedramcore_bankmachine5_cmd_buffer_sink_sink_first;
-assign main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_sink_last = main_litedramcore_bankmachine5_cmd_buffer_sink_sink_last;
-assign main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_sink_payload_we = main_litedramcore_bankmachine5_cmd_buffer_sink_sink_payload_we;
-assign main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine5_cmd_buffer_sink_sink_payload_addr;
-assign main_litedramcore_bankmachine5_cmd_buffer_source_source_valid = main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_valid;
-assign main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_ready = main_litedramcore_bankmachine5_cmd_buffer_source_source_ready;
-assign main_litedramcore_bankmachine5_cmd_buffer_source_source_first = main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_first;
-assign main_litedramcore_bankmachine5_cmd_buffer_source_source_last = main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_last;
-assign main_litedramcore_bankmachine5_cmd_buffer_source_source_payload_we = main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_payload_we;
-assign main_litedramcore_bankmachine5_cmd_buffer_source_source_payload_addr = main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_payload_addr;
+assign main_litedramcore_bankmachine5_syncfifo5_din = {main_litedramcore_bankmachine5_fifo_in_last, main_litedramcore_bankmachine5_fifo_in_first, main_litedramcore_bankmachine5_fifo_in_payload_addr, main_litedramcore_bankmachine5_fifo_in_payload_we};
+assign {main_litedramcore_bankmachine5_fifo_out_last, main_litedramcore_bankmachine5_fifo_out_first, main_litedramcore_bankmachine5_fifo_out_payload_addr, main_litedramcore_bankmachine5_fifo_out_payload_we} = main_litedramcore_bankmachine5_syncfifo5_dout;
+assign main_litedramcore_bankmachine5_sink_ready = main_litedramcore_bankmachine5_syncfifo5_writable;
+assign main_litedramcore_bankmachine5_syncfifo5_we = main_litedramcore_bankmachine5_sink_valid;
+assign main_litedramcore_bankmachine5_fifo_in_first = main_litedramcore_bankmachine5_sink_first;
+assign main_litedramcore_bankmachine5_fifo_in_last = main_litedramcore_bankmachine5_sink_last;
+assign main_litedramcore_bankmachine5_fifo_in_payload_we = main_litedramcore_bankmachine5_sink_payload_we;
+assign main_litedramcore_bankmachine5_fifo_in_payload_addr = main_litedramcore_bankmachine5_sink_payload_addr;
+assign main_litedramcore_bankmachine5_source_valid = main_litedramcore_bankmachine5_syncfifo5_readable;
+assign main_litedramcore_bankmachine5_source_first = main_litedramcore_bankmachine5_fifo_out_first;
+assign main_litedramcore_bankmachine5_source_last = main_litedramcore_bankmachine5_fifo_out_last;
+assign main_litedramcore_bankmachine5_source_payload_we = main_litedramcore_bankmachine5_fifo_out_payload_we;
+assign main_litedramcore_bankmachine5_source_payload_addr = main_litedramcore_bankmachine5_fifo_out_payload_addr;
+assign main_litedramcore_bankmachine5_syncfifo5_re = main_litedramcore_bankmachine5_source_ready;
+always @(*) begin
+    main_litedramcore_bankmachine5_wrport_adr = 3'd0;
+    if (main_litedramcore_bankmachine5_replace) begin
+        main_litedramcore_bankmachine5_wrport_adr = (main_litedramcore_bankmachine5_produce - 1'd1);
+    end else begin
+        main_litedramcore_bankmachine5_wrport_adr = main_litedramcore_bankmachine5_produce;
+    end
+end
+assign main_litedramcore_bankmachine5_wrport_dat_w = main_litedramcore_bankmachine5_syncfifo5_din;
+assign main_litedramcore_bankmachine5_wrport_we = (main_litedramcore_bankmachine5_syncfifo5_we & (main_litedramcore_bankmachine5_syncfifo5_writable | main_litedramcore_bankmachine5_replace));
+assign main_litedramcore_bankmachine5_do_read = (main_litedramcore_bankmachine5_syncfifo5_readable & main_litedramcore_bankmachine5_syncfifo5_re);
+assign main_litedramcore_bankmachine5_rdport_adr = main_litedramcore_bankmachine5_consume;
+assign main_litedramcore_bankmachine5_syncfifo5_dout = main_litedramcore_bankmachine5_rdport_dat_r;
+assign main_litedramcore_bankmachine5_syncfifo5_writable = (main_litedramcore_bankmachine5_level != 4'd8);
+assign main_litedramcore_bankmachine5_syncfifo5_readable = (main_litedramcore_bankmachine5_level != 1'd0);
+assign main_litedramcore_bankmachine5_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine5_pipe_valid_source_valid) | main_litedramcore_bankmachine5_pipe_valid_source_ready);
+assign main_litedramcore_bankmachine5_pipe_valid_sink_valid = main_litedramcore_bankmachine5_sink_sink_valid;
+assign main_litedramcore_bankmachine5_sink_sink_ready = main_litedramcore_bankmachine5_pipe_valid_sink_ready;
+assign main_litedramcore_bankmachine5_pipe_valid_sink_first = main_litedramcore_bankmachine5_sink_sink_first;
+assign main_litedramcore_bankmachine5_pipe_valid_sink_last = main_litedramcore_bankmachine5_sink_sink_last;
+assign main_litedramcore_bankmachine5_pipe_valid_sink_payload_we = main_litedramcore_bankmachine5_sink_sink_payload_we;
+assign main_litedramcore_bankmachine5_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine5_sink_sink_payload_addr;
+assign main_litedramcore_bankmachine5_source_source_valid = main_litedramcore_bankmachine5_pipe_valid_source_valid;
+assign main_litedramcore_bankmachine5_pipe_valid_source_ready = main_litedramcore_bankmachine5_source_source_ready;
+assign main_litedramcore_bankmachine5_source_source_first = main_litedramcore_bankmachine5_pipe_valid_source_first;
+assign main_litedramcore_bankmachine5_source_source_last = main_litedramcore_bankmachine5_pipe_valid_source_last;
+assign main_litedramcore_bankmachine5_source_source_payload_we = main_litedramcore_bankmachine5_pipe_valid_source_payload_we;
+assign main_litedramcore_bankmachine5_source_source_payload_addr = main_litedramcore_bankmachine5_pipe_valid_source_payload_addr;
 always @(*) begin
     builder_bankmachine5_next_state = 4'd0;
     main_litedramcore_bankmachine5_cmd_payload_cas = 1'd0;
@@ -5390,11 +5540,11 @@ always @(*) begin
             if (main_litedramcore_bankmachine5_refresh_req) begin
                 builder_bankmachine5_next_state = 3'd4;
             end else begin
-                if (main_litedramcore_bankmachine5_cmd_buffer_source_source_valid) begin
+                if (main_litedramcore_bankmachine5_source_source_valid) begin
                     if (main_litedramcore_bankmachine5_row_opened) begin
                         if (main_litedramcore_bankmachine5_row_hit) begin
                             main_litedramcore_bankmachine5_cmd_valid = 1'd1;
-                            if (main_litedramcore_bankmachine5_cmd_buffer_source_source_payload_we) begin
+                            if (main_litedramcore_bankmachine5_source_source_payload_we) begin
                                 main_litedramcore_bankmachine5_req_wdata_ready = main_litedramcore_bankmachine5_cmd_ready;
                                 main_litedramcore_bankmachine5_cmd_payload_is_write = 1'd1;
                                 main_litedramcore_bankmachine5_cmd_payload_we = 1'd1;
@@ -5417,26 +5567,26 @@ always @(*) begin
         end
     endcase
 end
-assign main_litedramcore_bankmachine6_cmd_buffer_lookahead_sink_sink_valid = main_litedramcore_bankmachine6_req_valid;
-assign main_litedramcore_bankmachine6_req_ready = main_litedramcore_bankmachine6_cmd_buffer_lookahead_sink_sink_ready;
-assign main_litedramcore_bankmachine6_cmd_buffer_lookahead_sink_sink_payload_we = main_litedramcore_bankmachine6_req_we;
-assign main_litedramcore_bankmachine6_cmd_buffer_lookahead_sink_sink_payload_addr = main_litedramcore_bankmachine6_req_addr;
-assign main_litedramcore_bankmachine6_cmd_buffer_sink_sink_valid = main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_valid;
-assign main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_ready = main_litedramcore_bankmachine6_cmd_buffer_sink_sink_ready;
-assign main_litedramcore_bankmachine6_cmd_buffer_sink_sink_first = main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_first;
-assign main_litedramcore_bankmachine6_cmd_buffer_sink_sink_last = main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_last;
-assign main_litedramcore_bankmachine6_cmd_buffer_sink_sink_payload_we = main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_payload_we;
-assign main_litedramcore_bankmachine6_cmd_buffer_sink_sink_payload_addr = main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_payload_addr;
-assign main_litedramcore_bankmachine6_cmd_buffer_source_source_ready = (main_litedramcore_bankmachine6_req_wdata_ready | main_litedramcore_bankmachine6_req_rdata_valid);
-assign main_litedramcore_bankmachine6_req_lock = (main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_valid | main_litedramcore_bankmachine6_cmd_buffer_source_source_valid);
-assign main_litedramcore_bankmachine6_row_hit = (main_litedramcore_bankmachine6_row == main_litedramcore_bankmachine6_cmd_buffer_source_source_payload_addr[20:7]);
+assign main_litedramcore_bankmachine6_sink_valid = main_litedramcore_bankmachine6_req_valid;
+assign main_litedramcore_bankmachine6_req_ready = main_litedramcore_bankmachine6_sink_ready;
+assign main_litedramcore_bankmachine6_sink_payload_we = main_litedramcore_bankmachine6_req_we;
+assign main_litedramcore_bankmachine6_sink_payload_addr = main_litedramcore_bankmachine6_req_addr;
+assign main_litedramcore_bankmachine6_sink_sink_valid = main_litedramcore_bankmachine6_source_valid;
+assign main_litedramcore_bankmachine6_source_ready = main_litedramcore_bankmachine6_sink_sink_ready;
+assign main_litedramcore_bankmachine6_sink_sink_first = main_litedramcore_bankmachine6_source_first;
+assign main_litedramcore_bankmachine6_sink_sink_last = main_litedramcore_bankmachine6_source_last;
+assign main_litedramcore_bankmachine6_sink_sink_payload_we = main_litedramcore_bankmachine6_source_payload_we;
+assign main_litedramcore_bankmachine6_sink_sink_payload_addr = main_litedramcore_bankmachine6_source_payload_addr;
+assign main_litedramcore_bankmachine6_source_source_ready = (main_litedramcore_bankmachine6_req_wdata_ready | main_litedramcore_bankmachine6_req_rdata_valid);
+assign main_litedramcore_bankmachine6_req_lock = (main_litedramcore_bankmachine6_source_valid | main_litedramcore_bankmachine6_source_source_valid);
+assign main_litedramcore_bankmachine6_row_hit = (main_litedramcore_bankmachine6_row == main_litedramcore_bankmachine6_source_source_payload_addr[20:7]);
 assign main_litedramcore_bankmachine6_cmd_payload_ba = 3'd6;
 always @(*) begin
     main_litedramcore_bankmachine6_cmd_payload_a = 14'd0;
     if (main_litedramcore_bankmachine6_row_col_n_addr_sel) begin
-        main_litedramcore_bankmachine6_cmd_payload_a = main_litedramcore_bankmachine6_cmd_buffer_source_source_payload_addr[20:7];
+        main_litedramcore_bankmachine6_cmd_payload_a = main_litedramcore_bankmachine6_source_source_payload_addr[20:7];
     end else begin
-        main_litedramcore_bankmachine6_cmd_payload_a = ((main_litedramcore_bankmachine6_auto_precharge <<< 4'd10) | {main_litedramcore_bankmachine6_cmd_buffer_source_source_payload_addr[6:0], {3{1'd0}}});
+        main_litedramcore_bankmachine6_cmd_payload_a = ((main_litedramcore_bankmachine6_auto_precharge <<< 4'd10) | {main_litedramcore_bankmachine6_source_source_payload_addr[6:0], {3{1'd0}}});
     end
 end
 assign main_litedramcore_bankmachine6_twtpcon_valid = ((main_litedramcore_bankmachine6_cmd_valid & main_litedramcore_bankmachine6_cmd_ready) & main_litedramcore_bankmachine6_cmd_payload_is_write);
@@ -5444,39 +5594,54 @@ assign main_litedramcore_bankmachine6_trccon_valid = ((main_litedramcore_bankmac
 assign main_litedramcore_bankmachine6_trascon_valid = ((main_litedramcore_bankmachine6_cmd_valid & main_litedramcore_bankmachine6_cmd_ready) & main_litedramcore_bankmachine6_row_open);
 always @(*) begin
     main_litedramcore_bankmachine6_auto_precharge = 1'd0;
-    if ((main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_valid & main_litedramcore_bankmachine6_cmd_buffer_source_source_valid)) begin
-        if ((main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_payload_addr[20:7] != main_litedramcore_bankmachine6_cmd_buffer_source_source_payload_addr[20:7])) begin
+    if ((main_litedramcore_bankmachine6_source_valid & main_litedramcore_bankmachine6_source_source_valid)) begin
+        if ((main_litedramcore_bankmachine6_source_payload_addr[20:7] != main_litedramcore_bankmachine6_source_source_payload_addr[20:7])) begin
             main_litedramcore_bankmachine6_auto_precharge = (main_litedramcore_bankmachine6_row_close == 1'd0);
         end
     end
 end
-assign main_litedramcore_bankmachine6_cmd_buffer_lookahead_level = main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_valid;
-assign main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_valid) | main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_ready);
-assign main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_sink_valid = main_litedramcore_bankmachine6_cmd_buffer_lookahead_sink_sink_valid;
-assign main_litedramcore_bankmachine6_cmd_buffer_lookahead_sink_sink_ready = main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_sink_ready;
-assign main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_sink_first = main_litedramcore_bankmachine6_cmd_buffer_lookahead_sink_sink_first;
-assign main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_sink_last = main_litedramcore_bankmachine6_cmd_buffer_lookahead_sink_sink_last;
-assign main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_sink_payload_we = main_litedramcore_bankmachine6_cmd_buffer_lookahead_sink_sink_payload_we;
-assign main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine6_cmd_buffer_lookahead_sink_sink_payload_addr;
-assign main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_valid = main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_valid;
-assign main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_ready = main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_ready;
-assign main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_first = main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_first;
-assign main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_last = main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_last;
-assign main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_payload_we = main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_payload_we;
-assign main_litedramcore_bankmachine6_cmd_buffer_lookahead_source_source_payload_addr = main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_payload_addr;
-assign main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_valid) | main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_ready);
-assign main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_sink_valid = main_litedramcore_bankmachine6_cmd_buffer_sink_sink_valid;
-assign main_litedramcore_bankmachine6_cmd_buffer_sink_sink_ready = main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_sink_ready;
-assign main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_sink_first = main_litedramcore_bankmachine6_cmd_buffer_sink_sink_first;
-assign main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_sink_last = main_litedramcore_bankmachine6_cmd_buffer_sink_sink_last;
-assign main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_sink_payload_we = main_litedramcore_bankmachine6_cmd_buffer_sink_sink_payload_we;
-assign main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine6_cmd_buffer_sink_sink_payload_addr;
-assign main_litedramcore_bankmachine6_cmd_buffer_source_source_valid = main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_valid;
-assign main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_ready = main_litedramcore_bankmachine6_cmd_buffer_source_source_ready;
-assign main_litedramcore_bankmachine6_cmd_buffer_source_source_first = main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_first;
-assign main_litedramcore_bankmachine6_cmd_buffer_source_source_last = main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_last;
-assign main_litedramcore_bankmachine6_cmd_buffer_source_source_payload_we = main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_payload_we;
-assign main_litedramcore_bankmachine6_cmd_buffer_source_source_payload_addr = main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_payload_addr;
+assign main_litedramcore_bankmachine6_syncfifo6_din = {main_litedramcore_bankmachine6_fifo_in_last, main_litedramcore_bankmachine6_fifo_in_first, main_litedramcore_bankmachine6_fifo_in_payload_addr, main_litedramcore_bankmachine6_fifo_in_payload_we};
+assign {main_litedramcore_bankmachine6_fifo_out_last, main_litedramcore_bankmachine6_fifo_out_first, main_litedramcore_bankmachine6_fifo_out_payload_addr, main_litedramcore_bankmachine6_fifo_out_payload_we} = main_litedramcore_bankmachine6_syncfifo6_dout;
+assign main_litedramcore_bankmachine6_sink_ready = main_litedramcore_bankmachine6_syncfifo6_writable;
+assign main_litedramcore_bankmachine6_syncfifo6_we = main_litedramcore_bankmachine6_sink_valid;
+assign main_litedramcore_bankmachine6_fifo_in_first = main_litedramcore_bankmachine6_sink_first;
+assign main_litedramcore_bankmachine6_fifo_in_last = main_litedramcore_bankmachine6_sink_last;
+assign main_litedramcore_bankmachine6_fifo_in_payload_we = main_litedramcore_bankmachine6_sink_payload_we;
+assign main_litedramcore_bankmachine6_fifo_in_payload_addr = main_litedramcore_bankmachine6_sink_payload_addr;
+assign main_litedramcore_bankmachine6_source_valid = main_litedramcore_bankmachine6_syncfifo6_readable;
+assign main_litedramcore_bankmachine6_source_first = main_litedramcore_bankmachine6_fifo_out_first;
+assign main_litedramcore_bankmachine6_source_last = main_litedramcore_bankmachine6_fifo_out_last;
+assign main_litedramcore_bankmachine6_source_payload_we = main_litedramcore_bankmachine6_fifo_out_payload_we;
+assign main_litedramcore_bankmachine6_source_payload_addr = main_litedramcore_bankmachine6_fifo_out_payload_addr;
+assign main_litedramcore_bankmachine6_syncfifo6_re = main_litedramcore_bankmachine6_source_ready;
+always @(*) begin
+    main_litedramcore_bankmachine6_wrport_adr = 3'd0;
+    if (main_litedramcore_bankmachine6_replace) begin
+        main_litedramcore_bankmachine6_wrport_adr = (main_litedramcore_bankmachine6_produce - 1'd1);
+    end else begin
+        main_litedramcore_bankmachine6_wrport_adr = main_litedramcore_bankmachine6_produce;
+    end
+end
+assign main_litedramcore_bankmachine6_wrport_dat_w = main_litedramcore_bankmachine6_syncfifo6_din;
+assign main_litedramcore_bankmachine6_wrport_we = (main_litedramcore_bankmachine6_syncfifo6_we & (main_litedramcore_bankmachine6_syncfifo6_writable | main_litedramcore_bankmachine6_replace));
+assign main_litedramcore_bankmachine6_do_read = (main_litedramcore_bankmachine6_syncfifo6_readable & main_litedramcore_bankmachine6_syncfifo6_re);
+assign main_litedramcore_bankmachine6_rdport_adr = main_litedramcore_bankmachine6_consume;
+assign main_litedramcore_bankmachine6_syncfifo6_dout = main_litedramcore_bankmachine6_rdport_dat_r;
+assign main_litedramcore_bankmachine6_syncfifo6_writable = (main_litedramcore_bankmachine6_level != 4'd8);
+assign main_litedramcore_bankmachine6_syncfifo6_readable = (main_litedramcore_bankmachine6_level != 1'd0);
+assign main_litedramcore_bankmachine6_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine6_pipe_valid_source_valid) | main_litedramcore_bankmachine6_pipe_valid_source_ready);
+assign main_litedramcore_bankmachine6_pipe_valid_sink_valid = main_litedramcore_bankmachine6_sink_sink_valid;
+assign main_litedramcore_bankmachine6_sink_sink_ready = main_litedramcore_bankmachine6_pipe_valid_sink_ready;
+assign main_litedramcore_bankmachine6_pipe_valid_sink_first = main_litedramcore_bankmachine6_sink_sink_first;
+assign main_litedramcore_bankmachine6_pipe_valid_sink_last = main_litedramcore_bankmachine6_sink_sink_last;
+assign main_litedramcore_bankmachine6_pipe_valid_sink_payload_we = main_litedramcore_bankmachine6_sink_sink_payload_we;
+assign main_litedramcore_bankmachine6_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine6_sink_sink_payload_addr;
+assign main_litedramcore_bankmachine6_source_source_valid = main_litedramcore_bankmachine6_pipe_valid_source_valid;
+assign main_litedramcore_bankmachine6_pipe_valid_source_ready = main_litedramcore_bankmachine6_source_source_ready;
+assign main_litedramcore_bankmachine6_source_source_first = main_litedramcore_bankmachine6_pipe_valid_source_first;
+assign main_litedramcore_bankmachine6_source_source_last = main_litedramcore_bankmachine6_pipe_valid_source_last;
+assign main_litedramcore_bankmachine6_source_source_payload_we = main_litedramcore_bankmachine6_pipe_valid_source_payload_we;
+assign main_litedramcore_bankmachine6_source_source_payload_addr = main_litedramcore_bankmachine6_pipe_valid_source_payload_addr;
 always @(*) begin
     builder_bankmachine6_next_state = 4'd0;
     main_litedramcore_bankmachine6_cmd_payload_cas = 1'd0;
@@ -5550,11 +5715,11 @@ always @(*) begin
             if (main_litedramcore_bankmachine6_refresh_req) begin
                 builder_bankmachine6_next_state = 3'd4;
             end else begin
-                if (main_litedramcore_bankmachine6_cmd_buffer_source_source_valid) begin
+                if (main_litedramcore_bankmachine6_source_source_valid) begin
                     if (main_litedramcore_bankmachine6_row_opened) begin
                         if (main_litedramcore_bankmachine6_row_hit) begin
                             main_litedramcore_bankmachine6_cmd_valid = 1'd1;
-                            if (main_litedramcore_bankmachine6_cmd_buffer_source_source_payload_we) begin
+                            if (main_litedramcore_bankmachine6_source_source_payload_we) begin
                                 main_litedramcore_bankmachine6_req_wdata_ready = main_litedramcore_bankmachine6_cmd_ready;
                                 main_litedramcore_bankmachine6_cmd_payload_is_write = 1'd1;
                                 main_litedramcore_bankmachine6_cmd_payload_we = 1'd1;
@@ -5577,26 +5742,26 @@ always @(*) begin
         end
     endcase
 end
-assign main_litedramcore_bankmachine7_cmd_buffer_lookahead_sink_sink_valid = main_litedramcore_bankmachine7_req_valid;
-assign main_litedramcore_bankmachine7_req_ready = main_litedramcore_bankmachine7_cmd_buffer_lookahead_sink_sink_ready;
-assign main_litedramcore_bankmachine7_cmd_buffer_lookahead_sink_sink_payload_we = main_litedramcore_bankmachine7_req_we;
-assign main_litedramcore_bankmachine7_cmd_buffer_lookahead_sink_sink_payload_addr = main_litedramcore_bankmachine7_req_addr;
-assign main_litedramcore_bankmachine7_cmd_buffer_sink_sink_valid = main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_valid;
-assign main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_ready = main_litedramcore_bankmachine7_cmd_buffer_sink_sink_ready;
-assign main_litedramcore_bankmachine7_cmd_buffer_sink_sink_first = main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_first;
-assign main_litedramcore_bankmachine7_cmd_buffer_sink_sink_last = main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_last;
-assign main_litedramcore_bankmachine7_cmd_buffer_sink_sink_payload_we = main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_payload_we;
-assign main_litedramcore_bankmachine7_cmd_buffer_sink_sink_payload_addr = main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_payload_addr;
-assign main_litedramcore_bankmachine7_cmd_buffer_source_source_ready = (main_litedramcore_bankmachine7_req_wdata_ready | main_litedramcore_bankmachine7_req_rdata_valid);
-assign main_litedramcore_bankmachine7_req_lock = (main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_valid | main_litedramcore_bankmachine7_cmd_buffer_source_source_valid);
-assign main_litedramcore_bankmachine7_row_hit = (main_litedramcore_bankmachine7_row == main_litedramcore_bankmachine7_cmd_buffer_source_source_payload_addr[20:7]);
+assign main_litedramcore_bankmachine7_sink_valid = main_litedramcore_bankmachine7_req_valid;
+assign main_litedramcore_bankmachine7_req_ready = main_litedramcore_bankmachine7_sink_ready;
+assign main_litedramcore_bankmachine7_sink_payload_we = main_litedramcore_bankmachine7_req_we;
+assign main_litedramcore_bankmachine7_sink_payload_addr = main_litedramcore_bankmachine7_req_addr;
+assign main_litedramcore_bankmachine7_sink_sink_valid = main_litedramcore_bankmachine7_source_valid;
+assign main_litedramcore_bankmachine7_source_ready = main_litedramcore_bankmachine7_sink_sink_ready;
+assign main_litedramcore_bankmachine7_sink_sink_first = main_litedramcore_bankmachine7_source_first;
+assign main_litedramcore_bankmachine7_sink_sink_last = main_litedramcore_bankmachine7_source_last;
+assign main_litedramcore_bankmachine7_sink_sink_payload_we = main_litedramcore_bankmachine7_source_payload_we;
+assign main_litedramcore_bankmachine7_sink_sink_payload_addr = main_litedramcore_bankmachine7_source_payload_addr;
+assign main_litedramcore_bankmachine7_source_source_ready = (main_litedramcore_bankmachine7_req_wdata_ready | main_litedramcore_bankmachine7_req_rdata_valid);
+assign main_litedramcore_bankmachine7_req_lock = (main_litedramcore_bankmachine7_source_valid | main_litedramcore_bankmachine7_source_source_valid);
+assign main_litedramcore_bankmachine7_row_hit = (main_litedramcore_bankmachine7_row == main_litedramcore_bankmachine7_source_source_payload_addr[20:7]);
 assign main_litedramcore_bankmachine7_cmd_payload_ba = 3'd7;
 always @(*) begin
     main_litedramcore_bankmachine7_cmd_payload_a = 14'd0;
     if (main_litedramcore_bankmachine7_row_col_n_addr_sel) begin
-        main_litedramcore_bankmachine7_cmd_payload_a = main_litedramcore_bankmachine7_cmd_buffer_source_source_payload_addr[20:7];
+        main_litedramcore_bankmachine7_cmd_payload_a = main_litedramcore_bankmachine7_source_source_payload_addr[20:7];
     end else begin
-        main_litedramcore_bankmachine7_cmd_payload_a = ((main_litedramcore_bankmachine7_auto_precharge <<< 4'd10) | {main_litedramcore_bankmachine7_cmd_buffer_source_source_payload_addr[6:0], {3{1'd0}}});
+        main_litedramcore_bankmachine7_cmd_payload_a = ((main_litedramcore_bankmachine7_auto_precharge <<< 4'd10) | {main_litedramcore_bankmachine7_source_source_payload_addr[6:0], {3{1'd0}}});
     end
 end
 assign main_litedramcore_bankmachine7_twtpcon_valid = ((main_litedramcore_bankmachine7_cmd_valid & main_litedramcore_bankmachine7_cmd_ready) & main_litedramcore_bankmachine7_cmd_payload_is_write);
@@ -5604,39 +5769,54 @@ assign main_litedramcore_bankmachine7_trccon_valid = ((main_litedramcore_bankmac
 assign main_litedramcore_bankmachine7_trascon_valid = ((main_litedramcore_bankmachine7_cmd_valid & main_litedramcore_bankmachine7_cmd_ready) & main_litedramcore_bankmachine7_row_open);
 always @(*) begin
     main_litedramcore_bankmachine7_auto_precharge = 1'd0;
-    if ((main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_valid & main_litedramcore_bankmachine7_cmd_buffer_source_source_valid)) begin
-        if ((main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_payload_addr[20:7] != main_litedramcore_bankmachine7_cmd_buffer_source_source_payload_addr[20:7])) begin
+    if ((main_litedramcore_bankmachine7_source_valid & main_litedramcore_bankmachine7_source_source_valid)) begin
+        if ((main_litedramcore_bankmachine7_source_payload_addr[20:7] != main_litedramcore_bankmachine7_source_source_payload_addr[20:7])) begin
             main_litedramcore_bankmachine7_auto_precharge = (main_litedramcore_bankmachine7_row_close == 1'd0);
         end
     end
 end
-assign main_litedramcore_bankmachine7_cmd_buffer_lookahead_level = main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_valid;
-assign main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_valid) | main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_ready);
-assign main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_sink_valid = main_litedramcore_bankmachine7_cmd_buffer_lookahead_sink_sink_valid;
-assign main_litedramcore_bankmachine7_cmd_buffer_lookahead_sink_sink_ready = main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_sink_ready;
-assign main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_sink_first = main_litedramcore_bankmachine7_cmd_buffer_lookahead_sink_sink_first;
-assign main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_sink_last = main_litedramcore_bankmachine7_cmd_buffer_lookahead_sink_sink_last;
-assign main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_sink_payload_we = main_litedramcore_bankmachine7_cmd_buffer_lookahead_sink_sink_payload_we;
-assign main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine7_cmd_buffer_lookahead_sink_sink_payload_addr;
-assign main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_valid = main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_valid;
-assign main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_ready = main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_ready;
-assign main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_first = main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_first;
-assign main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_last = main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_last;
-assign main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_payload_we = main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_payload_we;
-assign main_litedramcore_bankmachine7_cmd_buffer_lookahead_source_source_payload_addr = main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_payload_addr;
-assign main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_valid) | main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_ready);
-assign main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_sink_valid = main_litedramcore_bankmachine7_cmd_buffer_sink_sink_valid;
-assign main_litedramcore_bankmachine7_cmd_buffer_sink_sink_ready = main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_sink_ready;
-assign main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_sink_first = main_litedramcore_bankmachine7_cmd_buffer_sink_sink_first;
-assign main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_sink_last = main_litedramcore_bankmachine7_cmd_buffer_sink_sink_last;
-assign main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_sink_payload_we = main_litedramcore_bankmachine7_cmd_buffer_sink_sink_payload_we;
-assign main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine7_cmd_buffer_sink_sink_payload_addr;
-assign main_litedramcore_bankmachine7_cmd_buffer_source_source_valid = main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_valid;
-assign main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_ready = main_litedramcore_bankmachine7_cmd_buffer_source_source_ready;
-assign main_litedramcore_bankmachine7_cmd_buffer_source_source_first = main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_first;
-assign main_litedramcore_bankmachine7_cmd_buffer_source_source_last = main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_last;
-assign main_litedramcore_bankmachine7_cmd_buffer_source_source_payload_we = main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_payload_we;
-assign main_litedramcore_bankmachine7_cmd_buffer_source_source_payload_addr = main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_payload_addr;
+assign main_litedramcore_bankmachine7_syncfifo7_din = {main_litedramcore_bankmachine7_fifo_in_last, main_litedramcore_bankmachine7_fifo_in_first, main_litedramcore_bankmachine7_fifo_in_payload_addr, main_litedramcore_bankmachine7_fifo_in_payload_we};
+assign {main_litedramcore_bankmachine7_fifo_out_last, main_litedramcore_bankmachine7_fifo_out_first, main_litedramcore_bankmachine7_fifo_out_payload_addr, main_litedramcore_bankmachine7_fifo_out_payload_we} = main_litedramcore_bankmachine7_syncfifo7_dout;
+assign main_litedramcore_bankmachine7_sink_ready = main_litedramcore_bankmachine7_syncfifo7_writable;
+assign main_litedramcore_bankmachine7_syncfifo7_we = main_litedramcore_bankmachine7_sink_valid;
+assign main_litedramcore_bankmachine7_fifo_in_first = main_litedramcore_bankmachine7_sink_first;
+assign main_litedramcore_bankmachine7_fifo_in_last = main_litedramcore_bankmachine7_sink_last;
+assign main_litedramcore_bankmachine7_fifo_in_payload_we = main_litedramcore_bankmachine7_sink_payload_we;
+assign main_litedramcore_bankmachine7_fifo_in_payload_addr = main_litedramcore_bankmachine7_sink_payload_addr;
+assign main_litedramcore_bankmachine7_source_valid = main_litedramcore_bankmachine7_syncfifo7_readable;
+assign main_litedramcore_bankmachine7_source_first = main_litedramcore_bankmachine7_fifo_out_first;
+assign main_litedramcore_bankmachine7_source_last = main_litedramcore_bankmachine7_fifo_out_last;
+assign main_litedramcore_bankmachine7_source_payload_we = main_litedramcore_bankmachine7_fifo_out_payload_we;
+assign main_litedramcore_bankmachine7_source_payload_addr = main_litedramcore_bankmachine7_fifo_out_payload_addr;
+assign main_litedramcore_bankmachine7_syncfifo7_re = main_litedramcore_bankmachine7_source_ready;
+always @(*) begin
+    main_litedramcore_bankmachine7_wrport_adr = 3'd0;
+    if (main_litedramcore_bankmachine7_replace) begin
+        main_litedramcore_bankmachine7_wrport_adr = (main_litedramcore_bankmachine7_produce - 1'd1);
+    end else begin
+        main_litedramcore_bankmachine7_wrport_adr = main_litedramcore_bankmachine7_produce;
+    end
+end
+assign main_litedramcore_bankmachine7_wrport_dat_w = main_litedramcore_bankmachine7_syncfifo7_din;
+assign main_litedramcore_bankmachine7_wrport_we = (main_litedramcore_bankmachine7_syncfifo7_we & (main_litedramcore_bankmachine7_syncfifo7_writable | main_litedramcore_bankmachine7_replace));
+assign main_litedramcore_bankmachine7_do_read = (main_litedramcore_bankmachine7_syncfifo7_readable & main_litedramcore_bankmachine7_syncfifo7_re);
+assign main_litedramcore_bankmachine7_rdport_adr = main_litedramcore_bankmachine7_consume;
+assign main_litedramcore_bankmachine7_syncfifo7_dout = main_litedramcore_bankmachine7_rdport_dat_r;
+assign main_litedramcore_bankmachine7_syncfifo7_writable = (main_litedramcore_bankmachine7_level != 4'd8);
+assign main_litedramcore_bankmachine7_syncfifo7_readable = (main_litedramcore_bankmachine7_level != 1'd0);
+assign main_litedramcore_bankmachine7_pipe_valid_sink_ready = ((~main_litedramcore_bankmachine7_pipe_valid_source_valid) | main_litedramcore_bankmachine7_pipe_valid_source_ready);
+assign main_litedramcore_bankmachine7_pipe_valid_sink_valid = main_litedramcore_bankmachine7_sink_sink_valid;
+assign main_litedramcore_bankmachine7_sink_sink_ready = main_litedramcore_bankmachine7_pipe_valid_sink_ready;
+assign main_litedramcore_bankmachine7_pipe_valid_sink_first = main_litedramcore_bankmachine7_sink_sink_first;
+assign main_litedramcore_bankmachine7_pipe_valid_sink_last = main_litedramcore_bankmachine7_sink_sink_last;
+assign main_litedramcore_bankmachine7_pipe_valid_sink_payload_we = main_litedramcore_bankmachine7_sink_sink_payload_we;
+assign main_litedramcore_bankmachine7_pipe_valid_sink_payload_addr = main_litedramcore_bankmachine7_sink_sink_payload_addr;
+assign main_litedramcore_bankmachine7_source_source_valid = main_litedramcore_bankmachine7_pipe_valid_source_valid;
+assign main_litedramcore_bankmachine7_pipe_valid_source_ready = main_litedramcore_bankmachine7_source_source_ready;
+assign main_litedramcore_bankmachine7_source_source_first = main_litedramcore_bankmachine7_pipe_valid_source_first;
+assign main_litedramcore_bankmachine7_source_source_last = main_litedramcore_bankmachine7_pipe_valid_source_last;
+assign main_litedramcore_bankmachine7_source_source_payload_we = main_litedramcore_bankmachine7_pipe_valid_source_payload_we;
+assign main_litedramcore_bankmachine7_source_source_payload_addr = main_litedramcore_bankmachine7_pipe_valid_source_payload_addr;
 always @(*) begin
     builder_bankmachine7_next_state = 4'd0;
     main_litedramcore_bankmachine7_cmd_payload_cas = 1'd0;
@@ -5710,11 +5890,11 @@ always @(*) begin
             if (main_litedramcore_bankmachine7_refresh_req) begin
                 builder_bankmachine7_next_state = 3'd4;
             end else begin
-                if (main_litedramcore_bankmachine7_cmd_buffer_source_source_valid) begin
+                if (main_litedramcore_bankmachine7_source_source_valid) begin
                     if (main_litedramcore_bankmachine7_row_opened) begin
                         if (main_litedramcore_bankmachine7_row_hit) begin
                             main_litedramcore_bankmachine7_cmd_valid = 1'd1;
-                            if (main_litedramcore_bankmachine7_cmd_buffer_source_source_payload_we) begin
+                            if (main_litedramcore_bankmachine7_source_source_payload_we) begin
                                 main_litedramcore_bankmachine7_req_wdata_ready = main_litedramcore_bankmachine7_cmd_ready;
                                 main_litedramcore_bankmachine7_cmd_payload_is_write = 1'd1;
                                 main_litedramcore_bankmachine7_cmd_payload_we = 1'd1;
@@ -6139,156 +6319,6 @@ assign builder_roundrobin4_grant = 1'd0;
 assign builder_roundrobin5_grant = 1'd0;
 assign builder_roundrobin6_grant = 1'd0;
 assign builder_roundrobin7_grant = 1'd0;
-assign main_user_port_cmd_payload_addr = (main_wb_port_adr - 1'd0);
-assign main_user_port_cmd_payload_we = main_wb_port_we;
-assign main_user_port_cmd_last = (~main_wb_port_we);
-assign main_user_port_flush = (~main_wb_port_cyc);
-assign main_user_port_wdata_payload_data = main_wdata_data;
-assign main_user_port_wdata_payload_we = main_wdata_we;
-assign main_user_port_rdata_ready = 1'd1;
-always @(*) begin
-    builder_litedramwishbone2native_next_state = 2'd0;
-    main_aborted_litedramwishbone2native_next_value2 = 1'd0;
-    main_aborted_litedramwishbone2native_next_value_ce2 = 1'd0;
-    main_user_port_cmd_valid = 1'd0;
-    main_user_port_wdata_valid = 1'd0;
-    main_wb_port_ack = 1'd0;
-    main_wb_port_dat_r = 128'd0;
-    main_wdata_data_litedramwishbone2native_next_value0 = 128'd0;
-    main_wdata_data_litedramwishbone2native_next_value_ce0 = 1'd0;
-    main_wdata_we_litedramwishbone2native_next_value1 = 16'd0;
-    main_wdata_we_litedramwishbone2native_next_value_ce1 = 1'd0;
-    case (builder_litedramwishbone2native_state)
-        1'd1: begin
-            main_aborted_litedramwishbone2native_next_value2 = ((~main_wb_port_cyc) | main_aborted);
-        end
-        2'd2: begin
-            main_aborted_litedramwishbone2native_next_value2 = ((~main_wb_port_cyc) | main_aborted);
-        end
-        default: begin
-            main_aborted_litedramwishbone2native_next_value2 = 1'd0;
-        end
-    endcase
-    case (builder_litedramwishbone2native_state)
-        1'd1: begin
-            main_aborted_litedramwishbone2native_next_value_ce2 = 1'd1;
-        end
-        2'd2: begin
-            main_aborted_litedramwishbone2native_next_value_ce2 = 1'd1;
-        end
-        default: begin
-            main_aborted_litedramwishbone2native_next_value_ce2 = 1'd1;
-        end
-    endcase
-    case (builder_litedramwishbone2native_state)
-        1'd1: begin
-        end
-        2'd2: begin
-        end
-        default: begin
-            main_user_port_cmd_valid = (main_wb_port_cyc & main_wb_port_stb);
-        end
-    endcase
-    builder_litedramwishbone2native_next_state = builder_litedramwishbone2native_state;
-    case (builder_litedramwishbone2native_state)
-        1'd1: begin
-            if (main_user_port_wdata_ready) begin
-                builder_litedramwishbone2native_next_state = 1'd0;
-            end
-        end
-        2'd2: begin
-            if (main_user_port_rdata_valid) begin
-                builder_litedramwishbone2native_next_state = 1'd0;
-            end
-        end
-        default: begin
-            if (((main_user_port_cmd_valid & main_user_port_cmd_ready) & main_wb_port_we)) begin
-                builder_litedramwishbone2native_next_state = 1'd1;
-            end
-            if (((main_user_port_cmd_valid & main_user_port_cmd_ready) & (~main_wb_port_we))) begin
-                builder_litedramwishbone2native_next_state = 2'd2;
-            end
-        end
-    endcase
-    case (builder_litedramwishbone2native_state)
-        1'd1: begin
-            main_user_port_wdata_valid = 1'd1;
-        end
-        2'd2: begin
-        end
-        default: begin
-        end
-    endcase
-    case (builder_litedramwishbone2native_state)
-        1'd1: begin
-            if (main_user_port_wdata_ready) begin
-                main_wb_port_ack = (main_wb_port_cyc & (~main_aborted));
-            end
-        end
-        2'd2: begin
-            if (main_user_port_rdata_valid) begin
-                main_wb_port_ack = (main_wb_port_cyc & (~main_aborted));
-            end
-        end
-        default: begin
-        end
-    endcase
-    case (builder_litedramwishbone2native_state)
-        1'd1: begin
-        end
-        2'd2: begin
-            if (main_user_port_rdata_valid) begin
-                main_wb_port_dat_r = main_user_port_rdata_payload_data;
-            end
-        end
-        default: begin
-        end
-    endcase
-    case (builder_litedramwishbone2native_state)
-        1'd1: begin
-        end
-        2'd2: begin
-        end
-        default: begin
-            if (((main_user_port_cmd_valid & main_user_port_cmd_ready) & main_wb_port_we)) begin
-                main_wdata_data_litedramwishbone2native_next_value0 = main_wb_port_dat_w;
-            end
-        end
-    endcase
-    case (builder_litedramwishbone2native_state)
-        1'd1: begin
-        end
-        2'd2: begin
-        end
-        default: begin
-            if (((main_user_port_cmd_valid & main_user_port_cmd_ready) & main_wb_port_we)) begin
-                main_wdata_data_litedramwishbone2native_next_value_ce0 = 1'd1;
-            end
-        end
-    endcase
-    case (builder_litedramwishbone2native_state)
-        1'd1: begin
-        end
-        2'd2: begin
-        end
-        default: begin
-            if (((main_user_port_cmd_valid & main_user_port_cmd_ready) & main_wb_port_we)) begin
-                main_wdata_we_litedramwishbone2native_next_value1 = main_wb_port_sel;
-            end
-        end
-    endcase
-    case (builder_litedramwishbone2native_state)
-        1'd1: begin
-        end
-        2'd2: begin
-        end
-        default: begin
-            if (((main_user_port_cmd_valid & main_user_port_cmd_ready) & main_wb_port_we)) begin
-                main_wdata_we_litedramwishbone2native_next_value_ce1 = 1'd1;
-            end
-        end
-    endcase
-end
 always @(*) begin
     builder_csr_data_width = 1'd0;
     builder_csr_data_width = 1'd0;
@@ -6299,27 +6329,27 @@ end
 always @(*) begin
     builder_interface0_ack = 1'd0;
     builder_interface0_dat_r = 32'd0;
-    builder_interface1_adr_wishbone2csr_next_value2 = 14'd0;
-    builder_interface1_adr_wishbone2csr_next_value_ce2 = 1'd0;
-    builder_interface1_dat_w_wishbone2csr_next_value0 = 32'd0;
-    builder_interface1_dat_w_wishbone2csr_next_value_ce0 = 1'd0;
-    builder_interface1_re_wishbone2csr_next_value3 = 1'd0;
-    builder_interface1_re_wishbone2csr_next_value_ce3 = 1'd0;
-    builder_interface1_we_wishbone2csr_next_value4 = 1'd0;
-    builder_interface1_we_wishbone2csr_next_value_ce4 = 1'd0;
-    builder_selected_r_wishbone2csr_next_value1 = 1'd0;
-    builder_selected_r_wishbone2csr_next_value_ce1 = 1'd0;
-    builder_wishbone2csr_next_state = 2'd0;
-    builder_wishbone2csr_next_state = builder_wishbone2csr_state;
-    case (builder_wishbone2csr_state)
+    builder_interface1_adr_next_value2 = 14'd0;
+    builder_interface1_adr_next_value_ce2 = 1'd0;
+    builder_interface1_dat_w_next_value0 = 32'd0;
+    builder_interface1_dat_w_next_value_ce0 = 1'd0;
+    builder_interface1_re_next_value3 = 1'd0;
+    builder_interface1_re_next_value_ce3 = 1'd0;
+    builder_interface1_we_next_value4 = 1'd0;
+    builder_interface1_we_next_value_ce4 = 1'd0;
+    builder_next_state = 2'd0;
+    builder_selected_r_next_value1 = 1'd0;
+    builder_selected_r_next_value_ce1 = 1'd0;
+    builder_next_state = builder_state;
+    case (builder_state)
         1'd1: begin
-            builder_interface1_adr_wishbone2csr_next_value2 = 1'd0;
-            builder_interface1_adr_wishbone2csr_next_value_ce2 = 1'd1;
-            builder_interface1_re_wishbone2csr_next_value3 = 1'd0;
-            builder_interface1_re_wishbone2csr_next_value_ce3 = 1'd1;
-            builder_interface1_we_wishbone2csr_next_value4 = 1'd0;
-            builder_interface1_we_wishbone2csr_next_value_ce4 = 1'd1;
-            builder_wishbone2csr_next_state = 2'd2;
+            builder_interface1_adr_next_value2 = 1'd0;
+            builder_interface1_adr_next_value_ce2 = 1'd1;
+            builder_interface1_re_next_value3 = 1'd0;
+            builder_interface1_re_next_value_ce3 = 1'd1;
+            builder_interface1_we_next_value4 = 1'd0;
+            builder_interface1_we_next_value_ce4 = 1'd1;
+            builder_next_state = 2'd2;
         end
         2'd2: begin
             builder_interface0_ack = 1'd1;
@@ -6329,21 +6359,21 @@ always @(*) begin
                     builder_interface0_dat_r = builder_interface1_dat_r;
                 end
             endcase
-            builder_wishbone2csr_next_state = 1'd0;
+            builder_next_state = 1'd0;
         end
         default: begin
-            builder_interface1_dat_w_wishbone2csr_next_value0 = builder_basiclowerer_self;
-            builder_interface1_dat_w_wishbone2csr_next_value_ce0 = 1'd1;
+            builder_interface1_dat_w_next_value0 = builder_basiclowerer_self;
+            builder_interface1_dat_w_next_value_ce0 = 1'd1;
             if ((builder_interface0_cyc & builder_interface0_stb)) begin
-                builder_selected_r_wishbone2csr_next_value1 = builder_csr_data_width;
-                builder_selected_r_wishbone2csr_next_value_ce1 = 1'd1;
-                builder_interface1_adr_wishbone2csr_next_value2 = builder_interface0_adr;
-                builder_interface1_adr_wishbone2csr_next_value_ce2 = 1'd1;
-                builder_interface1_re_wishbone2csr_next_value3 = ((~builder_interface0_we) & (builder_interface0_sel != 1'd0));
-                builder_interface1_re_wishbone2csr_next_value_ce3 = 1'd1;
-                builder_interface1_we_wishbone2csr_next_value4 = (builder_interface0_we & (builder_interface0_sel != 1'd0));
-                builder_interface1_we_wishbone2csr_next_value_ce4 = 1'd1;
-                builder_wishbone2csr_next_state = 1'd1;
+                builder_selected_r_next_value1 = builder_csr_data_width;
+                builder_selected_r_next_value_ce1 = 1'd1;
+                builder_interface1_adr_next_value2 = builder_interface0_adr;
+                builder_interface1_adr_next_value_ce2 = 1'd1;
+                builder_interface1_re_next_value3 = ((~builder_interface0_we) & (builder_interface0_sel != 1'd0));
+                builder_interface1_re_next_value_ce3 = 1'd1;
+                builder_interface1_we_next_value4 = (builder_interface0_we & (builder_interface0_sel != 1'd0));
+                builder_interface1_we_next_value_ce4 = 1'd1;
+                builder_next_state = 1'd1;
             end
         end
     endcase
@@ -8477,22 +8507,30 @@ always @(posedge sys_clk) begin
     end else begin
         if (main_litedramcore_bankmachine0_row_open) begin
             main_litedramcore_bankmachine0_row_opened <= 1'd1;
-            main_litedramcore_bankmachine0_row <= main_litedramcore_bankmachine0_cmd_buffer_source_source_payload_addr[20:7];
+            main_litedramcore_bankmachine0_row <= main_litedramcore_bankmachine0_source_source_payload_addr[20:7];
         end
     end
-    if (((~main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_valid) | main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_ready)) begin
-        main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_valid <= main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_sink_valid;
-        main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_first <= main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_sink_first;
-        main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_last <= main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_sink_last;
-        main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_payload_we <= main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_sink_payload_we;
-        main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_sink_payload_addr;
+    if (((main_litedramcore_bankmachine0_syncfifo0_we & main_litedramcore_bankmachine0_syncfifo0_writable) & (~main_litedramcore_bankmachine0_replace))) begin
+        main_litedramcore_bankmachine0_produce <= (main_litedramcore_bankmachine0_produce + 1'd1);
     end
-    if (((~main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_valid) | main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_ready)) begin
-        main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_valid <= main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_sink_valid;
-        main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_first <= main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_sink_first;
-        main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_last <= main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_sink_last;
-        main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_payload_we <= main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_sink_payload_we;
-        main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_sink_payload_addr;
+    if (main_litedramcore_bankmachine0_do_read) begin
+        main_litedramcore_bankmachine0_consume <= (main_litedramcore_bankmachine0_consume + 1'd1);
+    end
+    if (((main_litedramcore_bankmachine0_syncfifo0_we & main_litedramcore_bankmachine0_syncfifo0_writable) & (~main_litedramcore_bankmachine0_replace))) begin
+        if ((~main_litedramcore_bankmachine0_do_read)) begin
+            main_litedramcore_bankmachine0_level <= (main_litedramcore_bankmachine0_level + 1'd1);
+        end
+    end else begin
+        if (main_litedramcore_bankmachine0_do_read) begin
+            main_litedramcore_bankmachine0_level <= (main_litedramcore_bankmachine0_level - 1'd1);
+        end
+    end
+    if (((~main_litedramcore_bankmachine0_pipe_valid_source_valid) | main_litedramcore_bankmachine0_pipe_valid_source_ready)) begin
+        main_litedramcore_bankmachine0_pipe_valid_source_valid <= main_litedramcore_bankmachine0_pipe_valid_sink_valid;
+        main_litedramcore_bankmachine0_pipe_valid_source_first <= main_litedramcore_bankmachine0_pipe_valid_sink_first;
+        main_litedramcore_bankmachine0_pipe_valid_source_last <= main_litedramcore_bankmachine0_pipe_valid_sink_last;
+        main_litedramcore_bankmachine0_pipe_valid_source_payload_we <= main_litedramcore_bankmachine0_pipe_valid_sink_payload_we;
+        main_litedramcore_bankmachine0_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine0_pipe_valid_sink_payload_addr;
     end
     if (main_litedramcore_bankmachine0_twtpcon_valid) begin
         main_litedramcore_bankmachine0_twtpcon_count <= 3'd5;
@@ -8545,22 +8583,30 @@ always @(posedge sys_clk) begin
     end else begin
         if (main_litedramcore_bankmachine1_row_open) begin
             main_litedramcore_bankmachine1_row_opened <= 1'd1;
-            main_litedramcore_bankmachine1_row <= main_litedramcore_bankmachine1_cmd_buffer_source_source_payload_addr[20:7];
+            main_litedramcore_bankmachine1_row <= main_litedramcore_bankmachine1_source_source_payload_addr[20:7];
         end
     end
-    if (((~main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_valid) | main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_ready)) begin
-        main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_valid <= main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_sink_valid;
-        main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_first <= main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_sink_first;
-        main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_last <= main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_sink_last;
-        main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_payload_we <= main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_sink_payload_we;
-        main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_sink_payload_addr;
+    if (((main_litedramcore_bankmachine1_syncfifo1_we & main_litedramcore_bankmachine1_syncfifo1_writable) & (~main_litedramcore_bankmachine1_replace))) begin
+        main_litedramcore_bankmachine1_produce <= (main_litedramcore_bankmachine1_produce + 1'd1);
     end
-    if (((~main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_valid) | main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_ready)) begin
-        main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_valid <= main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_sink_valid;
-        main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_first <= main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_sink_first;
-        main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_last <= main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_sink_last;
-        main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_payload_we <= main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_sink_payload_we;
-        main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_sink_payload_addr;
+    if (main_litedramcore_bankmachine1_do_read) begin
+        main_litedramcore_bankmachine1_consume <= (main_litedramcore_bankmachine1_consume + 1'd1);
+    end
+    if (((main_litedramcore_bankmachine1_syncfifo1_we & main_litedramcore_bankmachine1_syncfifo1_writable) & (~main_litedramcore_bankmachine1_replace))) begin
+        if ((~main_litedramcore_bankmachine1_do_read)) begin
+            main_litedramcore_bankmachine1_level <= (main_litedramcore_bankmachine1_level + 1'd1);
+        end
+    end else begin
+        if (main_litedramcore_bankmachine1_do_read) begin
+            main_litedramcore_bankmachine1_level <= (main_litedramcore_bankmachine1_level - 1'd1);
+        end
+    end
+    if (((~main_litedramcore_bankmachine1_pipe_valid_source_valid) | main_litedramcore_bankmachine1_pipe_valid_source_ready)) begin
+        main_litedramcore_bankmachine1_pipe_valid_source_valid <= main_litedramcore_bankmachine1_pipe_valid_sink_valid;
+        main_litedramcore_bankmachine1_pipe_valid_source_first <= main_litedramcore_bankmachine1_pipe_valid_sink_first;
+        main_litedramcore_bankmachine1_pipe_valid_source_last <= main_litedramcore_bankmachine1_pipe_valid_sink_last;
+        main_litedramcore_bankmachine1_pipe_valid_source_payload_we <= main_litedramcore_bankmachine1_pipe_valid_sink_payload_we;
+        main_litedramcore_bankmachine1_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine1_pipe_valid_sink_payload_addr;
     end
     if (main_litedramcore_bankmachine1_twtpcon_valid) begin
         main_litedramcore_bankmachine1_twtpcon_count <= 3'd5;
@@ -8613,22 +8659,30 @@ always @(posedge sys_clk) begin
     end else begin
         if (main_litedramcore_bankmachine2_row_open) begin
             main_litedramcore_bankmachine2_row_opened <= 1'd1;
-            main_litedramcore_bankmachine2_row <= main_litedramcore_bankmachine2_cmd_buffer_source_source_payload_addr[20:7];
+            main_litedramcore_bankmachine2_row <= main_litedramcore_bankmachine2_source_source_payload_addr[20:7];
         end
     end
-    if (((~main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_valid) | main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_ready)) begin
-        main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_valid <= main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_sink_valid;
-        main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_first <= main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_sink_first;
-        main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_last <= main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_sink_last;
-        main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_payload_we <= main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_sink_payload_we;
-        main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_sink_payload_addr;
+    if (((main_litedramcore_bankmachine2_syncfifo2_we & main_litedramcore_bankmachine2_syncfifo2_writable) & (~main_litedramcore_bankmachine2_replace))) begin
+        main_litedramcore_bankmachine2_produce <= (main_litedramcore_bankmachine2_produce + 1'd1);
     end
-    if (((~main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_valid) | main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_ready)) begin
-        main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_valid <= main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_sink_valid;
-        main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_first <= main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_sink_first;
-        main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_last <= main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_sink_last;
-        main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_payload_we <= main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_sink_payload_we;
-        main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_sink_payload_addr;
+    if (main_litedramcore_bankmachine2_do_read) begin
+        main_litedramcore_bankmachine2_consume <= (main_litedramcore_bankmachine2_consume + 1'd1);
+    end
+    if (((main_litedramcore_bankmachine2_syncfifo2_we & main_litedramcore_bankmachine2_syncfifo2_writable) & (~main_litedramcore_bankmachine2_replace))) begin
+        if ((~main_litedramcore_bankmachine2_do_read)) begin
+            main_litedramcore_bankmachine2_level <= (main_litedramcore_bankmachine2_level + 1'd1);
+        end
+    end else begin
+        if (main_litedramcore_bankmachine2_do_read) begin
+            main_litedramcore_bankmachine2_level <= (main_litedramcore_bankmachine2_level - 1'd1);
+        end
+    end
+    if (((~main_litedramcore_bankmachine2_pipe_valid_source_valid) | main_litedramcore_bankmachine2_pipe_valid_source_ready)) begin
+        main_litedramcore_bankmachine2_pipe_valid_source_valid <= main_litedramcore_bankmachine2_pipe_valid_sink_valid;
+        main_litedramcore_bankmachine2_pipe_valid_source_first <= main_litedramcore_bankmachine2_pipe_valid_sink_first;
+        main_litedramcore_bankmachine2_pipe_valid_source_last <= main_litedramcore_bankmachine2_pipe_valid_sink_last;
+        main_litedramcore_bankmachine2_pipe_valid_source_payload_we <= main_litedramcore_bankmachine2_pipe_valid_sink_payload_we;
+        main_litedramcore_bankmachine2_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine2_pipe_valid_sink_payload_addr;
     end
     if (main_litedramcore_bankmachine2_twtpcon_valid) begin
         main_litedramcore_bankmachine2_twtpcon_count <= 3'd5;
@@ -8681,22 +8735,30 @@ always @(posedge sys_clk) begin
     end else begin
         if (main_litedramcore_bankmachine3_row_open) begin
             main_litedramcore_bankmachine3_row_opened <= 1'd1;
-            main_litedramcore_bankmachine3_row <= main_litedramcore_bankmachine3_cmd_buffer_source_source_payload_addr[20:7];
+            main_litedramcore_bankmachine3_row <= main_litedramcore_bankmachine3_source_source_payload_addr[20:7];
         end
     end
-    if (((~main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_valid) | main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_ready)) begin
-        main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_valid <= main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_sink_valid;
-        main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_first <= main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_sink_first;
-        main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_last <= main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_sink_last;
-        main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_payload_we <= main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_sink_payload_we;
-        main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_sink_payload_addr;
+    if (((main_litedramcore_bankmachine3_syncfifo3_we & main_litedramcore_bankmachine3_syncfifo3_writable) & (~main_litedramcore_bankmachine3_replace))) begin
+        main_litedramcore_bankmachine3_produce <= (main_litedramcore_bankmachine3_produce + 1'd1);
     end
-    if (((~main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_valid) | main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_ready)) begin
-        main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_valid <= main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_sink_valid;
-        main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_first <= main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_sink_first;
-        main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_last <= main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_sink_last;
-        main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_payload_we <= main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_sink_payload_we;
-        main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_sink_payload_addr;
+    if (main_litedramcore_bankmachine3_do_read) begin
+        main_litedramcore_bankmachine3_consume <= (main_litedramcore_bankmachine3_consume + 1'd1);
+    end
+    if (((main_litedramcore_bankmachine3_syncfifo3_we & main_litedramcore_bankmachine3_syncfifo3_writable) & (~main_litedramcore_bankmachine3_replace))) begin
+        if ((~main_litedramcore_bankmachine3_do_read)) begin
+            main_litedramcore_bankmachine3_level <= (main_litedramcore_bankmachine3_level + 1'd1);
+        end
+    end else begin
+        if (main_litedramcore_bankmachine3_do_read) begin
+            main_litedramcore_bankmachine3_level <= (main_litedramcore_bankmachine3_level - 1'd1);
+        end
+    end
+    if (((~main_litedramcore_bankmachine3_pipe_valid_source_valid) | main_litedramcore_bankmachine3_pipe_valid_source_ready)) begin
+        main_litedramcore_bankmachine3_pipe_valid_source_valid <= main_litedramcore_bankmachine3_pipe_valid_sink_valid;
+        main_litedramcore_bankmachine3_pipe_valid_source_first <= main_litedramcore_bankmachine3_pipe_valid_sink_first;
+        main_litedramcore_bankmachine3_pipe_valid_source_last <= main_litedramcore_bankmachine3_pipe_valid_sink_last;
+        main_litedramcore_bankmachine3_pipe_valid_source_payload_we <= main_litedramcore_bankmachine3_pipe_valid_sink_payload_we;
+        main_litedramcore_bankmachine3_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine3_pipe_valid_sink_payload_addr;
     end
     if (main_litedramcore_bankmachine3_twtpcon_valid) begin
         main_litedramcore_bankmachine3_twtpcon_count <= 3'd5;
@@ -8749,22 +8811,30 @@ always @(posedge sys_clk) begin
     end else begin
         if (main_litedramcore_bankmachine4_row_open) begin
             main_litedramcore_bankmachine4_row_opened <= 1'd1;
-            main_litedramcore_bankmachine4_row <= main_litedramcore_bankmachine4_cmd_buffer_source_source_payload_addr[20:7];
+            main_litedramcore_bankmachine4_row <= main_litedramcore_bankmachine4_source_source_payload_addr[20:7];
         end
     end
-    if (((~main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_valid) | main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_ready)) begin
-        main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_valid <= main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_sink_valid;
-        main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_first <= main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_sink_first;
-        main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_last <= main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_sink_last;
-        main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_payload_we <= main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_sink_payload_we;
-        main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_sink_payload_addr;
+    if (((main_litedramcore_bankmachine4_syncfifo4_we & main_litedramcore_bankmachine4_syncfifo4_writable) & (~main_litedramcore_bankmachine4_replace))) begin
+        main_litedramcore_bankmachine4_produce <= (main_litedramcore_bankmachine4_produce + 1'd1);
     end
-    if (((~main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_valid) | main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_ready)) begin
-        main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_valid <= main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_sink_valid;
-        main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_first <= main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_sink_first;
-        main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_last <= main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_sink_last;
-        main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_payload_we <= main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_sink_payload_we;
-        main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_sink_payload_addr;
+    if (main_litedramcore_bankmachine4_do_read) begin
+        main_litedramcore_bankmachine4_consume <= (main_litedramcore_bankmachine4_consume + 1'd1);
+    end
+    if (((main_litedramcore_bankmachine4_syncfifo4_we & main_litedramcore_bankmachine4_syncfifo4_writable) & (~main_litedramcore_bankmachine4_replace))) begin
+        if ((~main_litedramcore_bankmachine4_do_read)) begin
+            main_litedramcore_bankmachine4_level <= (main_litedramcore_bankmachine4_level + 1'd1);
+        end
+    end else begin
+        if (main_litedramcore_bankmachine4_do_read) begin
+            main_litedramcore_bankmachine4_level <= (main_litedramcore_bankmachine4_level - 1'd1);
+        end
+    end
+    if (((~main_litedramcore_bankmachine4_pipe_valid_source_valid) | main_litedramcore_bankmachine4_pipe_valid_source_ready)) begin
+        main_litedramcore_bankmachine4_pipe_valid_source_valid <= main_litedramcore_bankmachine4_pipe_valid_sink_valid;
+        main_litedramcore_bankmachine4_pipe_valid_source_first <= main_litedramcore_bankmachine4_pipe_valid_sink_first;
+        main_litedramcore_bankmachine4_pipe_valid_source_last <= main_litedramcore_bankmachine4_pipe_valid_sink_last;
+        main_litedramcore_bankmachine4_pipe_valid_source_payload_we <= main_litedramcore_bankmachine4_pipe_valid_sink_payload_we;
+        main_litedramcore_bankmachine4_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine4_pipe_valid_sink_payload_addr;
     end
     if (main_litedramcore_bankmachine4_twtpcon_valid) begin
         main_litedramcore_bankmachine4_twtpcon_count <= 3'd5;
@@ -8817,22 +8887,30 @@ always @(posedge sys_clk) begin
     end else begin
         if (main_litedramcore_bankmachine5_row_open) begin
             main_litedramcore_bankmachine5_row_opened <= 1'd1;
-            main_litedramcore_bankmachine5_row <= main_litedramcore_bankmachine5_cmd_buffer_source_source_payload_addr[20:7];
+            main_litedramcore_bankmachine5_row <= main_litedramcore_bankmachine5_source_source_payload_addr[20:7];
         end
     end
-    if (((~main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_valid) | main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_ready)) begin
-        main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_valid <= main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_sink_valid;
-        main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_first <= main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_sink_first;
-        main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_last <= main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_sink_last;
-        main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_payload_we <= main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_sink_payload_we;
-        main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_sink_payload_addr;
+    if (((main_litedramcore_bankmachine5_syncfifo5_we & main_litedramcore_bankmachine5_syncfifo5_writable) & (~main_litedramcore_bankmachine5_replace))) begin
+        main_litedramcore_bankmachine5_produce <= (main_litedramcore_bankmachine5_produce + 1'd1);
     end
-    if (((~main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_valid) | main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_ready)) begin
-        main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_valid <= main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_sink_valid;
-        main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_first <= main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_sink_first;
-        main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_last <= main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_sink_last;
-        main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_payload_we <= main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_sink_payload_we;
-        main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_sink_payload_addr;
+    if (main_litedramcore_bankmachine5_do_read) begin
+        main_litedramcore_bankmachine5_consume <= (main_litedramcore_bankmachine5_consume + 1'd1);
+    end
+    if (((main_litedramcore_bankmachine5_syncfifo5_we & main_litedramcore_bankmachine5_syncfifo5_writable) & (~main_litedramcore_bankmachine5_replace))) begin
+        if ((~main_litedramcore_bankmachine5_do_read)) begin
+            main_litedramcore_bankmachine5_level <= (main_litedramcore_bankmachine5_level + 1'd1);
+        end
+    end else begin
+        if (main_litedramcore_bankmachine5_do_read) begin
+            main_litedramcore_bankmachine5_level <= (main_litedramcore_bankmachine5_level - 1'd1);
+        end
+    end
+    if (((~main_litedramcore_bankmachine5_pipe_valid_source_valid) | main_litedramcore_bankmachine5_pipe_valid_source_ready)) begin
+        main_litedramcore_bankmachine5_pipe_valid_source_valid <= main_litedramcore_bankmachine5_pipe_valid_sink_valid;
+        main_litedramcore_bankmachine5_pipe_valid_source_first <= main_litedramcore_bankmachine5_pipe_valid_sink_first;
+        main_litedramcore_bankmachine5_pipe_valid_source_last <= main_litedramcore_bankmachine5_pipe_valid_sink_last;
+        main_litedramcore_bankmachine5_pipe_valid_source_payload_we <= main_litedramcore_bankmachine5_pipe_valid_sink_payload_we;
+        main_litedramcore_bankmachine5_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine5_pipe_valid_sink_payload_addr;
     end
     if (main_litedramcore_bankmachine5_twtpcon_valid) begin
         main_litedramcore_bankmachine5_twtpcon_count <= 3'd5;
@@ -8885,22 +8963,30 @@ always @(posedge sys_clk) begin
     end else begin
         if (main_litedramcore_bankmachine6_row_open) begin
             main_litedramcore_bankmachine6_row_opened <= 1'd1;
-            main_litedramcore_bankmachine6_row <= main_litedramcore_bankmachine6_cmd_buffer_source_source_payload_addr[20:7];
+            main_litedramcore_bankmachine6_row <= main_litedramcore_bankmachine6_source_source_payload_addr[20:7];
         end
     end
-    if (((~main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_valid) | main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_ready)) begin
-        main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_valid <= main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_sink_valid;
-        main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_first <= main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_sink_first;
-        main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_last <= main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_sink_last;
-        main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_payload_we <= main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_sink_payload_we;
-        main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_sink_payload_addr;
+    if (((main_litedramcore_bankmachine6_syncfifo6_we & main_litedramcore_bankmachine6_syncfifo6_writable) & (~main_litedramcore_bankmachine6_replace))) begin
+        main_litedramcore_bankmachine6_produce <= (main_litedramcore_bankmachine6_produce + 1'd1);
     end
-    if (((~main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_valid) | main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_ready)) begin
-        main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_valid <= main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_sink_valid;
-        main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_first <= main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_sink_first;
-        main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_last <= main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_sink_last;
-        main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_payload_we <= main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_sink_payload_we;
-        main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_sink_payload_addr;
+    if (main_litedramcore_bankmachine6_do_read) begin
+        main_litedramcore_bankmachine6_consume <= (main_litedramcore_bankmachine6_consume + 1'd1);
+    end
+    if (((main_litedramcore_bankmachine6_syncfifo6_we & main_litedramcore_bankmachine6_syncfifo6_writable) & (~main_litedramcore_bankmachine6_replace))) begin
+        if ((~main_litedramcore_bankmachine6_do_read)) begin
+            main_litedramcore_bankmachine6_level <= (main_litedramcore_bankmachine6_level + 1'd1);
+        end
+    end else begin
+        if (main_litedramcore_bankmachine6_do_read) begin
+            main_litedramcore_bankmachine6_level <= (main_litedramcore_bankmachine6_level - 1'd1);
+        end
+    end
+    if (((~main_litedramcore_bankmachine6_pipe_valid_source_valid) | main_litedramcore_bankmachine6_pipe_valid_source_ready)) begin
+        main_litedramcore_bankmachine6_pipe_valid_source_valid <= main_litedramcore_bankmachine6_pipe_valid_sink_valid;
+        main_litedramcore_bankmachine6_pipe_valid_source_first <= main_litedramcore_bankmachine6_pipe_valid_sink_first;
+        main_litedramcore_bankmachine6_pipe_valid_source_last <= main_litedramcore_bankmachine6_pipe_valid_sink_last;
+        main_litedramcore_bankmachine6_pipe_valid_source_payload_we <= main_litedramcore_bankmachine6_pipe_valid_sink_payload_we;
+        main_litedramcore_bankmachine6_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine6_pipe_valid_sink_payload_addr;
     end
     if (main_litedramcore_bankmachine6_twtpcon_valid) begin
         main_litedramcore_bankmachine6_twtpcon_count <= 3'd5;
@@ -8953,22 +9039,30 @@ always @(posedge sys_clk) begin
     end else begin
         if (main_litedramcore_bankmachine7_row_open) begin
             main_litedramcore_bankmachine7_row_opened <= 1'd1;
-            main_litedramcore_bankmachine7_row <= main_litedramcore_bankmachine7_cmd_buffer_source_source_payload_addr[20:7];
+            main_litedramcore_bankmachine7_row <= main_litedramcore_bankmachine7_source_source_payload_addr[20:7];
         end
     end
-    if (((~main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_valid) | main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_ready)) begin
-        main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_valid <= main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_sink_valid;
-        main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_first <= main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_sink_first;
-        main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_last <= main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_sink_last;
-        main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_payload_we <= main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_sink_payload_we;
-        main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_sink_payload_addr;
+    if (((main_litedramcore_bankmachine7_syncfifo7_we & main_litedramcore_bankmachine7_syncfifo7_writable) & (~main_litedramcore_bankmachine7_replace))) begin
+        main_litedramcore_bankmachine7_produce <= (main_litedramcore_bankmachine7_produce + 1'd1);
     end
-    if (((~main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_valid) | main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_ready)) begin
-        main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_valid <= main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_sink_valid;
-        main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_first <= main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_sink_first;
-        main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_last <= main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_sink_last;
-        main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_payload_we <= main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_sink_payload_we;
-        main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_sink_payload_addr;
+    if (main_litedramcore_bankmachine7_do_read) begin
+        main_litedramcore_bankmachine7_consume <= (main_litedramcore_bankmachine7_consume + 1'd1);
+    end
+    if (((main_litedramcore_bankmachine7_syncfifo7_we & main_litedramcore_bankmachine7_syncfifo7_writable) & (~main_litedramcore_bankmachine7_replace))) begin
+        if ((~main_litedramcore_bankmachine7_do_read)) begin
+            main_litedramcore_bankmachine7_level <= (main_litedramcore_bankmachine7_level + 1'd1);
+        end
+    end else begin
+        if (main_litedramcore_bankmachine7_do_read) begin
+            main_litedramcore_bankmachine7_level <= (main_litedramcore_bankmachine7_level - 1'd1);
+        end
+    end
+    if (((~main_litedramcore_bankmachine7_pipe_valid_source_valid) | main_litedramcore_bankmachine7_pipe_valid_source_ready)) begin
+        main_litedramcore_bankmachine7_pipe_valid_source_valid <= main_litedramcore_bankmachine7_pipe_valid_sink_valid;
+        main_litedramcore_bankmachine7_pipe_valid_source_first <= main_litedramcore_bankmachine7_pipe_valid_sink_first;
+        main_litedramcore_bankmachine7_pipe_valid_source_last <= main_litedramcore_bankmachine7_pipe_valid_sink_last;
+        main_litedramcore_bankmachine7_pipe_valid_source_payload_we <= main_litedramcore_bankmachine7_pipe_valid_sink_payload_we;
+        main_litedramcore_bankmachine7_pipe_valid_source_payload_addr <= main_litedramcore_bankmachine7_pipe_valid_sink_payload_addr;
     end
     if (main_litedramcore_bankmachine7_twtpcon_valid) begin
         main_litedramcore_bankmachine7_twtpcon_count <= 3'd5;
@@ -9599,31 +9693,21 @@ always @(posedge sys_clk) begin
     builder_new_master_rdata_valid6 <= builder_new_master_rdata_valid5;
     builder_new_master_rdata_valid7 <= builder_new_master_rdata_valid6;
     builder_new_master_rdata_valid8 <= builder_new_master_rdata_valid7;
-    builder_litedramwishbone2native_state <= builder_litedramwishbone2native_next_state;
-    if (main_wdata_data_litedramwishbone2native_next_value_ce0) begin
-        main_wdata_data <= main_wdata_data_litedramwishbone2native_next_value0;
+    builder_state <= builder_next_state;
+    if (builder_interface1_dat_w_next_value_ce0) begin
+        builder_interface1_dat_w <= builder_interface1_dat_w_next_value0;
     end
-    if (main_wdata_we_litedramwishbone2native_next_value_ce1) begin
-        main_wdata_we <= main_wdata_we_litedramwishbone2native_next_value1;
+    if (builder_selected_r_next_value_ce1) begin
+        builder_selected_r <= builder_selected_r_next_value1;
     end
-    if (main_aborted_litedramwishbone2native_next_value_ce2) begin
-        main_aborted <= main_aborted_litedramwishbone2native_next_value2;
+    if (builder_interface1_adr_next_value_ce2) begin
+        builder_interface1_adr <= builder_interface1_adr_next_value2;
     end
-    builder_wishbone2csr_state <= builder_wishbone2csr_next_state;
-    if (builder_interface1_dat_w_wishbone2csr_next_value_ce0) begin
-        builder_interface1_dat_w <= builder_interface1_dat_w_wishbone2csr_next_value0;
+    if (builder_interface1_re_next_value_ce3) begin
+        builder_interface1_re <= builder_interface1_re_next_value3;
     end
-    if (builder_selected_r_wishbone2csr_next_value_ce1) begin
-        builder_selected_r <= builder_selected_r_wishbone2csr_next_value1;
-    end
-    if (builder_interface1_adr_wishbone2csr_next_value_ce2) begin
-        builder_interface1_adr <= builder_interface1_adr_wishbone2csr_next_value2;
-    end
-    if (builder_interface1_re_wishbone2csr_next_value_ce3) begin
-        builder_interface1_re <= builder_interface1_re_wishbone2csr_next_value3;
-    end
-    if (builder_interface1_we_wishbone2csr_next_value_ce4) begin
-        builder_interface1_we <= builder_interface1_we_wishbone2csr_next_value4;
+    if (builder_interface1_we_next_value_ce4) begin
+        builder_interface1_we <= builder_interface1_we_next_value4;
     end
     builder_interface0_bank_bus_dat_r <= 1'd0;
     if (builder_csrbank0_sel) begin
@@ -9988,8 +10072,10 @@ always @(posedge sys_clk) begin
         main_litedramcore_zqcs_timer_count1 <= 27'd99999999;
         main_litedramcore_zqcs_executer_done <= 1'd0;
         main_litedramcore_zqcs_executer_trigger <= 5'd0;
-        main_litedramcore_bankmachine0_cmd_buffer_lookahead_pipe_valid_source_valid <= 1'd0;
-        main_litedramcore_bankmachine0_cmd_buffer_pipe_valid_source_valid <= 1'd0;
+        main_litedramcore_bankmachine0_level <= 4'd0;
+        main_litedramcore_bankmachine0_produce <= 3'd0;
+        main_litedramcore_bankmachine0_consume <= 3'd0;
+        main_litedramcore_bankmachine0_pipe_valid_source_valid <= 1'd0;
         main_litedramcore_bankmachine0_row_opened <= 1'd0;
         main_litedramcore_bankmachine0_twtpcon_ready <= 1'd0;
         main_litedramcore_bankmachine0_twtpcon_count <= 3'd0;
@@ -9997,8 +10083,10 @@ always @(posedge sys_clk) begin
         main_litedramcore_bankmachine0_trccon_count <= 3'd0;
         main_litedramcore_bankmachine0_trascon_ready <= 1'd0;
         main_litedramcore_bankmachine0_trascon_count <= 3'd0;
-        main_litedramcore_bankmachine1_cmd_buffer_lookahead_pipe_valid_source_valid <= 1'd0;
-        main_litedramcore_bankmachine1_cmd_buffer_pipe_valid_source_valid <= 1'd0;
+        main_litedramcore_bankmachine1_level <= 4'd0;
+        main_litedramcore_bankmachine1_produce <= 3'd0;
+        main_litedramcore_bankmachine1_consume <= 3'd0;
+        main_litedramcore_bankmachine1_pipe_valid_source_valid <= 1'd0;
         main_litedramcore_bankmachine1_row_opened <= 1'd0;
         main_litedramcore_bankmachine1_twtpcon_ready <= 1'd0;
         main_litedramcore_bankmachine1_twtpcon_count <= 3'd0;
@@ -10006,8 +10094,10 @@ always @(posedge sys_clk) begin
         main_litedramcore_bankmachine1_trccon_count <= 3'd0;
         main_litedramcore_bankmachine1_trascon_ready <= 1'd0;
         main_litedramcore_bankmachine1_trascon_count <= 3'd0;
-        main_litedramcore_bankmachine2_cmd_buffer_lookahead_pipe_valid_source_valid <= 1'd0;
-        main_litedramcore_bankmachine2_cmd_buffer_pipe_valid_source_valid <= 1'd0;
+        main_litedramcore_bankmachine2_level <= 4'd0;
+        main_litedramcore_bankmachine2_produce <= 3'd0;
+        main_litedramcore_bankmachine2_consume <= 3'd0;
+        main_litedramcore_bankmachine2_pipe_valid_source_valid <= 1'd0;
         main_litedramcore_bankmachine2_row_opened <= 1'd0;
         main_litedramcore_bankmachine2_twtpcon_ready <= 1'd0;
         main_litedramcore_bankmachine2_twtpcon_count <= 3'd0;
@@ -10015,8 +10105,10 @@ always @(posedge sys_clk) begin
         main_litedramcore_bankmachine2_trccon_count <= 3'd0;
         main_litedramcore_bankmachine2_trascon_ready <= 1'd0;
         main_litedramcore_bankmachine2_trascon_count <= 3'd0;
-        main_litedramcore_bankmachine3_cmd_buffer_lookahead_pipe_valid_source_valid <= 1'd0;
-        main_litedramcore_bankmachine3_cmd_buffer_pipe_valid_source_valid <= 1'd0;
+        main_litedramcore_bankmachine3_level <= 4'd0;
+        main_litedramcore_bankmachine3_produce <= 3'd0;
+        main_litedramcore_bankmachine3_consume <= 3'd0;
+        main_litedramcore_bankmachine3_pipe_valid_source_valid <= 1'd0;
         main_litedramcore_bankmachine3_row_opened <= 1'd0;
         main_litedramcore_bankmachine3_twtpcon_ready <= 1'd0;
         main_litedramcore_bankmachine3_twtpcon_count <= 3'd0;
@@ -10024,8 +10116,10 @@ always @(posedge sys_clk) begin
         main_litedramcore_bankmachine3_trccon_count <= 3'd0;
         main_litedramcore_bankmachine3_trascon_ready <= 1'd0;
         main_litedramcore_bankmachine3_trascon_count <= 3'd0;
-        main_litedramcore_bankmachine4_cmd_buffer_lookahead_pipe_valid_source_valid <= 1'd0;
-        main_litedramcore_bankmachine4_cmd_buffer_pipe_valid_source_valid <= 1'd0;
+        main_litedramcore_bankmachine4_level <= 4'd0;
+        main_litedramcore_bankmachine4_produce <= 3'd0;
+        main_litedramcore_bankmachine4_consume <= 3'd0;
+        main_litedramcore_bankmachine4_pipe_valid_source_valid <= 1'd0;
         main_litedramcore_bankmachine4_row_opened <= 1'd0;
         main_litedramcore_bankmachine4_twtpcon_ready <= 1'd0;
         main_litedramcore_bankmachine4_twtpcon_count <= 3'd0;
@@ -10033,8 +10127,10 @@ always @(posedge sys_clk) begin
         main_litedramcore_bankmachine4_trccon_count <= 3'd0;
         main_litedramcore_bankmachine4_trascon_ready <= 1'd0;
         main_litedramcore_bankmachine4_trascon_count <= 3'd0;
-        main_litedramcore_bankmachine5_cmd_buffer_lookahead_pipe_valid_source_valid <= 1'd0;
-        main_litedramcore_bankmachine5_cmd_buffer_pipe_valid_source_valid <= 1'd0;
+        main_litedramcore_bankmachine5_level <= 4'd0;
+        main_litedramcore_bankmachine5_produce <= 3'd0;
+        main_litedramcore_bankmachine5_consume <= 3'd0;
+        main_litedramcore_bankmachine5_pipe_valid_source_valid <= 1'd0;
         main_litedramcore_bankmachine5_row_opened <= 1'd0;
         main_litedramcore_bankmachine5_twtpcon_ready <= 1'd0;
         main_litedramcore_bankmachine5_twtpcon_count <= 3'd0;
@@ -10042,8 +10138,10 @@ always @(posedge sys_clk) begin
         main_litedramcore_bankmachine5_trccon_count <= 3'd0;
         main_litedramcore_bankmachine5_trascon_ready <= 1'd0;
         main_litedramcore_bankmachine5_trascon_count <= 3'd0;
-        main_litedramcore_bankmachine6_cmd_buffer_lookahead_pipe_valid_source_valid <= 1'd0;
-        main_litedramcore_bankmachine6_cmd_buffer_pipe_valid_source_valid <= 1'd0;
+        main_litedramcore_bankmachine6_level <= 4'd0;
+        main_litedramcore_bankmachine6_produce <= 3'd0;
+        main_litedramcore_bankmachine6_consume <= 3'd0;
+        main_litedramcore_bankmachine6_pipe_valid_source_valid <= 1'd0;
         main_litedramcore_bankmachine6_row_opened <= 1'd0;
         main_litedramcore_bankmachine6_twtpcon_ready <= 1'd0;
         main_litedramcore_bankmachine6_twtpcon_count <= 3'd0;
@@ -10051,8 +10149,10 @@ always @(posedge sys_clk) begin
         main_litedramcore_bankmachine6_trccon_count <= 3'd0;
         main_litedramcore_bankmachine6_trascon_ready <= 1'd0;
         main_litedramcore_bankmachine6_trascon_count <= 3'd0;
-        main_litedramcore_bankmachine7_cmd_buffer_lookahead_pipe_valid_source_valid <= 1'd0;
-        main_litedramcore_bankmachine7_cmd_buffer_pipe_valid_source_valid <= 1'd0;
+        main_litedramcore_bankmachine7_level <= 4'd0;
+        main_litedramcore_bankmachine7_produce <= 3'd0;
+        main_litedramcore_bankmachine7_consume <= 3'd0;
+        main_litedramcore_bankmachine7_pipe_valid_source_valid <= 1'd0;
         main_litedramcore_bankmachine7_row_opened <= 1'd0;
         main_litedramcore_bankmachine7_twtpcon_ready <= 1'd0;
         main_litedramcore_bankmachine7_twtpcon_count <= 3'd0;
@@ -10076,7 +10176,6 @@ always @(posedge sys_clk) begin
         main_init_done_wr_stb <= 1'd0;
         main_init_error_storage <= 1'd0;
         main_init_error_wr_stb <= 1'd0;
-        main_aborted <= 1'd0;
         builder_interface1_re <= 1'd0;
         builder_interface1_we <= 1'd0;
         builder_selected_r <= 1'd0;
@@ -10103,8 +10202,7 @@ always @(posedge sys_clk) begin
         builder_new_master_rdata_valid6 <= 1'd0;
         builder_new_master_rdata_valid7 <= 1'd0;
         builder_new_master_rdata_valid8 <= 1'd0;
-        builder_litedramwishbone2native_state <= 2'd0;
-        builder_wishbone2csr_state <= 2'd0;
+        builder_state <= 2'd0;
     end
 end
 
@@ -12732,6 +12830,150 @@ IOBUF IOBUF_15(
 	// InOuts.
 	.IO (ddram_dq[15])
 );
+
+//------------------------------------------------------------------------------
+// Memory storage: 8-words x 24-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Async | Write: ---- | 
+reg [23:0] storage[0:7];
+reg [23:0] storage_dat0;
+always @(posedge sys_clk) begin
+	if (main_litedramcore_bankmachine0_wrport_we)
+		storage[main_litedramcore_bankmachine0_wrport_adr] <= main_litedramcore_bankmachine0_wrport_dat_w;
+	storage_dat0 <= storage[main_litedramcore_bankmachine0_wrport_adr];
+end
+always @(posedge sys_clk) begin
+end
+assign main_litedramcore_bankmachine0_wrport_dat_r = storage_dat0;
+assign main_litedramcore_bankmachine0_rdport_dat_r = storage[main_litedramcore_bankmachine0_rdport_adr];
+
+
+//------------------------------------------------------------------------------
+// Memory storage_1: 8-words x 24-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Async | Write: ---- | 
+reg [23:0] storage_1[0:7];
+reg [23:0] storage_1_dat0;
+always @(posedge sys_clk) begin
+	if (main_litedramcore_bankmachine1_wrport_we)
+		storage_1[main_litedramcore_bankmachine1_wrport_adr] <= main_litedramcore_bankmachine1_wrport_dat_w;
+	storage_1_dat0 <= storage_1[main_litedramcore_bankmachine1_wrport_adr];
+end
+always @(posedge sys_clk) begin
+end
+assign main_litedramcore_bankmachine1_wrport_dat_r = storage_1_dat0;
+assign main_litedramcore_bankmachine1_rdport_dat_r = storage_1[main_litedramcore_bankmachine1_rdport_adr];
+
+
+//------------------------------------------------------------------------------
+// Memory storage_2: 8-words x 24-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Async | Write: ---- | 
+reg [23:0] storage_2[0:7];
+reg [23:0] storage_2_dat0;
+always @(posedge sys_clk) begin
+	if (main_litedramcore_bankmachine2_wrport_we)
+		storage_2[main_litedramcore_bankmachine2_wrport_adr] <= main_litedramcore_bankmachine2_wrport_dat_w;
+	storage_2_dat0 <= storage_2[main_litedramcore_bankmachine2_wrport_adr];
+end
+always @(posedge sys_clk) begin
+end
+assign main_litedramcore_bankmachine2_wrport_dat_r = storage_2_dat0;
+assign main_litedramcore_bankmachine2_rdport_dat_r = storage_2[main_litedramcore_bankmachine2_rdport_adr];
+
+
+//------------------------------------------------------------------------------
+// Memory storage_3: 8-words x 24-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Async | Write: ---- | 
+reg [23:0] storage_3[0:7];
+reg [23:0] storage_3_dat0;
+always @(posedge sys_clk) begin
+	if (main_litedramcore_bankmachine3_wrport_we)
+		storage_3[main_litedramcore_bankmachine3_wrport_adr] <= main_litedramcore_bankmachine3_wrport_dat_w;
+	storage_3_dat0 <= storage_3[main_litedramcore_bankmachine3_wrport_adr];
+end
+always @(posedge sys_clk) begin
+end
+assign main_litedramcore_bankmachine3_wrport_dat_r = storage_3_dat0;
+assign main_litedramcore_bankmachine3_rdport_dat_r = storage_3[main_litedramcore_bankmachine3_rdport_adr];
+
+
+//------------------------------------------------------------------------------
+// Memory storage_4: 8-words x 24-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Async | Write: ---- | 
+reg [23:0] storage_4[0:7];
+reg [23:0] storage_4_dat0;
+always @(posedge sys_clk) begin
+	if (main_litedramcore_bankmachine4_wrport_we)
+		storage_4[main_litedramcore_bankmachine4_wrport_adr] <= main_litedramcore_bankmachine4_wrport_dat_w;
+	storage_4_dat0 <= storage_4[main_litedramcore_bankmachine4_wrport_adr];
+end
+always @(posedge sys_clk) begin
+end
+assign main_litedramcore_bankmachine4_wrport_dat_r = storage_4_dat0;
+assign main_litedramcore_bankmachine4_rdport_dat_r = storage_4[main_litedramcore_bankmachine4_rdport_adr];
+
+
+//------------------------------------------------------------------------------
+// Memory storage_5: 8-words x 24-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Async | Write: ---- | 
+reg [23:0] storage_5[0:7];
+reg [23:0] storage_5_dat0;
+always @(posedge sys_clk) begin
+	if (main_litedramcore_bankmachine5_wrport_we)
+		storage_5[main_litedramcore_bankmachine5_wrport_adr] <= main_litedramcore_bankmachine5_wrport_dat_w;
+	storage_5_dat0 <= storage_5[main_litedramcore_bankmachine5_wrport_adr];
+end
+always @(posedge sys_clk) begin
+end
+assign main_litedramcore_bankmachine5_wrport_dat_r = storage_5_dat0;
+assign main_litedramcore_bankmachine5_rdport_dat_r = storage_5[main_litedramcore_bankmachine5_rdport_adr];
+
+
+//------------------------------------------------------------------------------
+// Memory storage_6: 8-words x 24-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Async | Write: ---- | 
+reg [23:0] storage_6[0:7];
+reg [23:0] storage_6_dat0;
+always @(posedge sys_clk) begin
+	if (main_litedramcore_bankmachine6_wrport_we)
+		storage_6[main_litedramcore_bankmachine6_wrport_adr] <= main_litedramcore_bankmachine6_wrport_dat_w;
+	storage_6_dat0 <= storage_6[main_litedramcore_bankmachine6_wrport_adr];
+end
+always @(posedge sys_clk) begin
+end
+assign main_litedramcore_bankmachine6_wrport_dat_r = storage_6_dat0;
+assign main_litedramcore_bankmachine6_rdport_dat_r = storage_6[main_litedramcore_bankmachine6_rdport_adr];
+
+
+//------------------------------------------------------------------------------
+// Memory storage_7: 8-words x 24-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Async | Write: ---- | 
+reg [23:0] storage_7[0:7];
+reg [23:0] storage_7_dat0;
+always @(posedge sys_clk) begin
+	if (main_litedramcore_bankmachine7_wrport_we)
+		storage_7[main_litedramcore_bankmachine7_wrport_adr] <= main_litedramcore_bankmachine7_wrport_dat_w;
+	storage_7_dat0 <= storage_7[main_litedramcore_bankmachine7_wrport_adr];
+end
+always @(posedge sys_clk) begin
+end
+assign main_litedramcore_bankmachine7_wrport_dat_r = storage_7_dat0;
+assign main_litedramcore_bankmachine7_rdport_dat_r = storage_7[main_litedramcore_bankmachine7_rdport_adr];
+
 
 //------------------------------------------------------------------------------
 // Instance FDCE of FDCE Module.
