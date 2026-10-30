@@ -5,15 +5,18 @@
 `define WB_CLASSIC_V
 
 // Bridge from the pipelined wishbone of the interconnect to a slave using
-// the classic wishbone, ie: the ports of litedram.
+// the classic wishbone, ie: the control port of litedram, which maps its
+// registers.
 //
 // A classic slave takes a request presented with "s_wb_cyc_o" and
 // "s_wb_stb_o" high, its other signals stable, until the slave acknowledges
 // it through "s_wb_ack_i", which it may do in the clock cycle the request is
 // presented; the request is not to be withdrawn before, as the slave may
-// have consumed it, ie: litedram takes the command and the write data of a
-// request in one clock cycle, then completes the access whether the request
-// is still presented or not, acknowledging it only if it remained so.
+// have taken it, ie: the control port of litedram, when idle, takes a
+// request in the clock cycle it finds it presented, accesses the register in
+// the next clock cycle, and acknowledges the request in the clock cycle
+// after, whether it is still presented or not; idle again from the next
+// clock cycle, it would take a request still presented as a new one.
 //
 // The bridge takes one request at a time: it accepts the request of the
 // master in the clock cycle "m_wb_stb_i" is high while "m_wb_bsy_o" is low,
@@ -29,10 +32,10 @@
 // bridge, from the master to the slave or back.
 //
 // The bridge is meant for a slave which is not reset with the master, ie:
-// litedram, which must keep the content of its memory across the reset of
-// the system. A request presented to the slave remains so until the slave
-// acknowledges it, whatever "rst_i", since withdrawing it could leave the
-// slave with a part of it consumed; its acknowledgement is dropped when
+// litedram, whose registers, as its memory, survive the reset of the
+// system. A request presented to the slave remains so until the slave
+// acknowledges it, whatever "rst_i", since the slave may have taken it, and
+// would then acknowledge it regardless; its acknowledgement is dropped when
 // "rst_i" was high since the request was accepted, the master which made it
 // having been reset meanwhile: an acknowledgement for which the master has
 // no pending request would corrupt the count of pending requests which the
