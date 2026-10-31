@@ -225,8 +225,9 @@ delivered until software enables the source with `CMDENAIRQ` and the destination
 
 A `CMDINTDST` targeting the destination `-1` (`arg[31:3]` all ones) is a **system
 reset request**: the controller pulses its `rst_rqst_o` output to the reset
-controller, which restarts its reset pulse, so every CPU, device and cache resets
-and the SoC boots again from `0x1000` with its memory contents intact (see
+controller, which restarts its reset pulse, so every CPU, cache and device but the
+DDR3 controller resets, and the SoC boots again from `0x1000` with its memory contents
+intact (see
 [Reset behaviour](#reset-behaviour)). The command's result is `-1`, as for any
 invalid destination; underLineOS exposes it as `_sysreset()`.
 
@@ -475,7 +476,7 @@ as a **machine external interrupt (MEI)**, or as **SEI** when the corresponding
 | Mechanism | Where it lives |
 | :--- | :--- |
 | External interrupt (MEI / SEI) | `dev/irqctrl.sv`, memory-mapped at `0x00000F00` |
-| Timer interrupt (MTI / STI) | CSRs `mtimecmp` `0x34D` and `mtimecmph` `0x35D` — **not** memory-mapped |
+| Timer interrupt (MTI / STI) | CSRs `mtimecmp` `0x34D` and `mtimecmph` `0x35D` for MTI, or, while `MIDELEG` delegates the timer interrupt, `stimecmp` `0x14D` and `stimecmph` `0x15D` for STI — **not** memory-mapped |
 | Software interrupt (MSIP / SSIP) | **not implemented**; use `CMDINTDST` for IPIs |
 
 > [!NOTE]
@@ -548,8 +549,8 @@ D-cache).
 
 > [!NOTE]
 > `lib/xc7pll_100_to_50_100_200.sv` is still instantiated, but none of its outputs is
-> used, hence synthesis removes it; it is there for peripherals that need its 50, 100
-> or 200 MHz.
+> used, hence implementation removes it; it is there for peripherals that need its 50,
+> 100 or 200 MHz.
 
 ---
 
@@ -650,10 +651,9 @@ Three things the project does beyond the defaults:
 - **Twenty-one implementation runs.** `impl_1` builds on the default strategy;
   `impl_2` … `impl_21` each apply one of Vivado's *Performance_\** / *Congestion_\**
   strategies off the same `synth_1`. Launching them all is how timing closure at
-  100 MHz is swept. The default strategy no longer meets it since the DDR3 SDRAM was
-  added; in the sweep which followed, `impl_16` (*Performance_HighUtilSLRs*) met it
-  with the most margin, as did `impl_4`, `impl_21` and `impl_5`: a routine build can
-  use `impl_16`, until a change of the design reshuffles the strategies.
+  100 MHz is swept. The margin is thin, and which strategies meet it changes with
+  every change of the design, so take the bitstream from a run whose timing summary
+  shows it met.
 
 Open a console on the board's USB-UART bridge at **115200 8N1**:
 
@@ -697,7 +697,7 @@ editing the file:
 to reach the repository root.
 
 The default image is CoreMark. Any application under [`rv32-sim/apps/`](../rv32-sim/apps)
-— `helloworld`, `donut`, `tinyraytracer`, `isatests`, … — can be dropped in by
+— `helloworld`, `donut`, `tinyraytracer`, … — can be dropped in by
 pointing `SRAM_INITFILE` at its `*.32.hex`, as can [`apps/spiflashtest`](apps/spiflashtest),
 the benchmark of the SPI flash, with `../../../apps/spiflashtest/spiflashtest.32.hex`.
 
@@ -715,14 +715,15 @@ The `.32.hex` suffix matters: the same makefiles also emit 64/128/256-bit varian
 for wider `XWORDBITSZ` builds, and this target uses a 32-bit bus.
 
 > [!NOTE]
-> `SRAM_KBSIZE` must stay a power of two. Raising it moves the end of RAM, and with
-> it `WBPI_ADDRLIMIT`, the initial stack pointer and the cacheable window — all of
-> which are derived from it automatically. Widening `WBPI_ADDRLIMIT` also widens
-> the address bus, and with it the window of addresses the fault address register
-> reports exactly. It also moves the DDR3 SDRAM and the registers of its controller,
-> which follow the SRAM, but not their address in `litedram/litedram.c`: build
-> `apps/bootldr` with `-DLITEDRAM_BASE=` the new end of the SRAM, its default being
-> `0x41000`, ie: `make clean && CFLAGS=-DLITEDRAM_BASE=0x81000 make` for 512 KB.
+> `SRAM_KBSIZE` must stay a power of two, and 256 is the most this device holds.
+> Changing it moves the end of RAM, and with it `WBPI_ADDRLIMIT`, the initial stack
+> pointer and the cacheable window — all of which are derived from it automatically.
+> Widening `WBPI_ADDRLIMIT` also widens the address bus, and with it the window of
+> addresses the fault address register reports exactly. It also moves the DDR3 SDRAM
+> and the registers of its controller, which follow the SRAM, but not their address in
+> `litedram/litedram.c`: build `apps/bootldr` with `-DLITEDRAM_BASE=` the new end of the
+> SRAM, its default being `0x41000`, ie:
+> `make clean && CFLAGS=-DLITEDRAM_BASE=0x21000 make` for 128 KB.
 
 ### From the SPI flash: `apps/bootldr`
 
@@ -880,6 +881,11 @@ DDR3 controller);
 - **Set `mtvec` before anything can trap.** It resets to `0`, and a trap taken
   while the trap vector is still null halts the hart indefinitely — the board
   simply looks dead. A halted hart wakes only on an enabled, pending interrupt.
+- **Build applications for `rv32ima_zicsr_zifencei`**, the default of the toolchain: the
+  core does not trap every encoding of an extension it leaves out — ie: `clmul` without
+  Zbc executes as a shift — so an image built for one, like `isatests` (Zba, Zbb, Zbc,
+  Zbs), `clmultest` and `clmulbench` (Zbc), or `fpusmoke` and `fputests` (Zfinx), does not
+  run correctly here.
 - **A read of the UART data register blocks** until a byte is available.
 - The Wishbone arbiter is not instantiated here — with a single master
   (`WBPI_MDEVCOUNT = 1`) it is optimised away. The bus downsizers named by
