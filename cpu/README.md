@@ -96,10 +96,11 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	with no hardware source behind them, hence a hart writing its own MIP was the only way either
 	could be raised, and nothing does: underLineOS dispatches the machine timer and the machine
 	external interrupt only. Delivery of machine-level interprocessor interrupts is done through
-	external interrupts (MEI), dev/irqctrl.sv command CMDINTDST targeting the destination hart; the
-	same command targeting the destination -1 requests a system reset from the reset controller. wfi
-	never woke on one either, its wake condition having always listed the external and the timer
-	interrupts only.
+	external interrupts (MEI), dev/irqctrl.sv command CMDINTDST targeting the destination hart,
+	which the controller holds pending for that hart until it acknowledges it, one sent while one
+	is already pending merging with it; the same command targeting the destination -1 requests a
+	system reset from the reset controller. wfi never woke on one either, its wake condition having
+	always listed the external and the timer interrupts only.
 - There is support for Second Trap Value Register CSRs csrMtval2 csrStval2.
 - csrMtimecmp csrMtimecmph are not memory mapped and use 12'h34d 12'h35d CSRs.
 - csrTime and csrCycle get their value from the same register, which is compared against csrMtimecmp for timer interrupt.
