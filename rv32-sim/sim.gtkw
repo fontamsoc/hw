@@ -1450,8 +1450,9 @@ TOP.sim.irqctrl.prevcmdisdevrdy
 TOP.sim.irqctrl.srcidx[0]
 @24
 TOP.sim.irqctrl.dstidx[3:0]
+@22
+TOP.sim.irqctrl.ipipending[15:0]
 @28
-TOP.sim.irqctrl.irqdstseek
 TOP.sim.irqctrl.irqpending
 TOP.sim.irqctrl.cmdackirq
 TOP.sim.irqctrl.cmdintdst
