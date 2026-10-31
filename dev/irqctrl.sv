@@ -6,6 +6,9 @@
 // its irq_rdy_o is high, iterating in a round-robin fashion
 // through each destination.
 // Preference is given to destination with irq_dst_pri_i high.
+// An interrupt triggered by CMDINTDST is instead held pending for
+// the destination it targets, one per destination, until that
+// destination acknowledges it.
 //
 // Commands are sent to the controller writing to it with the
 // following expected format | arg: (WORDBITSZ-2) bits | cmd: 2 bit |
@@ -27,16 +30,21 @@
 // 	CMDACKIRQ: Acknowledges an interrupt source; field "arg" is expected
 // 	to have following format | idx: (WORDBITSZ-3) bits | en: 1 bit |
 // 	where "idx" is the interrupt destination index, "en" enables/disables
-// 	further interrupt delivery to the interrupt destination "idx".
-// 	"resp" in the result gets set to the interrupt source index, or -2
-// 	if there are no pending interrupts for the destination "idx", or -1
-// 	for an interrupt triggered by CMDINTDST.
+// 	further interrupt delivery to the interrupt destination "idx", except
+// 	for interrupts triggered by CMDINTDST, which "en" does not gate.
+// 	"resp" in the result gets set to -1 for an interrupt triggered by
+// 	CMDINTDST pending for the destination "idx", which gets acknowledged
+// 	ahead of an interrupt from a source routed to "idx", the latter staying
+// 	pending; otherwise "resp" gets set to the interrupt source index, or -2
+// 	if there are no pending interrupts for the destination "idx".
 // 	CMDINTDST: Triggers an interrupt targeting a specific destination;
 // 	field "arg" is expected to have following format
 // 	| idx: (WORDBITSZ-3) bits | rsvd: 1 bit | where "idx" is the interrupt
 // 	destination index to target, "rsvd" is reserved and ignored.
 // 	"resp" in the result gets set to the interrupt destination index
-// 	if valid, -2 if not ready due to an interrupt pending ack, or -1 if invalid.
+// 	if valid, or -1 if invalid. The command is never refused: one targeting
+// 	a destination which already has one pending merges with it, a single
+// 	acknowledgement servicing both.
 // 	The destination -1 (all ones) requests a system reset, which the
 // 	controller signals through rst_rqst_o; "resp" gets set to -1 as for
 // 	an invalid destination, the four command codes being all taken.
@@ -57,10 +65,10 @@
 // atomic read-write sending CMDDEVRDY must be used to retrieve the
 // result while making the controller ready for the next command.
 //
-// An interrupt must be acknowledged as soon as possible using CMDACKIRQ
-// (which drives irq_src_rdy_o low and returns its index) so that
+// An interrupt from a source must be acknowledged as soon as possible using
+// CMDACKIRQ (which drives irq_src_rdy_o low and returns its index) so that
 // the controller can dispatch another interrupt, because the controller
-// does not buffer requests.
+// does not buffer requests, dispatching one at a time for all destinations.
 
 // Parameters:
 //
@@ -101,7 +109,9 @@
 // 	irq_dst_stb_i is raised when the interrupt request is now being
 // 	considered by the destination.
 // 	When the destination drives irq_dst_rdy_i low while irq_dst_stb_i
-// 	is high, it is assumed that it has taken on the requested interrupt.
+// 	is high, it is assumed that it has taken on the requested interrupt;
+// 	otherwise an interrupt from a source gets dispatched again, while one
+// 	triggered by CMDINTDST stays pending.
 // 	The destination keeps irq_dst_pri_i low when it wouldn't be
 // 	the best choice to service the interrupt; irq_dst_pri_i is used
 // 	in a multi-PU system where it is driven by PUs "halted_o" in order
@@ -233,12 +243,30 @@ always_ff @(posedge clk_i) begin
 		rst_rqst_o <= (cmdintdst && (&wb_dat_r[WORDBITSZ -1 : 3]));
 end
 
-reg [WORDBITSZ -1 : 0] irqdstdat;
-wire irqdstseek = (
-	irqdstdat[1:0] == CMDINTDST &&
-	dstidx != irqdstdat[(CLOG2IRQDSTCOUNT +3) -1 : 3]);
+// Destination index that a command carries, and whether it is valid.
+wire [CLOG2IRQDSTCOUNT -1 : 0] cmddstidx = wb_dat_r[(CLOG2IRQDSTCOUNT +3) -1 : 3];
+wire cmddstvalid = (wb_dat_r[WORDBITSZ -1 : 3] < IRQDSTCOUNT);
 
-reg irqpending; /* set to 1 when an interrupt request is waiting to be acknowledged */
+// Interrupts triggered by CMDINTDST, one held pending per destination until
+// that destination acknowledges it; unlike an interrupt from a source, which
+// gets dispatched again when its destination stops being ready before taking
+// it, no source is left to raise it again, hence it is never aborted.
+// A CMDINTDST targeting a destination which already has one pending merges
+// with it, a single acknowledgement servicing both.
+reg [IRQDSTCOUNT -1 : 0] ipipending;
+
+wire ackipi = (cmdackirq && cmddstvalid && ipipending[cmddstidx]);
+
+always_ff @(posedge clk_i) begin
+	if (rst_i)
+		ipipending <= {IRQDSTCOUNT{1'b0}};
+	else if (cmdintdst && cmddstvalid)
+		ipipending[cmddstidx] <= 1'b1;
+	else if (ackipi)
+		ipipending[cmddstidx] <= 1'b0;
+end
+
+reg irqpending; /* set to 1 when an interrupt from a source is waiting to be acknowledged */
 
 reg [IRQDSTCOUNT -1 : 0] irq_dst_rdy_i_and_not_irq_dst_stb_i_r;
 always_ff @(posedge clk_i)
@@ -254,13 +282,15 @@ wire irqpending_abort_dstidx = irqpending_abort[dstidx];
 // request; ie: an acknowledgement sent while nothing is routed to the
 // acknowledging destination would otherwise report, and fake-service, the
 // interrupt source that the round-robin scan happens to be indexing.
+// An acknowledgement servicing an interrupt triggered by CMDINTDST pending
+// for that same destination must not signal irq_src_rdy_o either.
 genvar gen_irq_src_rdy_o_idx;
 generate for (
 	gen_irq_src_rdy_o_idx = 0;
 	gen_irq_src_rdy_o_idx < IRQSRCCOUNT;
 	gen_irq_src_rdy_o_idx = gen_irq_src_rdy_o_idx + 1) begin :gen_irq_src_rdy_o
 	assign irq_src_rdy_o[gen_irq_src_rdy_o_idx] = (
-		srcidx != gen_irq_src_rdy_o_idx || irqdstdat[1:0] == CMDINTDST ||
+		srcidx != gen_irq_src_rdy_o_idx || ipipending[dstidx] ||
 			!(cmdackirq && irqpending && !irqpending_abort_dstidx &&
 				wb_dat_r[WORDBITSZ -1 : 3] == dstidx));
 end endgenerate
@@ -271,7 +301,8 @@ generate for (
 	gen_irq_dst_stb_o_idx < IRQDSTCOUNT;
 	gen_irq_dst_stb_o_idx = gen_irq_dst_stb_o_idx + 1) begin :gen_irq_dst_stb_o
 	assign irq_dst_stb_o[gen_irq_dst_stb_o_idx] = (
-		dstidx == gen_irq_dst_stb_o_idx && irqpending && !irqdstseek &&
+		(ipipending[gen_irq_dst_stb_o_idx] ||
+			(dstidx == gen_irq_dst_stb_o_idx && irqpending)) &&
 		// Raise irq_dst_stb_o only when the controller is ready for the next command,
 		// otherwise an interrupt would cause software to send the controller a new
 		// command while it is not ready, waiting indefinitely for it to be ready.
@@ -292,7 +323,6 @@ always_ff @(posedge clk_i) begin
 		srcidx <= {CLOG2IRQSRCCOUNT{1'b0}};
 		dstidx <= {CLOG2IRQDSTCOUNT{1'b0}};
 		irqpending <= 1'b0;
-		irqdstdat <= {WORDBITSZ{1'b0}};
 		irqsrcen <= {IRQSRCCOUNT{1'b0}};
 		irqdsten <= {IRQDSTCOUNT{1'b0}};
 	end else if (cmddevrdy) begin
@@ -308,34 +338,30 @@ always_ff @(posedge clk_i) begin
 		end else
 			wb_dat_o <= {{(WORDBITSZ-3){1'b1}}, 1'b0, wb_dat_r[1:0]};
 	end else if (cmdintdst) begin
-		if (wb_dat_r[WORDBITSZ -1 : 3] < IRQDSTCOUNT) begin
-			if (irqpending) begin
-				wb_dat_o <= {{(WORDBITSZ-4){1'b1}}, 1'b0, 1'b0, wb_dat_r[1:0]};
-			end else begin
-				wb_dat_o <= {
-					{((WORDBITSZ-3)-CLOG2IRQDSTCOUNT){1'b0}},
-					wb_dat_r[(CLOG2IRQDSTCOUNT +3) -1 : 3],
-					1'b0,
-					wb_dat_r[1:0]};
-				irqpending <= 1'b1;
-				irqdstdat <= wb_dat_r;
-			end
-		end else
+		// Never refused: ipipending, which this command sets when valid,
+		// merges it with one already pending for the same destination.
+		if (cmddstvalid)
+			wb_dat_o <= {
+				{((WORDBITSZ-3)-CLOG2IRQDSTCOUNT){1'b0}},
+				cmddstidx,
+				1'b0,
+				wb_dat_r[1:0]};
+		else
 			wb_dat_o <= {{(WORDBITSZ-3){1'b1}}, 1'b0, wb_dat_r[1:0]};
-	end else if (irqdstseek) begin
-		// Keep incrementing dstidx until the targeted interrupt destination is indexed.
-		dstidx <= nextdstidx;
 	end else if (irqpending || cmdackirq) begin
 		if (irqpending_abort_dstidx)
 			irqpending <= 1'b0;
 		if (cmdackirq) begin // Logic that acknowledges a triggered interrupt.
-			if (irqpending && !irqpending_abort_dstidx &&
+			if (ackipi) begin
+				// An interrupt triggered by CMDINTDST reports -1, and gets
+				// acknowledged ahead of an interrupt from a source routed to
+				// the same destination, which stays pending, keeping the
+				// destination strobed.
+				wb_dat_o <= {{(WORDBITSZ-3){1'b1}}, 1'b0, wb_dat_r[1:0]};
+			end else if (irqpending && !irqpending_abort_dstidx &&
 				wb_dat_r[WORDBITSZ -1 : 3] == dstidx) begin
-				wb_dat_o <= ((irqdstdat[1:0] == CMDINTDST) ?
-					{{(WORDBITSZ-3){1'b1}}, 1'b0, wb_dat_r[1:0]} :
-					{{((WORDBITSZ-3)-CLOG2IRQSRCCOUNT){1'b0}}, srcidx, 1'b0, wb_dat_r[1:0]});
+				wb_dat_o <= {{((WORDBITSZ-3)-CLOG2IRQSRCCOUNT){1'b0}}, srcidx, 1'b0, wb_dat_r[1:0]};
 				irqpending <= 1'b0;
-				irqdstdat <= {WORDBITSZ{1'b0}};
 				// The destination with the lowest index is always preferred.
 				dstidx <= {CLOG2IRQDSTCOUNT{1'b0}};
 				srcidx <= nextsrcidx;
@@ -382,9 +408,10 @@ end
 // disabled is not reported, as it is the documented way for software to
 // enable interrupt delivery to a destination; ie: the _OS (UnderLineOS)
 // cpu bring-up deliberately acknowledges with nothing pending just for
-// the enable side effect.
+// the enable side effect. An acknowledgement servicing an interrupt
+// triggered by CMDINTDST hits by construction.
 always_ff @(posedge clk_i) begin
-	if (!rst_i && cmdackirq && !irqdstseek &&
+	if (!rst_i && cmdackirq && !ackipi &&
 		(wb_dat_r[WORDBITSZ -1 : 3] >= IRQDSTCOUNT ||
 			irqdsten[wb_dat_r[(CLOG2IRQDSTCOUNT +3) -1 : 3]])) begin
 		if (!irqpending) begin
