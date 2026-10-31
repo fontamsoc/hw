@@ -210,8 +210,8 @@ retrieves its result; two memory operations are always needed.
 | `cmd` | Name | Purpose |
 | :-: | :--- | :--- |
 | `0b00` | `CMDDEVRDY` | Ready the controller for a new command; clears `resp` |
-| `0b01` | `CMDACKIRQ` | Acknowledge an IRQ for destination `arg[31:3]`; `arg[2]` enables/disables further delivery. Returns the source index, `-2` if none pending, `-1` if raised by `CMDINTDST` |
-| `0b10` | `CMDINTDST` | Raise an interrupt at destination `arg[31:3]` (used for IPIs); the destination `-1` (all ones) requests a system reset instead |
+| `0b01` | `CMDACKIRQ` | Acknowledge an IRQ for destination `arg[31:3]`; `arg[2]` enables/disables further delivery. Returns `-1` if raised by `CMDINTDST` (served first), otherwise the source index, or `-2` if none pending |
+| `0b10` | `CMDINTDST` | Raise an interrupt at destination `arg[31:3]` (used for IPIs), held pending for it until it acknowledges it; one raised while one is already pending merges with it, hence the command is never refused. The destination `-1` (all ones) requests a system reset instead |
 | `0b11` | `CMDENAIRQ` | Enable (`arg[2] = 1`) or disable a given interrupt source `arg[31:3]` |
 
 The controller has accepted a command only when the `cmd` field read back is
@@ -219,9 +219,9 @@ The controller has accepted a command only when the `cmd` field read back is
 a transaction is in flight is silently dropped, so use an atomic read-modify-write
 to stay thread-safe.
 
-Every source and every destination is **disabled at reset**; nothing is delivered
-until software enables the source with `CMDENAIRQ` and the destination with
-`CMDACKIRQ` (`arg[2] = 1`).
+Every source and every destination is **disabled at reset**; no source interrupt is
+delivered until software enables the source with `CMDENAIRQ` and the destination with
+`CMDACKIRQ` (`arg[2] = 1`). An interrupt raised with `CMDINTDST` bypasses both enables.
 
 A `CMDINTDST` targeting the destination `-1` (`arg[31:3]` all ones) is a **system
 reset request**: the controller pulses its `rst_rqst_o` output to the reset
@@ -485,8 +485,9 @@ as a **machine external interrupt (MEI)**, or as **SEI** when the corresponding
 
 Three behaviours worth coding around:
 
-- **Acknowledge promptly.** `irqctrl` does not buffer requests; until the current
-  one is acknowledged with `CMDACKIRQ` it cannot dispatch another.
+- **Acknowledge promptly.** `irqctrl` dispatches source interrupts one at a time for
+  all destinations; until the current one is acknowledged with `CMDACKIRQ` it cannot
+  dispatch another. Interrupts raised with `CMDINTDST` are held per destination instead.
 - **The UART and SPI interrupts disarm themselves.** Each is disabled at reset (so
   no spurious interrupt can fire immediately after release) and disabled again each
   time a raised interrupt is acknowledged, so the handler must re-enable it. On
