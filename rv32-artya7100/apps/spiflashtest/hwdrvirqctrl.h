@@ -24,16 +24,22 @@
 // 	CMDACKIRQ: Acknowledges an interrupt source; field "arg" is expected
 // 	to have following format | idx: (WORDBITSZ-3) bits | en: 1 bit |
 // 	where "idx" is the interrupt destination index, "en" enables/disables
-// 	further interrupt delivery to the interrupt destination "idx".
-// 	"resp" in the result gets set to the interrupt source index, or -2
-// 	if there are no pending interrupts for the destination "idx", or -1
-// 	for an interrupt triggered by CMDINTDST.
-// 	CMDINTDST: Triggers an interrupt targeting a specific destination;
+// 	further interrupt delivery to the interrupt destination "idx", except
+// 	for interrupts triggered by CMDINTDST, which "en" does not gate.
+// 	"resp" in the result gets set to -1 for an interrupt triggered by
+// 	CMDINTDST pending for the destination "idx", which gets acknowledged
+// 	ahead of an interrupt from a source routed to "idx", the latter staying
+// 	pending; otherwise "resp" gets set to the interrupt source index, or -2
+// 	if there are no pending interrupts for the destination "idx".
+// 	CMDINTDST: Triggers an interrupt targeting a specific destination,
+// 	held pending for that destination until it acknowledges it;
 // 	field "arg" is expected to have following format
 // 	| idx: (WORDBITSZ-3) bits | rsvd: 1 bit | where "idx" is the interrupt
 // 	destination index to target, "rsvd" is reserved and ignored.
 // 	"resp" in the result gets set to the interrupt destination index
-// 	if valid, -2 if not ready due to an interrupt pending ack, or -1 if invalid.
+// 	if valid, or -1 if invalid. The command is never refused: one targeting
+// 	a destination which already has one pending merges with it, a single
+// 	acknowledgement servicing both.
 // 	The destination -1 (all ones) requests a system reset; "resp" in the
 // 	result gets set to -1 as for an invalid destination.
 // 	CMDENAIRQ: Enable/Disable an interrupt source; field "arg" is expected
@@ -48,8 +54,9 @@
 // atomic read-write sending CMDDEVRDY must be used to retrieve the
 // result while making the controller ready for the next command.
 //
-// An interrupt must be acknowledged as soon as possible so
-// that the irqctrl can dispatch another interrupt request.
+// An interrupt from a source must be acknowledged as soon as possible so
+// that the irqctrl can dispatch another interrupt request, as it dispatches
+// them one at a time for all destinations.
 
 #define IRQCTRLADDR ((uintptr_t *)0xf00 /* By convention, the interrupt controller is located at 0xf00 */)
 
