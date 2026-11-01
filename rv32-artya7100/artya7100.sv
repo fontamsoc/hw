@@ -170,7 +170,7 @@ xc7pll_100_to_50_100_200 pll (
 wire sdram_ddr3_clk_w;
 wire sdram_ddr3_rst_w;
 
-(* direct_reset = "true" *) wire rst_w;
+wire rst_w;
 wire irqctrl_rst_rqst_w;
 rstctrl #(
 	 .RSTDURATION (CLKFREQ100MHZ/1000000) // 1us
@@ -220,7 +220,7 @@ localparam WBPI_CLOG2WORDBITSZBY8 = clog2(WBPI_WORDBITSZ/8);
 localparam WBPI_ADDRBITSZ         = (WBPI_WORDBITSZ - WBPI_CLOG2WORDBITSZBY8);
 localparam WBPI_ADDRLIMIT         = ('h1000+(`SRAM_KBSIZE*1024)+LITEDRAM_MAPSZ+LITEDRAMCTRL_MAPSZ);
 localparam WBPI_CLKFREQ           = CLKFREQ100MHZ;
-(* direct_reset = "true" *) wire wbpi_rst_w = (rst_w || sdram_ddr3_rst_w);
+wire wbpi_rst_w = (rst_w || sdram_ddr3_rst_w);
 wire wbpi_clk_w = sdram_ddr3_clk_w;
 // The peripheral interconnect is instantiated in a separate file to keep this file clean.
 // Master devices must use the following signals to plug onto the peripheral interconnect:
