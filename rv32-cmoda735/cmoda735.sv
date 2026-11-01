@@ -150,7 +150,7 @@ xc7pll_12_to_48_96_192 pll (
 // rst_i comes from the button btn0 which is active-high; after power-on,
 // the soc is held in reset until btn0 get pressed once; thereafter,
 // resetting the soc requires holding btn0 pressed for at least RSTTHRESH.
-(* direct_reset = "true" *) wire rst_w;
+wire rst_w;
 wire irqctrl_rst_rqst_w;
 rstctrl #(
 	 .RSTDURATION (CLKFREQ96MHZ/1000000) // 1us
