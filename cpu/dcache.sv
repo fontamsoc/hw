@@ -1,27 +1,250 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // (c) William Fonkou Tambe
 
-// TODO: Ports description:
-// conly_i: Make cache behave like an sram; no slave memory operation occurs.
-// cmiss_i: Cache-miss to force slave memory operation; any cache-hit gets invalidated, a read writing back a dirty one first.
-// coherency_en_i: Enable logic that uses/generates coherency traffic.
+// Data-cache between a master and memory, connecting to both through pipelined wishbone interfaces;
+// it is write-back, and kept coherent with the other data-caches of its coherency ring, within the
+// limits stated under Cache coherency.
+//
+// The data-cache holds CACHESETCNT cache sets of CACHEWAYCNT cache-entries, each made of a word,
+// the cache-tag of its address, a valid bit for each of its bytes, a dirty bit and a shared bit.
+// The cache set of an address is selected by the least significant bits of its word address, the
+// remaining bits making its cache-tag. An access is a cache-hit when every byte that it selects is
+// held by a cache-entry whose cache-tag matches, and a cache-miss otherwise.
+//
+// An access is accepted in the clockcycle in which m_wb_stb_i is high while m_wb_bsy_o is low, and
+// tested in the clockcycle which follows (TSTHIT), in which the next access can already be accepted.
+// An access which is not forced to miss (as explained under Ports for cmiss_i), is handled as follows:
+// - A read cache-hit is acknowledged in TSTHIT, with the word of the cache-entry.
+// - A write is acknowledged in TSTHIT as well, whether it is a cache-hit or not, and made in the
+// 	cache-entry whose cache-tag matches, else in a cache-entry that it replaces, without reading
+// 	memory (write-allocate); the bytes that it writes become valid in the cache-entry, which is
+// 	marked dirty.
+// - A read cache-miss is acknowledged once it has the bytes that it selects: while coherency_en_i
+// 	is low, the whole word is read from memory (REFILL); while it is high, the bytes that it selects
+// 	and that the cache-entry lacks are looked for in the other data-caches (as described under
+// 	Cache coherency), and read from memory (REFILL) when they are not all found there.
+// - A cache-miss whose cache-tag matches no cache-entry replaces one, whose content, when dirty, is
+// 	written back to memory (WRITEB). The way replaced is selected by an index common to all cache
+// 	sets, which moves to the next way only when a write, or a refill from memory, is made in a
+// 	cache-entry of the way it selects whose cache-tag matched; an allocation does not move it.
+// 	Hence, with more than one way, and unless the index moves meanwhile, a cache-entry just
+// 	allocated in a cache set is the next one replaced there, whereas one that a write or a refill
+// 	has just hit is not.
+// A dirty cache-entry reaches memory only when it gets replaced, or, for the bytes that it selects,
+// when a read forced to miss hits it; the data-cache cannot be flushed as a whole.
 
-/* ### Cache Coherency logic:
-- Data-caches in the same coherency circle are daisy-chained serially in a round-robin fashion
-	using valid-ready handshake connections.
-- When reading:
-	- On cache-miss, look for a hit in other data-caches by sending a read request.
-		If a data-cache has a hit, it modifies the read request with the requested data.
-		If no data-cache has a hit, the read request goes around back to the requesting data-cache, and gets
-			discarded while the requesting data-cache proceed to the REFILL state to fetch the data needed.
-- When writing:
-	- Send write request to update any other data-caches with a matching cache-tag,
-		keeping their dirty state unchanged (made clean instead when the write request updates
-		all bits), because only the data-cache being written will have
-		its cache-entry set dirty, and we only want one of the data-caches to flush-to-memory.
-- Coherency requests have priority over regular operations that are not atomic.
-- Coherency requests never create/flush/refill a cache-entry in a data-cache; they only use/update
-	an existing cache-entry if its cache-tag matches. */
+// Cache coherency:
+//
+// - Data-caches in the same coherency ring are daisy-chained, the coherency_*_o ports and
+// 	coherency_bsy_i of each one connected to the coherency_*_i ports and coherency_bsy_o of the
+// 	next one, and those of the last one to the first one. A coherency request travels the whole
+// 	ring, each data-cache it goes through using it and forwarding it, until it comes back around to
+// 	the data-cache which issued it.
+// - Coherency traffic is generated only while coherency_en_i is set, and only by accesses that are
+// 	neither made with conly_i nor forced to miss; one forced to miss, by cmiss_i, by the bus lock,
+// 	or because it follows a locked access, generates none.
+// - An access forced to miss thus neither sees nor updates the copies held by the other
+// 	data-caches: a write forced to miss, eg: that of a store-conditional or of an atomic memory
+// 	operation, leaves stale their copies of the bytes it writes; and a read forced to miss, eg: a
+// 	load-reserved or the read of an atomic memory operation, can return data from memory older than
+// 	a dirty copy held by another data-cache. This holds as well for the access which follows a
+// 	locked one, which may be an ordinary load or store, eg: the first one after a compare-and-swap
+// 	whose compare failed. A word accessed through atomic memory operations is therefore not to be
+// 	accessed otherwise, as cpu/README.md requires.
+// - Reading generates a read request only on a cache-miss, ie: when some selected byte is not in the
+// 	cache-entry, and asks for those bytes only. The request always comes back around: each other
+// 	data-cache whose cache-tag matches merges into it every byte it holds, and marks its own
+// 	cache-entry shared. When the merged bytes cover the request, the cache-entry is filled from them,
+// 	otherwise the missing bytes are read from memory (REFILL). The cache-entry is then marked shared
+// 	if another data-cache matched the cache-tag, or was itself waiting on a read of that word,
+// 	and exclusive otherwise.
+// - Writing generates a write request whether or not it is a cache-miss, unless its cache-tag
+// 	matches a cache-entry marked exclusive. When it comes back around, the cache-entry is marked
+// 	exclusive if no other data-cache matched the cache-tag nor was waiting on a read of that word.
+// - A read/write request from another data-cache that matches the cache-tag marks the cache-entry
+// 	shared. Hence a cache-entry becomes exclusive only when a request of its own comes back having
+// 	found no other copy: a write, or a read refilled from memory, including a read of a cache-entry
+// 	holding only some of the selected bytes.
+// - A write request from another data-cache updates the cache-entry whose cache-tag matches, the
+// 	bytes it writes becoming valid in it, without changing its dirty state, so that a write request
+// 	never makes another copy dirty; the cache-entry is made clean instead when the write request
+// 	writes every byte of the word, all of which the store that issued it made dirty in its own
+// 	data-cache.
+// - A coherency request from another data-cache never allocates, writes back nor refills a
+// 	cache-entry; it only reads, or updates, a cache-entry whose cache-tag matches.
+// - Coherency requests have priority over the accesses of the master: a coherency request is taken
+// 	ahead of an access presented in the same clockcycle; yet no coherency request is taken while the
+// 	data-cache handles an access forced to miss, or a cache-miss in WRITEB or REFILL, nor while it
+// 	holds the bus lock, ie: from an access carrying m_wb_lock_i until the access which follows it,
+// 	the ring being held off meanwhile.
+// - Atomic memory operations do not travel the ring, being forced to miss; hence an access carrying
+// 	m_wb_lock_i, when the access before it did not, is accepted only once every write request that
+// 	the data-cache issued has come back around, including that of a write in TSTHIT, so that the
+// 	writes made before it have reached the other data-caches when it takes effect in memory.
+// - Note that writes to the same word from different data-caches, whose write requests cross on the
+// 	ring, are not ordered: each data-cache applies the write of the other after its own, hence each
+// 	cache-entry ends up holding the value of the other for the bytes both wrote; and when both write
+// 	every byte, both cache-entries are made clean, and neither write reaches memory.
+
+// Parameters:
+//
+// WORDBITSZ
+// 	Width of a word in bits, ie: of the data of a cache-entry, and of the data buses.
+// 	It must be 16, 32, 64, 128 or 256.
+//
+// ADDRLIMIT
+// 	Address limit from which the address bus width is derived,
+// 	as the modules of lib/ do; the address buses carry word addresses.
+//
+// CACHESETCNT
+// 	Number of cache sets, each holding CACHEWAYCNT cache-entries.
+// 	It must be at least 2, a power-of-2, and less than or equal to
+// 	2^(w-1), where w is the width of the address buses.
+//
+// CACHEWAYCNT
+// 	Number of cache-entries in a cache set, ie: of ways.
+// 	It must be non-null and a power-of-2.
+//
+// REGMSTOUTPUT
+// 	When non-null, m_wb_ack_o and m_wb_dat_o are registered, delaying
+// 	the response to the master by a clockcycle; m_wb_bsy_o is not registered.
+//
+// REGSLVINPUT
+// 	When non-null, s_wb_ack_i and s_wb_dat_i are registered before use, delaying
+// 	the response of the slave by a clockcycle; s_wb_bsy_i is not registered.
+//
+// MAXPENDINGACK
+// 	When null, the data-cache waits for the acknowledgement of each access that it
+// 	makes on the slave interface before going on. When non-null, it does not wait for
+// 	that of a write, ie: a write-back, which speeds up evictions, or a write forced to
+// 	miss; the slave interface must then never hold more than MAXPENDINGACK accesses
+// 	accepted and not yet acknowledged, that count being kept to tell which
+// 	acknowledgement is that of a refill.
+//
+// INITFILE
+// 	File from which the words of way 0 are initialized using $readmemh(),
+// 	for use with conly_i.
+//
+// PUIDBITSZ
+// 	Width of coherency_rqid_*, which must hold the PUID of every data-cache of the
+// 	ring; (1<<PUIDBITSZ) also sizes the skid-buffer of coherency_*_o, and the count
+// 	of write requests which have not come back around. It must be non-null.
+//
+// PUID
+// 	Identifier of the data-cache in its ring, carried by the coherency requests that
+// 	it issues, from which it recognizes them when they come back around; it must be
+// 	unique within the ring.
+
+// Ports:
+//
+// rst_i
+// 	When held high at the rising edge of the clock signal, the module resets;
+// 	it must be held low for normal operation. Once it is low, the data-cache
+// 	invalidates its cache-entries, a cache set per clockcycle, being busy meanwhile,
+// 	ie: m_wb_bsy_o and coherency_bsy_o high; the words that they hold are kept,
+// 	hence those from INITFILE. The data-caches of a ring are to be reset together,
+// 	as a reset drops the coherency requests that a data-cache holds.
+//
+// clk_i
+// 	Clock signal.
+//
+// conly_i
+// 	When high along with m_wb_stb_i, the access is made in the cache only, as in an
+// 	sram of CACHESETCNT words, ie: way 0 of the cache set that the address selects,
+// 	whatever the cache-tag of the address; neither a slave access nor a coherency
+// 	request is made. A write stores the bytes that it selects without preserving
+// 	the others, hence only whole-word writes are reliable in that mode.
+//
+// cmiss_i
+// 	When high along with m_wb_stb_i, the access is forced to miss, as are an access
+// 	carrying m_wb_lock_i and the access which follows it; cmiss_i is to be set high
+// 	combinationally from m_wb_addr_i for an address which must not be cached.
+// 	An access forced to miss reaches the slave interface, and neither sees nor
+// 	updates the copies held by the other data-caches, with the consequences
+// 	described under Cache coherency. It is handled as follows:
+// 	- A write is made in memory, the bytes that it writes being invalidated in the
+// 		cache-entry whose cache-tag matches.
+// 	- A read is made in memory, unless it selects only bytes held by a dirty
+// 		cache-entry, which then answers it and writes them back; either way, a
+// 		cache-entry holding every byte that it selects has them invalidated.
+// 		When the read is made in memory, the bytes held by the cache-entry whose
+// 		cache-tag matches are merged over the data read, unless the read carries
+// 		m_wb_lock_i and that cache-entry is clean, as it may then be behind memory.
+//
+// m_wb_stb_i
+// m_wb_lock_i
+// m_wb_we_i
+// m_wb_addr_i
+// m_wb_sel_i
+// m_wb_dat_i
+// m_wb_bsy_o
+// m_wb_ack_o
+// m_wb_dat_o
+// 	Pipelined wishbone slave interface, to which the master connects. An access is
+// 	accepted in the clockcycle in which m_wb_stb_i is high while m_wb_bsy_o is low;
+// 	each access is acknowledged by m_wb_ack_o high for a clockcycle, in the order the
+// 	accesses were accepted, m_wb_dat_o then holding the bytes that a read selects.
+// 	An access carrying m_wb_lock_i requests the bus lock: it reaches the slave
+// 	interface with s_wb_lock_o high, and the lock is released by the access which
+// 	follows it, that access being forced to miss, as explained for cmiss_i; when the
+// 	access before it did not carry the lock, it is accepted only once every write
+// 	request that the data-cache issued, or is issuing, has come back around, as
+// 	described under Cache coherency.
+//
+// s_wb_stb_o
+// s_wb_lock_o
+// s_wb_we_o
+// s_wb_addr_o
+// s_wb_sel_o
+// s_wb_dat_o
+// s_wb_bsy_i
+// s_wb_ack_i
+// s_wb_dat_i
+// 	Pipelined wishbone master interface, which connects to the slave, ie: memory,
+// 	which is to acknowledge every access, a write as well as a read. Through it are
+// 	made the write-backs, the refills and the accesses forced to miss, each one
+// 	carrying the bus lock of the access that it is made for.
+//
+// coherency_en_i
+// 	When high, the data-cache takes part in the cache-coherency logic, ie: it issues
+// 	coherency requests, and forwards those of the other data-caches of the ring.
+// 	It is to be low for a data-cache which is not part of a ring, its
+// 	coherency_stb_i being then held low.
+//
+// coherency_stb_i
+// coherency_rqid_i
+// coherency_we_i
+// coherency_addr_i
+// coherency_sel_i
+// coherency_dat_i
+// coherency_shr_i
+// coherency_bsy_o
+// 	Coherency requests from the previous data-cache of the ring, each taken in the
+// 	clockcycle in which coherency_stb_i is high while coherency_bsy_o is low:
+// 	- coherency_rqid_i is the PUID of the data-cache which issued the request.
+// 	- coherency_we_i is high for a write request, and low for a read request.
+// 	- coherency_addr_i is the word address.
+// 	- coherency_sel_i and coherency_dat_i are, for a write request, the bytes written
+// 		and their value, and for a read request, the bytes gathered so far from the
+// 		data-caches that it went through, and their value.
+// 	- coherency_shr_i is high when a data-cache that the request went through matched
+// 		the cache-tag, or was waiting on a read of that word.
+//
+// coherency_stb_o
+// coherency_rqid_o
+// coherency_we_o
+// coherency_addr_o
+// coherency_sel_o
+// coherency_dat_o
+// coherency_shr_o
+// coherency_bsy_i
+// 	Coherency requests to the next data-cache of the ring, with the same meaning,
+// 	presented through a skid-buffer of (1<<PUIDBITSZ) requests.
+//
+// Module dCacheSub, which dCache wraps, has the same parameters, except REGMSTOUTPUT
+// and REGSLVINPUT, and the same ports, its coherency_*_o being those that dCache
+// presents through the skid-buffer, plus coherency_near_bsy_i, high when that
+// skid-buffer is full or one request away from being full.
 
 `ifndef DCACHE_V
 `define DCACHE_V
@@ -297,7 +520,7 @@ wire cache_drt_i = (coherency_r ?
 
 wire cache_shr_i = ((state == TSTHIT) ? // m_wb_shr_r is used only when the coherency request has come back around.
 	(coherency_r ? (!m_wb_we_r || m_wb_rqid_r != PUID || m_wb_shr_r) : (cache_tag_hit ? cache_shr_o_tag_hit : 1'b1)) :
-	(|m_wb_sel_r)); // m_wb_sel_r is non-null at REFILL when merging data from coherency search.
+	((|m_wb_sel_r) || m_wb_shr_r)); // m_wb_sel_r is non-null at REFILL when merging data from coherency search.
 
 wire _coherency_stb_i;
 
@@ -335,7 +558,10 @@ always_ff @(posedge clk_i) begin
 		cache_sel_o[gen_cache_idx] <= cache_sels[cache_rdidx];
 		cache_dat_o[gen_cache_idx] <= cache_dats[cache_rdidx];
 		cache_drt_o[gen_cache_idx] <= cache_drts[cache_rdidx];
-		cache_shr_o[gen_cache_idx] <= cache_shrs[cache_rdidx];
+		// A remote read request marks the entry shared through cache_we1 while m_wb_we_r is null, hence
+		// the "wait for cache-write" term does not hold off a same-set access; forward the bit being written.
+		cache_shr_o[gen_cache_idx] <= ((cache_we1[gen_cache_idx] && cache_wridx == cache_rdidx) ?
+			cache_shr_i : cache_shrs[cache_rdidx]);
 	end
 end
 
@@ -345,7 +571,7 @@ assign cache_we1[gen_cache_idx] = (gen_cache_idx == cache_we_wayidx && (cache_we
 		(state == TSTHIT && (cache_tag_hit_[gen_cache_idx] || __coherency_stb_r_r) && coherency_r)));
 assign cache_we2[gen_cache_idx] = (rst_r || (gen_cache_idx == cache_we_wayidx && (cache_we ||
 		(state == TSTHIT && ((cache_tag_hit_[gen_cache_idx] && (cmiss_r ||  m_wb_rqid_r != PUID)) || __coherency_stb_r_r) &&
-			((cmiss_r && cache_hit) || (coherency_r && m_wb_we_r))))));
+			((cmiss_r && (cache_hit || m_wb_we_r)) || (coherency_r && m_wb_we_r))))));
 
 always_ff @(posedge clk_i) begin
 	if (cache_we0[gen_cache_idx]) begin
@@ -448,7 +674,8 @@ always_ff @(posedge clk_i) begin
 		coherency_addr_o <= m_wb_addr_r;
 		coherency_sel_o <= m_wb_sel_r;
 		coherency_dat_o <= m_wb_dat_r;
-		if (cache_tag_hit)
+		// A data-cache waiting on its own read of the same word is about to hold it as well.
+		if (cache_tag_hit || (coherency_stb_r && coherency_addr_r == m_wb_addr_r))
 			coherency_shr_o <= 1'b1;
 		else
 			coherency_shr_o <= m_wb_shr_r;
@@ -494,7 +721,8 @@ end
 assign m_wb_bsy_o = (coherency_bsy_o_ || __coherency_stb_i || coherency_stb_r ||
 	// Right before the start of an atomic operation, coherency_write_pending is
 	// used to wait for pending coherency writes to update all other data caches.
-	(coherency_write_pending && m_wb_lock_i && !lock_r));
+	// A store in TSTHIT is counted only on the clockedge ending TSTHIT, hence it holds off as well.
+	((coherency_write_pending || (state == TSTHIT && m_wb_we_r && !coherency_r)) && m_wb_lock_i && !lock_r));
 
 // A read forced to miss is acknowledged from the cache only on a cache-hit of a dirty entry, which is
 // then written back; a clean one is invalidated and the read is made in memory, ie: acknowledged at REFILL.
@@ -556,6 +784,7 @@ always_ff @(posedge clk_i) begin
 			end else if ((cache_miss && !m_wb_we_r && !coherency_en_i) || cmiss_r) begin
 
 				m_wb_sel_r <= {(WORDBITSZ/8){1'b0}}; // Used when writing cache at (state == REFILL).
+				m_wb_shr_r <= 1'b0;
 
 				s_wb_stb_o <= 1;
 				s_wb_lock_o <= m_wb_lock_r;
@@ -576,7 +805,7 @@ always_ff @(posedge clk_i) begin
 					m_wb_addr_r <= coherency_addr_i;
 					m_wb_sel_r <= coherency_sel_r; // coherency_sel_i is not used because it may contain atomic data not meant to be cached.
 					m_wb_dat_r <= coherency_dat_i;
-					m_wb_shr_r <= coherency_shr_i; // Updated only when setting coherency_r true.
+					m_wb_shr_r <= coherency_shr_i; // Updated when setting coherency_r true, and for REFILL.
 
 					coherency_r <= 1;
 
@@ -588,6 +817,9 @@ always_ff @(posedge clk_i) begin
 					m_wb_addr_r <= coherency_addr_r; // Used when writing cache at (state == REFILL).
 					m_wb_sel_r <= coherency_sel_i; // Used when writing cache at (state == REFILL).
 					m_wb_dat_r <= coherency_dat_i;
+					m_wb_shr_r <= coherency_shr_i; // Used when writing cache at (state == REFILL).
+
+					coherency_r <= 0; // May still be set by the remote request serviced in this TSTHIT.
 
 					s_wb_stb_o <= 1;
 					s_wb_lock_o <= 0;
@@ -604,7 +836,7 @@ always_ff @(posedge clk_i) begin
 					m_wb_addr_r <= coherency_addr_i;
 					m_wb_sel_r <= coherency_sel_i;
 					m_wb_dat_r <= coherency_dat_i;
-					m_wb_shr_r <= coherency_shr_i; // Updated only when setting coherency_r true.
+					m_wb_shr_r <= coherency_shr_i; // Updated when setting coherency_r true, and for REFILL.
 
 					coherency_r <= 1;
 
@@ -656,6 +888,7 @@ always_ff @(posedge clk_i) begin
 				end else begin
 
 					m_wb_sel_r <= {(WORDBITSZ/8){1'b0}}; // Used when writing cache at (state == REFILL).
+					m_wb_shr_r <= 1'b0;
 
 					s_wb_stb_o <= 1;
 					s_wb_lock_o <= m_wb_lock_r;
