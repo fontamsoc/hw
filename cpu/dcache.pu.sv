@@ -244,7 +244,6 @@ dCache #(
 
 	//,.invd_i (dCache_invd_w) TODO: evict all dirty caches ...
 
-	,.conly_i (1'b0)
 	,.cmiss_i (dcache_miss_i)
 
 	,.m_wb_stb_i  (upSizr_dCache_m_stb_o)

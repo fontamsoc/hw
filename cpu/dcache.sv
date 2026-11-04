@@ -41,8 +41,8 @@
 // 	ring, each data-cache it goes through using it and forwarding it, until it comes back around to
 // 	the data-cache which issued it.
 // - Coherency traffic is generated only while coherency_en_i is set, and only by accesses that are
-// 	neither made with conly_i nor forced to miss; one forced to miss, by cmiss_i, by the bus lock,
-// 	or because it follows a locked access, generates none.
+// 	not forced to miss; one forced to miss, by cmiss_i, by the bus lock, or because it follows a
+// 	locked access, generates none.
 // - An access forced to miss thus neither sees nor updates the copies held by the other
 // 	data-caches: a write forced to miss, eg: that of a store-conditional or of an atomic memory
 // 	operation, leaves stale their copies of the bytes it writes; and a read forced to miss, eg: a
@@ -121,10 +121,6 @@
 // 	accepted and not yet acknowledged, that count being kept to tell which
 // 	acknowledgement is that of a refill.
 //
-// INITFILE
-// 	File from which the words of way 0 are initialized using $readmemh(),
-// 	for use with conly_i.
-//
 // PUIDBITSZ
 // 	Width of coherency_rqid_*, which must hold the PUID of every data-cache of the
 // 	ring; (1<<PUIDBITSZ) also sizes the skid-buffer of coherency_*_o, and the count
@@ -141,19 +137,11 @@
 // 	When held high at the rising edge of the clock signal, the module resets;
 // 	it must be held low for normal operation. Once it is low, the data-cache
 // 	invalidates its cache-entries, a cache set per clockcycle, being busy meanwhile,
-// 	ie: m_wb_bsy_o and coherency_bsy_o high; the words that they hold are kept,
-// 	hence those from INITFILE. The data-caches of a ring are to be reset together,
-// 	as a reset drops the coherency requests that a data-cache holds.
+// 	ie: m_wb_bsy_o and coherency_bsy_o high. The data-caches of a ring are to be
+// 	reset together, as a reset drops the coherency requests that a data-cache holds.
 //
 // clk_i
 // 	Clock signal.
-//
-// conly_i
-// 	When high along with m_wb_stb_i, the access is made in the cache only, as in an
-// 	sram of CACHESETCNT words, ie: way 0 of the cache set that the address selects,
-// 	whatever the cache-tag of the address; neither a slave access nor a coherency
-// 	request is made. A write stores the bytes that it selects without preserving
-// 	the others, hence only whole-word writes are reliable in that mode.
 //
 // cmiss_i
 // 	When high along with m_wb_stb_i, the access is forced to miss, as are an access
@@ -257,7 +245,6 @@ module dCacheSub (
 
 	,clk_i
 
-	,conly_i
 	,cmiss_i
 
 	,m_wb_stb_i
@@ -313,8 +300,6 @@ parameter CACHEWAYCNT = 1;
 
 parameter MAXPENDINGACK = 0; // Enables faster eviction when non-null.
 
-parameter INITFILE = "";
-
 parameter PUIDBITSZ = 1;
 parameter PUID      = 0;
 
@@ -333,7 +318,6 @@ input wire rst_i;
 
 input wire clk_i;
 
-input wire conly_i;
 input wire cmiss_i;
 
 input  wire                               m_wb_stb_i;
@@ -397,7 +381,6 @@ reg [WORDBITSZ -1 : 0]            m_wb_dat_r;
 reg                               m_wb_shr_r;
 
 reg rst_r;
-reg conly_r;
 reg cmiss_r;
 reg coherency_r; // True when handling a coherency request.
 
@@ -471,7 +454,7 @@ reg [CLOG2CACHEWAYCNT -1 : 0] cache_we_wayidx_;
 // Note that cache_we_wayidx_ does not get incremented when coherency_r is true because it makes cache_we null.
 // cache_we_wayidx_ must remain constant until the cache-entry has been written, even much later after a coherency search.
 always_ff @(posedge clk_i) begin
-	if (CACHEWAYCNT == 1 || (_m_wb_stb_i && conly_i) || conly_r) begin
+	if (CACHEWAYCNT == 1) begin
 		cache_we_wayidx_ <= 0;
 	end else if (cache_we && (cache_tag_hit && cache_we_wayidx_ == cache_tag_hit_wayidx)) begin
 		cache_we_wayidx_ <= cache_we_wayidx_ + 1'b1;
@@ -490,7 +473,6 @@ wire cache_shr_o_tag_hit = cache_shr_o[cache_tag_hit_wayidx];
 
 wire [(WORDBITSZ/8) -1 : 0] cache_sel_i_ = (cache_tag_hit ? (m_wb_sel_r | cache_sel_o_tag_hit) : m_wb_sel_r);
 wire [(WORDBITSZ/8) -1 : 0] cache_sel_i = (
-	conly_r ? {(WORDBITSZ/8){1'b0}} :
 	(state == TSTHIT) ? (cache_sel_i_ & (cmiss_r ? ~m_wb_sel_r : {(WORDBITSZ/8){1'b1}})) :
 	(state == REFILL) ? ((cache_tag_hit ? cache_sel_o_tag_hit : {(WORDBITSZ/8){1'b0}}) | s_wb_sel_o) : {(WORDBITSZ/8){1'b0}});
 
@@ -516,7 +498,7 @@ wire [WORDBITSZ -1 : 0] cache_dat_i = ((state == TSTHIT) ? cache_dat_i_ : _s_wb_
 wire cache_drt_i = (coherency_r ?
 	// If coherency request updates all bits, then make dirty state clean instead of preserving dirty state.
 	(((&m_wb_sel_r) && m_wb_rqid_r != PUID) ? 1'b0 : (cache_tag_hit && cache_drt_o[cache_tag_hit_wayidx])) :
-	(!(/*rst_r ||*/ conly_r || (cmiss_r && (&m_wb_sel_r))) && ((m_wb_we_r && !cmiss_r) || (cache_tag_hit && cache_drt_o[cache_tag_hit_wayidx]))));
+	(!(/*rst_r ||*/ (cmiss_r && (&m_wb_sel_r))) && ((m_wb_we_r && !cmiss_r) || (cache_tag_hit && cache_drt_o[cache_tag_hit_wayidx]))));
 
 wire cache_shr_i = ((state == TSTHIT) ? // m_wb_shr_r is used only when the coherency request has come back around.
 	(coherency_r ? (!m_wb_we_r || m_wb_rqid_r != PUID || m_wb_shr_r) : (cache_tag_hit ? cache_shr_o_tag_hit : 1'b1)) :
@@ -527,9 +509,8 @@ wire _coherency_stb_i;
 reg _coherency_stb_r_r;
 reg __coherency_stb_r_r;
 
-wire cache_hit = (conly_r ||
-	// There is a cachehit when there is a cache tag hit and the selected bits are in the cache.
-	(cache_tag_hit && (m_wb_sel_r & cache_sel_o_tag_hit) == m_wb_sel_r));
+// There is a cachehit when there is a cache tag hit and the selected bits are in the cache.
+wire cache_hit = (cache_tag_hit && (m_wb_sel_r & cache_sel_o_tag_hit) == m_wb_sel_r);
 
 genvar gen_cache_idx;
 generate for (
@@ -542,15 +523,6 @@ reg [(WORDBITSZ/8) -1 : 0]   cache_sels [CACHESETCNT];
 reg [WORDBITSZ -1 : 0]       cache_dats [CACHESETCNT];
 reg                          cache_drts [CACHESETCNT];
 reg                          cache_shrs [CACHESETCNT];
-
-initial begin
-	if (INITFILE != "" && gen_cache_idx == 0 /* TODO: check whether worst logic */) begin
-		$readmemh (INITFILE, cache_dats);
-		`ifdef SIMULATION
-		$display ("%s loaded", INITFILE);
-		`endif
-	end
-end
 
 always_ff @(posedge clk_i) begin
 	if (_m_wb_stb_i || _coherency_stb_i) begin
@@ -639,7 +611,7 @@ always_ff @(posedge clk_i) begin
 		coherency_stb_o <= 1'b0;
 		coherency_stb_r <= 1'b0;
 	end else if (state == TSTHIT && !coherency_r &&
-		(m_wb_we_r || !cache_hit) && !(conly_r || cmiss_r) &&
+		(m_wb_we_r || !cache_hit) && !cmiss_r &&
 		(!m_wb_we_r || !cache_tag_hit || cache_shr_o_tag_hit)) begin
 		// When writing, this state generates write request to update other data-caches only if the cache-entry is shared.
 		// When reading, on cache-miss, this state generates read request to look for data in other data-caches.
@@ -688,7 +660,7 @@ always_ff @(posedge clk_i) begin
 end
 
 wire coherency_write_req = (state == TSTHIT && m_wb_we_r && !coherency_r &&
-	!(conly_r || cmiss_r) && (!cache_tag_hit || cache_shr_o_tag_hit));
+	!cmiss_r && (!cache_tag_hit || cache_shr_o_tag_hit));
 
 wire coherency_write_ack = (_coherency_stb_i && coherency_rqid_i == PUID && coherency_we_i);
 
@@ -744,7 +716,6 @@ always_ff @(posedge clk_i) begin
 
 		s_wb_stb_o <= 0;
 
-		conly_r <= 0;
 		cmiss_r <= 0;
 
 		coherency_r <= 0;
@@ -850,7 +821,6 @@ always_ff @(posedge clk_i) begin
 					m_wb_sel_r <= m_wb_sel_i;
 					m_wb_dat_r <= m_wb_dat_i;
 
-					conly_r <= conly_i;
 					cmiss_r <= _cmiss_i;
 
 					coherency_r <= 0;
@@ -862,7 +832,6 @@ always_ff @(posedge clk_i) begin
 
 				m_wb_we_r <= 0;
 
-				conly_r <= 0;
 				cmiss_r <= 0;
 
 				coherency_r <= 0;
@@ -880,7 +849,6 @@ always_ff @(posedge clk_i) begin
 
 					s_wb_stb_o <= 0;
 
-					conly_r <= 0;
 					cmiss_r <= 0;
 
 					state <= READY;
@@ -912,7 +880,6 @@ always_ff @(posedge clk_i) begin
 
 				s_wb_stb_o <= 0;
 
-				conly_r <= 0;
 				cmiss_r <= 0;
 
 				state <= READY;
@@ -1038,7 +1005,6 @@ module dCache (
 
 	,clk_i
 
-	,conly_i
 	,cmiss_i
 
 	,m_wb_stb_i
@@ -1096,8 +1062,6 @@ parameter REGSLVINPUT  = 0;
 
 parameter MAXPENDINGACK = 0; // Enables faster eviction when non-null.
 
-parameter INITFILE = "";
-
 parameter PUIDBITSZ = 1;
 parameter PUID      = 0;
 
@@ -1111,7 +1075,6 @@ input wire rst_i;
 
 input wire clk_i;
 
-input wire conly_i;
 input wire cmiss_i;
 
 input  wire                               m_wb_stb_i;
@@ -1218,7 +1181,6 @@ dCacheSub #(
 	,.CACHESETCNT   (CACHESETCNT)
 	,.CACHEWAYCNT   (CACHEWAYCNT)
 	,.MAXPENDINGACK (MAXPENDINGACK)
-	,.INITFILE      (INITFILE)
 	,.PUIDBITSZ     (PUIDBITSZ)
 	,.PUID          (PUID)
 ) dCacheSub (
@@ -1227,7 +1189,6 @@ dCacheSub #(
 
 	,.clk_i (clk_i)
 
-	,.conly_i (conly_i)
 	,.cmiss_i (cmiss_i)
 
 	,.m_wb_stb_i  (m_wb_stb_i)
