@@ -77,9 +77,15 @@
 // 	cache-tag matches merges into it every byte it holds, and marks its own
 // 	cache-entry shared. When the merged bytes cover the request, the
 // 	cache-entry is filled from them, otherwise the missing bytes are read
-// 	from memory (REFILL). The cache-entry is then marked shared if another
+// 	from memory (REFILL), the bytes that the cache-entry holds winning over
+// 	those merged. The cache-entry is then marked shared if another
 // 	data-cache matched the cache-tag, or was itself waiting on a read of
-// 	that word, and exclusive otherwise.
+// 	that word, and exclusive otherwise. Yet when a write request from
+// 	another data-cache for that word went through the data-cache while its
+// 	read request travelled the ring, the read is answered without filling
+// 	the cache-entry, as the read request may have overtaken the write
+// 	request and gathered, from a data-cache which the write request had not
+// 	reached yet, bytes older than that write.
 // - A read refilled from memory takes memory to hold the current value of the
 // 	bytes that no data-cache holds, hence the slave interface is to take the
 // 	accesses of the data-caches of a ring in a single order, in which a
@@ -131,17 +137,6 @@
 // 	the value of the other for the bytes both wrote; and when both write
 // 	every byte, both cache-entries are made clean, and neither write reaches
 // 	memory.
-// - Note also that, with three data-caches or more, a read request crossing a
-// 	write request from another data-cache can gather, from a third
-// 	data-cache which that write request has not reached yet, bytes older
-// 	than that write; when the data-cache which made the write no longer
-// 	holds the word, ie: it replaced it since, nothing on the way of the read
-// 	request supersedes them, and the reader installs them after the write
-// 	request went through it, keeping a stale copy until a later write
-// 	request reaches it. When the read request comes back without every byte
-// 	asked for, the bytes gathered are merged at REFILL with those that the
-// 	cache-entry holds by a bitwise or, hence a byte that both hold with
-// 	different values comes out as a value that neither holds.
 
 // Parameters:
 //
@@ -457,6 +452,7 @@ reg coherency_r; // True when handling a coherency request.
 reg                               coherency_stb_r; // True when looking for data in other data-caches.
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] coherency_addr_r;
 reg [(WORDBITSZ/8) -1 : 0]        coherency_sel_r;
+reg                               coherency_xw_r; // True when a write request for that word went through meanwhile.
 
 localparam READY  = 0;
 localparam TSTHIT = 1;
@@ -485,7 +481,7 @@ wire refill_ack = (s_wb_ack_i && (!MAXPENDINGACK || (!s_wb_stb_o && s_wb_ack_pen
 
 wire cache_we = (!(cmiss_r || coherency_r) && (
 	(state == TSTHIT && m_wb_we_r) ||
-	(state == REFILL && !s_wb_we_o && refill_ack)));
+	(state == REFILL && !s_wb_we_o && refill_ack && !coherency_xw_r)));
 
 wire [CACHEWAYCNT -1 : 0] cache_we0;
 wire [CACHEWAYCNT -1 : 0] cache_we1;
@@ -559,7 +555,9 @@ wire [WORDBITSZ -1 : 0] _m_wb_sel_r;
 wire [WORDBITSZ -1 : 0] _m_wb_sel_r_n = ~_m_wb_sel_r;
 wire [WORDBITSZ -1 : 0] _cache_sel_o_tag_hit;
 wire [WORDBITSZ -1 : 0] _cache_sel_o_tag_hit_n = ~_cache_sel_o_tag_hit;
-wire [WORDBITSZ -1 : 0] _s_wb_dat_i = ((m_wb_dat_r & _m_wb_sel_r) |
+// The bytes that the cache-entry holds win over those gathered from the other data-caches, which may
+// hold an older copy of them, as a write request crossing the read request updated those held.
+wire [WORDBITSZ -1 : 0] _s_wb_dat_i = ((m_wb_dat_r & _m_wb_sel_r & ((coherency_en_i && _cache_tag_hit) ? _cache_sel_o_tag_hit_n : {WORDBITSZ{1'b1}})) |
 	(s_wb_dat_i & _m_wb_sel_r_n & (_cache_tag_hit ? _cache_sel_o_tag_hit_n : {WORDBITSZ{1'b1}})) |
 	(_cache_tag_hit ? (cache_dat_o_tag_hit & _cache_sel_o_tag_hit) : {WORDBITSZ{1'b0}}));
 wire [WORDBITSZ -1 : 0] cache_dat_i_ = ((m_wb_dat_r & _m_wb_sel_r) | (cache_tag_hit ? (cache_dat_o_tag_hit & _m_wb_sel_r_n) : {WORDBITSZ{1'b0}}));
@@ -608,11 +606,11 @@ always_ff @(posedge clk_i) begin
 end
 
 assign cache_we0[gen_cache_idx] = (gen_cache_idx == cache_we_wayidx && (cache_we ||
-		(state == TSTHIT && ((cache_tag_hit_[gen_cache_idx] && m_wb_rqid_r != PUID) || __coherency_stb_r_r) && (coherency_r && m_wb_we_r))));
+		(state == TSTHIT && ((cache_tag_hit_[gen_cache_idx] && m_wb_rqid_r != PUID) || (__coherency_stb_r_r && !coherency_xw_r)) && (coherency_r && m_wb_we_r))));
 assign cache_we1[gen_cache_idx] = (gen_cache_idx == cache_we_wayidx && (cache_we ||
-		(state == TSTHIT && (cache_tag_hit_[gen_cache_idx] || __coherency_stb_r_r) && coherency_r)));
+		(state == TSTHIT && (cache_tag_hit_[gen_cache_idx] || (__coherency_stb_r_r && !coherency_xw_r)) && coherency_r)));
 assign cache_we2[gen_cache_idx] = (rst_r || (gen_cache_idx == cache_we_wayidx && (cache_we ||
-		(state == TSTHIT && ((cache_tag_hit_[gen_cache_idx] && (cmiss_r ||  m_wb_rqid_r != PUID)) || __coherency_stb_r_r) &&
+		(state == TSTHIT && ((cache_tag_hit_[gen_cache_idx] && (cmiss_r ||  m_wb_rqid_r != PUID)) || (__coherency_stb_r_r && !coherency_xw_r)) &&
 			((cmiss_r && (cache_hit || m_wb_we_r)) || (coherency_r && m_wb_we_r))))));
 
 always_ff @(posedge clk_i) begin
@@ -680,6 +678,7 @@ always_ff @(posedge clk_i) begin
 	if (rst_i || !coherency_en_i) begin
 		coherency_stb_o <= 1'b0;
 		coherency_stb_r <= 1'b0;
+		coherency_xw_r <= 1'b0;
 	end else if (state == TSTHIT && !coherency_r &&
 		(m_wb_we_r || !cache_hit) && !cmiss_r &&
 		(!m_wb_we_r || !cache_tag_hit || cache_shr_o_tag_hit)) begin
@@ -697,6 +696,7 @@ always_ff @(posedge clk_i) begin
 			coherency_sel_r <= (m_wb_sel_r & (cache_tag_hit ? ~cache_sel_o_tag_hit : {(WORDBITSZ/8){1'b1}}));
 			// Note that we exclude the bits already in the cache-entry so that __coherency_stb_r matches
 			// only the bits we need, and so that we correctly merge them for the result.
+			coherency_xw_r <= 1'b0;
 		end
 		coherency_stb_r <= !m_wb_we_r;
 	end else if (state == TSTHIT && coherency_r && !m_wb_we_r && cache_tag_hit && m_wb_rqid_r != PUID) begin
@@ -721,6 +721,10 @@ always_ff @(posedge clk_i) begin
 			coherency_shr_o <= 1'b1;
 		else
 			coherency_shr_o <= m_wb_shr_r;
+		// The read request of this data-cache may have overtaken that write request, and gathered older
+		// bytes from a data-cache which it had not yet reached: the load is answered, but not cached.
+		if (m_wb_we_r && coherency_stb_r && coherency_addr_r == m_wb_addr_r)
+			coherency_xw_r <= 1'b1;
 	end else begin
 		if (coherency_stb_o)
 			coherency_stb_o <= coherency_bsy_i;
