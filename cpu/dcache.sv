@@ -498,7 +498,7 @@ wire [WORDBITSZ -1 : 0] cache_dat_i = ((state == TSTHIT) ? cache_dat_i_ : _s_wb_
 wire cache_drt_i = (coherency_r ?
 	// If coherency request updates all bits, then make dirty state clean instead of preserving dirty state.
 	(((&m_wb_sel_r) && m_wb_rqid_r != PUID) ? 1'b0 : (cache_tag_hit && cache_drt_o[cache_tag_hit_wayidx])) :
-	(!(/*rst_r ||*/ (cmiss_r && (&m_wb_sel_r))) && ((m_wb_we_r && !cmiss_r) || (cache_tag_hit && cache_drt_o[cache_tag_hit_wayidx]))));
+	(!(rst_r || (cmiss_r && (&m_wb_sel_r))) && ((m_wb_we_r && !cmiss_r) || (cache_tag_hit && cache_drt_o[cache_tag_hit_wayidx]))));
 
 wire cache_shr_i = ((state == TSTHIT) ? // m_wb_shr_r is used only when the coherency request has come back around.
 	(coherency_r ? (!m_wb_we_r || m_wb_rqid_r != PUID || m_wb_shr_r) : (cache_tag_hit ? cache_shr_o_tag_hit : 1'b1)) :
