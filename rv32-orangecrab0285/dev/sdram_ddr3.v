@@ -399,7 +399,6 @@ dCache #(
 
 	,.clk_i (clk_o)
 
-	,.conly_i (1'b0)
 	,.cmiss_i (1'b0)
 
 	,.m_wb_stb_i  (dcache_stb_w)
