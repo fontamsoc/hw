@@ -136,15 +136,18 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	`m_wb_bsy_o` keeps the hart busy for as long as it is non-null. The acknowledgement that
 	decrements it is the request arriving back at the data-cache that issued it, which is after
 	every other one has seen it, hence a null count means applied everywhere rather than merely
-	sent. The wait is what insures that ordering, as an atomic memory operation does not travel the
-	ring at all: it is forced to miss the cache and resolve in memory, and while it holds the bus
-	lock this data-cache stops accepting ring traffic altogether, hence its effect becomes visible
-	through memory while the writes before it are still visible only through the ring. Without the
-	wait, the ordinary release shape, ie: plain stores to shared data followed by an atomic memory
-	operation that publishes them, would let the hart which acquires afterwards read its own
-	cache-entry, which those writes had not yet reached. The wait costs about one part in ten
-	thousand of a two-hart run, as the count is non-null only just after a burst of writes to
-	shared cache-entries.
+	sent. A store is counted only from the clockedge which ends its test of the cache (TSTHIT), hence
+	`m_wb_bsy_o` holds the access off while a store is in TSTHIT as well; both waits apply on a
+	coherency ring only, ie: while `coherency_en_i` is high, as no coherency write is issued otherwise.
+	The wait is what insures that ordering, as an atomic memory operation does not travel the ring at
+	all: it is forced to miss the cache and resolve in memory, and while it holds the bus lock this
+	data-cache stops accepting ring traffic altogether, hence its effect becomes visible through memory
+	while the writes before it are still visible only through the ring. Without the wait, the ordinary
+	release shape, ie: plain stores to shared data followed by an atomic memory operation that
+	publishes them, would let the hart which acquires afterwards read its own cache-entry, which those
+	writes had not yet reached. The wait on the count costs about one part in ten thousand of a
+	two-hart run, as the count is non-null only just after a burst of writes to shared cache-entries,
+	and that on a store in TSTHIT a clockcycle at most.
 	A coherency write occupies a place on the ring from the clockcycle it is issued until it comes
 	back, so the count can never exceed what the ring holds, and `coherency_write_pending` is sized
 	from that rather than from the hart count: this data-cache's own coherency output register and
@@ -208,12 +211,19 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	fails, its reservation cancelled, or with no store-conditional after the load-reserved. Such an
 	abandoned sequence therefore holds the bus until that hart's next load, store or atomic. That
 	access is forced to miss the data-cache as well, so that it reaches the bus and releases the lock
-	whether or not it hits, a data-cache-hit being invalidated, and written back first when dirty. A
-	retry loop holding a load-reserved and no other data access, ie: `1: lr.w t0,(a0); bnez t0,1b`,
-	issues none and starves the other harts for as long as it spins; use instead the
-	compare-and-swap shape, whose store-conditional is inside the loop. Note that the starvation is
-	not observed to be one-sided: the holder stops making progress as well rather than running on,
-	so a lock left held wedges the whole machine rather than merely losing a hart.
+	whether or not it hits: a load's data-cache-hit is invalidated, and written back first when dirty,
+	and a store is made in memory, the bytes that it writes being invalidated in its data-cache. Being
+	forced to miss, that access does not take part in the cache-coherency protocol: a store leaves
+	stale the copies that the other harts' data-caches hold of the bytes it writes, which its own
+	data-cache then reads back on its next load of them, and a load can return data from memory older
+	than a dirty copy that another hart's data-cache holds. That access is therefore to be an atomic
+	one, or one to data that no other hart may cache, ie: the path of a failed compare-and-swap is to
+	make one before touching shared data. A retry loop holding a load-reserved and no other data
+	access, ie: `1: lr.w t0,(a0); bnez t0,1b`, issues none and starves the other harts for as long as
+	it spins; use instead the compare-and-swap shape, whose store-conditional is inside the loop. Note
+	that the starvation is not observed to be one-sided: the holder stops making progress as well
+	rather than running on, so a lock left held wedges the whole machine rather than merely losing a
+	hart.
 	The hold cannot be bounded in hardware as this design stands. A store-conditional's success is
 	decided at decode (`_amoUnit_lrValid`), so breaking the lock early would let one report success
 	after another hart had interposed; bounding it safely needs the store-conditional resolved at
