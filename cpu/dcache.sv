@@ -49,8 +49,12 @@
 // 	load-reserved or the read of an atomic memory operation, can return data from memory older than
 // 	a dirty copy held by another data-cache. This holds as well for the access which follows a
 // 	locked one, which may be an ordinary load or store, eg: the first one after a compare-and-swap
-// 	whose compare failed. A word accessed through atomic memory operations is therefore not to be
-// 	accessed otherwise, as cpu/README.md requires.
+// 	whose compare failed. A write forced to miss also invalidates the bytes that it writes in its
+// 	own data-cache, hence a later read of those bytes there misses, and gathers the stale copies of
+// 	the other data-caches when they hold any, ie: returns the value from before that write. A word
+// 	accessed through atomic memory operations is therefore not to be accessed otherwise, as
+// 	cpu/README.md requires, and the access which follows a load-reserved whose store-conditional
+// 	does not come is not to be a write to a word that another data-cache may hold.
 // - Reading generates a read request only on a cache-miss, ie: when some selected byte is not in the
 // 	cache-entry, and asks for those bytes only. The request always comes back around: each other
 // 	data-cache whose cache-tag matches merges into it every byte it holds, and marks its own
@@ -58,6 +62,13 @@
 // 	otherwise the missing bytes are read from memory (REFILL). The cache-entry is then marked shared
 // 	if another data-cache matched the cache-tag, or was itself waiting on a read of that word,
 // 	and exclusive otherwise.
+// - A read refilled from memory takes memory to hold the current value of the bytes that no
+// 	data-cache holds, hence the slave interface is to take the accesses of the data-caches of a
+// 	ring in a single order, in which a write-back is ahead of every access accepted after it from
+// 	another data-cache, the data-cache not waiting for the acknowledgement of a write-back when
+// 	MAXPENDINGACK is non-null. lib/wb_arbiter.sv insures it, as it accepts the access of the master
+// 	that it grants only, and passes it on in that order; a buffer per data-cache ahead of the
+// 	arbiter would not.
 // - Writing generates a write request whether or not it is a cache-miss, unless its cache-tag
 // 	matches a cache-entry marked exclusive. When it comes back around, the cache-entry is marked
 // 	exclusive if no other data-cache matched the cache-tag nor was waiting on a read of that word.
@@ -76,7 +87,11 @@
 // 	ahead of an access presented in the same clockcycle; yet no coherency request is taken while the
 // 	data-cache handles an access forced to miss, or a cache-miss in WRITEB or REFILL, nor while it
 // 	holds the bus lock, ie: from an access carrying m_wb_lock_i until the access which follows it,
-// 	the ring being held off meanwhile.
+// 	the ring being held off meanwhile. As a data-cache whose own read request travels the ring is
+// 	busy until it comes back around, every other data-cache of the ring then stalls on its next
+// 	read cache-miss: one held in WRITEB or REFILL by an access that the slave interface does not
+// 	accept, or holding the bus lock after a load-reserved whose store-conditional does not come,
+// 	stops every hart of the ring, as cpu/README.md details.
 // - Atomic memory operations do not travel the ring, being forced to miss; hence an access carrying
 // 	m_wb_lock_i, when the access before it did not, is accepted only once every write request that
 // 	the data-cache issued has come back around, including that of a write in TSTHIT, so that the
@@ -85,6 +100,14 @@
 // 	ring, are not ordered: each data-cache applies the write of the other after its own, hence each
 // 	cache-entry ends up holding the value of the other for the bytes both wrote; and when both write
 // 	every byte, both cache-entries are made clean, and neither write reaches memory.
+// - Note also that, with three data-caches or more, a read request crossing a write request from
+// 	another data-cache can gather, from a third data-cache which that write request has not reached
+// 	yet, bytes older than that write; when the data-cache which made the write no longer holds the
+// 	word, ie: it replaced it since, nothing on the way of the read request supersedes them, and the
+// 	reader installs them after the write request went through it, keeping a stale copy until a
+// 	later write request reaches it. When the read request comes back without every byte asked for,
+// 	the bytes gathered are merged at REFILL with those that the cache-entry holds by a bitwise or,
+// 	hence a byte that both hold with different values comes out as a value that neither holds.
 
 // Parameters:
 //
