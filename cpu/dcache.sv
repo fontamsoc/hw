@@ -13,7 +13,7 @@
 //
 // An access is accepted in the clockcycle in which m_wb_stb_i is high while m_wb_bsy_o is low, and
 // tested in the clockcycle which follows (TSTHIT), in which the next access can already be accepted.
-// An access which is not forced to miss (as explained under Ports for cmiss_i), is handled as follows:
+// An access which is not forced to miss (as explained under Ports for cmiss_i) is handled as follow:
 // - A read cache-hit is acknowledged in TSTHIT, with the word of the cache-entry.
 // - A write is acknowledged in TSTHIT as well, whether it is a cache-hit or not, and made in the
 // 	cache-entry whose cache-tag matches, else in a cache-entry that it replaces, without reading
@@ -40,15 +40,15 @@
 // 	next one, and those of the last one to the first one. A coherency request travels the whole
 // 	ring, each data-cache it goes through using it and forwarding it, until it comes back around to
 // 	the data-cache which issued it.
-// - Coherency traffic is generated only while coherency_en_i is set, and only by accesses that are
+// - Coherency traffic is generated only while coherency_en_i is high, and only by accesses that are
 // 	not forced to miss; one forced to miss, by cmiss_i, by the bus lock, or because it follows a
 // 	locked access, generates none.
 // - An access forced to miss thus neither sees nor updates the copies held by the other
-// 	data-caches: a write forced to miss, eg: that of a store-conditional or of an atomic memory
-// 	operation, leaves stale their copies of the bytes it writes; and a read forced to miss, eg: a
+// 	data-caches: a write forced to miss, ie: that of a store-conditional or of an atomic memory
+// 	operation, leaves stale their copies of the bytes it writes; and a read forced to miss, ie: a
 // 	load-reserved or the read of an atomic memory operation, can return data from memory older than
 // 	a dirty copy held by another data-cache. This holds as well for the access which follows a
-// 	locked one, which may be an ordinary load or store, eg: the first one after a compare-and-swap
+// 	locked one, which may be an ordinary load or store, ie: the first one after a compare-and-swap
 // 	whose compare failed. A write forced to miss also invalidates the bytes that it writes in its
 // 	own data-cache, hence a later read of those bytes there misses, and gathers the stale copies of
 // 	the other data-caches when they hold any, ie: returns the value from before that write. A word
@@ -146,7 +146,7 @@
 //
 // PUIDBITSZ
 // 	Width of coherency_rqid_*, which must hold the PUID of every data-cache of the
-// 	ring; (1<<PUIDBITSZ) also sizes the skid-buffer of coherency_*_o, and the count
+// 	ring; (1<<PUIDBITSZ) also sizes the skidbuf of coherency_*_o, and the count
 // 	of write requests which have not come back around. It must be non-null.
 //
 // PUID
@@ -172,7 +172,7 @@
 // 	combinationally from m_wb_addr_i for an address which must not be cached.
 // 	An access forced to miss reaches the slave interface, and neither sees nor
 // 	updates the copies held by the other data-caches, with the consequences
-// 	described under Cache coherency. It is handled as follows:
+// 	described under Cache coherency. It is handled as follow:
 // 	- A write is made in memory, the bytes that it writes being invalidated in the
 // 		cache-entry whose cache-tag matches.
 // 	- A read is made in memory, unless it selects only bytes held by a dirty
@@ -250,12 +250,12 @@
 // coherency_shr_o
 // coherency_bsy_i
 // 	Coherency requests to the next data-cache of the ring, with the same meaning,
-// 	presented through a skid-buffer of (1<<PUIDBITSZ) requests.
+// 	presented through a skidbuf of (1<<PUIDBITSZ) requests.
 //
 // Module dCacheSub, which dCache wraps, has the same parameters, except REGMSTOUTPUT
 // and REGSLVINPUT, and the same ports, its coherency_*_o being those that dCache
-// presents through the skid-buffer, plus coherency_near_bsy_i, high when that
-// skid-buffer is full or one request away from being full.
+// presents through the skidbuf, plus coherency_near_bsy_i, high when that
+// skidbuf is full or one request away from being full.
 
 `ifndef DCACHE_V
 `define DCACHE_V
