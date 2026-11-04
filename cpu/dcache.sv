@@ -694,7 +694,7 @@ assign m_wb_bsy_o = (coherency_bsy_o_ || __coherency_stb_i || coherency_stb_r ||
 	// Right before the start of an atomic operation, coherency_write_pending is
 	// used to wait for pending coherency writes to update all other data caches.
 	// A store in TSTHIT is counted only on the clockedge ending TSTHIT, hence it holds off as well.
-	((coherency_write_pending || (state == TSTHIT && m_wb_we_r && !coherency_r)) && m_wb_lock_i && !lock_r));
+	((coherency_write_pending || (coherency_en_i && state == TSTHIT && m_wb_we_r && !coherency_r)) && m_wb_lock_i && !lock_r));
 
 // A read forced to miss is acknowledged from the cache only on a cache-hit of a dirty entry, which is
 // then written back; a clean one is invalidated and the read is made in memory, ie: acknowledged at REFILL.
