@@ -69,8 +69,8 @@
 // 	hold any, ie: returns the value from before that write. A word accessed
 // 	through atomic memory operations is therefore not to be accessed
 // 	otherwise, as cpu/README.md requires, and the access which follows a
-// 	load-reserved whose store-conditional does not come is not to be a write
-// 	to a word that another data-cache may hold.
+// 	load-reserved whose store-conditional does not come is to be an atomic
+// 	one, or one to a word that no other data-cache may hold.
 // - Reading generates a read request only on a cache-miss, ie: when some
 // 	selected byte is not in the cache-entry, and asks for those bytes only.
 // 	The request always comes back around: each other data-cache whose
