@@ -232,11 +232,11 @@
 // 	clockcycle, in the order the accesses were accepted, m_wb_dat_o then
 // 	holding the bytes that a read selects. An access carrying m_wb_lock_i
 // 	requests the bus lock: it reaches the slave interface with s_wb_lock_o
-// 	high, and the lock is released by the access which follows it, that
-// 	access being forced to miss, as explained for cmiss_i; when the access
-// 	before it did not carry the lock, it is accepted only once every write
-// 	request that the data-cache issued, or is issuing, has come back around,
-// 	as described under Cache coherency.
+// 	high, and the lock is released by the next access which does not carry
+// 	it, that access being forced to miss, as explained for cmiss_i; when the
+// 	access before it did not carry the lock, it is accepted only once every
+// 	write request that the data-cache issued, or is issuing, has come back
+// 	around, as described under Cache coherency.
 //
 // s_wb_stb_o
 // s_wb_lock_o
