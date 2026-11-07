@@ -109,7 +109,10 @@
 // 	changing its dirty state, so that a write request never makes another
 // 	copy dirty; the cache-entry is made clean instead when the write request
 // 	writes every byte of the word, all of which the store that issued it
-// 	made dirty in its own data-cache.
+// 	made dirty in its own data-cache, unless a write request that the
+// 	data-cache issued has not come back around: the two may be for the same
+// 	word and crossing on the ring, and each data-cache would then make the
+// 	copy of the other clean, leaving the word dirty in neither.
 // - A coherency request from another data-cache never allocates, writes back
 // 	nor refills a cache-entry; it only reads, or updates, a cache-entry
 // 	whose cache-tag matches.
@@ -134,9 +137,10 @@
 // - Note that writes to the same word from different data-caches, whose write
 // 	requests cross on the ring, are not ordered: each data-cache applies the
 // 	write of the other after its own, hence each cache-entry ends up holding
-// 	the value of the other for the bytes both wrote; and when both write
-// 	every byte, both cache-entries are made clean, and neither write reaches
-// 	memory.
+// 	the value of the other for the bytes both wrote, and stays dirty, memory
+// 	getting the value of the one written back last, while another data-cache
+// 	holding the word ends up with, for the bytes both wrote, the value of
+// 	the write request that reached it last.
 
 // Parameters:
 //
@@ -474,6 +478,22 @@ always_ff @(posedge clk_i) begin
 end
 end endgenerate
 
+// A coherency write stays pending from the clockcycle it is issued until it has travelled the
+// whole ring and come back, hence there cannot be more of them than the ring can hold: this
+// data-cache's own coherency output register and its skidbuf, plus, for each of the other
+// data-caches, its request capture registers, its coherency output register and its skidbuf.
+// (1<<PUIDBITSZ) is the count of data-caches rounded up to a power of two, ie: never short.
+localparam COHERENCYRINGCNT = (1<<PUIDBITSZ);
+localparam COHERENCYWRITEPENDINGMAX =
+	((COHERENCYRINGCNT*COHERENCYRINGCNT) + (2*COHERENCYRINGCNT) - 1);
+// Note that the width below is not the (clog2(N) +1) used by the other pending counters here,
+// as it does not need that extra bit: clog2() rounds up, so clog2(N) bits hold up to
+// ((2**clog2(N))-1), which falls short of N only when N is an exact power of two, and the
+// maximum above never is; it is (((COHERENCYRINGCNT+1)**2)-2), and COHERENCYRINGCNT is a power
+// of two, hence that square is odd, hence the maximum is odd and greater than one.
+localparam CLOG2COHERENCYWRITEPENDINGMAX = clog2(COHERENCYWRITEPENDINGMAX);
+reg [CLOG2COHERENCYWRITEPENDINGMAX -1 : 0] coherency_write_pending;
+
 // When MAXPENDINGACK is non-null, and the sequencing of WRITEB followed by REFILL
 // occurs, the expression (!s_wb_stb_o && s_wb_ack_pending == 1) identifies the ack
 // of REFILL, because we could still be waiting for the ack of WRITEB.
@@ -564,8 +584,11 @@ wire [WORDBITSZ -1 : 0] cache_dat_i_ = ((m_wb_dat_r & _m_wb_sel_r) | (cache_tag_
 wire [WORDBITSZ -1 : 0] cache_dat_i = ((state == TSTHIT) ? cache_dat_i_ : _s_wb_dat_i);
 
 wire cache_drt_i = (coherency_r ?
-	// If coherency request updates all bits, then make dirty state clean instead of preserving dirty state.
-	(((&m_wb_sel_r) && m_wb_rqid_r != PUID) ? 1'b0 : (cache_tag_hit && cache_drt_o[cache_tag_hit_wayidx])) :
+	// A write request from another data-cache which writes every byte makes the cache-entry clean, as the
+	// store which issued it made them all dirty in its own data-cache; but not while a write request of
+	// this data-cache has not come back around: the two may be for the same word and crossing, and each
+	// data-cache would then make the copy of the other clean, leaving the word dirty in neither.
+	(((&m_wb_sel_r) && m_wb_rqid_r != PUID && !coherency_write_pending) ? 1'b0 : (cache_tag_hit && cache_drt_o[cache_tag_hit_wayidx])) :
 	(!(rst_r || (cmiss_r && (&m_wb_sel_r))) && ((m_wb_we_r && !cmiss_r) || (cache_tag_hit && cache_drt_o[cache_tag_hit_wayidx]))));
 
 wire cache_shr_i = ((state == TSTHIT) ? // m_wb_shr_r is used only when the coherency request has come back around.
@@ -738,21 +761,6 @@ wire coherency_write_req = (state == TSTHIT && m_wb_we_r && !coherency_r &&
 
 wire coherency_write_ack = (_coherency_stb_i && coherency_rqid_i == PUID && coherency_we_i);
 
-// A coherency write stays pending from the clockcycle it is issued until it has travelled the
-// whole ring and come back, hence there cannot be more of them than the ring can hold: this
-// data-cache's own coherency output register and its skidbuf, plus, for each of the other
-// data-caches, its request capture registers, its coherency output register and its skidbuf.
-// (1<<PUIDBITSZ) is the count of data-caches rounded up to a power of two, ie: never short.
-localparam COHERENCYRINGCNT = (1<<PUIDBITSZ);
-localparam COHERENCYWRITEPENDINGMAX =
-	((COHERENCYRINGCNT*COHERENCYRINGCNT) + (2*COHERENCYRINGCNT) - 1);
-// Note that the width below is not the (clog2(N) +1) used by the other pending counters here,
-// as it does not need that extra bit: clog2() rounds up, so clog2(N) bits hold up to
-// ((2**clog2(N))-1), which falls short of N only when N is an exact power of two, and the
-// maximum above never is; it is (((COHERENCYRINGCNT+1)**2)-2), and COHERENCYRINGCNT is a power
-// of two, hence that square is odd, hence the maximum is odd and greater than one.
-localparam CLOG2COHERENCYWRITEPENDINGMAX = clog2(COHERENCYWRITEPENDINGMAX);
-reg [CLOG2COHERENCYWRITEPENDINGMAX -1 : 0] coherency_write_pending;
 always_ff @(posedge clk_i) begin
 	if (rst_i || !coherency_en_i)
 		coherency_write_pending <= 0;
@@ -1027,10 +1035,11 @@ generate if (WORDBITSZ == 256) begin
 end endgenerate
 
 `ifdef SIMULATION_MONITOR
-// m_wb_bsy_o above reads coherency_write_pending as a plain non-null test, hence a count that does
-// not fit its width does not merely lose precision, it reads null and releases the barrier while
-// coherency writes are still travelling the ring; the atomic operation then starts early, and
-// another data-cache is left holding a cache-entry that the writes had not yet updated. Nothing
+// m_wb_bsy_o and cache_drt_i above read coherency_write_pending as a plain non-null test, hence a
+// count that does not fit its width does not merely lose precision, it reads null and releases the
+// barrier while coherency writes are still travelling the ring; the atomic operation then starts
+// early, and another data-cache is left holding a cache-entry that the writes had not yet updated;
+// a crossing write request also makes clean a copy that is to stay dirty. Nothing
 // about that is visible in a run, hence report it. Also reported is the count exceeding the ring
 // capacity that its width is derived from, which would mean that derivation is wrong, and an
 // acknowledgement arriving with nothing pending, which would mean a request was lost or duplicated.
