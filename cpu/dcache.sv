@@ -456,7 +456,7 @@ reg coherency_r; // True when handling a coherency request.
 reg                               coherency_stb_r; // True when looking for data in other data-caches.
 reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] coherency_addr_r;
 reg [(WORDBITSZ/8) -1 : 0]        coherency_sel_r;
-reg                               coherency_xw_r; // True when a write request for that word went through meanwhile.
+reg                               coherency_xw_r; // True when a write request from another data-cache for that word crossed the read.
 
 localparam READY  = 0;
 localparam TSTHIT = 1;
