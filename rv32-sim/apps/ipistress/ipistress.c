@@ -23,7 +23,7 @@
 // IPI gets followed by an acknowledgement, rather than that the counts match:
 // after each IPI, the sender waits for the count of its destination to move
 // past the value read before sending it, and a wait longer than TIMEOUT cycles
-// is a lost IPI; the count is checked before the elapsed time, hence a sender
+// is a lost IPI; the elapsed time is read before the count, hence a sender
 // preempted while waiting does not report an IPI acknowledged meanwhile as lost.
 // Each sender runs two phases, first sending its IPIs back-to-back, then
 // spacing them with a varying spin, so that they land at every point of the
@@ -96,8 +96,11 @@ static void sender_fn (void *arg) {
 			uintptr_t a = _atomic_add(&acked[dst], 0);
 			_thread_preempt(dst);
 			_date_t t = _clkcycles();
-			while (_atomic_add(&acked[dst], 0) == a) {
-				if ((_clkcycles() - t) > TIMEOUT) {
+			for (;;) {
+				_date_t e = (_clkcycles() - t);
+				if (_atomic_add(&acked[dst], 0) != a)
+					break;
+				if (e > TIMEOUT) {
 					++l;
 					break;
 				}
