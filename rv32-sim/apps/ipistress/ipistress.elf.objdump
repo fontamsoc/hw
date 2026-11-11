@@ -529,7 +529,7 @@ exit (int code)
 
 00001284 <main>:
 main():
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:123
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:126
 		__asm__ __volatile__ ("" ::: "memory");
 	}
 }
@@ -537,29 +537,29 @@ main():
 void main (void) {
 	printf("Starting ...\n");
     1284:	0000f537          	lui	a0,0xf
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:122
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:125
 void main (void) {
     1288:	f4010113          	addi	sp,sp,-192
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:123
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:126
 	printf("Starting ...\n");
     128c:	54050513          	addi	a0,a0,1344 # f540 <__clzsi2+0x90>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:122
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:125
 void main (void) {
     1290:	0a112e23          	sw	ra,188(sp)
     1294:	0a812c23          	sw	s0,184(sp)
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:123
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:126
 	printf("Starting ...\n");
     1298:	57d000ef          	jal	2014 <puts>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:125
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:128
 
 	uintptr_t ncpu = _ncpu();
     129c:	3240a0ef          	jal	b5c0 <_ncpu>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:126
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:129
 	if (ncpu < 2) {
     12a0:	00100413          	li	s0,1
     12a4:	28a47e63          	bgeu	s0,a0,1540 <main+0x2bc>
     12a8:	0a912a23          	sw	s1,180(sp)
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:131
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:134
 		printf("ipistress: single hart, skipped\n");
 		printf("PASS\n");
 		return;
@@ -569,7 +569,7 @@ void main (void) {
     12b0:	00050493          	mv	s1,a0
     12b4:	26a5ee63          	bltu	a1,a0,1530 <main+0x2ac>
     12b8:	09712e23          	sw	s7,156(sp)
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:136
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:139
 		printf("FAILED: more than %u cpus\n", (unsigned)MAXCPU);
 		return;
 	}
@@ -582,7 +582,7 @@ void main (void) {
     12cc:	ec0b8513          	addi	a0,s7,-320 # fec0 <ipicount>
     12d0:	01010913          	addi	s2,sp,16
     12d4:	00002ab7          	lui	s5,0x2
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:140
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:143
 
 	_thread_t *togglers[MAXCPU], *senders[MAXCPU];
 	for (uintptr_t cpu = 1; cpu < ncpu; cpu += 2) {
@@ -591,11 +591,11 @@ void main (void) {
     12dc:	0b312623          	sw	s3,172(sp)
     12e0:	0b612023          	sw	s6,160(sp)
     12e4:	09812c23          	sw	s8,152(sp)
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:136
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:139
 	_irq_register(&ipicount);
     12e8:	00090993          	mv	s3,s2
     12ec:	4fd090ef          	jal	afe8 <_irq_register>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:140
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:143
 		togglers[cpu] = _thread_create(0, THREADS_STACKSZ, toggler_fn, 0);
     12f0:	abca8a93          	addi	s5,s5,-1348 # 1abc <toggler_fn>
     12f4:	800a0a13          	addi	s4,s4,-2048 # 800 <_tls_sig_func+0x78c>
@@ -604,53 +604,53 @@ void main (void) {
     1300:	000a0593          	mv	a1,s4
     1304:	00000513          	li	a0,0
     1308:	0610a0ef          	jal	bb68 <_thread_create>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:140 (discriminator 1)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:143 (discriminator 1)
     130c:	00a9a223          	sw	a0,4(s3)
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:141
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:144
 		_thread_schedoncpu(togglers[cpu], cpu, true);
     1310:	00040593          	mv	a1,s0
     1314:	00100613          	li	a2,1
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:139 (discriminator 1)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:142 (discriminator 1)
 	for (uintptr_t cpu = 1; cpu < ncpu; cpu += 2) {
     1318:	00240413          	addi	s0,s0,2
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:141
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:144
 		_thread_schedoncpu(togglers[cpu], cpu, true);
     131c:	1b10a0ef          	jal	bccc <_thread_schedoncpu>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:139 (discriminator 2)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:142 (discriminator 2)
 	for (uintptr_t cpu = 1; cpu < ncpu; cpu += 2) {
     1320:	00898993          	addi	s3,s3,8
     1324:	fc946ae3          	bltu	s0,s1,12f8 <main+0x74>
     1328:	05010a93          	addi	s5,sp,80
     132c:	00002b37          	lui	s6,0x2
     1330:	000a8993          	mv	s3,s5
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:144
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:147
 	}
 	for (uintptr_t cpu = 0; cpu < ncpu; cpu += 2) {
 		senders[cpu] = _thread_create(0, THREADS_STACKSZ, sender_fn, (void *)cpu);
     1334:	914b0b13          	addi	s6,s6,-1772 # 1914 <sender_fn>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:143
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:146
 	for (uintptr_t cpu = 0; cpu < ncpu; cpu += 2) {
     1338:	00000413          	li	s0,0
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:144
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:147
 		senders[cpu] = _thread_create(0, THREADS_STACKSZ, sender_fn, (void *)cpu);
     133c:	00040693          	mv	a3,s0
     1340:	000b0613          	mv	a2,s6
     1344:	000a0593          	mv	a1,s4
     1348:	00000513          	li	a0,0
     134c:	01d0a0ef          	jal	bb68 <_thread_create>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:144 (discriminator 1)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:147 (discriminator 1)
     1350:	00a9a023          	sw	a0,0(s3)
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:145
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:148
 		_thread_schedoncpu(senders[cpu], cpu, true);
     1354:	00040593          	mv	a1,s0
     1358:	00100613          	li	a2,1
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:143 (discriminator 1)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:146 (discriminator 1)
 	for (uintptr_t cpu = 0; cpu < ncpu; cpu += 2) {
     135c:	00240413          	addi	s0,s0,2
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:145
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:148
 		_thread_schedoncpu(senders[cpu], cpu, true);
     1360:	16d0a0ef          	jal	bccc <_thread_schedoncpu>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:143 (discriminator 2)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:146 (discriminator 2)
 	for (uintptr_t cpu = 0; cpu < ncpu; cpu += 2) {
     1364:	00898993          	addi	s3,s3,8
     1368:	fc946ae3          	bltu	s0,s1,133c <main+0xb8>
@@ -660,55 +660,55 @@ void main (void) {
     1378:	008a8a13          	addi	s4,s5,8
     137c:	014989b3          	add	s3,s3,s4
 join():
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:117
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:120
 		for (volatile uintptr_t d = 0; d < 2000; ++d);
     1380:	7cf00413          	li	s0,1999
 main():
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:149
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:152
 	}
 
 	for (uintptr_t cpu = 0; cpu < ncpu; cpu += 2) {
 		join(senders[cpu]);
     1384:	000aa503          	lw	a0,0(s5)
 join():
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:116 (discriminator 1)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:119 (discriminator 1)
 	while (!_is_thread_terminated(thrd)) {
     1388:	04852783          	lw	a5,72(a0)
     138c:	02078663          	beqz	a5,13b8 <main+0x134>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:117
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:120
 		for (volatile uintptr_t d = 0; d < 2000; ++d);
     1390:	00012423          	sw	zero,8(sp)
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:117 (discriminator 2)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:120 (discriminator 2)
     1394:	00812783          	lw	a5,8(sp)
     1398:	00f46c63          	bltu	s0,a5,13b0 <main+0x12c>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:117 (discriminator 1)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:120 (discriminator 1)
     139c:	00812783          	lw	a5,8(sp)
     13a0:	00178793          	addi	a5,a5,1
     13a4:	00f12423          	sw	a5,8(sp)
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:117 (discriminator 2)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:120 (discriminator 2)
     13a8:	00812783          	lw	a5,8(sp)
     13ac:	fef478e3          	bgeu	s0,a5,139c <main+0x118>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:116 (discriminator 1)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:119 (discriminator 1)
 	while (!_is_thread_terminated(thrd)) {
     13b0:	04852783          	lw	a5,72(a0)
     13b4:	fc079ee3          	bnez	a5,1390 <main+0x10c>
 main():
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:150
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:153
 		_thread_dispose(senders[cpu]);
     13b8:	2880b0ef          	jal	c640 <_thread_dispose>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:148 (discriminator 2)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:151 (discriminator 2)
 	for (uintptr_t cpu = 0; cpu < ncpu; cpu += 2) {
     13bc:	000a0a93          	mv	s5,s4
     13c0:	013a0663          	beq	s4,s3,13cc <main+0x148>
     13c4:	008a0a13          	addi	s4,s4,8
     13c8:	fbdff06f          	j	1384 <main+0x100>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:152 (discriminator 1)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:155 (discriminator 1)
 	}
 	_xchg(&stop, 1);
     13cc:	00100793          	li	a5,1
     13d0:	82018713          	addi	a4,gp,-2016 # 104ac <stop>
     13d4:	0ef727af          	amoswap.w.aqrl	a5,a5,(a4)
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:153 (discriminator 2)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:156 (discriminator 2)
 	for (uintptr_t cpu = 1; cpu < ncpu; cpu += 2) {
     13d8:	0014d993          	srli	s3,s1,0x1
     13dc:	fff98993          	addi	s3,s3,-1
@@ -716,46 +716,46 @@ main():
     13e4:	00890a13          	addi	s4,s2,8
     13e8:	014989b3          	add	s3,s3,s4
 join():
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:117
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:120
 		for (volatile uintptr_t d = 0; d < 2000; ++d);
     13ec:	7cf00413          	li	s0,1999
 main():
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:154
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:157
 		join(togglers[cpu]);
     13f0:	00492503          	lw	a0,4(s2)
 join():
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:116 (discriminator 1)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:119 (discriminator 1)
 	while (!_is_thread_terminated(thrd)) {
     13f4:	04852783          	lw	a5,72(a0)
     13f8:	02078663          	beqz	a5,1424 <main+0x1a0>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:117
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:120
 		for (volatile uintptr_t d = 0; d < 2000; ++d);
     13fc:	00012623          	sw	zero,12(sp)
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:117 (discriminator 2)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:120 (discriminator 2)
     1400:	00c12783          	lw	a5,12(sp)
     1404:	00f46c63          	bltu	s0,a5,141c <main+0x198>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:117 (discriminator 1)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:120 (discriminator 1)
     1408:	00c12783          	lw	a5,12(sp)
     140c:	00178793          	addi	a5,a5,1
     1410:	00f12623          	sw	a5,12(sp)
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:117 (discriminator 2)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:120 (discriminator 2)
     1414:	00c12783          	lw	a5,12(sp)
     1418:	fef478e3          	bgeu	s0,a5,1408 <main+0x184>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:116 (discriminator 1)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:119 (discriminator 1)
 	while (!_is_thread_terminated(thrd)) {
     141c:	04852783          	lw	a5,72(a0)
     1420:	fc079ee3          	bnez	a5,13fc <main+0x178>
 main():
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:155
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:158
 		_thread_dispose(togglers[cpu]);
     1424:	21c0b0ef          	jal	c640 <_thread_dispose>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:153 (discriminator 2)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:156 (discriminator 2)
 	for (uintptr_t cpu = 1; cpu < ncpu; cpu += 2) {
     1428:	000a0913          	mv	s2,s4
     142c:	013a0663          	beq	s4,s3,1438 <main+0x1b4>
     1430:	008a0a13          	addi	s4,s4,8
     1434:	fbdff06f          	j	13f0 <main+0x16c>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:158
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:161
 	}
 
 	_irq_unregister(&ipicount);
@@ -764,31 +764,31 @@ main():
     1440:	00010937          	lui	s2,0x10
     1444:	0000fbb7          	lui	s7,0xf
     1448:	45d090ef          	jal	b0a4 <_irq_unregister>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:161 (discriminator 2)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:164 (discriminator 2)
 
 	uintptr_t total = 0;
 	for (uintptr_t cpu = 0; cpu < ncpu; cpu += 2) {
     144c:	003b0b13          	addi	s6,s6,3
     1450:	4b090913          	addi	s2,s2,1200 # 104b0 <lost>
     1454:	8a418413          	addi	s0,gp,-1884 # 10530 <sent>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:163 (discriminator 1)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:166 (discriminator 1)
 		uintptr_t l0 = _atomic_add(&lost[cpu][0], 0), l1 = _atomic_add(&lost[cpu][1], 0);
 		printf("ipistress: cpu%u to cpu%u: back-to-back %u sent %u lost, spaced %u sent %u lost\n",
     1458:	594b8b93          	addi	s7,s7,1428 # f594 <__clzsi2+0xe4>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:158
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:161
 	_irq_unregister(&ipicount);
     145c:	00100a13          	li	s4,1
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:160
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:163
 	uintptr_t total = 0;
     1460:	00000c13          	li	s8,0
     1464:	fffa0593          	addi	a1,s4,-1
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:162 (discriminator 1)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:165 (discriminator 1)
 		uintptr_t l0 = _atomic_add(&lost[cpu][0], 0), l1 = _atomic_add(&lost[cpu][1], 0);
     1468:	00000793          	li	a5,0
     146c:	06f92aaf          	amoadd.w.aqrl	s5,a5,(s2)
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:162 (discriminator 4)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:165 (discriminator 4)
     1470:	00490713          	addi	a4,s2,4
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:162
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:165
     1474:	06f729af          	amoadd.w.aqrl	s3,a5,(a4)
 dstcpu():
 /home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:77
@@ -798,45 +798,45 @@ dstcpu():
 /home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:77 (discriminator 2)
     1480:	ffea0613          	addi	a2,s4,-2
 main():
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:165 (discriminator 1)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:168 (discriminator 1)
 			(unsigned)cpu, (unsigned)dstcpu(cpu, ncpu),
 			(unsigned)_atomic_add(&sent[cpu][0], 0), (unsigned)l0,
     1484:	06f426af          	amoadd.w.aqrl	a3,a5,(s0)
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:166 (discriminator 1)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:169 (discriminator 1)
 			(unsigned)_atomic_add(&sent[cpu][1], 0), (unsigned)l1);
     1488:	00440713          	addi	a4,s0,4
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:166
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:169
     148c:	06f727af          	amoadd.w.aqrl	a5,a5,(a4)
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:163 (discriminator 1)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:166 (discriminator 1)
 		printf("ipistress: cpu%u to cpu%u: back-to-back %u sent %u lost, spaced %u sent %u lost\n",
     1490:	000a8713          	mv	a4,s5
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:163
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:166
     1494:	00098813          	mv	a6,s3
     1498:	000b8513          	mv	a0,s7
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:167
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:170
 		total += (l0 + l1);
     149c:	013a8ab3          	add	s5,s5,s3
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:161 (discriminator 2)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:164 (discriminator 2)
 	for (uintptr_t cpu = 0; cpu < ncpu; cpu += 2) {
     14a0:	002a0a13          	addi	s4,s4,2
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:163 (discriminator 1)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:166 (discriminator 1)
 		printf("ipistress: cpu%u to cpu%u: back-to-back %u sent %u lost, spaced %u sent %u lost\n",
     14a4:	185000ef          	jal	1e28 <printf>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:167
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:170
 		total += (l0 + l1);
     14a8:	015c0c33          	add	s8,s8,s5
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:161 (discriminator 2)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:164 (discriminator 2)
 	for (uintptr_t cpu = 0; cpu < ncpu; cpu += 2) {
     14ac:	01090913          	addi	s2,s2,16
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:161
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:164
     14b0:	01040413          	addi	s0,s0,16
     14b4:	fb4b18e3          	bne	s6,s4,1464 <main+0x1e0>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:170
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:173
 	}
 
 	if (total)
     14b8:	040c0063          	beqz	s8,14f8 <main+0x274>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:171
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:174
 		printf("FAILED: %u IPIs lost\n", (unsigned)total);
     14bc:	000c0593          	mv	a1,s8
     14c0:	0b412483          	lw	s1,180(sp)
@@ -849,17 +849,17 @@ main():
     14dc:	09812c03          	lw	s8,152(sp)
     14e0:	0000f537          	lui	a0,0xf
     14e4:	5e850513          	addi	a0,a0,1512 # f5e8 <__clzsi2+0x138>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:174
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:177
 	else
 		printf("PASS\n");
 }
     14e8:	0b812403          	lw	s0,184(sp)
     14ec:	0bc12083          	lw	ra,188(sp)
     14f0:	0c010113          	addi	sp,sp,192
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:171
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:174
 		printf("FAILED: %u IPIs lost\n", (unsigned)total);
     14f4:	1350006f          	j	1e28 <printf>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:173
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:176
 		printf("PASS\n");
     14f8:	0b412483          	lw	s1,180(sp)
     14fc:	0b012903          	lw	s2,176(sp)
@@ -871,26 +871,26 @@ main():
     1514:	09812c03          	lw	s8,152(sp)
     1518:	0000f537          	lui	a0,0xf
     151c:	57050513          	addi	a0,a0,1392 # f570 <__clzsi2+0xc0>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:174
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:177
 }
     1520:	0b812403          	lw	s0,184(sp)
     1524:	0bc12083          	lw	ra,188(sp)
     1528:	0c010113          	addi	sp,sp,192
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:173
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:176
 		printf("PASS\n");
     152c:	2e90006f          	j	2014 <puts>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:132
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:135
 		printf("FAILED: more than %u cpus\n", (unsigned)MAXCPU);
     1530:	0000f537          	lui	a0,0xf
     1534:	0b412483          	lw	s1,180(sp)
     1538:	57850513          	addi	a0,a0,1400 # f578 <__clzsi2+0xc8>
     153c:	fadff06f          	j	14e8 <main+0x264>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:127
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:130
 		printf("ipistress: single hart, skipped\n");
     1540:	0000f537          	lui	a0,0xf
     1544:	55050513          	addi	a0,a0,1360 # f550 <__clzsi2+0xa0>
     1548:	2cd000ef          	jal	2014 <puts>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:128
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:131
 		printf("PASS\n");
     154c:	0000f537          	lui	a0,0xf
     1550:	57050513          	addi	a0,a0,1392 # f570 <__clzsi2+0xc0>
@@ -1685,18 +1685,18 @@ sender_fn():
     1978:	000107b7          	lui	a5,0x10
     197c:	00341413          	slli	s0,s0,0x3
     1980:	4b078793          	addi	a5,a5,1200 # 104b0 <lost>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:100 (discriminator 1)
-				if ((_clkcycles() - t) > TIMEOUT) {
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:103
+				if (e > TIMEOUT) {
     1984:	000319b7          	lui	s3,0x31
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:106 (discriminator 2)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:109 (discriminator 2)
 				for (volatile uintptr_t d = 0; d < ((n * 37) % IPIGAP); ++d);
     1988:	1b4e8d37          	lui	s10,0x1b4e8
     198c:	00e40cb3          	add	s9,s0,a4
     1990:	00f12623          	sw	a5,12(sp)
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:100 (discriminator 1)
-				if ((_clkcycles() - t) > TIMEOUT) {
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:103
+				if (e > TIMEOUT) {
     1994:	d4098993          	addi	s3,s3,-704 # 30d40 <__BSS_END__+0x1e040>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:106 (discriminator 2)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:109 (discriminator 2)
 				for (volatile uintptr_t d = 0; d < ((n * 37) % IPIGAP); ++d);
     1998:	1b5d0d13          	addi	s10,s10,437 # 1b4e81b5 <__BSS_END__+0x1b4d54b5>
 /home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:93
@@ -1724,27 +1724,29 @@ static void sender_fn (void *arg) {
     19bc:	7c5080ef          	jal	a980 <_clkcycles>
     19c0:	00050913          	mv	s2,a0
     19c4:	00058493          	mv	s1,a1
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:99
-			while (_atomic_add(&acked[dst], 0) == a) {
-    19c8:	01c0006f          	j	19e4 <sender_fn+0xd0>
+    19c8:	00c0006f          	j	19d4 <sender_fn+0xc0>
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:103
+				if (e > TIMEOUT) {
+    19cc:	06a59663          	bne	a1,a0,1a38 <sender_fn+0x124>
+    19d0:	06d9e463          	bltu	s3,a3,1a38 <sender_fn+0x124>
 /home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:100
-				if ((_clkcycles() - t) > TIMEOUT) {
-    19cc:	7b5080ef          	jal	a980 <_clkcycles>
+				_date_t e = (_clkcycles() - t);
+    19d4:	7ad080ef          	jal	a980 <_clkcycles>
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:101 (discriminator 1)
+				if (_atomic_add(&acked[dst], 0) != a)
+    19d8:	00000793          	li	a5,0
+    19dc:	06fda7af          	amoadd.w.aqrl	a5,a5,(s11)
 /home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:100 (discriminator 1)
-    19d0:	412507b3          	sub	a5,a0,s2
-    19d4:	409585b3          	sub	a1,a1,s1
-    19d8:	00f53533          	sltu	a0,a0,a5
+				_date_t e = (_clkcycles() - t);
+    19e0:	412506b3          	sub	a3,a0,s2
+    19e4:	00d53533          	sltu	a0,a0,a3
 /home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:100
-    19dc:	04a59e63          	bne	a1,a0,1a38 <sender_fn+0x124>
-    19e0:	04f9ec63          	bltu	s3,a5,1a38 <sender_fn+0x124>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:99 (discriminator 2)
-			while (_atomic_add(&acked[dst], 0) == a) {
-    19e4:	00000793          	li	a5,0
-    19e8:	06fda7af          	amoadd.w.aqrl	a5,a5,(s11)
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:99
+    19e8:	409585b3          	sub	a1,a1,s1
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:101 (discriminator 3)
+				if (_atomic_add(&acked[dst], 0) != a)
     19ec:	fef400e3          	beq	s0,a5,19cc <sender_fn+0xb8>
     19f0:	00100613          	li	a2,1
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:105
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:108
 			if (phase)
     19f4:	040b9a63          	bnez	s7,1a48 <sender_fn+0x134>
 /home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:95 (discriminator 1)
@@ -1755,16 +1757,16 @@ static void sender_fn (void *arg) {
     1a00:	025a8a93          	addi	s5,s5,37
     1a04:	00078463          	beqz	a5,1a0c <sender_fn+0xf8>
     1a08:	fa0612e3          	bnez	a2,19ac <sender_fn+0x98>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:108 (discriminator 1)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:111 (discriminator 1)
 		_xchg(&sent[src][phase], n);
     1a0c:	0f4caa2f          	amoswap.w.aqrl	s4,s4,(s9)
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:109
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:112
 		_xchg(&lost[src][phase], l);
     1a10:	00c12783          	lw	a5,12(sp)
     1a14:	00812703          	lw	a4,8(sp)
     1a18:	40e787b3          	sub	a5,a5,a4
     1a1c:	019787b3          	add	a5,a5,s9
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:109 (discriminator 1)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:112 (discriminator 1)
     1a20:	0f67ab2f          	amoswap.w.aqrl	s6,s6,(a5)
 /home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:93 (discriminator 2)
 	for (uintptr_t phase = 0; phase < 2; ++phase) {
@@ -1778,34 +1780,34 @@ static void sender_fn (void *arg) {
 		for (n = 0; n < IPIS && l < MAXLOST; ++n) {
     1a38:	ff1b0613          	addi	a2,s6,-15
     1a3c:	00c03633          	snez	a2,a2
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:101
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:104
 					++l;
     1a40:	001b0b13          	addi	s6,s6,1
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:105
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:108
 			if (phase)
     1a44:	fa0b8ae3          	beqz	s7,19f8 <sender_fn+0xe4>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:106 (discriminator 2)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:109 (discriminator 2)
 				for (volatile uintptr_t d = 0; d < ((n * 37) % IPIGAP); ++d);
     1a48:	03aab6b3          	mulhu	a3,s5,s10
     1a4c:	25800713          	li	a4,600
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:106
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:109
     1a50:	00012e23          	sw	zero,28(sp)
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:106 (discriminator 2)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:109 (discriminator 2)
     1a54:	01c12783          	lw	a5,28(sp)
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:106
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:109
     1a58:	0066d693          	srli	a3,a3,0x6
     1a5c:	02e686b3          	mul	a3,a3,a4
     1a60:	40da86b3          	sub	a3,s5,a3
     1a64:	f8d7fae3          	bgeu	a5,a3,19f8 <sender_fn+0xe4>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:106 (discriminator 1)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:109 (discriminator 1)
     1a68:	01c12783          	lw	a5,28(sp)
     1a6c:	00178793          	addi	a5,a5,1
     1a70:	00f12e23          	sw	a5,28(sp)
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:106 (discriminator 2)
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:109 (discriminator 2)
     1a74:	01c12783          	lw	a5,28(sp)
     1a78:	fed7e8e3          	bltu	a5,a3,1a68 <sender_fn+0x154>
     1a7c:	f7dff06f          	j	19f8 <sender_fn+0xe4>
-/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:111
+/home/wtambe/Documents/rvpu_hw_forAi/rv32-sim/apps/ipistress/ipistress.c:114
 }
     1a80:	05c12083          	lw	ra,92(sp)
     1a84:	05812403          	lw	s0,88(sp)
