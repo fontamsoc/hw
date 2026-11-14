@@ -62,17 +62,20 @@
 // 	store-conditional or of an atomic memory operation, leaves stale their
 // 	copies of the bytes it writes; and a read forced to miss, ie: a
 // 	load-reserved or the read of an atomic memory operation, can return data
-// 	from memory older than a dirty copy held by another data-cache. This
-// 	holds as well for the access which follows a locked one, which may be an
-// 	ordinary load or store, ie: the first one after a compare-and-swap whose
-// 	compare failed. A write forced to miss also invalidates the bytes that
-// 	it writes in its own data-cache, hence a later read of those bytes there
-// 	misses, and gathers the stale copies of the other data-caches when they
-// 	hold any, ie: returns the value from before that write. A word accessed
-// 	through atomic memory operations is therefore not to be accessed
-// 	otherwise, as cpu/README.md requires, and the access which follows a
-// 	load-reserved whose store-conditional does not come is to be an atomic
-// 	one, or one to a word that no other data-cache may hold.
+// 	from memory older than a dirty copy held by another data-cache. A write
+// 	forced to miss also invalidates the bytes that it writes in its own
+// 	data-cache, hence a later read of those bytes there misses, and gathers
+// 	the stale copies of the other data-caches when they hold any, ie:
+// 	returns the value from before that write. A word accessed through atomic
+// 	memory operations is therefore not to be accessed otherwise, as
+// 	cpu/README.md requires.
+// - The access which follows a locked one is forced to miss as well, so that it
+// 	reaches the slave interface and releases the lock; while coherency_en_i
+// 	is high, it is therefore to be the write of the atomic memory operation,
+// 	or a read selecting no byte, which releases the lock and changes
+// 	nothing, as cpu/dcache.pu.sv makes it when a load-reserved is abandoned,
+// 	ahead of any other access: an ordinary load or store would neither see
+// 	nor update the copies held by the other data-caches.
 // - Reading generates a read request only on a cache-miss, ie: when some
 // 	selected byte is not in the cache-entry, and asks for those bytes only.
 // 	The request always comes back around: each other data-cache whose
@@ -163,8 +166,9 @@
 // 	comes back around, every other data-cache of the ring then stalls on its
 // 	next read cache-miss: one held in WRITEB or REFILL by an access that the
 // 	slave interface does not accept, or holding the bus lock after a
-// 	load-reserved whose store-conditional does not come, stops every hart of
-// 	the ring, as cpu/README.md details.
+// 	load-reserved until its store-conditional comes, or until
+// 	cpu/dcache.pu.sv releases it, stops every hart of the ring meanwhile, as
+// 	cpu/README.md details.
 // - Atomic memory operations do not travel the ring, being forced to miss;
 // 	hence an access carrying m_wb_lock_i, when the access before it did not,
 // 	is accepted only once every write request that the data-cache issued has
@@ -273,11 +277,13 @@
 // 	clockcycle, in the order the accesses were accepted, m_wb_dat_o then
 // 	holding the bytes that a read selects. An access carrying m_wb_lock_i
 // 	requests the bus lock: it reaches the slave interface with s_wb_lock_o
-// 	high, and the lock is released by the next access which does not carry
-// 	it, that access being forced to miss, as explained for cmiss_i; when the
-// 	access before it did not carry the lock, it is accepted only once every
-// 	write request that the data-cache issued, or is issuing, has come back
-// 	around, as described under Cache coherency.
+// 	high; when the access before it did not carry the lock, it is accepted
+// 	only once every write request that the data-cache issued, or is issuing,
+// 	has come back around, as described under Cache coherency. The lock is
+// 	released by the next access which does not carry it, that access being
+// 	forced to miss, as explained for cmiss_i; while coherency_en_i is high,
+// 	that access is to be the write of the atomic memory operation, or a read
+// 	selecting no byte, as described under Cache coherency.
 //
 // s_wb_stb_o
 // s_wb_lock_o

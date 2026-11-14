@@ -399,6 +399,26 @@ wire dCache_m_dat_i_lt_dCache_m_dat_o = (
 wire dCache_m_dat_i_ltu_dCache_m_dat_o = dCache_m_dat_i_minus_dCache_m_dat_o[WORDBITSZ];
 `endif
 
+// On a coherency ring, the data-cache holds the bus lock, and the coherency ring, from a locked read
+// until the access which follows it, which it forces to miss so that it reaches memory and releases the
+// lock (cpu/dcache.sv, Cache coherency); an ordinary load or store there would neither see nor update the
+// copies of the other data-caches. Hence, while the request presented last is a locked read, ie: a
+// load-reserved, the read of an atomic memory operation being followed by its write while
+// dCache_m_isAMOonly is high, a load, a store or an atomic at decode waits (lsu.pu.sv), and the lock is
+// released first with a read of the reserved word selecting no byte, which changes nothing: when the
+// reservation is no longer valid, ie: was cancelled by an instruction making no data access, a fetch
+// redirect (a mispredicted branch, a jump, a trap), a fence, a system instruction, or a store-conditional
+// to another address, which issues no store; and right away when such an access is at decode, its own
+// cancel of the reservation being then made by the release. A store-conditional does not wait, being the
+// write of the atomic. That is told from registers: the release changes dCache_m_lock_r, hence is
+// presented once. Without a ring the hold stops no other hart, the access which follows a locked one
+// being forced to miss as well, and nothing waits.
+wire dCache_m_lrOpen = (dcache_coherency_en_i && dCache_m_lock_r && !dCache_m_we_r);
+wire dCache_m_rel = (dCache_m_lrOpen && !dCache_m_max_pending &&
+	(!amoUnit_lrValid || ((iD_ldUnit_stb || iD_isStore) && !iD_flushed)));
+// The release is presented, ie: the leg of dCache_m_rel below is taken.
+wire dCache_m_rel_stb = (dCache_m_rel && !dCache_m_bsy_r && !dCache_m_isAMOonly);
+
 always_comb begin
 
 	dCache_m_stb_i = 1'b0;
@@ -450,6 +470,15 @@ always_comb begin
 				(!dCache_m_dat_i_ltu_dCache_m_dat_o ? dCache_m_dat_r : dCache_m_dat_o) :
 			dCache_m_dat_r);
 `endif
+	end else if (dCache_m_rel) begin
+		// A read of the reserved word selecting no byte, which releases the lock that the load-reserved
+		// presented last took, cf. dCache_m_rel. The address is left as the load-reserved presented it,
+		// dCache_m_addr_r holding it still, so that it adds no leg to the address mux. It is
+		// acknowledged like a store, nothing waiting for its data.
+		dCache_m_stb_i = 1'b1;
+		dCache_m_lock_i = 1'b0;
+		dCache_m_we_i = 1'b0;
+		dCache_m_sel_i = {(WORDBITSZ/8){1'b0}};
 	end else begin
 		// The request of the instruction at decode. Only its strobe tells whether it is issued, ie:
 		// whether the instruction is valid, and whether the reservation of a store-conditional holds;
@@ -501,6 +530,10 @@ always_ff @(posedge clk_i) begin
 		dCache_m_sel_r <= dCache_m_sel_i;
 		dCache_m_dat_r <= dCache_m_dat_i;
 	end
+	// dCache_m_lrOpen reads it as whether the request presented last is a locked read; without a ring,
+	// nothing reads it so, and it keeps no reset.
+	if (rst_i && dcache_coherency_en_i)
+		dCache_m_lock_r <= 1'b0;
 end
 
 reg dcache_m_addr_misaligned; // ### comb-block-reg.

@@ -51,9 +51,11 @@ always_ff @(posedge clk_i) begin
 	else
 		ldUnit_rqsts_nearFull_r <= ldUnit_rqsts_nearFull;
 end
-assign iD_ldUnit_bsy = (ldUnit_rqsts_nearFull_r || __dCache_m_bsy);
+// A load, a load-reserved or an atomic memory operation waits for the release of an open load-reserved,
+// cf. dCache_m_rel in dcache.pu.sv.
+assign iD_ldUnit_bsy = (ldUnit_rqsts_nearFull_r || __dCache_m_bsy || dCache_m_lrOpen);
 `else
-assign iD_ldUnit_bsy = (ldUnit_rqsts_full || __dCache_m_bsy);
+assign iD_ldUnit_bsy = (ldUnit_rqsts_full || __dCache_m_bsy || dCache_m_lrOpen);
 `endif
 
 wire ldUnit_stb = (iD_ldUnit_stb && iD_insn_valid);
@@ -103,7 +105,9 @@ wire ldUnit_respHeld = (dCache_m_ack_avail_o && ldUnit_memAck_);
 
 // Store Unit.
 
-assign iD_stUnit_bsy = __dCache_m_bsy;
+// A store waits for the release of an open load-reserved as well, cf. dCache_m_rel in dcache.pu.sv, but a
+// store-conditional, which is the write of the atomic.
+assign iD_stUnit_bsy = (__dCache_m_bsy || (dCache_m_lrOpen && !iD_isSc));
 
 // AMO Unit.
 
@@ -112,9 +116,11 @@ assign amoUnit_memAck = (ldUnit_memAck && ldUnit_rqsts_isAMO);
 wire iD_isLr_and_insn_valid = (iD_isLr && iD_insn_valid);
 
 always_ff @(posedge clk_i) begin
-	if (rst_i || eX_JumpOrBranch || (iD_cancelLr && iD_insn_valid)) begin
+	if (rst_i || eX_JumpOrBranch || (iD_cancelLr && iD_insn_valid) || dCache_m_rel_stb) begin
 		// Per spec, cancel load reservation on taken branch,
-		// jump, system, fence, loads, stores instructions.
+		// jump, system, fence, loads, stores instructions;
+		// and on the release of the lock that it holds, cf. dCache_m_rel in dcache.pu.sv,
+		// which a store-conditional is then not to succeed without.
 		amoUnit_lrValid <= 1'b0;
 	end else if (iD_isLr_and_insn_valid) begin
 		amoUnit_lrValid <= 1'b1;
