@@ -237,6 +237,7 @@ dCache #(
 	,.MAXPENDINGACK (MAXPENDINGACK)
 	,.PUIDBITSZ     (PUIDBITSZ)
 	,.PUID          (PUID)
+	,.ATOMIC_COHERENCE (ATOMIC_COHERENCE)
 ) dCache (
 
 	 .rst_i (rst_i)
@@ -422,8 +423,11 @@ wire dCache_m_dat_i_ltu_dCache_m_dat_o = dCache_m_dat_i_minus_dCache_m_dat_o[WOR
 // an access is at decode, its own cancel of the reservation being then made by the release. A
 // store-conditional does not wait, being the write of the atomic. That is told from registers: the
 // release changes dCache_m_lock_r, hence is presented once. Without a ring the hold stops no other hart,
-// the access which follows a locked one being forced to miss as well, and nothing waits.
-wire dCache_m_lrOpen = (dcache_coherency_en_i && dCache_m_lock_r && !dCache_m_we_r);
+// the access which follows a locked one being forced to miss as well, and nothing waits; nor does anything
+// wait while ATOMIC_COHERENCE is null, the access which follows a load-reserved whose store-conditional
+// does not come being then to be an atomic one, or one to a word that no other data-cache may hold, as
+// cpu/README.md requires.
+wire dCache_m_lrOpen = (ATOMIC_COHERENCE && dcache_coherency_en_i && dCache_m_lock_r && !dCache_m_we_r);
 wire dCache_m_rel = (dCache_m_lrOpen && !dCache_m_max_pending &&
 	(!amoUnit_lrValid || ((iD_ldUnit_stb || iD_isStore) && !iD_flushed)));
 // The release is presented, ie: the leg of dCache_m_rel below is taken.
@@ -540,9 +544,9 @@ always_ff @(posedge clk_i) begin
 		dCache_m_sel_r <= dCache_m_sel_i;
 		dCache_m_dat_r <= dCache_m_dat_i;
 	end
-	// dCache_m_lrOpen reads it as whether the request presented last is a locked read; without a ring,
-	// nothing reads it so, and it keeps no reset.
-	if (rst_i && dcache_coherency_en_i)
+	// dCache_m_lrOpen reads it as whether the request presented last is a locked read; without a ring, or
+	// while ATOMIC_COHERENCE is null, nothing reads it so, and it keeps no reset.
+	if (rst_i && ATOMIC_COHERENCE && dcache_coherency_en_i)
 		dCache_m_lock_r <= 1'b0;
 end
 
@@ -552,7 +556,8 @@ end
 // what it does at decode would be done, ie: its load queued, its atomic memory operation started, while the
 // release is presented in its place, its acknowledgement then taken for that of the instruction. The stall of
 // lsu.pu.sv on dCache_m_lrOpen is what rules it out. Also reported is a reservation valid while no
-// load-reserved is open on a ring, which a store-conditional would then write under no lock.
+// load-reserved is open on a ring, which a store-conditional would then write under no lock. Neither is
+// reported while ATOMIC_COHERENCE is null, no release being made then, nor any load-reserved told open.
 reg dCache_m_relOverInsn_r;
 reg amoUnit_lrValidNotOpen_r;
 always_ff @(posedge clk_i) begin
@@ -567,7 +572,7 @@ always_ff @(posedge clk_i) begin
 				PUID, iD_pc);
 			$fflush();
 		end
-		if (dcache_coherency_en_i && amoUnit_lrValid && !dCache_m_lrOpen && !amoUnit_lrValidNotOpen_r) begin
+		if (ATOMIC_COHERENCE && dcache_coherency_en_i && amoUnit_lrValid && !dCache_m_lrOpen && !amoUnit_lrValidNotOpen_r) begin
 			amoUnit_lrValidNotOpen_r <= 1'b1;
 			$display("pu%0d: error: a reservation is valid while no load-reserved is open, iD_pc %h", PUID, iD_pc);
 			$fflush();

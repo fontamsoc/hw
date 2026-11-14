@@ -237,6 +237,20 @@
 // 	Index of the pu when used in a multi-pu configuration,
 // 	otherwise must be 0. Non-zero pu index are halted on reset
 // 	waiting for an external interrupt.
+//
+// ATOMIC_COHERENCE
+// 	When non-null, in a multi-pu configuration, atomic memory
+// 	operations take part in the cache-coherency protocol of the
+// 	data-caches (cpu/dcache.sv), and a load-reserved whose
+// 	store-conditional does not come is released ahead of the access
+// 	which follows it: a word may then be accessed by atomic and plain
+// 	accesses alike, as SMP Linux does. When null, a word accessed
+// 	through atomic memory operations is to be accessed only so, and
+// 	the access which follows such a load-reserved is to be an atomic
+// 	one, or one to a word that no other data-cache may hold, as
+// 	cpu/README.md details. It changes nothing in a single-pu
+// 	configuration, and is to be the same in every pu whose data-caches
+// 	share a coherency ring, as cpu/dcache.sv details.
 
 // Ports:
 //
@@ -384,6 +398,7 @@ parameter FPUCNT        = 1;
 parameter MAXPENDINGACK = 16;
 parameter PUIDBITSZ     = 1;
 parameter PUID          = 0;
+parameter ATOMIC_COHERENCE = 0;
 
 localparam USE_DCACHE = (DCACHESETCNT > 0);
 

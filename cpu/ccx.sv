@@ -71,6 +71,7 @@ parameter FPUCNT        = 1;
 parameter MAXPENDINGACK = 16;
 parameter PUCNT         = 1;
 parameter CPUID         = 0;
+parameter ATOMIC_COHERENCE = 0;
 
 localparam PUIDBITSZ = clog2(PUCNT);
 
@@ -162,6 +163,7 @@ pu #(
 	,.MAXPENDINGACK (MAXPENDINGACK)
 	,.PUIDBITSZ     (PUIDBITSZ)
 	,.PUID          (CPUID + genpu_idx)
+	,.ATOMIC_COHERENCE (ATOMIC_COHERENCE)
 ) pu (
 
 	 .rst_i (rst_i)

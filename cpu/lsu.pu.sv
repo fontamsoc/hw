@@ -115,20 +115,20 @@ assign amoUnit_memAck = (ldUnit_memAck && ldUnit_rqsts_isAMO);
 
 wire iD_isLr_and_insn_valid = (iD_isLr && iD_insn_valid);
 
-// eX_JumpOrBranch cancels the reservation on a fetch redirect only, ie: on a mispredicted branch or
-// return among others, the branches, jal and returns which the predictors get right causing none. On a
-// coherency ring, where the data-cache holds the bus lock and the ring off from a load-reserved until
-// dcache.pu.sv releases it once the reservation is cancelled, cf. dCache_m_rel, a jalr, a backward jal and
-// a backward branch predicted taken cancel it as well, none of which the spec allows taken between the
-// load-reserved and the store-conditional of a constrained LR/SC loop, whereas a forward branch, which
-// it allows, does not: a loop which follows a load-reserved whose store-conditional does not come thus
-// cancels it at its first iteration, and a return at once. A backward branch predicted taken which is not
-// taken is mispredicted, hence cancels through eX_JumpOrBranch already, as does one taken which was not
-// predicted so: this adds no cancel but that of a taken backward branch predicted as such. It is told
-// from the decode registers alone, an instruction at decode which is not flushed being one which executes
-// unless a trap comes first, which cancels as well, so that neither eX_takeBranch_i nor iD_insn_valid is
-// on it; it may thus cancel while that instruction is still stalled.
-wire amoUnit_lrCancelJmp = (dcache_coherency_en_i && !iD_flushed &&
+// eX_JumpOrBranch cancels the reservation on a fetch redirect only, ie: on a mispredicted branch or return
+// among others, the branches, jal and returns which the predictors get right causing none. On a coherency
+// ring while ATOMIC_COHERENCE is non-null, where the data-cache holds the bus lock and the ring off from a
+// load-reserved until dcache.pu.sv releases it once the reservation is cancelled, cf. dCache_m_rel, a
+// jalr, a backward jal and a backward branch predicted taken cancel it as well, none of which the spec
+// allows taken between the load-reserved and the store-conditional of a constrained LR/SC loop, whereas a
+// forward branch, which it allows, does not: a loop which follows a load-reserved whose store-conditional
+// does not come thus cancels it at its first iteration, and a return at once. A backward branch predicted
+// taken which is not taken is mispredicted, hence cancels through eX_JumpOrBranch already, as does one
+// taken which was not predicted so: this adds no cancel but that of a taken backward branch predicted as
+// such. It is told from the decode registers alone, an instruction at decode which is not flushed being
+// one which executes unless a trap comes first, which cancels as well, so that neither eX_takeBranch_i nor
+// iD_insn_valid is on it; it may thus cancel while that instruction is still stalled.
+wire amoUnit_lrCancelJmp = (ATOMIC_COHERENCE && dcache_coherency_en_i && !iD_flushed &&
 	((iD_isJAlOrJALR && (iD_isJALR || iD_insn[31])) || (iD_isBranch && iD_insn[31] && eX_predictBranch_i[1])));
 
 always_ff @(posedge clk_i) begin
