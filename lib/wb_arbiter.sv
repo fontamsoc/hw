@@ -254,12 +254,12 @@ end
 
 `ifdef SIMULATION_MONITOR
 // The lock is released by the lock owner's next accepted access that does not carry
-// it, and nothing bounds when that comes: an atomic sequence whose store-conditional
-// is branched over or never reached holds it until that hart's next load, store or
-// atomic, and a retry loop holding a load-reserved and no other data access issues
-// none at all. Every other master is held busy meanwhile, down to its instruction
-// fetching, so it executes nothing; there is no bus watchdog and no cycle limit,
-// hence that presents as a silent run forever. Report it instead.
+// it, and nothing here bounds when that comes: the master is to, as cpu/lsu.pu.sv and
+// cpu/dcache.pu.sv do for a load-reserved whose store-conditional is branched over or
+// never reached, which they release once its reservation is cancelled, a jump backward
+// cancelling it on a coherency ring. Every other master is held busy meanwhile, down to
+// its instruction fetching, so it executes nothing; there is no bus watchdog and no cycle
+// limit, hence a lock left held presents as a silent run forever. Report it instead.
 // Held length alone is the tell, rather than also testing that another master is
 // requesting: a starved master is held busy before it can even present a request,
 // so that would be missed exactly when it matters.

@@ -407,12 +407,12 @@ wire dCache_m_dat_i_ltu_dCache_m_dat_o = dCache_m_dat_i_minus_dCache_m_dat_o[WOR
 // dCache_m_isAMOonly is high, a load, a store or an atomic at decode waits (lsu.pu.sv), and the lock is
 // released first with a read of the reserved word selecting no byte, which changes nothing: when the
 // reservation is no longer valid, ie: was cancelled by an instruction making no data access, a fetch
-// redirect (a mispredicted branch, a jump, a trap), a fence, a system instruction, or a store-conditional
-// to another address, which issues no store; and right away when such an access is at decode, its own
-// cancel of the reservation being then made by the release. A store-conditional does not wait, being the
-// write of the atomic. That is told from registers: the release changes dCache_m_lock_r, hence is
-// presented once. Without a ring the hold stops no other hart, the access which follows a locked one
-// being forced to miss as well, and nothing waits.
+// redirect (a mispredicted branch, a jump, a trap), a fence, a system instruction, a store-conditional
+// to another address, which issues no store, or a jump backward, cf. lsu.pu.sv; and right away when such
+// an access is at decode, its own cancel of the reservation being then made by the release. A
+// store-conditional does not wait, being the write of the atomic. That is told from registers: the
+// release changes dCache_m_lock_r, hence is presented once. Without a ring the hold stops no other hart,
+// the access which follows a locked one being forced to miss as well, and nothing waits.
 wire dCache_m_lrOpen = (dcache_coherency_en_i && dCache_m_lock_r && !dCache_m_we_r);
 wire dCache_m_rel = (dCache_m_lrOpen && !dCache_m_max_pending &&
 	(!amoUnit_lrValid || ((iD_ldUnit_stb || iD_isStore) && !iD_flushed)));
