@@ -81,13 +81,15 @@
 // 	cache-entry is filled from them, otherwise the missing bytes are read
 // 	from memory (REFILL), the bytes that the cache-entry holds winning over
 // 	those merged. The cache-entry is then marked shared if another
-// 	data-cache matched the cache-tag, or was itself waiting on a read of
-// 	that word, and exclusive otherwise. Yet when a write request from
-// 	another data-cache for that word went through the data-cache while its
-// 	read request travelled the ring, the read is answered without filling
-// 	the cache-entry, as the read request may have overtaken the write
-// 	request and gathered, from a data-cache which the write request had not
-// 	reached yet, bytes older than that write.
+// 	data-cache matched the cache-tag, was itself waiting on a read of that
+// 	word, or had a write waiting for its write request to come back around
+// 	(as described below for a dirty cache-entry), and exclusive otherwise.
+// 	Yet when a write request from another data-cache for that word went
+// 	through the data-cache while its read request travelled the ring, the
+// 	read is answered without filling the cache-entry, as the read request
+// 	may have overtaken the write request and gathered, from a data-cache
+// 	which the write request had not reached yet, bytes older than that
+// 	write.
 // - A read refilled from memory takes memory to hold the current value of the
 // 	bytes that no data-cache holds, hence the slave interface is to take the
 // 	accesses of the data-caches of a ring in a single order, in which a
@@ -114,10 +116,16 @@
 // 	value of the later write when both write it back: the write request
 // 	carrying it updates the older copy on its way, or, when that copy is
 // 	being written back, waits for that write-back to be accepted first.
+// 	While a write waits so for its write request, its data-cache holds no
+// 	copy of the word that it writes, and does not keep which word that is:
+// 	it counts as holding a copy for every request that it forwards
+// 	meanwhile, so that no other data-cache marks exclusive a cache-entry of
+// 	that word.
 // - Writing generates a write request whether or not it is a cache-miss, unless
 // 	its cache-tag matches a cache-entry marked exclusive. When it comes back
 // 	around, the cache-entry is marked exclusive if no other data-cache
-// 	matched the cache-tag nor was waiting on a read of that word.
+// 	matched the cache-tag, was waiting on a read of that word, nor had a
+// 	write waiting for its own write request to come back around.
 // - A read/write request from another data-cache that matches the cache-tag
 // 	marks the cache-entry shared. Hence a cache-entry becomes exclusive only
 // 	when a request of its own comes back having found no other copy: a
@@ -774,8 +782,10 @@ always_ff @(posedge clk_i) begin
 		coherency_addr_o <= m_wb_addr_r;
 		coherency_sel_o <= m_wb_sel_r;
 		coherency_dat_o <= m_wb_dat_r;
-		// A data-cache waiting on its own read of the same word is about to hold it as well.
-		if (cache_tag_hit || (coherency_stb_r && coherency_addr_r == m_wb_addr_r))
+		// A data-cache waiting on its own read of the same word is about to hold it as well; as is one whose
+		// store waits for its write request to come back around (defst_r), which holds no copy of the word of
+		// that store meanwhile, and does not keep which word that is: every request forwarded then is marked.
+		if (cache_tag_hit || (coherency_stb_r && coherency_addr_r == m_wb_addr_r) || defst_r)
 			coherency_shr_o <= 1'b1;
 		else
 			coherency_shr_o <= m_wb_shr_r;
