@@ -117,88 +117,103 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	to starve interrupts indefinitely.
 - Atomic memory operations resolve in memory: a dirty data-cache-hit is written back before the
 	read-modify-write, a clean one is dropped and the operation reads memory, and either is
-	invalidated; an atomic access allocates nothing in the data-cache and evicts nothing from it. On
-	a coherency ring they take part in the cache-coherency protocol: the read of a load-reserved, or
-	of an atomic memory operation, first issues a take, a coherency request which removes the word
-	from every other hart's data-cache, a dirty copy being written back to memory first, and is made
-	in memory under the bus lock only once the take has come back around, or at once when it hits a
-	copy marked exclusive, whole or partial, ie: which no other hart's data-cache holds but through a
-	store just made, which then comes after the atomic, no take being issued; the write which follows
-	it, the store-conditional's or the atomic memory operation's, is made in memory, which releases
-	the lock. The data-cache holds the ring off from the take's return, or from such a read, until
-	that write, hence the read sees every store made before it by any hart, no stale copy is left
-	behind the write, and a plain store made meanwhile by another hart comes after it. A word may
-	thus be accessed by atomic and plain accesses alike, and be initialized by a plain store, as SMP
-	Linux does: its ticket spinlock takes a ticket with an atomic add and releases the lock with a
-	plain store to half of the same word. A data-cache which has a coherency request of its own that
-	may be for the word still travelling the ring lets the take go by marked, its copy left as it
-	is: a coherency write, ie: it holds the word dirty and cannot write it back, as that coherency
-	write would carry the older bytes to copies made after the atomic; or its coherency read of that
-	word, which the take thus leaves to complete. The hart which issued the take issues it again,
-	and every data-cache that the take went through marked accepts nothing from its hart until a
-	take of the same hart comes by unmarked, a hold that it keeps for each hart, hence a take is
-	issued again fewer times than there are harts, whatever the other harts load or store. For the
-	same reason a miss replacing a dirty word of the data-cache writes it back only once the
-	coherency writes of its hart which may be for that word have come back around, ie: those to a
-	cache set whose low bits are the same, which a stream of stores replacing dirty words waits for
-	only when it comes back to such a cache set while its coherency writes kept travelling. A take
-	costs a round trip of the ring, about two clockcycles per hart: memtest, which reads and writes
-	every word through atomic memory operations, takes 11% longer with 2 harts and 34% longer
-	with 4, whereas coremark does not change measurably; an atomic memory operation which follows a
-	plain load, or a plain store of any of its bytes, that its hart made to a word which no other hart
-	holds, issues no take, hence costs no trip of the ring. An atomic access to a word that is not
-	cached, ie: a device register, as every command of hwdrvchar.h and hwdrvirqctrl.h is, issues no
-	take, no data-cache holding such a word. Memory still receives every atomic write, which a reset
-	relies on, as it discards the dirty words of the data-caches: a value meant to survive one is
-	written atomically, as underLineOS writes the pristine copy of .data and `__rst_flg` at boot; the
-	coherency itself no longer requires those atomic accesses, nor that .bss be zeroed with them.
-	rv32-sim/apps/smpatomic covers the shapes that SMP Linux uses.
+	invalidated; an atomic access allocates nothing in the data-cache and evicts nothing from it. With
+	the ccx parameter `ATOMIC_COHERENCE` null, which the tops leave by default, they do not participate
+	in the cache-coherency protocol: other harts' cached copies are not invalidated by an atomic write.
+	Software must therefore access an atomically-manipulated variable exclusively through atomic
+	instructions (a plain load can observe a stale value, and a plain store, which reaches memory only
+	when written back, is not seen by another hart's atomic access even where the cache-coherency
+	protocol has already carried it to that hart's data-cache, as the atomic access drops a clean
+	data-cache-hit and reads memory), and initialize it using an atomic instruction (e.g. amoswap of 0)
+	rather than a plain store: the plain store sits dirty in the initializing hart's data-cache, so its
+	write-back before the initializing hart's first own atomic access would overwrite an update that
+	another hart made in memory meanwhile; a plain store also leaves memory holding whatever a
+	runtime-allocated chunk held before. underLineOS zeroes .bss and copies .data with atomic accesses
+	at boot, which leaves the rule to memory the boot does not initialize: runtime-allocated memory,
+	.noinit and .persistent.
+	With `ATOMIC_COHERENCE` non-null, on a coherency ring, they take part in the cache-coherency
+	protocol: the read of a load-reserved, or of an atomic memory operation, first issues a take, a
+	coherency request which removes the word from every other hart's data-cache, a dirty copy being
+	written back to memory first, and is made in memory under the bus lock only once the take has come
+	back around, or at once when it hits a copy marked exclusive, whole or partial, ie: which no other
+	hart's data-cache holds but through a store just made, which then comes after the atomic, no take
+	being issued; the write which follows it, the store-conditional's or the atomic memory operation's,
+	is made in memory, which releases the lock. The data-cache holds the ring off from the take's
+	return, or from such a read, until that write, hence the read sees every store made before it by
+	any hart, no stale copy is left behind the write, and a plain store made meanwhile by another hart
+	comes after it. A word may thus be accessed by atomic and plain accesses alike, and be initialized
+	by a plain store, as SMP Linux does: its ticket spinlock takes a ticket with an atomic add and
+	releases the lock with a plain store to half of the same word. A data-cache which has a coherency
+	request of its own that may be for the word still travelling the ring lets the take go by marked,
+	its copy left as it is: a coherency write, ie: it holds the word dirty and cannot write it back, as
+	that coherency write would carry the older bytes to copies made after the atomic; or its coherency
+	read of that word, which the take thus leaves to complete. The hart which issued the take issues it
+	again, and every data-cache that the take went through marked accepts nothing from its hart until a
+	take of the same hart comes by unmarked, a hold that it keeps for each hart, hence a take is issued
+	again fewer times than there are harts, whatever the other harts load or store. A take costs a
+	round trip of the ring, about two clockcycles per hart: memtest, which reads and writes every word
+	through atomic memory operations, takes 11% longer with 2 harts and 34% longer with 4 than with
+	`ATOMIC_COHERENCE` null, whereas coremark does not change measurably; the parameter adds to each
+	hart about 300 gates and 4 flip-flops before the mapping to LUTs, mostly in its data-cache; an
+	atomic memory operation which follows a plain load, or a plain store of any of its bytes, that its
+	hart made to a word which no other hart holds, issues no take, hence costs no trip of the ring. An
+	atomic access to a word that is not cached, ie: a device register, as every command of hwdrvchar.h
+	and hwdrvirqctrl.h is, issues no take, no data-cache holding such a word. Memory still receives
+	every atomic write, which a reset relies on, as it discards the dirty words of the data-caches: a
+	value meant to survive one is written atomically, as underLineOS writes the pristine copy of .data
+	and `__rst_flg` at boot; the coherency itself then no longer requires those atomic accesses, nor
+	that .bss be zeroed with them. rv32-sim/apps/smpatomic covers the shapes that SMP Linux uses.
 - Ordinary cached writes do participate, and an atomic memory operation is ordered against the ones
-	its hart already made: dcache.sv holds off the first access of a load-reserved, or of an
-	atomic memory operation's read, until every coherency write this data-cache put on the ring has
-	travelled it and come back. `coherency_write_pending` counts those still in flight, and
-	`m_wb_bsy_o` keeps the hart busy for as long as it is non-null. The acknowledgement that
-	decrements it is the request arriving back at the data-cache that issued it, which is after
-	every other one has seen it, hence a null count means applied everywhere rather than merely
-	sent. A store is counted only from the clockedge which ends its test of the cache (TSTHIT), hence
-	`m_wb_bsy_o` holds the access off while a store is in TSTHIT as well; both waits apply on a
-	coherency ring only, ie: while `coherency_en_i` is high, as no coherency write is issued otherwise.
-	The take of an atomic memory operation follows those coherency writes on the ring, hence would
-	wait for them as well, but an atomic memory operation on a word which is not to be cached, or
-	hitting a copy marked exclusive, issues none: it resolves in memory, and while it holds the
-	bus lock this data-cache stops accepting ring traffic altogether, hence its effect becomes
-	visible through memory while the writes before it may still be visible only through the ring;
-	the wait is what insures that ordering. Without the wait, the ordinary release shape, ie: plain
-	stores to shared data followed by an atomic memory operation that publishes them, would let the
-	hart which acquires afterwards read its own cache-entry, which those writes had not yet reached.
-	The wait on the count costs about one part in ten thousand of a two-hart run, as the count is
-	non-null only just after a burst of writes to shared cache-entries, and that on a store in
-	TSTHIT a clockcycle at most.
+	its hart already made: dcache.sv holds off the first access of a load-reserved, or of an atomic
+	memory operation's read, until every coherency write this data-cache put on the ring has travelled
+	it and come back. `coherency_write_pending` counts those still in flight, and `m_wb_bsy_o` keeps
+	the hart busy for as long as it is non-null. The acknowledgement that decrements it is the request
+	arriving back at the data-cache that issued it, which is after every other one has seen it, hence a
+	null count means applied everywhere rather than merely sent. A store is counted only from the
+	clockedge which ends its test of the cache (TSTHIT), hence `m_wb_bsy_o` holds the access off while
+	a store is in TSTHIT as well; both waits apply on a coherency ring only, ie: while `coherency_en_i`
+	is high, as no coherency write is issued otherwise. With `ATOMIC_COHERENCE` non-null, the take of
+	an atomic memory operation follows those coherency writes on the ring, hence would wait for them as
+	well, but an atomic memory operation on a word which is not to be cached, or hitting a copy marked
+	exclusive, issues none, nor does any with it null: such an atomic memory operation resolves in
+	memory, and while it holds the bus lock this data-cache stops accepting ring traffic altogether,
+	hence its effect becomes visible through memory while the writes before it may still be visible
+	only through the ring; the wait is what insures that ordering. Without the wait, the ordinary
+	release shape, ie: plain stores to shared data followed by an atomic memory operation that
+	publishes them, would let the hart which acquires afterwards read its own cache-entry, which those
+	writes had not yet reached. The wait on the count costs about one part in ten thousand of a
+	two-hart run, as the count is non-null only just after a burst of writes to shared cache-entries,
+	and that on a store in TSTHIT a clockcycle at most.
+	Whatever `ATOMIC_COHERENCE`, a miss replacing a dirty word of the data-cache writes it back only
+	once the coherency writes of its hart which may be for that word have come back around, ie: those
+	to a cache set whose low bits are the same, which a stream of stores replacing dirty words waits
+	for only when it comes back to such a cache set while its coherency writes kept travelling: memory
+	would otherwise get bytes which such a coherency write is yet to carry to the copies made since,
+	and two harts writing a word in turn could leave memory holding the older value.
 	A fence whose predecessor set holds W and whose successor set holds R, such as fence rw,rw, waits
 	likewise for every coherency write that its hart put on the ring to have come back, through the
-	data-cache's `coherency_pending_o`: the ring keeps the order of the requests of a data-cache,
-	which orders a store before a later store, but a load answered from a data-cache-entry can be
-	made before a store of the same hart has reached the other data-caches, hence two harts each
-	storing, fencing, then loading the word of the other could both read the old values, which fence
-	rw,rw forbids and the smp_mb() of Linux relies on. fence.tso, which does not order a store before
-	a later load, and the fences of acquire and release do not wait. The wait lasts a round trip of
-	the ring at most.
+	data-cache's `coherency_pending_o`: the ring keeps the order of the requests of a data-cache, which
+	orders a store before a later store, but a load answered from a data-cache-entry can be made before
+	a store of the same hart has reached the other data-caches, hence two harts each storing, fencing,
+	then loading the word of the other could both read the old values, which fence rw,rw forbids and
+	the smp_mb() of Linux relies on. fence.tso, which does not order a store before a later load, and
+	the fences of acquire and release do not wait. The wait lasts a round trip of the ring at most.
 	A coherency write occupies a place on the ring from the clockcycle it is issued until it comes
 	back, so the count can never exceed what the ring holds, and `coherency_write_pending` is sized
-	from that rather than from the hart count: this data-cache's own coherency output register and
-	its skidbuf, plus, for each of the others, its request capture registers, its coherency output
-	register and its skidbuf. That width matters more than it looks, as the count is tested for
-	non-null by `m_wb_bsy_o` for the wait above; by `coherency_pending_o` for that of the fence; by the
-	dirty state that a coherency write of another data-cache leaves in a copy (`cache_drt_i`), which
-	one writing the whole word makes clean only while no coherency write of this data-cache travels;
-	and by the test of the coherency writes which may be for a word (`coherency_write_bkt_hit`), on
-	which the write-back of a dirty word is held and a take is marked. A count too large for its width
-	does not lose precision, it reads null, which removes both waits entirely, makes clean a copy that
-	is to stay dirty, and writes a dirty word back, or lets a take go by unmarked, while a coherency
-	write which may be for that word travels, and nothing an application prints would show any of that.
-	A simulation-only monitor at the end of `dCacheSub`, compiled in when `SIMULATION_MONITOR` is
-	defined, reports it instead, along with the count exceeding the ring capacity that the width is
-	derived from.
+	from that rather than from the hart count: this data-cache's own coherency output register and its
+	skidbuf, plus, for each of the others, its request capture registers, its coherency output register
+	and its skidbuf. That width matters more than it looks, as the count is tested for non-null by
+	`m_wb_bsy_o` for the wait above; by `coherency_pending_o` for that of the fence; by the dirty state
+	that a coherency write of another data-cache leaves in a copy (`cache_drt_i`), which one writing
+	the whole word makes clean only while no coherency write of this data-cache travels; and by the
+	test of the coherency writes which may be for a word (`coherency_write_bkt_hit`), on which the
+	write-back of a dirty word is held and, with `ATOMIC_COHERENCE` non-null, a take is marked. A count
+	too large for its width does not lose precision, it reads null, which removes both waits entirely,
+	makes clean a copy that is to stay dirty, and writes a dirty word back, or lets a take go by
+	unmarked, while a coherency write which may be for that word travels, and nothing an application
+	prints would show any of that. A simulation-only monitor at the end of `dCacheSub`, compiled in
+	when `SIMULATION_MONITOR` is defined, reports it instead, along with the count exceeding the ring
+	capacity that the width is derived from.
 - A data-cache stalled on an access the bus has not accepted stops the coherency ring, and that is a
 	way for one hart to stop the others which has nothing to do with arbitration. dcache.sv holds
 	`coherency_bsy_o_` for as long as the data-cache is outside READY and TSTHIT, so a data-cache
@@ -240,40 +255,56 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	on a clockcycle the granted hart was requesting, and an accepted access implies a requesting
 	hart; the quantum term does fire then, hence the guard.
 - A load-reserved, and the read phase of an atomic memory operation, raise the Wishbone bus lock,
-	which lib/wb_arbiter.sv turns into a grant hold: while it is set the granted hart cannot change
-	and every other hart is held busy, which reaches instruction fetching through memctrl.pu.sv,
-	hence a hart that is not granted executes nothing at all. It is released by the lock owner's
-	next accepted access that does not carry it, ie: the store-conditional's store, or the atomic
-	memory operation's write-back. Instruction fetches interleaved inside that window carry the
-	lock, so that they hold it rather than release it; every other access the hart can make inside
-	that window either carries it too, the data-cache's own write-back and refill, or is suppressed
-	for the duration, the cache-coherency path.
-	A store-conditional is allowed to issue no store at all: branched over, which is what gcc emits
-	for a compare-and-swap whose compare fails, its reservation cancelled, or with no
-	store-conditional after the load-reserved. As its success is decided at decode
-	(`_amoUnit_lrValid`), the lock has to be held for as long as the reservation lasts, and it is
-	the reservation which is ended. On a coherency ring, while the access last presented by a hart
-	is a load-reserved, its next load, store or atomic waits, and the hart releases the lock first
-	with a read of the reserved word selecting no byte, which cancels the reservation; it does so as
-	well as soon as the reservation is cancelled by anything but a memory access, ie: a fetch
-	redirect (a mispredicted branch, a jump, a trap), a fence, a system instruction or a
-	store-conditional to another address, which issues no store. Every access but the
-	store-conditional's store thus comes after the release, and takes part in the cache-coherency
-	protocol. As a branch or a return predicted right is no redirect, a jalr, a backward jal and a
-	backward branch predicted taken cancel a reservation as well on a coherency ring, none of which a
-	constrained LR/SC loop takes between its load-reserved and its store-conditional: a loop which
-	follows a load-reserved whose store-conditional does not come thus releases the lock at its
-	first iteration, a return does at once, and a store-conditional reached through such a jump
-	fails. Hence a retry loop holding a load-reserved and no other data access, ie:
-	`1: lr.w t0,(a0); bnez t0,1b`, releases the bus and the ring between its load-reserveds, and
-	stops neither the other harts nor their loads of that word. A stretch of instructions making no
-	memory access, taking no jump backward and no jalr, after an abandoned load-reserved, still holds
-	the lock until its end, and the holder then stops the other harts rather than merely running
-	ahead of them. A load-reserved of a device register is to be followed by its store-conditional:
-	the read which releases it reaches the device, which does not tell it apart from a read, a device
-	ignoring the byte select; and a trap may come between the two. Without a ring, the access which
-	follows a locked one is forced to miss the data-cache, so that it reaches the bus and releases the
-	lock, the data-cache being alone.
+	which lib/wb_arbiter.sv turns into a grant hold: while it is set the granted hart cannot change and
+	every other hart is held busy, which reaches instruction fetching through memctrl.pu.sv, hence a
+	hart that is not granted executes nothing at all. It is released by the lock owner's next accepted
+	access that does not carry it, ie: the store-conditional's store, or the atomic memory operation's
+	write-back. Instruction fetches interleaved inside that window carry the lock, so that they hold it
+	rather than release it; every other access the hart can make inside that window either carries it
+	too, the data-cache's own write-back and refill, or is suppressed for the duration, the
+	cache-coherency path.
+	A store-conditional is allowed to issue no store at all: branched over, which is what gcc emits for
+	a compare-and-swap whose compare fails, its reservation cancelled, or with no store-conditional
+	after the load-reserved.
+	With `ATOMIC_COHERENCE` null, nothing bounds when the releasing access comes: such an abandoned
+	sequence holds the bus until that hart's next load, store or atomic. That access is forced to miss
+	the data-cache as well, so that it reaches the bus and releases the lock whether or not it hits: a
+	load's data-cache-hit is invalidated, and written back first when dirty, and a store is made in
+	memory, the bytes that it writes being invalidated in its data-cache. Being forced to miss, that
+	access does not take part in the cache-coherency protocol: a store leaves stale the copies that the
+	other harts' data-caches hold of the bytes it writes, which its own data-cache then reads back on
+	its next load of them, and a load can return data from memory older than a dirty copy that another
+	hart's data-cache holds. That access is therefore to be an atomic one, or one to data that no other
+	hart may cache, ie: the path of a failed compare-and-swap is to make one before touching shared
+	data. A retry loop holding a load-reserved and no other data access, ie:
+	`1: lr.w t0,(a0); bnez t0,1b`, issues none and starves the other harts for as long as it spins; use
+	instead the compare-and-swap shape, whose store-conditional is inside the loop. Note that the
+	starvation is not observed to be one-sided: the holder stops making progress as well rather than
+	running on, so a lock left held wedges the whole machine rather than merely losing a hart. A
+	store-conditional's success being decided at decode (`_amoUnit_lrValid`), breaking the lock early
+	would let one report success after another hart had interposed.
+	With `ATOMIC_COHERENCE` non-null, the lock is held for as long as the reservation lasts, and it is
+	the reservation which is ended: on a coherency ring, while the access last presented by a hart is a
+	load-reserved, its next load, store or atomic waits, and the hart releases the lock first with a
+	read of the reserved word selecting no byte, which cancels the reservation; it does so as well as
+	soon as the reservation is cancelled by anything but a memory access, ie: a fetch redirect (a
+	mispredicted branch, a jump, a trap), a fence, a system instruction or a store-conditional to
+	another address, which issues no store. Every access but the store-conditional's store thus comes
+	after the release, and takes part in the cache-coherency protocol. As a branch or a return
+	predicted right is no redirect, a jalr, a backward jal and a backward branch predicted taken cancel
+	a reservation as well on a coherency ring, none of which a constrained LR/SC loop takes between its
+	load-reserved and its store-conditional: a loop which follows a load-reserved whose
+	store-conditional does not come thus releases the lock at its first iteration, a return does at
+	once, and a store-conditional reached through such a jump fails. Hence a retry loop holding a
+	load-reserved and no other data access, ie: `1: lr.w t0,(a0); bnez t0,1b`, releases the bus and the
+	ring between its load-reserveds, and stops neither the other harts nor their loads of that word. A
+	stretch of instructions making no memory access, taking no jump backward and no jalr, after an
+	abandoned load-reserved, still holds the lock until its end, and the holder then stops the other
+	harts rather than merely running ahead of them. A load-reserved of a device register is to be
+	followed by its store-conditional: the read which releases it reaches the device, which does not
+	tell it apart from a read, a device ignoring the byte select; and a trap may come between the two.
+	Without a ring, the access which follows a locked one is forced to miss the data-cache, so that it
+	reaches the bus and releases the lock, the data-cache being alone.
 - The alternate link register x5/t0 is not supported by the return-address stack, which recognizes only
 	x1/ra: a call is JAL or JALR with rd x1, a return is JALR with rd x0 and rs1 x1, hence the
 	return-address-stack hints that the RISC-V spec defines for x5 are not implemented. That is a
