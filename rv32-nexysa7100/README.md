@@ -778,6 +778,9 @@ editing the file:
 `ifndef CPU_COUNT
 `define CPU_COUNT 1
 `endif
+`ifndef ATOMIC_COHERENCE
+`define ATOMIC_COHERENCE 0
+`endif
 `ifndef XWORDBITSZ
 `define XWORDBITSZ 32
 `endif
@@ -792,6 +795,10 @@ editing the file:
 `SRAM_INITFILE` is resolved by `$readmemh` relative to the synthesis run directory
 (`vivado/nexysa7100.runs/synth_1/`), which is why the default climbs four levels
 to reach the repository root.
+
+`ATOMIC_COHERENCE`, when non-null, makes the atomics of the harts take part in their
+cache coherency, which matters only with `CPU_COUNT` above 1, and which SMP Linux
+needs: see the atomics notes of [cpu/README.md](../cpu/README.md).
 
 The default image is CoreMark. Any application under [`rv32-sim/apps/`](../rv32-sim/apps)
 — `helloworld`, `donut`, `tinyraytracer`, … — can be dropped in by
@@ -985,10 +992,12 @@ formats the data which `apps/bootldr` loads.
 - **The fault interrupt is imprecise**, and a speculative instruction fetch can
   raise it without any instruction at that address ever executing (see
   [Interrupts](#delivery)).
-- **Atomics bypass the D-cache** and do not participate in cache coherency. A
-  variable manipulated atomically must be accessed *only* through atomic
-  instructions, and must be initialised atomically if it lives in runtime-allocated
-  memory. Statically allocated variables start zeroed and are safe.
+- **Atomics bypass the D-cache** and do not participate in cache coherency, as
+  `ATOMIC_COHERENCE` is null by default. A variable manipulated atomically must be
+  accessed *only* through atomic instructions, and must be initialised atomically if
+  it lives in runtime-allocated memory. Statically allocated variables start zeroed
+  and are safe. Built with more than one hart, `ATOMIC_COHERENCE` non-null lifts
+  those rules, as SMP Linux requires.
 - **Do not build the toolchain with `-msave-restore`.** The millicode it calls enters
   through a `JALR` writing `x5` and returns through a `JALR` reading `x5`; the return
   address stack only recognises `x1`, so neither is predicted.
