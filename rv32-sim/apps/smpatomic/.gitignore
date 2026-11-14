@@ -1,0 +1,7 @@
+*.bin
+*.elf
+*.he[_x]
+*.o
+*.su
+*.objdump
+*.readelf
