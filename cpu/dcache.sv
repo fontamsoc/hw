@@ -209,6 +209,12 @@
 // 	memory; the take of a locked read, which follows those write requests on
 // 	the ring, would wait for them as well, but a locked read of a word that
 // 	is not to be cached issues none.
+// - The ring keeps the order of the requests that a data-cache issues, hence
+// 	every other data-cache sees a write before a later write of the same
+// 	data-cache; but a read of another word, answered meanwhile from a
+// 	cache-entry, can be made before a write of the same data-cache is seen
+// 	everywhere, which coherency_pending_o tells, and which a fence ordering
+// 	stores before loads waits for.
 // - Note that writes to the same word from different data-caches, whose write
 // 	requests cross on the ring, are not ordered: each data-cache applies the
 // 	write of the other after its own, hence each cache-entry ends up holding
@@ -379,6 +385,12 @@
 // 	Coherency requests to the next data-cache of the ring, with the same
 // 	meaning, presented through a skidbuf of (1<<PUIDBITSZ) requests.
 //
+// coherency_pending_o
+// 	High while a write request that the data-cache issued has not come back
+// 	around, ie: while a write made through the data-cache may not yet be
+// 	seen by every data-cache of the ring; cpu/dcache.pu.sv holds a fence
+// 	ordering stores before loads until it is low.
+//
 // Module dCacheSub, which dCache wraps, has the same parameters, except
 // REGMSTOUTPUT and REGSLVINPUT, and the same ports, its coherency_*_o being
 // those that dCache presents through the skidbuf, plus coherency_near_bsy_i,
@@ -437,6 +449,8 @@ module dCacheSub (
 	,coherency_shr_o
 	,coherency_bsy_i
 	,coherency_near_bsy_i
+
+	,coherency_pending_o
 );
 
 `include "lib/clog2.sv"
@@ -510,6 +524,8 @@ output reg  [WORDBITSZ -1 : 0]            coherency_dat_o;
 output reg                                coherency_shr_o;
 input  wire                               coherency_bsy_i;
 input  wire                               coherency_near_bsy_i;
+
+output wire                               coherency_pending_o;
 
 wire _m_wb_stb_i = (m_wb_stb_i && !m_wb_bsy_o);
 
@@ -933,6 +949,10 @@ wire coherency_write_req = (state == TSTHIT && m_wb_we_r && !coherency_r && !def
 // A take is not counted: while it travels (tko_r), it is the only write request of this data-cache which can
 // come back, every other one having come back before its locked read was accepted.
 wire coherency_write_ack = (_coherency_stb_i && coherency_rqid_i == PUID && coherency_we_i && !tko_r);
+
+// A store is counted on the clockedge ending its TSTHIT, which is the earliest that its master counts its
+// acknowledgement, hence the master sees no clockcycle between the two.
+assign coherency_pending_o = (|coherency_write_pending);
 
 always_ff @(posedge clk_i) begin
 	if (rst_i || !coherency_en_i)
@@ -1518,6 +1538,8 @@ module dCache (
 	,coherency_dat_o
 	,coherency_shr_o
 	,coherency_bsy_i
+
+	,coherency_pending_o
 );
 
 `include "lib/clog2.sv"
@@ -1588,6 +1610,8 @@ output wire [(WORDBITSZ/8) -1 : 0]        coherency_sel_o;
 output wire [WORDBITSZ -1 : 0]            coherency_dat_o;
 output reg                                coherency_shr_o;
 input  wire                               coherency_bsy_i;
+
+output wire                               coherency_pending_o;
 
 wire                               coherency_stb_o_;
 wire [PUIDBITSZ -1 : 0]            coherency_rqid_o_;
@@ -1703,6 +1727,8 @@ dCacheSub #(
 	,.coherency_shr_o  (coherency_shr_o_)
 	,.coherency_bsy_i  (coherency_bsy_i_)
 	,.coherency_near_bsy_i (coherency_near_bsy_i)
+
+	,.coherency_pending_o (coherency_pending_o)
 );
 
 endmodule

@@ -684,6 +684,9 @@ wire iF_isMiscMem = (iF_insn[6:2] == 5'b00011);
 wire iF_isFence         = (iF_isMiscMem && iF_func3 == 3'b000);
 wire iF_isFencei        = (iF_isMiscMem && iF_func3 == 3'b001);
 wire iF_isFenceOrFencei = (iF_isMiscMem && iF_func3[2:1] == 2'b00);
+// A fence ordering stores before loads, ie: whose predecessor set holds W and whose successor set holds R,
+// such as fence rw,rw, but not fence.tso, which does not order them.
+wire iF_isFenceWR       = (iF_isFence && iF_insn[24] && iF_insn[21] && iF_insn[31:28] != 4'b1000);
 
 wire iF_isALUregOrBranch = (iF_isALUreg || iF_isBranch);
 wire iF_isJAlOrJALR = (iF_isJAL || iF_isJALR);
@@ -1026,6 +1029,7 @@ reg iD_isZbc; // single-cycle EX clmul select.
 reg iD_isFence;
 reg iD_isFencei;
 reg iD_isFenceOrFencei;
+reg iD_isFenceWR; // dcache.pu.sv makes such a fence wait for the coherency ring as well, through dCache_m_pending.
 
 reg iD_isALUregOrBranch;
 reg iD_isJAlOrJALR;
@@ -1340,6 +1344,7 @@ always_ff @(posedge clk_i) begin
 		iD_isFence         <= iF_isFence;
 		iD_isFencei        <= iF_isFencei;
 		iD_isFenceOrFencei <= iF_isFenceOrFencei;
+		iD_isFenceWR       <= iF_isFenceWR;
 
 		iD_isALUregOrBranch <= iF_isALUregOrBranch;
 		iD_isJAlOrJALR <= iF_isJAlOrJALR;

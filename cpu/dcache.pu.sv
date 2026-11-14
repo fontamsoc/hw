@@ -14,6 +14,7 @@ wire                               dCache_m_ack_o;
 wire [WORDBITSZ -1 : 0]            dCache_m_dat_o;
 wire                               dCache_m_bsy_i; // Response back-pressure: hold a completed load until it can retire.
 wire                               dCache_m_ack_avail_o; // Un-gated 'response available' (high even while held by dCache_m_bsy_i).
+wire                               dCache_coherency_pending; // A write made through the data-cache may not be seen by every data-cache yet.
 
 wire                                 dCache_s_stb_o;
 wire                                 dCache_s_lock_o;
@@ -285,6 +286,8 @@ dCache #(
 	,.coherency_dat_o  (dcache_coherency_dat_o)
 	,.coherency_shr_o  (dcache_coherency_shr_o)
 	,.coherency_bsy_i  (dcache_coherency_bsy_i)
+
+	,.coherency_pending_o (dCache_coherency_pending)
 );
 
 end else begin
@@ -312,6 +315,8 @@ assign dcache_coherency_addr_o = {(XADDRBITSZ-XMSBSZIGN){1'b0}};
 assign dcache_coherency_sel_o = {(XWORDBITSZ/8){1'b0}};
 assign dcache_coherency_dat_o = {XWORDBITSZ{1'b0}};
 assign dcache_coherency_shr_o = 1'b0;
+
+assign dCache_coherency_pending = 1'b0;
 
 end endgenerate
 
@@ -350,7 +355,12 @@ always_ff @(posedge clk_i) begin
 		dCache_m_resp_cnt <= dCache_m_resp_cnt + 1'b1;
 end
 
-assign dCache_m_pending = ((|dCache_m_pending_acks) || dCache_m_bsy_r);
+// A fence ordering stores before loads (iD_isFenceWR) waits as well for the write requests that the
+// data-cache put on the coherency ring to have come back around: a store is acknowledged once made in the
+// data-cache, and the ring keeps the order of the writes of a data-cache, but a later load answered from a
+// cache-entry could otherwise be made before such a store is seen by the other data-caches, which
+// fence rw,rw forbids, and which smp_mb() relies on.
+assign dCache_m_pending = ((|dCache_m_pending_acks) || dCache_m_bsy_r || (iD_isFenceWR && dCache_coherency_pending));
 
 reg amoUnit_lrValid;
 
