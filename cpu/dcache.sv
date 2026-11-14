@@ -131,15 +131,20 @@
 // 	when a request of its own comes back having found no other copy: a
 // 	write, or a read refilled from memory, including a read of a cache-entry
 // 	holding only some of the selected bytes.
-// - A write request from another data-cache updates the cache-entry whose
-// 	cache-tag matches, the bytes it writes becoming valid in it, without
-// 	changing its dirty state, so that a write request never makes another
-// 	copy dirty; the cache-entry is made clean instead when the write request
-// 	writes every byte of the word, all of which the store that issued it
-// 	made dirty in its own data-cache, unless a write request that the
-// 	data-cache issued has not come back around: the two may be for the same
-// 	word and crossing on the ring, and each data-cache would then make the
-// 	copy of the other clean, leaving the word dirty in neither.
+// - A write request from another data-cache updates, in the cache-entry whose
+// 	cache-tag matches, the bytes that it holds, and makes none valid: the
+// 	cache-entry of the data-cache which issued it may have been marked
+// 	exclusive since, when an earlier write request came back around, its
+// 	stores then issuing no write request, hence a byte that a write request
+// 	still travelling made valid in a copy allocated meanwhile would hold a
+// 	value that nothing corrects. It does not change the dirty state of the
+// 	cache-entry, so that a write request never makes another copy dirty; the
+// 	cache-entry is made clean instead when the write request writes every
+// 	byte of the word, all of which the store that issued it made dirty in
+// 	its own data-cache, unless a write request that the data-cache issued
+// 	has not come back around: the two may be for the same word and crossing
+// 	on the ring, and each data-cache would then make the copy of the other
+// 	clean, leaving the word dirty in neither.
 // - A coherency request from another data-cache never allocates, writes back
 // 	nor refills a cache-entry; it only reads, or updates, a cache-entry
 // 	whose cache-tag matches.
@@ -591,7 +596,11 @@ wire [WORDBITSZ -1 : 0] cache_dat_o_tag_hit = cache_dat_o[cache_tag_hit_wayidx];
 
 wire cache_shr_o_tag_hit = cache_shr_o[cache_tag_hit_wayidx];
 
-wire [(WORDBITSZ/8) -1 : 0] cache_sel_i_ = (cache_tag_hit ? (m_wb_sel_r | cache_sel_o_tag_hit) : m_wb_sel_r);
+// A write request from another data-cache updates the bytes that the cache-entry holds, and makes none valid:
+// the cache-entry of the data-cache which issued it may have been marked exclusive since, its stores then
+// issuing no write request, hence a byte made valid here would never see them.
+wire [(WORDBITSZ/8) -1 : 0] cache_sel_i_ = (cache_tag_hit ?
+	((m_wb_sel_r & {(WORDBITSZ/8){!(coherency_en_i && coherency_r && m_wb_rqid_r != PUID)}}) | cache_sel_o_tag_hit) : m_wb_sel_r);
 wire [(WORDBITSZ/8) -1 : 0] cache_sel_i = (
 	(state == TSTHIT) ? (cache_sel_i_ & (cmiss_r ? ~m_wb_sel_r : {(WORDBITSZ/8){1'b1}})) :
 	(state == REFILL) ? ((cache_tag_hit ? cache_sel_o_tag_hit : {(WORDBITSZ/8){1'b0}}) | s_wb_sel_o) : {(WORDBITSZ/8){1'b0}});
