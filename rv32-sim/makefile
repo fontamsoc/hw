@@ -5,6 +5,7 @@ BUILD_LOG_FILE ?= build.log
 
 CLKFREQ ?= 100000000
 CPU_COUNT ?= 1
+ATOMIC_COHERENCE ?= 0
 XWORDBITSZ ?= 32
 SRAM_KBSIZE ?= "(256/*KB*/)"
 SRAM_INITFILE ?= apps/helloworld/helloworld.${XWORDBITSZ}.hex
@@ -33,6 +34,7 @@ obj_dir/Vsim: sim.sv ${TB}.cpp
 		--relative-includes -I.. -Wno-lint \
 		-DCLKFREQ=${CLKFREQ} \
 		-DCPU_COUNT=${CPU_COUNT} \
+		-DATOMIC_COHERENCE=${ATOMIC_COHERENCE} \
 		-DXWORDBITSZ=${XWORDBITSZ} \
 		-DSRAM_INITFILE='"${SRAM_INITFILE}"' \
 		-DSRAM_KBSIZE=${SRAM_KBSIZE} \

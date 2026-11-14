@@ -7,6 +7,9 @@
 `ifndef CPU_COUNT
 `define CPU_COUNT 1
 `endif
+`ifndef ATOMIC_COHERENCE
+`define ATOMIC_COHERENCE 0
+`endif
 `ifndef XWORDBITSZ
 `define XWORDBITSZ 32
 `endif
@@ -82,6 +85,7 @@ end
 wire rst_w = (rst_i | (|softrst_cntr));
 
 localparam CPU_COUNT = `CPU_COUNT;
+localparam ATOMIC_COHERENCE = `ATOMIC_COHERENCE;
 
 localparam M_WBPI_CPU     = 0;
 localparam M_WBPI_LAST    = M_WBPI_CPU;
@@ -168,6 +172,7 @@ ccx #(
 	,.IDIVCNT       (2)
 	,.MAXPENDINGACK (WBPI_MAXPENDINGACK)
 	,.PUCNT         (CPU_COUNT)
+	,.ATOMIC_COHERENCE (ATOMIC_COHERENCE)
 ) cpu (
 
 	 .rst_i (wbpi_rst_w)
