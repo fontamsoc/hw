@@ -43,8 +43,9 @@
 // 	allocated in a cache set is the next one replaced there, whereas one
 // 	that a write or a refill has just hit is not.
 // A dirty cache-entry reaches memory only when it gets replaced, or, for the
-// bytes that it selects, when a read forced to miss hits it; the data-cache
-// cannot be flushed as a whole.
+// bytes that it selects, when a read forced to miss hits it, or when a take
+// from another data-cache takes it, as described under Cache coherency; the
+// data-cache cannot be flushed as a whole.
 
 // Cache coherency:
 //
@@ -56,26 +57,52 @@
 // 	back around to the data-cache which issued it.
 // - Coherency traffic is generated only while coherency_en_i is high, and only
 // 	by accesses that are not forced to miss; one forced to miss, by cmiss_i,
-// 	by the bus lock, or because it follows a locked access, generates none.
-// - An access forced to miss thus neither sees nor updates the copies held by
-// 	the other data-caches: a write forced to miss, ie: that of a
-// 	store-conditional or of an atomic memory operation, leaves stale their
-// 	copies of the bytes it writes; and a read forced to miss, ie: a
-// 	load-reserved or the read of an atomic memory operation, can return data
-// 	from memory older than a dirty copy held by another data-cache. A write
-// 	forced to miss also invalidates the bytes that it writes in its own
-// 	data-cache, hence a later read of those bytes there misses, and gathers
-// 	the stale copies of the other data-caches when they hold any, ie:
-// 	returns the value from before that write. A word accessed through atomic
-// 	memory operations is therefore not to be accessed otherwise, as
-// 	cpu/README.md requires.
+// 	by the bus lock, or because it follows a locked access, generates none,
+// 	but for the take which a locked read issues.
+// - An atomic memory operation, ie: a locked read, the read of a
+// 	load-reserved or of an atomic memory operation, and the write which
+// 	follows it, that of the store-conditional or of the atomic memory
+// 	operation, takes its word from the ring before it reads it: the locked
+// 	read issues a take, a request which removes the word from every other
+// 	data-cache, a dirty copy being first written back to memory, and is
+// 	made, from memory under the bus lock as described for cmiss_i, only
+// 	once the take has come back around. The ring is held off from then
+// 	until the access which follows the locked read, ie: the write, which is
+// 	made in memory, releasing the lock, its bytes being invalidated in the
+// 	data-cache. Hence the read sees the stores made before it in every
+// 	data-cache, no copy is left which the write would leave stale, and a
+// 	store made meanwhile in another data-cache, its write request being held
+// 	off, comes after the write. A locked read of a word which is not to be
+// 	cached issues no take, no data-cache holding that word.
+// - A data-cache lets the take go by marked, with its copy left as it is,
+// 	while a request of its own which may be for that word has not come back
+// 	around: a write request, ie: it holds the word dirty while one which
+// 	may be for it travels, or while a store waits for its own (as described
+// 	below for a dirty cache-entry), as writing the word back would put in
+// 	memory bytes that such a write request is yet to carry to the copies
+// 	made since; or its read request for that word, which may have gathered
+// 	bytes that the take is yet to remove, and which is completed with the
+// 	bytes that the cache-entry holds. The data-cache which issued the take
+// 	issues it again. A data-cache which a take goes through marked, by
+// 	itself or by one before it, accepts no access from its master until a
+// 	take of the same data-cache comes by unmarked, but the access which
+// 	follows a locked read of its own, which issues no request; it keeps
+// 	that hold for each data-cache of the ring, so that the take of another
+// 	one does not end it early. Its requests have then come back around when
+// 	the take next comes by, hence a trip of a take can only be marked by a
+// 	data-cache nearer its issuer than on the trip before, and a take is
+// 	issued again fewer times than the ring holds data-caches, whatever the
+// 	other data-caches load or store. No access is accepted either in the
+// 	clockcycle in which a take from another data-cache is tested.
 // - The access which follows a locked one is forced to miss as well, so that it
 // 	reaches the slave interface and releases the lock; while coherency_en_i
 // 	is high, it is therefore to be the write of the atomic memory operation,
 // 	or a read selecting no byte, which releases the lock and changes
 // 	nothing, as cpu/dcache.pu.sv makes it when a load-reserved is abandoned,
 // 	ahead of any other access: an ordinary load or store would neither see
-// 	nor update the copies held by the other data-caches.
+// 	nor update the copies held by the other data-caches. A locked read which
+// 	follows a locked one issues no take, staying under the lock that the
+// 	latter took.
 // - Reading generates a read request only on a cache-miss, ie: when some
 // 	selected byte is not in the cache-entry, and asks for those bytes only.
 // 	The request always comes back around: each other data-cache whose
@@ -133,7 +160,11 @@
 // 	its cache-tag matches a cache-entry marked exclusive. When it comes back
 // 	around, the cache-entry is marked exclusive if no other data-cache
 // 	matched the cache-tag, was waiting on a read of that word, nor had a
-// 	write waiting for its own write request to come back around.
+// 	write waiting for its own write request to come back around. A write
+// 	which selects no byte writes nothing: while coherency_en_i is high, and
+// 	unless it is forced to miss, it is acknowledged and does nothing else,
+// 	ie: it issues no write request, which would read as a take, allocates no
+// 	cache-entry and replaces none.
 // - A read/write request from another data-cache that matches the cache-tag
 // 	marks the cache-entry shared. Hence a cache-entry becomes exclusive only
 // 	when a request of its own comes back having found no other copy: a
@@ -153,28 +184,31 @@
 // 	has not come back around: the two may be for the same word and crossing
 // 	on the ring, and each data-cache would then make the copy of the other
 // 	clean, leaving the word dirty in neither.
-// - A coherency request from another data-cache never allocates, writes back
-// 	nor refills a cache-entry; it only reads, or updates, a cache-entry
-// 	whose cache-tag matches.
+// - A coherency request from another data-cache never allocates nor refills a
+// 	cache-entry, and writes one back only when it is a take; it only reads,
+// 	updates, or, for a take, invalidates, a cache-entry whose cache-tag
+// 	matches.
 // - Coherency requests have priority over the accesses of the master: a
 // 	coherency request is taken ahead of an access presented in the same
 // 	clockcycle; yet no coherency request is taken while the data-cache
 // 	handles an access forced to miss, or a cache-miss in WRITEB or REFILL,
 // 	nor while it holds the bus lock, ie: from an access carrying m_wb_lock_i
-// 	until the access which follows it, the ring being held off meanwhile. As
-// 	a data-cache whose own read request travels the ring is busy until it
-// 	comes back around, every other data-cache of the ring then stalls on its
-// 	next read cache-miss: one held in WRITEB or REFILL by an access that the
-// 	slave interface does not accept, or holding the bus lock after a
-// 	load-reserved until its store-conditional comes, or until
-// 	cpu/dcache.pu.sv releases it, stops every hart of the ring meanwhile, as
-// 	cpu/README.md details.
-// - Atomic memory operations do not travel the ring, being forced to miss;
-// 	hence an access carrying m_wb_lock_i, when the access before it did not,
-// 	is accepted only once every write request that the data-cache issued has
-// 	come back around, including that of a write in TSTHIT, so that the
-// 	writes made before it have reached the other data-caches when it takes
-// 	effect in memory.
+// 	until the access which follows it, the ring being held off meanwhile,
+// 	but while the take of a locked read travels the ring, the data-cache
+// 	then taking coherency requests as it otherwise does. As a data-cache
+// 	whose own read request travels the ring is busy until it comes back
+// 	around, every other data-cache of the ring then stalls on its next read
+// 	cache-miss: one held in WRITEB or REFILL by an access that the slave
+// 	interface does not accept, or holding the bus lock after a load-reserved
+// 	until its store-conditional comes, or until cpu/dcache.pu.sv releases
+// 	it, stops every hart of the ring meanwhile, as cpu/README.md details.
+// - A locked read, when the access before it was not one, is accepted only
+// 	once every write request that the data-cache issued has come back
+// 	around, including that of a write in TSTHIT, so that the writes made
+// 	before it have reached the other data-caches when it takes effect in
+// 	memory; the take of a locked read, which follows those write requests on
+// 	the ring, would wait for them as well, but a locked read of a word that
+// 	is not to be cached issues none.
 // - Note that writes to the same word from different data-caches, whose write
 // 	requests cross on the ring, are not ordered: each data-cache applies the
 // 	write of the other after its own, hence each cache-entry ends up holding
@@ -249,9 +283,10 @@
 // 	access carrying m_wb_lock_i and the access which follows it; cmiss_i is
 // 	to be set high combinationally from m_wb_addr_i for an address which
 // 	must not be cached. An access forced to miss reaches the slave
-// 	interface, and neither sees nor updates the copies held by the other
-// 	data-caches, with the consequences described under Cache coherency. It
-// 	is handled as follow:
+// 	interface; while coherency_en_i is high, a locked read of a word which
+// 	may be cached, when the access before it was not a locked read, first
+// 	takes it from the ring, as described under Cache coherency. It is
+// 	handled as follow:
 // 	- A write is made in memory, the bytes that it writes being invalidated
 // 		in the cache-entry whose cache-tag matches.
 // 	- A read is made in memory, unless it selects only bytes held by a dirty
@@ -260,7 +295,7 @@
 // 		invalidated. When the read is made in memory, the bytes held by
 // 		the cache-entry whose cache-tag matches are merged over the data
 // 		read, unless the read carries m_wb_lock_i and that cache-entry
-// 		is clean, as it may then be behind memory.
+// 		is clean, holding then nothing that memory lacks.
 //
 // m_wb_stb_i
 // m_wb_lock_i
@@ -329,6 +364,9 @@
 // 	- coherency_shr_i is high when a data-cache that the request went
 // 		through matched the cache-tag, or was waiting on a read of that
 // 		word.
+// 	- A write request selecting no byte is a take (cf. Cache coherency),
+// 		coherency_shr_i being then high when a data-cache that it went
+// 		through let it go by marked.
 //
 // coherency_stb_o
 // coherency_rqid_o
@@ -508,6 +546,28 @@ reg defld_r;      // True while a load waits for its read request to come back, 
 reg defldtst_r;   // True in the TSTHIT which evicts that victim, and in the WRITEB which follows, ahead of the REFILL.
 wire evict_defer;
 
+// An atomic memory operation takes its word from the ring before it reads it, cf. Cache coherency.
+// A take is a write request selecting no byte; coherency_shr_* is high when a data-cache let it go by
+// marked, a request of its own which may be for that word not having come back around, cf. tkmark.
+reg tkp_r; // True in the TSTHIT of a locked read which is to issue its take.
+reg tko_r; // True while the take of the locked read travels the ring.
+// A bit per data-cache of the ring, true while the master waits for a take of that data-cache, which went
+// through marked, to come by again, cf. tkmark.
+reg [(1<<PUIDBITSZ) -1 : 0] tkf_r;
+// True when the request accepted last is a take from another data-cache, cf. tktst.
+reg tk_r;
+// The ring is held off from the clockcycle the take comes back until the access after the locked read.
+wire lock_hold = (lock_r && !tko_r);
+// The request in TSTHIT is a take, for the state machine generating coherency requests, which forwards it
+// from WRITEB as well, tk_r being null there.
+wire _m_wb_tk_r = (coherency_r && m_wb_we_r && !(|m_wb_sel_r));
+wire tkinv; // A take from another data-cache invalidates the word in TSTHIT, cf. tkmark.
+// A store selecting no byte writes nothing: on a ring, when it is not forced to miss, it is acknowledged and
+// does nothing else, ie: it neither allocates a cache-entry nor replaces one. It issues no write request,
+// which would read as a take, hence neither its allocation nor the write-back of the cache-entry that it
+// would replace could wait for one to come back, cf. evict_defer.
+wire nullst = (coherency_en_i && !coherency_r && !cmiss_r && m_wb_we_r && !(|m_wb_sel_r));
+
 localparam READY  = 0;
 localparam TSTHIT = 1;
 localparam WRITEB = 2;
@@ -550,7 +610,7 @@ reg [CLOG2COHERENCYWRITEPENDINGMAX -1 : 0] coherency_write_pending;
 wire refill_ack = (s_wb_ack_i && (!MAXPENDINGACK || (!s_wb_stb_o && s_wb_ack_pending == 1)));
 
 wire cache_we = (!(cmiss_r || coherency_r) && (
-	(state == TSTHIT && m_wb_we_r && !evict_defer) ||
+	(state == TSTHIT && m_wb_we_r && !evict_defer && !nullst) ||
 	(state == REFILL && !s_wb_we_o && refill_ack && !coherency_xw_r)));
 
 wire [CACHEWAYCNT -1 : 0] cache_we0;
@@ -560,7 +620,7 @@ wire [CACHEWAYCNT -1 : 0] cache_we2;
 localparam CACHETAGBITSIZE = ((ADDRBITSZ-MSBSZIGN) - CLOG2CACHESETCNT);
 
 // The check `(coherency_rqid_i != PUID || coherency_we_i)` is used for the same reason it is used to set __coherency_stb_i.
-wire [CLOG2CACHESETCNT -1 : 0] cache_rdidx = ((coherency_stb_i && (coherency_rqid_i != PUID || coherency_we_i) && !lock_r) || coherency_stb_r) ?
+wire [CLOG2CACHESETCNT -1 : 0] cache_rdidx = ((coherency_stb_i && (coherency_rqid_i != PUID || coherency_we_i) && !lock_hold) || coherency_stb_r) ?
 	coherency_addr_i[0 +: CLOG2CACHESETCNT] : m_wb_addr_i[0 +: CLOG2CACHESETCNT];
 wire [CLOG2CACHESETCNT -1 : 0] cache_wridx = m_wb_addr_r[0 +: CLOG2CACHESETCNT];
 
@@ -613,16 +673,16 @@ wire cache_shr_o_tag_hit = cache_shr_o[cache_tag_hit_wayidx];
 wire [(WORDBITSZ/8) -1 : 0] cache_sel_i_ = (cache_tag_hit ?
 	((m_wb_sel_r & {(WORDBITSZ/8){!(coherency_en_i && coherency_r && m_wb_rqid_r != PUID)}}) | cache_sel_o_tag_hit) : m_wb_sel_r);
 wire [(WORDBITSZ/8) -1 : 0] cache_sel_i = (
-	(state == TSTHIT) ? (cache_sel_i_ & (cmiss_r ? ~m_wb_sel_r : {(WORDBITSZ/8){1'b1}})) :
+	(state == TSTHIT) ? (cache_sel_i_ & ((cmiss_r || tkinv) ? ~(m_wb_sel_r | {(WORDBITSZ/8){tkinv}}) : {(WORDBITSZ/8){1'b1}})) :
 	(state == REFILL) ? ((cache_tag_hit ? cache_sel_o_tag_hit : {(WORDBITSZ/8){1'b0}}) | s_wb_sel_o) : {(WORDBITSZ/8){1'b0}});
 
 // Whether the bytes held by a cache-tag-hit are merged over the data from memory at (state == REFILL).
 // They are, but for an access carrying the bus lock, ie: a load-reserved or the read of an atomic
-// memory operation, which hits a clean entry: it may be behind memory, as an atomic memory operation
-// from another hart, which the cache-coherency logic does not carry, may have updated memory since the
-// entry was filled, whereas a dirty entry holds stores this hart made since. The access following a
-// locked one is forced to miss as well, so that it reaches the bus and releases the lock, but it is not
-// atomic, and the entry it hits, ahead of memory when filled from another data-cache, is what a hit returns.
+// memory operation, which hits a clean entry: it holds nothing that memory lacks, the take of the locked
+// read having removed the word from every other data-cache, or the word being out of a ring, whereas a
+// dirty entry holds stores this hart made since. The access following a locked one is forced to miss as
+// well, so that it reaches the bus and releases the lock, but it is not atomic, and the entry it hits,
+// ahead of memory when filled from another data-cache, is what a hit returns.
 wire _cache_tag_hit = (cache_tag_hit && (!cmiss_r || !m_wb_lock_r || cache_drt_o[cache_tag_hit_wayidx]));
 
 wire [WORDBITSZ -1 : 0] _m_wb_sel_r;
@@ -637,7 +697,7 @@ wire [WORDBITSZ -1 : 0] _s_wb_dat_i = ((m_wb_dat_r & _m_wb_sel_r & ((coherency_e
 wire [WORDBITSZ -1 : 0] cache_dat_i_ = ((m_wb_dat_r & _m_wb_sel_r) | (cache_tag_hit ? (cache_dat_o_tag_hit & _m_wb_sel_r_n) : {WORDBITSZ{1'b0}}));
 wire [WORDBITSZ -1 : 0] cache_dat_i = ((state == TSTHIT) ? cache_dat_i_ : _s_wb_dat_i);
 
-wire cache_drt_i = (coherency_r ?
+wire cache_drt_i = (tkinv ? 1'b0 : coherency_r ?
 	// A write request from another data-cache which writes every byte makes the cache-entry clean, as the
 	// store which issued it made them all dirty in its own data-cache; but not while a write request of
 	// this data-cache has not come back around: the two may be for the same word and crossing, and each
@@ -688,7 +748,7 @@ assign cache_we1[gen_cache_idx] = (gen_cache_idx == cache_we_wayidx && (cache_we
 		(state == TSTHIT && (cache_tag_hit_[gen_cache_idx] || (__coherency_stb_r_r && !coherency_xw_r)) && coherency_r)));
 assign cache_we2[gen_cache_idx] = (rst_r || (gen_cache_idx == cache_we_wayidx && (cache_we ||
 		(state == TSTHIT && ((cache_tag_hit_[gen_cache_idx] && (cmiss_r ||  m_wb_rqid_r != PUID)) || (__coherency_stb_r_r && !coherency_xw_r)) &&
-			((cmiss_r && (cache_hit || m_wb_we_r)) || (coherency_r && m_wb_we_r))))));
+			((cmiss_r && !tkp_r && (cache_hit || m_wb_we_r)) || (coherency_r && m_wb_we_r))))));
 
 always_ff @(posedge clk_i) begin
 	if (cache_we0[gen_cache_idx]) begin
@@ -729,32 +789,57 @@ wire cache_writeb = (cache_drt_o_we_wayidx && !cache_tag_hit);
 // ring being FIFO, hence the count null then.
 // Which words a write request of this data-cache travelling the ring may be for, told by the low bits of
 // their cache set: a bit is set when a write request is issued for a word of that bucket, and all are
-// cleared once none travels. The victim of a miss shares the cache set of the access, hence the bit of the
-// access is high whenever such a write request is for that victim; a miss replacing a dirty victim thus
-// waits only when the bit of its bucket is high, instead of for every write request of this data-cache,
-// which a stream of stores would otherwise do at every store.
+// cleared once none travels. The victim of a miss shares the cache set of the access, and a take is for the
+// word itself, hence the bit of the access is high whenever such a write request is for that victim, or for
+// that word; a miss replacing a dirty victim thus waits only when the bit of its bucket is high, instead of
+// for every write request of this data-cache, which a stream of stores would otherwise do at every store.
 localparam CLOG2COHERENCYWRITEBKTCNT = ((CLOG2CACHESETCNT < 4) ? CLOG2CACHESETCNT : 4);
 reg [(1 << CLOG2COHERENCYWRITEBKTCNT) -1 : 0] coherency_write_bkt;
 wire coherency_write_bkt_hit = ((|coherency_write_pending) && coherency_write_bkt[m_wb_addr_r[0 +: CLOG2COHERENCYWRITEBKTCNT]]);
 
 assign evict_defer = (coherency_en_i && coherency_write_bkt_hit &&
-	state == TSTHIT && !coherency_r && !cmiss_r && cache_miss && cache_writeb);
+	state == TSTHIT && !coherency_r && !cmiss_r && cache_miss && cache_writeb && !nullst);
+
+// A take from another data-cache, in TSTHIT, removes the word from this data-cache: a clean copy is
+// invalidated, and the take forwarded; a dirty one is written back, invalidated, and the take forwarded
+// only once memory accepted that write-back (tkwb), so that the read of the atomic memory operation, which
+// follows the take, is ordered after it. But the copy is left as it is while a request of this data-cache
+// which may be for that word travels the ring: a write request, ie: the copy is dirty while one which may
+// be for it travels, or a store waits on its own (defst_r), as that would write back bytes that such a
+// write request is still to carry to copies made since, cf. evict_defer; or its read request for that
+// word, which may have gathered bytes that the take is yet to remove, and which is completed with the bytes
+// that the cache-entry holds. The take is then forwarded marked (tkmark), and its data-cache issues it
+// again. A data-cache which a take goes through marked, here or before, accepts nothing from its master
+// until a take of the same data-cache comes by unmarked, cf. tkf_r, which holds a bit per data-cache issuing
+// takes, but the access which follows a locked read of its own, which issues no request: it then has no
+// request travelling when the take next comes by, hence a trip of a take can only be marked by a data-cache
+// nearer its issuer than on the trip before, and a take is issued again fewer times than the ring holds
+// data-caches, whatever the other data-caches load or store, their takes included. Nothing is accepted in
+// the TSTHIT of a take from another data-cache (tktst in coherency_bsy_o_, which is registers only): its
+// word may be written back, and no access is to slip in ahead of the hold when it is, or gets, marked. That
+// TSTHIT is told by tk_r, set when the take is accepted, rather than from the request held, so that
+// coherency_bsy_o_, which the read enables of the cache follow, sees a single register.
+wire tktst = (coherency_en_i && state == TSTHIT && tk_r);
+wire tkmark = (tktst && (defst_r || (cache_tag_hit && cache_drt_o_we_wayidx && coherency_write_bkt_hit) ||
+	(coherency_stb_r && coherency_addr_r == m_wb_addr_r)));
+wire tkwb = (tktst && !tkmark && cache_tag_hit && cache_drt_o_we_wayidx);
+assign tkinv = (tktst && !tkmark && cache_tag_hit);
 
 // This signal is true when coherency_*_o registers cannot be updated with a new request for the next data-cache.
 wire _coherency_bsy_i = (state == READY ? (coherency_bsy_i && coherency_stb_o) : coherency_near_bsy_i);
 
 // This signal is high when coherency_stb_i cannot yet be consumed.
-wire coherency_bsy_o_ = (rst_r || cmiss_r || defldtst_r || !(state == READY || state == TSTHIT) || _coherency_bsy_i ||
+wire coherency_bsy_o_ = (rst_r || cmiss_r || defldtst_r || tktst || !(state == READY || state == TSTHIT) || _coherency_bsy_i ||
 	(m_wb_we_r && cache_rdidx == cache_wridx) /* wait for cache-write */ ||
 	(cache_miss && (cache_writeb || !m_wb_we_r) && !coherency_r && !coherency_stb_r));
 
-// `lock_r` is used to insure that atomic operation has priority over coherency request.
-assign _coherency_stb_i = (coherency_stb_i && !coherency_bsy_o_ && !lock_r);
+// The hold is used to insure that atomic operation has priority over coherency request, cf. lock_hold.
+assign _coherency_stb_i = (coherency_stb_i && !coherency_bsy_o_ && !lock_hold);
 // coherency_we_i is checked to process a write coherency request that came back around;
 // it is used to mark the cache-entry as exclusive if it did not modified another data-cache.
 wire __coherency_stb_i = (_coherency_stb_i && (coherency_rqid_i != PUID || coherency_we_i));
 
-assign coherency_bsy_o = (coherency_bsy_o_ || lock_r);
+assign coherency_bsy_o = (coherency_bsy_o_ || lock_hold);
 
 // True when we were looking for data in other data-caches and we received a response
 // which would be a hit if `(coherency_sel_i & coherency_sel_r) == coherency_sel_r`.
@@ -775,26 +860,29 @@ always_ff @(posedge clk_i) begin
 		coherency_stb_o <= 1'b0;
 		coherency_stb_r <= 1'b0;
 		coherency_xw_r <= 1'b0;
-	end else if (state == TSTHIT && !coherency_r && !defstalloc_r && !defldtst_r &&
-		(m_wb_we_r || !cache_hit) && !cmiss_r &&
-		(!m_wb_we_r || !cache_tag_hit || cache_shr_o_tag_hit)) begin
+	end else if (state == TSTHIT && (tkp_r || (!coherency_r && !defstalloc_r && !defldtst_r &&
+		(m_wb_we_r || !cache_hit) && !cmiss_r && (!m_wb_we_r || (|m_wb_sel_r)) &&
+		(!m_wb_we_r || !cache_tag_hit || cache_shr_o_tag_hit)))) begin
 		// When writing, this state generates write request to update other data-caches only if the cache-entry is shared.
 		// When reading, on cache-miss, this state generates read request to look for data in other data-caches.
+		// For a locked read which is to take its word (tkp_r), this state generates its take, ie: a write
+		// request selecting no byte, and saves the bytes that the locked read selects, with which it is
+		// resumed once the take has come back around.
 		coherency_stb_o <= 1'b1;
 		coherency_rqid_o <= PUID;
-		coherency_we_o <= m_wb_we_r;
+		coherency_we_o <= (m_wb_we_r || tkp_r);
 		coherency_addr_o <= m_wb_addr_r;
-		coherency_sel_o <= (m_wb_sel_r & {(WORDBITSZ/8){m_wb_we_r}}); // Initially null for aggregation.
-		coherency_dat_o <= (m_wb_dat_r & {WORDBITSZ{m_wb_we_r}}); // Initially null for aggregation.
-		coherency_shr_o <= 1'b0; // Becomes non-null when any of the next data-caches use the request.
+		coherency_sel_o <= (m_wb_sel_r & {(WORDBITSZ/8){m_wb_we_r}}); // Initially null for aggregation; null for a take.
+		coherency_dat_o <= (m_wb_dat_r & {WORDBITSZ{m_wb_we_r}}); // Initially null for aggregation; null for a take.
+		coherency_shr_o <= 1'b0; // Becomes non-null when any of the next data-caches use the request, or marks a take.
 		if (!m_wb_we_r) begin // For power-efficiency, otherwise this test is not needed.
 			coherency_addr_r <= m_wb_addr_r;
-			coherency_sel_r <= (m_wb_sel_r & (cache_tag_hit ? ~cache_sel_o_tag_hit : {(WORDBITSZ/8){1'b1}}));
+			coherency_sel_r <= (m_wb_sel_r & ((cache_tag_hit && !tkp_r) ? ~cache_sel_o_tag_hit : {(WORDBITSZ/8){1'b1}}));
 			// Note that we exclude the bits already in the cache-entry so that __coherency_stb_r matches
 			// only the bits we need, and so that we correctly merge them for the result.
 			coherency_xw_r <= 1'b0;
 		end
-		coherency_stb_r <= !m_wb_we_r;
+		coherency_stb_r <= (!m_wb_we_r && !tkp_r);
 	end else if (state == TSTHIT && coherency_r && !m_wb_we_r && cache_tag_hit && m_wb_rqid_r != PUID) begin
 		// This state modifies the read request aggregating cache_tag_hit(s).
 		coherency_stb_o <= 1'b1;
@@ -804,24 +892,31 @@ always_ff @(posedge clk_i) begin
 		coherency_sel_o <= (m_wb_sel_r | cache_sel_o_tag_hit);
 		coherency_dat_o <= ((m_wb_dat_r & _cache_sel_o_tag_hit_n) | (cache_dat_o_tag_hit & _cache_sel_o_tag_hit));
 		coherency_shr_o <= 1'b1;
-	end else if (state == TSTHIT && coherency_r && m_wb_rqid_r != PUID) begin
-		// This state forwards the request to the next data-cache.
+	end else if ((state == TSTHIT && coherency_r && m_wb_rqid_r != PUID && !tkwb) ||
+		(state == WRITEB && coherency_r && (MAXPENDINGACK ? !s_wb_bsy_i : s_wb_ack_i))) begin
+		// This state forwards the request to the next data-cache; a take whose word is written back first
+		// (tkwb) is forwarded from WRITEB, which no other coherency request enters, once memory accepted
+		// that write-back.
 		coherency_stb_o <= 1'b1;
 		coherency_rqid_o <= m_wb_rqid_r;
 		coherency_we_o <= m_wb_we_r;
 		coherency_addr_o <= m_wb_addr_r;
 		coherency_sel_o <= m_wb_sel_r;
 		coherency_dat_o <= m_wb_dat_r;
+		// A take is marked when this data-cache could not let it go by, cf. tkmark.
+		if (_m_wb_tk_r)
+			coherency_shr_o <= (m_wb_shr_r || tkmark);
 		// A data-cache waiting on its own read of the same word is about to hold it as well; as is one whose
 		// store waits for its write request to come back around (defst_r), which holds no copy of the word of
 		// that store meanwhile, and does not keep which word that is: every request forwarded then is marked.
-		if (cache_tag_hit || (coherency_stb_r && coherency_addr_r == m_wb_addr_r) || defst_r)
+		else if (cache_tag_hit || (coherency_stb_r && coherency_addr_r == m_wb_addr_r) || defst_r)
 			coherency_shr_o <= 1'b1;
 		else
 			coherency_shr_o <= m_wb_shr_r;
 		// The read request of this data-cache may have overtaken that write request, and gathered older
 		// bytes from a data-cache which it had not yet reached: the load is answered, but not cached.
-		if (m_wb_we_r && coherency_stb_r && coherency_addr_r == m_wb_addr_r)
+		// A take changes no byte, and is marked when it meets such a read.
+		if (m_wb_we_r && !_m_wb_tk_r && coherency_stb_r && coherency_addr_r == m_wb_addr_r)
 			coherency_xw_r <= 1'b1;
 	end else begin
 		if (coherency_stb_o)
@@ -831,10 +926,13 @@ always_ff @(posedge clk_i) begin
 	end
 end
 
+// A store selecting no byte issues no write request, which would read as a take, cf. nullst.
 wire coherency_write_req = (state == TSTHIT && m_wb_we_r && !coherency_r && !defstalloc_r &&
-	!cmiss_r && (!cache_tag_hit || cache_shr_o_tag_hit));
+	!cmiss_r && (!coherency_en_i || (|m_wb_sel_r)) && (!cache_tag_hit || cache_shr_o_tag_hit));
 
-wire coherency_write_ack = (_coherency_stb_i && coherency_rqid_i == PUID && coherency_we_i);
+// A take is not counted: while it travels (tko_r), it is the only write request of this data-cache which can
+// come back, every other one having come back before its locked read was accepted.
+wire coherency_write_ack = (_coherency_stb_i && coherency_rqid_i == PUID && coherency_we_i && !tko_r);
 
 always_ff @(posedge clk_i) begin
 	if (rst_i || !coherency_en_i)
@@ -858,7 +956,11 @@ always_ff @(posedge clk_i) begin
 	end
 end
 
-assign m_wb_bsy_o = (coherency_bsy_o_ || __coherency_stb_i || coherency_stb_r || defst_r ||
+assign m_wb_bsy_o = (coherency_bsy_o_ || __coherency_stb_i || coherency_stb_r || defst_r || tko_r ||
+	// Nothing is accepted while a take which went through marked is to come by again, cf. tkmark, but the
+	// access which follows a locked read of this data-cache: it ends the hold of the ring, which that take
+	// may be waiting behind, and which issues no request.
+	((|tkf_r) && !lock_r) ||
 	// Right before the start of an atomic operation, coherency_write_pending is
 	// used to wait for pending coherency writes to update all other data caches.
 	// A store in TSTHIT is counted only on the clockedge ending TSTHIT, hence it holds off as well.
@@ -867,7 +969,7 @@ assign m_wb_bsy_o = (coherency_bsy_o_ || __coherency_stb_i || coherency_stb_r ||
 // A read forced to miss is acknowledged from the cache only on a cache-hit of a dirty entry, which is
 // then written back; a clean one is invalidated and the read is made in memory, ie: acknowledged at REFILL.
 assign m_wb_ack_o = (
-	state == TSTHIT ? ((((cache_hit && (!cmiss_r || cache_drt_o_we_wayidx)) || m_wb_we_r) && !coherency_r && !defstalloc_r) || __coherency_stb_r_r) :
+	state == TSTHIT ? ((((cache_hit && (!cmiss_r || cache_drt_o_we_wayidx)) || m_wb_we_r) && !coherency_r && !defstalloc_r && !tkp_r) || __coherency_stb_r_r) :
 	state == REFILL ? (!s_wb_we_o && refill_ack) : 1'b0);
 
 assign m_wb_dat_o = (state == TSTHIT ? (__coherency_stb_r_r ? cache_dat_i_ : cache_dat_o_tag_hit) : _s_wb_dat_i);
@@ -893,6 +995,11 @@ always_ff @(posedge clk_i) begin
 		defld_r <= 0;
 		defldtst_r <= 0;
 
+		tkp_r <= 0;
+		tko_r <= 0;
+		tkf_r <= 0;
+		tk_r <= 0;
+
 		state <= READY;
 
 	end else begin
@@ -900,6 +1007,10 @@ always_ff @(posedge clk_i) begin
 		if (state == READY || state == TSTHIT) begin
 
 			defstalloc_r <= 0;
+			tk_r <= 0;
+
+			if (tktst)
+				tkf_r[m_wb_rqid_r] <= (tkmark || m_wb_shr_r);
 
 			if (evict_defer) begin
 				if (m_wb_we_r)
@@ -915,18 +1026,35 @@ always_ff @(posedge clk_i) begin
 				else
 					m_wb_addr_r <= m_wb_addr_r + 1'b1;
 
-			end else if (!coherency_r && (cmiss_r ?
+			end else if (tkp_r) begin
+				// The locked read issues its take, cf. the state machine generating coherency
+				// requests, and waits for it to come back, the ring flowing meanwhile.
+
+				tkp_r <= 0;
+				tko_r <= 1;
+
+				cmiss_r <= 0;
+
+				state <= READY;
+
+			end else if (tkwb || (!coherency_r && (cmiss_r ?
 				(cache_hit && !m_wb_we_r && cache_drt_o_we_wayidx) :
-				(cache_miss && cache_writeb && !evict_defer))) begin
-				// A read forced to miss writes back the entry it hits only when dirty. A clean entry may be
-				// behind memory, as an atomic memory operation from another hart, which the cache-coherency
-				// logic does not carry, may have updated memory since it was filled, hence it is only
-				// invalidated, through cache_we2, and the read is made in memory by the REFILL arm below,
-				// carrying the same lock, and acknowledged once from there; the bytes it held are merged
-				// back for an access not carrying the lock, cf. _cache_tag_hit.
+				(cache_miss && cache_writeb && !evict_defer && !nullst)))) begin
+				// A read forced to miss writes back the entry it hits only when dirty. A clean entry holds
+				// nothing that memory lacks, cf. _cache_tag_hit, hence it is only invalidated, through
+				// cache_we2, and the read is made in memory by the REFILL arm below, carrying the same lock,
+				// and acknowledged once from there; the bytes it held are merged back for an access not
+				// carrying the lock, cf. _cache_tag_hit.
+				// A take from another data-cache writes back here as well the word that it removes, when it
+				// is held dirty (tkwb): the cache-entry is the one whose cache-tag matches, and the take is
+				// forwarded once memory accepted the write-back, cf. the state machine generating coherency
+				// requests.
 
 				s_wb_stb_o <= 1;
-				s_wb_lock_o <= m_wb_lock_r;
+				// The write-back of a take carries no lock, its m_wb_lock_r being that of an earlier access
+				// of the master: the take may be travelling while the take of a locked read of this data-cache
+				// does, and that lock would hold the bus against the data-cache which issued it.
+				s_wb_lock_o <= (m_wb_lock_r && !coherency_r);
 				s_wb_we_o <= 1;
 				s_wb_addr_o <= {cache_tag_o[cache_we_wayidx], cache_wridx};
 				s_wb_sel_o <= cache_sel_o[cache_we_wayidx] & (cmiss_r ? m_wb_sel_r : {(WORDBITSZ/8){1'b1}});
@@ -965,7 +1093,25 @@ always_ff @(posedge clk_i) begin
 
 			end else if (_m_wb_stb_i || __coherency_stb_i || _coherency_stb_r) begin
 
-				if (_coherency_stb_r && defld_r) begin
+				if (_coherency_stb_i && coherency_rqid_i == PUID && coherency_we_i && tko_r) begin
+					// The take of the locked read came back: the locked read is resumed in the TSTHIT which
+					// follows, unless the take is marked, ie: is to be issued again from there, cf. tkmark.
+
+					m_wb_lock_r <= 1;
+					m_wb_we_r <= 0;
+					m_wb_addr_r <= coherency_addr_r;
+					m_wb_sel_r <= coherency_sel_r;
+
+					cmiss_r <= 1;
+
+					coherency_r <= 0;
+
+					tko_r <= 0;
+					tkp_r <= coherency_shr_i;
+
+					state <= TSTHIT;
+
+				end else if (_coherency_stb_r && defld_r) begin
 					// The read request of a load deferred by evict_defer came back, hence the count is
 					// null: its victim is tested in the TSTHIT which follows, written back if dirty, and
 					// the REFILL which answers the load set up as below, cf. defldtst_r.
@@ -1041,6 +1187,9 @@ always_ff @(posedge clk_i) begin
 						m_wb_shr_r <= coherency_shr_i; // Updated when setting coherency_r true, and for REFILL.
 
 						coherency_r <= 1;
+
+						// A take from another data-cache, cf. tktst.
+						tk_r <= (coherency_we_i && !(|coherency_sel_i) && coherency_rqid_i != PUID);
 					end
 
 					state <= TSTHIT;
@@ -1056,6 +1205,10 @@ always_ff @(posedge clk_i) begin
 					cmiss_r <= _cmiss_i;
 
 					coherency_r <= 0;
+
+					// A locked read to a cacheable word first takes it from the ring, cf. tkp_r, unless it
+					// follows a locked read, being then forced to miss as any access which does.
+					tkp_r <= (coherency_en_i && m_wb_lock_i && !m_wb_we_i && !cmiss_i && !lock_r);
 
 					state <= TSTHIT;
 				end
@@ -1089,6 +1242,8 @@ always_ff @(posedge clk_i) begin
 					state <= REFILL;
 
 				end else if (cmiss_r || m_wb_we_r || coherency_en_i) begin
+					// This is as well where the write-back of the word that a take removes ends, m_wb_we_r
+					// being high for a take, which the state machine generating coherency requests forwards.
 
 					m_wb_we_r <= 0;
 
@@ -1134,13 +1289,19 @@ always_ff @(posedge clk_i) begin
 		end
 	end
 
-	// The deferrals of evict_defer occur on a coherency ring only.
+	// The deferrals of evict_defer, and the takes, occur on a coherency ring only.
 	if (!coherency_en_i) begin
 		defst_r <= 0;
 		defstalloc_r <= 0;
 		defld_r <= 0;
 		defldtst_r <= 0;
+		tkp_r <= 0;
+		tko_r <= 0;
+		tkf_r <= 0;
+		tk_r <= 0;
 	end
+	// A take is tested only from another data-cache, cf. tktst: the bit of this data-cache is never set.
+	tkf_r[PUID] <= 1'b0;
 end
 
 generate if (WORDBITSZ == 16) begin
@@ -1245,6 +1406,63 @@ always_ff @(posedge clk_i) begin
 			!coherency_write_pending && !coherency_write_pending_undf_r) begin
 			coherency_write_pending_undf_r <= 1'b1;
 			$display("dcache%0d: error: coherency write acknowledged with none pending", PUID);
+			$fflush();
+		end
+	end
+end
+
+// The holds that the atomics add (cf. Cache coherency) fail as a stall rather than as a wrong value: a take
+// which never comes back, a master held by a take which went through marked and never comes by again, a
+// store or a load deferred by evict_defer whose request never comes back. Each is reported once past a
+// bound that no correct run reaches, and flushed, as the run may then never reach $finish. Also reported
+// is a take coming back marked as many times in a row as the ring can hold data-caches, which the hold
+// of the data-caches that it went through marked rules out, cf. tkf_r.
+localparam HOLDAGELIMIT = 4096;
+reg [(clog2(HOLDAGELIMIT) +1) -1 : 0] tko_age_r;
+reg [(clog2(HOLDAGELIMIT) +1) -1 : 0] tkf_age_r;
+reg [(clog2(HOLDAGELIMIT) +1) -1 : 0] def_age_r;
+reg [8 -1 : 0] tk_reissue_r;
+reg tko_age_rpt_r;
+reg tkf_age_rpt_r;
+reg def_age_rpt_r;
+reg tk_reissue_rpt_r;
+wire tk_return = (_coherency_stb_i && coherency_rqid_i == PUID && coherency_we_i && tko_r);
+always_ff @(posedge clk_i) begin
+	if (rst_i || !coherency_en_i) begin
+		tko_age_r <= 0;
+		tkf_age_r <= 0;
+		def_age_r <= 0;
+		tk_reissue_r <= 0;
+		tko_age_rpt_r <= 1'b0;
+		tkf_age_rpt_r <= 1'b0;
+		def_age_rpt_r <= 1'b0;
+		tk_reissue_rpt_r <= 1'b0;
+	end else begin
+		tko_age_r <= (tko_r ? (tko_age_r + (tko_age_r != HOLDAGELIMIT)) : 0);
+		if (tko_age_r == (HOLDAGELIMIT - 1) && tko_r && !tko_age_rpt_r) begin
+			tko_age_rpt_r <= 1'b1;
+			$display("dcache%0d: error: a take has not come back in %0d clockcycles", PUID, HOLDAGELIMIT);
+			$fflush();
+		end
+		tkf_age_r <= (((|tkf_r) && !lock_r) ? (tkf_age_r + (tkf_age_r != HOLDAGELIMIT)) : 0);
+		if (tkf_age_r == (HOLDAGELIMIT - 1) && (|tkf_r) && !lock_r && !tkf_age_rpt_r) begin
+			tkf_age_rpt_r <= 1'b1;
+			$display("dcache%0d: error: the master has been held %0d clockcycles for marked takes, of the data-caches %b",
+				PUID, HOLDAGELIMIT, tkf_r);
+			$fflush();
+		end
+		def_age_r <= ((defst_r || defld_r) ? (def_age_r + (def_age_r != HOLDAGELIMIT)) : 0);
+		if (def_age_r == (HOLDAGELIMIT - 1) && (defst_r || defld_r) && !def_age_rpt_r) begin
+			def_age_rpt_r <= 1'b1;
+			$display("dcache%0d: error: a deferred %s has waited %0d clockcycles for its request",
+				PUID, (defst_r ? "store" : "load"), HOLDAGELIMIT);
+			$fflush();
+		end
+		if (tk_return)
+			tk_reissue_r <= (coherency_shr_i ? (tk_reissue_r + (tk_reissue_r != 8'hff)) : 8'd0);
+		if (tk_return && coherency_shr_i && tk_reissue_r == ((1<<PUIDBITSZ) - 1) && !tk_reissue_rpt_r) begin
+			tk_reissue_rpt_r <= 1'b1;
+			$display("dcache%0d: error: a take came back marked %0d times in a row", PUID, (1<<PUIDBITSZ));
 			$fflush();
 		end
 	end
