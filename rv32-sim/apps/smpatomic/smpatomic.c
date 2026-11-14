@@ -15,6 +15,13 @@
 // insures on a coherency ring (cpu/lsu.pu.sv); and a fence ordering stores before
 // loads waits until the stores of its hart are seen by every data-cache.
 //
+// The take and the release are made only in a ccx built with ATOMIC_COHERENCE
+// non-null, which every top leaves null by default: build the simulator so, ie:
+// make CPU_COUNT=2 ATOMIC_COHERENCE=1, removing obj_dir/Vsim first, which depends
+// on sim.sv and sim.cpp only. With it null, the cases break the rules that
+// cpu/README.md then states, and most of them fail; case5, which tests the fence,
+// does not need it.
+//
 // case1: a ticket spinlock taken with an atomic add, released with a plain store.
 // case2: an atomic counter set with a plain store and read with plain loads.
 // case3: a plain store and a plain load after a compare-and-swap whose compare fails.
