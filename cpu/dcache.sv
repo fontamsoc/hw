@@ -32,14 +32,16 @@
 // 	under Cache coherency), and read from memory (REFILL) when they are not
 // 	all found there.
 // - A cache-miss whose cache-tag matches no cache-entry replaces one, whose
-// 	content, when dirty, is written back to memory (WRITEB). The way
-// 	replaced is selected by an index common to all cache sets, which moves
-// 	to the next way only when a write, or a refill from memory, is made in a
-// 	cache-entry of the way it selects whose cache-tag matched; an allocation
-// 	does not move it. Hence, with more than one way, and unless the index
-// 	moves meanwhile, a cache-entry just allocated in a cache set is the next
-// 	one replaced there, whereas one that a write or a refill has just hit is
-// 	not.
+// 	content, when dirty, is written back to memory (WRITEB), while
+// 	coherency_en_i is high only once the write requests that the data-cache
+// 	issued have come back around, as described under Cache coherency. The
+// 	way replaced is selected by an index common to all cache sets, which
+// 	moves to the next way only when a write, or a refill from memory, is
+// 	made in a cache-entry of the way it selects whose cache-tag matched; an
+// 	allocation does not move it. Hence, with more than one way, and unless
+// 	the index moves meanwhile, a cache-entry just allocated in a cache set
+// 	is the next one replaced there, whereas one that a write or a refill has
+// 	just hit is not.
 // A dirty cache-entry reaches memory only when it gets replaced, or, for the
 // bytes that it selects, when a read forced to miss hits it; the data-cache
 // cannot be flushed as a whole.
@@ -95,6 +97,23 @@
 // 	as it accepts the access of the master that it grants only, and passes
 // 	it on in that order; a buffer per data-cache ahead of the arbiter would
 // 	not.
+// - A dirty cache-entry is not written back while a write request that the
+// 	data-cache issued has not come back around: that write request may be
+// 	for the word of the cache-entry, and memory would then hold the bytes
+// 	that it carries while it has yet to update the copies it has not
+// 	reached, ie: an atomic memory operation could read them from memory, and
+// 	the write request, applied after it to a copy made since, would undo it
+// 	there. Hence a read cache-miss replacing a dirty cache-entry writes it
+// 	back once its read request has come back around, ahead of the REFILL;
+// 	and a write cache-miss replacing one is acknowledged, but made in the
+// 	cache-entry, which is written back then, only once its write request,
+// 	which carries the bytes that it writes, has come back around, the master
+// 	being held meanwhile; the ring being FIFO, no write request that the
+// 	data-cache issued is travelling at either time. That also insures that a
+// 	word which two data-caches wrote in turn ends holding in memory the
+// 	value of the later write when both write it back: the write request
+// 	carrying it updates the older copy on its way, or, when that copy is
+// 	being written back, waits for that write-back to be accepted first.
 // - Writing generates a write request whether or not it is a cache-miss, unless
 // 	its cache-tag matches a cache-entry marked exclusive. When it comes back
 // 	around, the cache-entry is marked exclusive if no other data-cache
@@ -458,6 +477,13 @@ reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] coherency_addr_r;
 reg [(WORDBITSZ/8) -1 : 0]        coherency_sel_r;
 reg                               coherency_xw_r; // True when a write request from another data-cache for that word crossed the read.
 
+// A dirty victim is not written back while a write request of this data-cache travels the ring, cf. evict_defer.
+reg defst_r;      // True while a store waits for its write request to come back, to evict its victim and be made.
+reg defstalloc_r; // True in the TSTHIT which evicts that victim and makes that store, which was acknowledged already.
+reg defld_r;      // True while a load waits for its read request to come back, to evict its victim.
+reg defldtst_r;   // True in the TSTHIT which evicts that victim, and in the WRITEB which follows, ahead of the REFILL.
+wire evict_defer;
+
 localparam READY  = 0;
 localparam TSTHIT = 1;
 localparam WRITEB = 2;
@@ -500,7 +526,7 @@ reg [CLOG2COHERENCYWRITEPENDINGMAX -1 : 0] coherency_write_pending;
 wire refill_ack = (s_wb_ack_i && (!MAXPENDINGACK || (!s_wb_stb_o && s_wb_ack_pending == 1)));
 
 wire cache_we = (!(cmiss_r || coherency_r) && (
-	(state == TSTHIT && m_wb_we_r) ||
+	(state == TSTHIT && m_wb_we_r && !evict_defer) ||
 	(state == REFILL && !s_wb_we_o && refill_ack && !coherency_xw_r)));
 
 wire [CACHEWAYCNT -1 : 0] cache_we0;
@@ -667,11 +693,20 @@ wire cache_drt_o_we_wayidx = cache_drt_o[cache_we_wayidx];
 
 wire cache_writeb = (cache_drt_o_we_wayidx && !cache_tag_hit);
 
+// A dirty victim is not written back while a write request of this data-cache travels the ring: the victim
+// may be the word that write request is for, and memory would then hold the bytes it carries while it is
+// still to update the copies it has not reached yet, ie: an atomic memory operation could read them from
+// memory, and the write request, applied after it to a copy made since, would undo it there. A load then
+// writes its victim back once its read request has come back, a store once its write request has, the
+// ring being FIFO, hence the count null then.
+assign evict_defer = (coherency_en_i && (|coherency_write_pending) &&
+	state == TSTHIT && !coherency_r && !cmiss_r && cache_miss && cache_writeb);
+
 // This signal is true when coherency_*_o registers cannot be updated with a new request for the next data-cache.
 wire _coherency_bsy_i = (state == READY ? (coherency_bsy_i && coherency_stb_o) : coherency_near_bsy_i);
 
 // This signal is high when coherency_stb_i cannot yet be consumed.
-wire coherency_bsy_o_ = (rst_r || cmiss_r || !(state == READY || state == TSTHIT) || _coherency_bsy_i ||
+wire coherency_bsy_o_ = (rst_r || cmiss_r || defldtst_r || !(state == READY || state == TSTHIT) || _coherency_bsy_i ||
 	(m_wb_we_r && cache_rdidx == cache_wridx) /* wait for cache-write */ ||
 	(cache_miss && (cache_writeb || !m_wb_we_r) && !coherency_r && !coherency_stb_r));
 
@@ -694,7 +729,7 @@ always_ff @(posedge clk_i)
 wire __coherency_stb_r = (_coherency_stb_r && (coherency_sel_i & coherency_sel_r) == coherency_sel_r);
 
 always_ff @(posedge clk_i)
-	__coherency_stb_r_r <= (__coherency_stb_r && (state == READY || state == TSTHIT));
+	__coherency_stb_r_r <= (__coherency_stb_r && (state == READY || state == TSTHIT) && !defld_r);
 
 always_ff @(posedge clk_i) begin
 	// State machine generating coherency requests, sending it to the next data-cache.
@@ -702,7 +737,7 @@ always_ff @(posedge clk_i) begin
 		coherency_stb_o <= 1'b0;
 		coherency_stb_r <= 1'b0;
 		coherency_xw_r <= 1'b0;
-	end else if (state == TSTHIT && !coherency_r &&
+	end else if (state == TSTHIT && !coherency_r && !defstalloc_r && !defldtst_r &&
 		(m_wb_we_r || !cache_hit) && !cmiss_r &&
 		(!m_wb_we_r || !cache_tag_hit || cache_shr_o_tag_hit)) begin
 		// When writing, this state generates write request to update other data-caches only if the cache-entry is shared.
@@ -756,7 +791,7 @@ always_ff @(posedge clk_i) begin
 	end
 end
 
-wire coherency_write_req = (state == TSTHIT && m_wb_we_r && !coherency_r &&
+wire coherency_write_req = (state == TSTHIT && m_wb_we_r && !coherency_r && !defstalloc_r &&
 	!cmiss_r && (!cache_tag_hit || cache_shr_o_tag_hit));
 
 wire coherency_write_ack = (_coherency_stb_i && coherency_rqid_i == PUID && coherency_we_i);
@@ -772,7 +807,7 @@ always_ff @(posedge clk_i) begin
 	end
 end
 
-assign m_wb_bsy_o = (coherency_bsy_o_ || __coherency_stb_i || coherency_stb_r ||
+assign m_wb_bsy_o = (coherency_bsy_o_ || __coherency_stb_i || coherency_stb_r || defst_r ||
 	// Right before the start of an atomic operation, coherency_write_pending is
 	// used to wait for pending coherency writes to update all other data caches.
 	// A store in TSTHIT is counted only on the clockedge ending TSTHIT, hence it holds off as well.
@@ -781,7 +816,7 @@ assign m_wb_bsy_o = (coherency_bsy_o_ || __coherency_stb_i || coherency_stb_r ||
 // A read forced to miss is acknowledged from the cache only on a cache-hit of a dirty entry, which is
 // then written back; a clean one is invalidated and the read is made in memory, ie: acknowledged at REFILL.
 assign m_wb_ack_o = (
-	state == TSTHIT ? ((((cache_hit && (!cmiss_r || cache_drt_o_we_wayidx)) || m_wb_we_r) && !coherency_r) || __coherency_stb_r_r) :
+	state == TSTHIT ? ((((cache_hit && (!cmiss_r || cache_drt_o_we_wayidx)) || m_wb_we_r) && !coherency_r && !defstalloc_r) || __coherency_stb_r_r) :
 	state == REFILL ? (!s_wb_we_o && refill_ack) : 1'b0);
 
 assign m_wb_dat_o = (state == TSTHIT ? (__coherency_stb_r_r ? cache_dat_i_ : cache_dat_o_tag_hit) : _s_wb_dat_i);
@@ -802,11 +837,25 @@ always_ff @(posedge clk_i) begin
 
 		coherency_r <= 0;
 
+		defst_r <= 0;
+		defstalloc_r <= 0;
+		defld_r <= 0;
+		defldtst_r <= 0;
+
 		state <= READY;
 
 	end else begin
 
 		if (state == READY || state == TSTHIT) begin
+
+			defstalloc_r <= 0;
+
+			if (evict_defer) begin
+				if (m_wb_we_r)
+					defst_r <= 1;
+				else
+					defld_r <= 1;
+			end
 
 			if (rst_r) begin
 
@@ -817,7 +866,7 @@ always_ff @(posedge clk_i) begin
 
 			end else if (!coherency_r && (cmiss_r ?
 				(cache_hit && !m_wb_we_r && cache_drt_o_we_wayidx) :
-				(cache_miss && cache_writeb))) begin
+				(cache_miss && cache_writeb && !evict_defer))) begin
 				// A read forced to miss writes back the entry it hits only when dirty. A clean entry may be
 				// behind memory, as an atomic memory operation from another hart, which the cache-coherency
 				// logic does not carry, may have updated memory since it was filled, hence it is only
@@ -833,6 +882,20 @@ always_ff @(posedge clk_i) begin
 				s_wb_dat_o <= cache_dat_o[cache_we_wayidx];
 
 				state <= WRITEB;
+
+			end else if (defldtst_r) begin
+				// The victim of a load deferred by evict_defer is clean, or was written back by the
+				// arm above, which then starts this same REFILL from WRITEB.
+
+				defldtst_r <= 0;
+
+				s_wb_stb_o <= 1;
+				s_wb_lock_o <= 0;
+				s_wb_we_o <= 0;
+				s_wb_addr_o <= m_wb_addr_r;
+				s_wb_sel_o <= coherency_sel_r;
+
+				state <= REFILL;
 
 			end else if ((cache_miss && !m_wb_we_r && !coherency_en_i) || cmiss_r) begin
 
@@ -851,7 +914,25 @@ always_ff @(posedge clk_i) begin
 
 			end else if (_m_wb_stb_i || __coherency_stb_i || _coherency_stb_r) begin
 
-				if (__coherency_stb_r) begin
+				if (_coherency_stb_r && defld_r) begin
+					// The read request of a load deferred by evict_defer came back, hence the count is
+					// null: its victim is tested in the TSTHIT which follows, written back if dirty, and
+					// the REFILL which answers the load set up as below, cf. defldtst_r.
+
+					m_wb_we_r <= 0;
+					m_wb_addr_r <= coherency_addr_r;
+					m_wb_sel_r <= coherency_sel_i;
+					m_wb_dat_r <= coherency_dat_i;
+					m_wb_shr_r <= coherency_shr_i;
+
+					coherency_r <= 0;
+
+					defld_r <= 0;
+					defldtst_r <= 1;
+
+					state <= TSTHIT;
+
+				end else if (__coherency_stb_r) begin
 
 					m_wb_rqid_r <= coherency_rqid_i;
 					m_wb_we_r <= 1;
@@ -884,14 +965,32 @@ always_ff @(posedge clk_i) begin
 
 				end else if (__coherency_stb_i) begin
 
-					m_wb_rqid_r <= coherency_rqid_i;
-					m_wb_we_r <= coherency_we_i;
-					m_wb_addr_r <= coherency_addr_i;
-					m_wb_sel_r <= coherency_sel_i;
-					m_wb_dat_r <= coherency_dat_i;
-					m_wb_shr_r <= coherency_shr_i; // Updated when setting coherency_r true, and for REFILL.
+					if (defst_r && coherency_rqid_i == PUID && coherency_we_i && coherency_write_pending == 1) begin
+						// The write request of a store deferred by evict_defer came back, as the last one
+						// that this data-cache issued, hence the count is null: the store, which that
+						// request carries, is made in the TSTHIT which follows, evicting its victim.
 
-					coherency_r <= 1;
+						m_wb_we_r <= 1;
+						m_wb_addr_r <= coherency_addr_i;
+						m_wb_sel_r <= coherency_sel_i;
+						m_wb_dat_r <= coherency_dat_i;
+
+						coherency_r <= 0;
+
+						defst_r <= 0;
+						defstalloc_r <= 1;
+
+					end else begin
+
+						m_wb_rqid_r <= coherency_rqid_i;
+						m_wb_we_r <= coherency_we_i;
+						m_wb_addr_r <= coherency_addr_i;
+						m_wb_sel_r <= coherency_sel_i;
+						m_wb_dat_r <= coherency_dat_i;
+						m_wb_shr_r <= coherency_shr_i; // Updated when setting coherency_r true, and for REFILL.
+
+						coherency_r <= 1;
+					end
 
 					state <= TSTHIT;
 
@@ -925,7 +1024,20 @@ always_ff @(posedge clk_i) begin
 
 			if (MAXPENDINGACK ? !s_wb_bsy_i : s_wb_ack_i) begin
 
-				if (cmiss_r || m_wb_we_r || coherency_en_i) begin
+				if (defldtst_r) begin
+					// The victim of a load deferred by evict_defer is written back: start its REFILL.
+
+					defldtst_r <= 0;
+
+					s_wb_stb_o <= 1;
+					s_wb_lock_o <= 0;
+					s_wb_we_o <= 0;
+					s_wb_addr_o <= m_wb_addr_r;
+					s_wb_sel_o <= coherency_sel_r;
+
+					state <= REFILL;
+
+				end else if (cmiss_r || m_wb_we_r || coherency_en_i) begin
 
 					m_wb_we_r <= 0;
 
@@ -969,6 +1081,14 @@ always_ff @(posedge clk_i) begin
 			end else if (!s_wb_bsy_i)
 				s_wb_stb_o <= 0;
 		end
+	end
+
+	// The deferrals of evict_defer occur on a coherency ring only.
+	if (!coherency_en_i) begin
+		defst_r <= 0;
+		defstalloc_r <= 0;
+		defld_r <= 0;
+		defldtst_r <= 0;
 	end
 end
 
