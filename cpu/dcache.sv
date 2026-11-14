@@ -34,14 +34,14 @@
 // - A cache-miss whose cache-tag matches no cache-entry replaces one, whose
 // 	content, when dirty, is written back to memory (WRITEB), while
 // 	coherency_en_i is high only once the write requests that the data-cache
-// 	issued have come back around, as described under Cache coherency. The
-// 	way replaced is selected by an index common to all cache sets, which
-// 	moves to the next way only when a write, or a refill from memory, is
-// 	made in a cache-entry of the way it selects whose cache-tag matched; an
-// 	allocation does not move it. Hence, with more than one way, and unless
-// 	the index moves meanwhile, a cache-entry just allocated in a cache set
-// 	is the next one replaced there, whereas one that a write or a refill has
-// 	just hit is not.
+// 	issued, and which may be for it, have come back around, as described
+// 	under Cache coherency. The way replaced is selected by an index common
+// 	to all cache sets, which moves to the next way only when a write, or a
+// 	refill from memory, is made in a cache-entry of the way it selects whose
+// 	cache-tag matched; an allocation does not move it. Hence, with more than
+// 	one way, and unless the index moves meanwhile, a cache-entry just
+// 	allocated in a cache set is the next one replaced there, whereas one
+// 	that a write or a refill has just hit is not.
 // A dirty cache-entry reaches memory only when it gets replaced, or, for the
 // bytes that it selects, when a read forced to miss hits it; the data-cache
 // cannot be flushed as a whole.
@@ -100,25 +100,30 @@
 // 	it on in that order; a buffer per data-cache ahead of the arbiter would
 // 	not.
 // - A dirty cache-entry is not written back while a write request that the
-// 	data-cache issued has not come back around: that write request may be
-// 	for the word of the cache-entry, and memory would then hold the bytes
-// 	that it carries while it has yet to update the copies it has not
-// 	reached, ie: an atomic memory operation could read them from memory, and
-// 	the write request, applied after it to a copy made since, would undo it
-// 	there. Hence a read cache-miss replacing a dirty cache-entry writes it
-// 	back once its read request has come back around, ahead of the REFILL;
-// 	and a write cache-miss replacing one is acknowledged, but made in the
-// 	cache-entry, which is written back then, only once its write request,
-// 	which carries the bytes that it writes, has come back around, the master
-// 	being held meanwhile; the ring being FIFO, no write request that the
-// 	data-cache issued is travelling at either time. That also insures that a
-// 	word which two data-caches wrote in turn ends holding in memory the
-// 	value of the later write when both write it back: the write request
-// 	carrying it updates the older copy on its way, or, when that copy is
-// 	being written back, waits for that write-back to be accepted first.
-// 	While a write waits so for its write request, its data-cache holds no
-// 	copy of the word that it writes, and does not keep which word that is:
-// 	it counts as holding a copy for every request that it forwards
+// 	data-cache issued, and which may be for its word, has not come back
+// 	around: memory would then hold the bytes that it carries while it has
+// 	yet to update the copies it has not reached, ie: an atomic memory
+// 	operation could read them from memory, and the write request, applied
+// 	after it to a copy made since, would undo it there. A write request may
+// 	be for the word of a cache-entry when the low bits of their cache sets
+// 	are the same, which is what the data-cache keeps of the write requests
+// 	that it issued, until none of them travels; a stream of writes replacing
+// 	dirty cache-entries thus waits for the ring only when it comes back to
+// 	such a cache set while its write requests kept travelling, instead of at
+// 	every write. Hence a read cache-miss replacing such a dirty cache-entry
+// 	writes it back once its read request has come back around, ahead of the
+// 	REFILL; and a write cache-miss replacing one is acknowledged, but made
+// 	in the cache-entry, which is written back then, only once its write
+// 	request, which carries the bytes that it writes, has come back around,
+// 	the master being held meanwhile; the ring being FIFO, no write request
+// 	that the data-cache issued is travelling at either time. That also
+// 	insures that a word which two data-caches wrote in turn ends holding in
+// 	memory the value of the later write when both write it back: the write
+// 	request carrying it updates the older copy on its way, or, when that
+// 	copy is being written back, waits for that write-back to be accepted
+// 	first. While a write waits so for its write request, its data-cache
+// 	holds no copy of the word that it writes, and does not keep which word
+// 	that is: it counts as holding a copy for every request that it forwards
 // 	meanwhile, so that no other data-cache marks exclusive a cache-entry of
 // 	that word.
 // - Writing generates a write request whether or not it is a cache-miss, unless
@@ -716,7 +721,17 @@ wire cache_writeb = (cache_drt_o_we_wayidx && !cache_tag_hit);
 // memory, and the write request, applied after it to a copy made since, would undo it there. A load then
 // writes its victim back once its read request has come back, a store once its write request has, the
 // ring being FIFO, hence the count null then.
-assign evict_defer = (coherency_en_i && (|coherency_write_pending) &&
+// Which words a write request of this data-cache travelling the ring may be for, told by the low bits of
+// their cache set: a bit is set when a write request is issued for a word of that bucket, and all are
+// cleared once none travels. The victim of a miss shares the cache set of the access, hence the bit of the
+// access is high whenever such a write request is for that victim; a miss replacing a dirty victim thus
+// waits only when the bit of its bucket is high, instead of for every write request of this data-cache,
+// which a stream of stores would otherwise do at every store.
+localparam CLOG2COHERENCYWRITEBKTCNT = ((CLOG2CACHESETCNT < 4) ? CLOG2CACHESETCNT : 4);
+reg [(1 << CLOG2COHERENCYWRITEBKTCNT) -1 : 0] coherency_write_bkt;
+wire coherency_write_bkt_hit = ((|coherency_write_pending) && coherency_write_bkt[m_wb_addr_r[0 +: CLOG2COHERENCYWRITEBKTCNT]]);
+
+assign evict_defer = (coherency_en_i && coherency_write_bkt_hit &&
 	state == TSTHIT && !coherency_r && !cmiss_r && cache_miss && cache_writeb);
 
 // This signal is true when coherency_*_o registers cannot be updated with a new request for the next data-cache.
@@ -823,6 +838,17 @@ always_ff @(posedge clk_i) begin
 		coherency_write_pending <= coherency_write_pending - 1'b1;
 	else if (coherency_write_req) begin
 		coherency_write_pending <= coherency_write_pending + 1'b1;
+	end
+end
+
+always_ff @(posedge clk_i) begin
+	if (rst_i || !coherency_en_i)
+		coherency_write_bkt <= 0;
+	else begin
+		if (!coherency_write_pending)
+			coherency_write_bkt <= 0;
+		if (coherency_write_req)
+			coherency_write_bkt[m_wb_addr_r[0 +: CLOG2COHERENCYWRITEBKTCNT]] <= 1'b1;
 	end
 end
 
