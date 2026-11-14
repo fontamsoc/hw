@@ -726,13 +726,14 @@ tunneled through the JTAG port of the ECP5, and
 `examples/rv32-orangecrab0285/serial_usb_multi_port` a second serial port over the same
 USB link as the console.
 
-The build knobs are variables of the makefile: it passes `CPU_COUNT`, `XWORDBITSZ` and
-`SRAM_KBSIZE` to yosys as defines, in place of the `` `ifndef ``-guarded defaults at the
-top of `orangecrab0285.sv`, and `SRAM_INITFILE` to `ecpbram`, yosys reading the
-placeholder instead:
+The build knobs are variables of the makefile: it passes `CPU_COUNT`, `ATOMIC_COHERENCE`,
+`XWORDBITSZ` and `SRAM_KBSIZE` to yosys as defines, in place of the `` `ifndef ``-guarded
+defaults at the top of `orangecrab0285.sv`, and `SRAM_INITFILE` to `ecpbram`, yosys
+reading the placeholder instead:
 
 ```make
 CPU_COUNT ?= 1
+ATOMIC_COHERENCE ?= 0
 XWORDBITSZ ?= 32
 SRAM_KBSIZE ?= 256
 SRAM_INITFILE ?= ../../rv32-sim/apps/coremark/rv32/coremark.${XWORDBITSZ}.hex
@@ -740,6 +741,10 @@ SRAM_INITFILE ?= ../../rv32-sim/apps/coremark/rv32/coremark.${XWORDBITSZ}.hex
 
 `SRAM_INITFILE` is relative to `yosys/`, where the makefile runs; the others change the
 netlist, hence call for `make -B` with them on its command line.
+
+`ATOMIC_COHERENCE`, when non-null, makes the atomics of the harts take part in their
+cache coherency, which matters only with `CPU_COUNT` above 1, and which SMP Linux
+needs: see the atomics notes of [cpu/README.md](../cpu/README.md).
 
 The default image is CoreMark. Any application under [`rv32-sim/apps/`](../rv32-sim/apps)
 — `helloworld`, `donut`, `tinyraytracer`, … — can be dropped in by
@@ -925,10 +930,12 @@ controller); [`tools/mkBootldrDat.py`](../tools/mkBootldrDat.py) formats the dat
 - **The fault interrupt is imprecise**, and a speculative instruction fetch can
   raise it without any instruction at that address ever executing (see
   [Interrupts](#delivery)).
-- **Atomics bypass the D-cache** and do not participate in cache coherency. A
-  variable manipulated atomically must be accessed *only* through atomic
-  instructions, and must be initialised atomically if it lives in runtime-allocated
-  memory. Statically allocated variables start zeroed and are safe.
+- **Atomics bypass the D-cache** and do not participate in cache coherency, as
+  `ATOMIC_COHERENCE` is null by default. A variable manipulated atomically must be
+  accessed *only* through atomic instructions, and must be initialised atomically if
+  it lives in runtime-allocated memory. Statically allocated variables start zeroed
+  and are safe. Built with more than one hart, `ATOMIC_COHERENCE` non-null lifts
+  those rules, as SMP Linux requires.
 - **Do not build the toolchain with `-msave-restore`.** The millicode it calls enters
   through a `JALR` writing `x5` and returns through a `JALR` reading `x5`; the return
   address stack only recognises `x1`, so neither is predicted.
