@@ -1562,6 +1562,51 @@ always_ff @(posedge clk_i) begin
 		end
 	end
 end
+
+// What the deferral of evict_defer takes for granted, each reported once and flushed:
+// - No access is deferred while another one is, the master being held meanwhile.
+// - The write request taken for that of a deferred store, ie: the one which comes back while a single one
+//   travels, is for the word of that store; the monitor keeps that word, which the data-cache does not.
+// - The TSTHIT which makes a deferred store finds no write request of this data-cache travelling, and no
+//   cache-tag hit, nothing having allocated the word of that store meanwhile; nor does the TSTHIT which
+//   evicts the victim of a deferred load find such a write request (cf. evict_defer).
+reg def_nest_rpt_r;
+reg def_back_rpt_r;
+reg def_stresume_rpt_r;
+reg def_ldresume_rpt_r;
+reg [(ADDRBITSZ-MSBSZIGN) -1 : 0] def_addr_r;
+always_ff @(posedge clk_i) begin
+	if (rst_i || !coherency_en_i) begin
+		def_nest_rpt_r <= 1'b0;
+		def_back_rpt_r <= 1'b0;
+		def_stresume_rpt_r <= 1'b0;
+		def_ldresume_rpt_r <= 1'b0;
+	end else begin
+		if (evict_defer && m_wb_we_r)
+			def_addr_r <= m_wb_addr_r;
+		if (evict_defer && (defst_r || defld_r || defstalloc_r || defldtst_r) && !def_nest_rpt_r) begin
+			def_nest_rpt_r <= 1'b1;
+			$display("dcache%0d: error: an access is deferred while another one is", PUID);
+			$fflush();
+		end
+		if (state == TSTHIT && defstalloc_r && m_wb_addr_r != def_addr_r && !def_back_rpt_r) begin
+			def_back_rpt_r <= 1'b1;
+			$display("dcache%0d: error: the write request taken for that of a deferred store is for word address %h, not %h",
+				PUID, m_wb_addr_r, def_addr_r);
+			$fflush();
+		end
+		if (state == TSTHIT && defstalloc_r && ((|coherency_write_pending) || cache_tag_hit) && !def_stresume_rpt_r) begin
+			def_stresume_rpt_r <= 1'b1;
+			$display("dcache%0d: error: a deferred store is made while a write request travels, or on a cache-tag hit", PUID);
+			$fflush();
+		end
+		if (state == TSTHIT && defldtst_r && (|coherency_write_pending) && !def_ldresume_rpt_r) begin
+			def_ldresume_rpt_r <= 1'b1;
+			$display("dcache%0d: error: the victim of a deferred load is evicted while a write request travels", PUID);
+			$fflush();
+		end
+	end
+end
 `endif
 
 endmodule
