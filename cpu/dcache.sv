@@ -1508,6 +1508,56 @@ always_ff @(posedge clk_i) begin
 		end
 	end
 end
+
+// What the take logic takes for granted of the master and of itself, each reported once and flushed:
+// - On a ring, the access which follows a locked read of a word which may be cached is the write of the
+//   atomic, or a read selecting no byte (cf. Cache coherency): a read selecting bytes there is forced to
+//   miss and takes no part in the cache-coherency logic, which cpu/dcache.pu.sv insures does not occur.
+// - tk_r tells the TSTHIT of a take from another data-cache (cf. tktst): it is to be high there only, and
+//   whenever the request held is one.
+// - A write request selecting no byte is a take: one of this data-cache coming back while none of its takes
+//   travels is a store selecting no byte which was issued as a write request (cf. nullst), and the
+//   data-caches that it went through marked would hold their master for a take which is never issued again.
+// - A take which came back marked is issued again in the TSTHIT which follows: the data-caches that it went
+//   through marked hold their master until it comes by again (cf. tkf_r).
+reg lockfollow_rpt_r;
+reg tk_decode_rpt_r;
+reg nulltake_rpt_r;
+reg tkret_marked_r;
+reg tk_noreissue_rpt_r;
+wire tk_decode = (coherency_r && m_wb_we_r && !(|m_wb_sel_r) && m_wb_rqid_r != PUID);
+always_ff @(posedge clk_i) begin
+	if (rst_i || !coherency_en_i) begin
+		lockfollow_rpt_r <= 1'b0;
+		tk_decode_rpt_r <= 1'b0;
+		nulltake_rpt_r <= 1'b0;
+		tkret_marked_r <= 1'b0;
+		tk_noreissue_rpt_r <= 1'b0;
+	end else begin
+		if (_m_wb_stb_i && lock_r && !cmiss_i && !m_wb_we_i && (|m_wb_sel_i) && !lockfollow_rpt_r) begin
+			lockfollow_rpt_r <= 1'b1;
+			$display("dcache%0d: error: a read selecting bytes follows a locked read, at word address %h", PUID, m_wb_addr_i);
+			$fflush();
+		end
+		if ((state == TSTHIT ? (tk_r != tk_decode) : tk_r) && !tk_decode_rpt_r) begin
+			tk_decode_rpt_r <= 1'b1;
+			$display("dcache%0d: error: tk_r is %0d in state %0d, where it is to be %0d",
+				PUID, tk_r, state, (state == TSTHIT && tk_decode));
+			$fflush();
+		end
+		if (_coherency_stb_i && coherency_rqid_i == PUID && coherency_we_i && !(|coherency_sel_i) && !tko_r && !nulltake_rpt_r) begin
+			nulltake_rpt_r <= 1'b1;
+			$display("dcache%0d: error: a write request selecting no byte came back while no take travels", PUID);
+			$fflush();
+		end
+		tkret_marked_r <= (tk_return && coherency_shr_i);
+		if (tkret_marked_r && !(state == TSTHIT && tktake) && !tk_noreissue_rpt_r) begin
+			tk_noreissue_rpt_r <= 1'b1;
+			$display("dcache%0d: error: a take which came back marked is not issued again", PUID);
+			$fflush();
+		end
+	end
+end
 `endif
 
 endmodule

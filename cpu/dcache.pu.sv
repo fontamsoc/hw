@@ -546,6 +546,36 @@ always_ff @(posedge clk_i) begin
 		dCache_m_lock_r <= 1'b0;
 end
 
+`ifdef SIMULATION_MONITOR
+// The release of a load-reserved has the leg of the request ahead of that of the instruction at decode, cf.
+// dCache_m_rel: should that instruction be one which presents a request, and be valid in that clockcycle,
+// what it does at decode would be done, ie: its load queued, its atomic memory operation started, while the
+// release is presented in its place, its acknowledgement then taken for that of the instruction. The stall of
+// lsu.pu.sv on dCache_m_lrOpen is what rules it out. Also reported is a reservation valid while no
+// load-reserved is open on a ring, which a store-conditional would then write under no lock.
+reg dCache_m_relOverInsn_r;
+reg amoUnit_lrValidNotOpen_r;
+always_ff @(posedge clk_i) begin
+	if (rst_i) begin
+		dCache_m_relOverInsn_r <= 1'b0;
+		amoUnit_lrValidNotOpen_r <= 1'b0;
+	end else begin
+		if (dCache_m_rel_stb && iD_insn_valid && (iD_isLoadOrLr || iD_isStore || (iD_isSc && _amoUnit_lrValid) || iD_isAMOonly) &&
+			!dCache_m_relOverInsn_r) begin
+			dCache_m_relOverInsn_r <= 1'b1;
+			$display("pu%0d: error: the release of a load-reserved is presented in place of the request of a valid instruction, iD_pc %h",
+				PUID, iD_pc);
+			$fflush();
+		end
+		if (dcache_coherency_en_i && amoUnit_lrValid && !dCache_m_lrOpen && !amoUnit_lrValidNotOpen_r) begin
+			amoUnit_lrValidNotOpen_r <= 1'b1;
+			$display("pu%0d: error: a reservation is valid while no load-reserved is open, iD_pc %h", PUID, iD_pc);
+			$fflush();
+		end
+	end
+end
+`endif
+
 reg dcache_m_addr_misaligned; // ### comb-block-reg.
 
 generate if (WORDBITSZ == 32) begin
