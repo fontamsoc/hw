@@ -1408,11 +1408,15 @@ generate if (WORDBITSZ == 256) begin
 end endgenerate
 
 `ifdef SIMULATION_MONITOR
-// m_wb_bsy_o and cache_drt_i above read coherency_write_pending as a plain non-null test, hence a
-// count that does not fit its width does not merely lose precision, it reads null and releases the
-// barrier while coherency writes are still travelling the ring; the atomic operation then starts
-// early, and another data-cache is left holding a cache-entry that the writes had not yet updated;
-// a crossing write request also makes clean a copy that is to stay dirty. Nothing
+// m_wb_bsy_o, cache_drt_i, coherency_write_bkt_hit and coherency_pending_o above read
+// coherency_write_pending as a plain non-null test, hence a count that does not fit its width does not
+// merely lose precision, it reads null while coherency writes are still travelling the ring: the barrier
+// is released, the atomic operation then starting early, and another data-cache being left holding a
+// cache-entry that the writes had not yet updated; a crossing write request makes clean a copy that is
+// to stay dirty; a dirty cache-entry is written back, and a take goes by unmarked, while a write request
+// which may be for their word travels (evict_defer, tkmark), the buckets being cleared as well; and a
+// fence of stores before loads stops waiting. The store deferred by evict_defer, which takes for its own
+// the write request coming back while the count is one, would take that of another store. Nothing
 // about that is visible in a run, hence report it. Also reported is the count exceeding the ring
 // capacity that its width is derived from, which would mean that derivation is wrong, and an
 // acknowledgement arriving with nothing pending, which would mean a request was lost or duplicated.
