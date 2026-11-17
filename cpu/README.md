@@ -187,11 +187,18 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	back, so the count can never exceed what the ring holds, and `coherency_write_pending` is sized
 	from that rather than from the hart count: this data-cache's own coherency output register and
 	its skidbuf, plus, for each of the others, its request capture registers, its coherency output
-	register and its skidbuf. That width matters more than it looks, as `m_wb_bsy_o` tests the count
-	for non-null: a count too large for it does not lose precision, it reads null and removes the
-	wait entirely, and nothing an application prints would show that. A simulation-only monitor at
-	the end of `dCacheSub`, compiled in when `SIMULATION_MONITOR` is defined, reports it instead,
-	along with the count exceeding the ring capacity that the width is derived from.
+	register and its skidbuf. That width matters more than it looks, as the count is tested for
+	non-null by `m_wb_bsy_o` for the wait above; by `coherency_pending_o` for that of the fence; by the
+	dirty state that a coherency write of another data-cache leaves in a copy (`cache_drt_i`), which
+	one writing the whole word makes clean only while no coherency write of this data-cache travels;
+	and by the test of the coherency writes which may be for a word (`coherency_write_bkt_hit`), on
+	which the write-back of a dirty word is held and a take is marked. A count too large for its width
+	does not lose precision, it reads null, which removes both waits entirely, makes clean a copy that
+	is to stay dirty, and writes a dirty word back, or lets a take go by unmarked, while a coherency
+	write which may be for that word travels, and nothing an application prints would show any of that.
+	A simulation-only monitor at the end of `dCacheSub`, compiled in when `SIMULATION_MONITOR` is
+	defined, reports it instead, along with the count exceeding the ring capacity that the width is
+	derived from.
 - A data-cache stalled on an access the bus has not accepted stops the coherency ring, and that is a
 	way for one hart to stop the others which has nothing to do with arbitration. dcache.sv holds
 	`coherency_bsy_o_` for as long as the data-cache is outside READY and TSTHIT, so a data-cache
