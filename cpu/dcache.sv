@@ -66,9 +66,10 @@
 // 	read issues a take, a request which removes the word from every other
 // 	data-cache, a dirty copy being first written back to memory, and is
 // 	made, from memory under the bus lock as described for cmiss_i, only
-// 	once the take has come back around; a locked read which fully hits a
-// 	cache-entry marked exclusive issues no take, and is made as described
-// 	for cmiss_i at once: no other data-cache holds the word, but one which
+// 	once the take has come back around; a locked read whose cache-tag
+// 	matches a cache-entry marked exclusive issues no take, whichever bytes
+// 	of the word that cache-entry holds, and is made as described for
+// 	cmiss_i at once: no other data-cache holds the word, but one which
 // 	wrote it since, and whose write request has not come by yet; that write
 // 	then comes after the atomic, its write request being held off as
 // 	described next, and its cache-entry not being written back meanwhile.
@@ -215,7 +216,7 @@
 // 	before it have reached the other data-caches when it takes effect in
 // 	memory; the take of a locked read, which follows those write requests on
 // 	the ring, would wait for them as well, but a locked read of a word that
-// 	is not to be cached issues none, nor does one which fully hits a
+// 	is not to be cached issues none, nor does one whose cache-tag matches a
 // 	cache-entry marked exclusive.
 // - The ring keeps the order of the requests that a data-cache issues, hence
 // 	every other data-cache sees a write before a later write of the same
@@ -586,7 +587,8 @@ wire lock_hold = (lock_r && !tko_r);
 // from WRITEB as well, tk_r being null there.
 wire _m_wb_tk_r = (coherency_r && m_wb_we_r && !(|m_wb_sel_r));
 wire tkinv; // A take from another data-cache invalidates the word in TSTHIT, cf. tkmark.
-// A locked read fully hitting a cache-entry marked exclusive takes no word from the ring: no other
+// A locked read whose cache-tag matches a cache-entry marked exclusive takes no word from the ring,
+// whichever bytes of the word that cache-entry holds, a cache-entry being marked for its word: no other
 // data-cache holds a copy of the word, as a request of theirs for it marks the cache-entry shared when it
 // goes through, hence it is handled as a read forced to miss is, the ring being held off from its
 // acceptance as before. The only copy which may exist is that of a store which another data-cache made
@@ -856,7 +858,7 @@ wire tkmark = (tktst && (defst_r || (cache_tag_hit && cache_drt_o_we_wayidx && c
 	(coherency_stb_r && coherency_addr_r == m_wb_addr_r)));
 wire tkwb = (tktst && !tkmark && cache_tag_hit && cache_drt_o_we_wayidx);
 assign tkinv = (tktst && !tkmark && cache_tag_hit);
-assign tktake = (tkp_r && !(cache_hit && !cache_shr_o_tag_hit));
+assign tktake = (tkp_r && !(cache_tag_hit && !cache_shr_o_tag_hit));
 
 // This signal is true when coherency_*_o registers cannot be updated with a new request for the next data-cache.
 wire _coherency_bsy_i = (state == READY ? (coherency_bsy_i && coherency_stb_o) : coherency_near_bsy_i);
