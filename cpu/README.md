@@ -121,9 +121,9 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	a coherency ring they take part in the cache-coherency protocol: the read of a load-reserved, or
 	of an atomic memory operation, first issues a take, a coherency request which removes the word
 	from every other hart's data-cache, a dirty copy being written back to memory first, and is made
-	in memory under the bus lock only once the take has come back around, or at once when it fully
-	hits a copy marked exclusive, ie: which no other hart's data-cache holds but through a store
-	just made, which then comes after the atomic, no take being issued then; the write which follows
+	in memory under the bus lock only once the take has come back around, or at once when it hits a
+	copy marked exclusive, whole or partial, ie: which no other hart's data-cache holds but through a
+	store just made, which then comes after the atomic, no take being issued; the write which follows
 	it, the store-conditional's or the atomic memory operation's, is made in memory, which releases
 	the lock. The data-cache holds the ring off from the take's return, or from such a read, until
 	that write, hence the read sees every store made before it by any hart, no stale copy is left
@@ -145,7 +145,7 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	costs a round trip of the ring, about two clockcycles per hart: memtest, which reads and writes
 	every word through atomic memory operations, takes 11% longer with 2 harts and 34% longer
 	with 4, whereas coremark does not change measurably; an atomic memory operation which follows a
-	plain load, or a plain store of the whole word, that its hart made to a word which no other hart
+	plain load, or a plain store of any of its bytes, that its hart made to a word which no other hart
 	holds, issues no take, hence costs no trip of the ring. An atomic access to a word that is not
 	cached, ie: a device register, as every command of hwdrvchar.h and hwdrvirqctrl.h is, issues no
 	take, no data-cache holding such a word. Memory still receives every atomic write, which a reset
@@ -165,7 +165,7 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	coherency ring only, ie: while `coherency_en_i` is high, as no coherency write is issued otherwise.
 	The take of an atomic memory operation follows those coherency writes on the ring, hence would
 	wait for them as well, but an atomic memory operation on a word which is not to be cached, or
-	fully hitting a copy marked exclusive, issues none: it resolves in memory, and while it holds the
+	hitting a copy marked exclusive, issues none: it resolves in memory, and while it holds the
 	bus lock this data-cache stops accepting ring traffic altogether, hence its effect becomes
 	visible through memory while the writes before it may still be visible only through the ring;
 	the wait is what insures that ordering. Without the wait, the ordinary release shape, ie: plain
