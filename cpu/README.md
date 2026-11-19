@@ -197,7 +197,45 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	a store of the same hart has reached the other data-caches, hence two harts each storing, fencing,
 	then loading the word of the other could both read the old values, which fence rw,rw forbids and
 	the smp_mb() of Linux relies on. fence.tso, which does not order a store before a later load, and
-	the fences of acquire and release do not wait. The wait lasts a round trip of the ring at most.
+	the fences of acquire and release do not wait. The wait lasts a round trip of the ring at most; a
+	fence which syncs with the ring, as described next, does not wait so.
+	On a ring of more than two harts, that is not enough, the ring not being multi-copy atomic: a
+	coherency write reaches the other data-caches one after the other, hence two harts each loading
+	a word, fencing with fence rw,rw, then loading another word, could see the stores of two other
+	harts to those words in opposite orders, which RVWMO, the smp_mb() of Linux and the seq_cst of
+	C11 forbid. Once issued, a full fence, ie: one whose predecessor and successor sets both hold R
+	and W, and an atomic memory operation whose aq and rl bits are both set, as the `_atomic_*` of
+	underLineOS are, thus make their hart present a sync after the access that they make, if any: a
+	read selecting no byte, which the data-cache acknowledges only once a coherency read that it
+	puts on the ring for it has come back around, its hart's next access waiting meanwhile. Every
+	coherency write travelling the ring when that coherency read was issued has then reached the
+	data-cache, and every one of its own has come back around, hence a fence which syncs does not
+	wait as above. A sync costs a round trip of the ring, about two clockcycles per hart, as a take
+	does: a loop of fence rw,rw takes 11 clockcycles per round with 4 harts and 19 with 8, against
+	3. With `ATOMIC_COHERENCE` non-null, a sync which follows the access after a locked read whose
+	take came back unmarked costs two clockcycles only, the take having made the trip already, ie:
+	that of a fully-ordered atomic memory operation, or the fence rw,rw which follows the
+	store-conditional of a fully-ordered compare-and-swap in Linux. With it null, no take is issued,
+	and a fully-ordered atomic memory operation costs the trip: smplock, made of such atomics, takes
+	35% longer with 4 harts, against 1.5% with `ATOMIC_COHERENCE` non-null; coremark does not change
+	measurably with 3, 4 or 8 harts either way. With two harts, a coherency write has a single other
+	data-cache to reach, and nothing syncs. rv32-sim/apps/iriw covers it.
+	The other fences, ie: fence r,r, r,rw, rw,r, fence.tso and those of acquire and release, do not
+	sync, nor does an address dependency, hence two harts can still see the stores of two others in
+	opposite orders through them, which RVWMO forbids whereas the Linux memory model and C11 allow
+	it; nor do the aq and rl bits of a load-reserved or of a store-conditional, as the seq_cst
+	compare-and-swap of gcc sets them, nor those of an atomic memory operation which does not set
+	both, the core reading them nowhere else. Making those cumulative would take coherency writes
+	which every data-cache applies at once, ie: a protocol of two trips of the ring. With
+	`ATOMIC_COHERENCE` null, a sync right after a load-reserved is the access which follows a locked
+	one: forced to miss, it releases the lock, and makes no trip.
+	Plain stores of two harts to the same byte are not ordered either when their coherency writes
+	cross on the ring: each data-cache applies the coherency write of the other after its own store,
+	hence each ends up holding the value of the other, memory the value of the one written back
+	last, and a third data-cache holding the word the value of the coherency write which reached it
+	last, ie: the harts do not agree on a single order of those stores, which RVWMO requires, as do
+	the Linux memory model and C11 of their atomics, a relaxed atomic store being a plain store.
+	Such stores are to be ordered by software, through a lock or atomics.
 	A coherency write occupies a place on the ring from the clockcycle it is issued until it comes
 	back, so the count can never exceed what the ring holds, and `coherency_write_pending` is sized
 	from that rather than from the hart count: this data-cache's own coherency output register and its
@@ -221,12 +259,16 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	as an unmapped address is acknowledged by the default device on the FPGA tops -- refuses ring
 	traffic for as long as that lasts, and `m_wb_bsy_o` then holds every other hart's data-cache busy through
 	`coherency_stb_r`. Those harts stall having presented no bus request at all, hence they are not
-	starved of the bus and giving them the bus changes nothing. That is why a hart which stalls a
-	load on a device wedges the whole machine whereas one which stalls an instruction fetch does
-	not, a fetch leaving the data-cache in READY so that the ring keeps flowing. It is also how a
-	grant held for any reason comes to stop the hart holding it: the harts it starves park their own
-	refills, and their data-caches then refuse the ring that the holder needs. Bounding this needs
-	the ring decoupled from the data-cache's state, which this design does not do.
+	starved of the bus and giving them the bus changes nothing. With `ATOMIC_COHERENCE` non-null,
+	the take of every atomic memory operation travels the ring as well, as does every sync on a ring
+	of more than two harts: a hart so parked then stops the atomics, the full fences and the
+	fully-ordered atomics of every other hart, whether or not their data-caches miss. That is why a
+	hart which stalls a load on a device wedges the whole machine whereas one which stalls an
+	instruction fetch does not, a fetch leaving the data-cache in READY so that the ring keeps
+	flowing. It is also how a grant held for any reason comes to stop the hart holding it: the harts
+	it starves park their own refills, and their data-caches then refuse the ring that the holder
+	needs. Bounding this needs the ring decoupled from the data-cache's state, which this design
+	does not do.
 - lib/wb_arbiter.sv rotates its grant when the granted hart stops requesting, and otherwise once
 	that hart has held it `GRANTHELDLIMIT` clockcycles and another hart is requesting. The second
 	term is what bounds it: a hart holds its strobe asserted until its access is accepted, and a
@@ -315,3 +357,6 @@ Entries hold only `[WORDBITSZ-1:2]`, hence a return prediction is aligned by con
 	Insure the toolchain is not built with -msave-restore: the millicode routines that it calls are
 	entered by a JALR writing x5 and return through a JALR reading x5, neither of which is predicted.
 - Load and store encodings whose func3 is 3'b011 or 3'b111 issue a memory operation with sel == 0 instead of trapping.
+	On a ring of more than two harts, such a load is a sync, as described for the fences above, and
+	returns an undefined value; elsewhere, a simulation-only monitor of dcache.sv, compiled in when
+	`SIMULATION_MONITOR` is defined, reports it.
