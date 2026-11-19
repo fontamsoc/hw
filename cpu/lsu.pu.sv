@@ -52,10 +52,10 @@ always_ff @(posedge clk_i) begin
 		ldUnit_rqsts_nearFull_r <= ldUnit_rqsts_nearFull;
 end
 // A load, a load-reserved or an atomic memory operation waits for the release of an open load-reserved,
-// cf. dCache_m_rel in dcache.pu.sv.
-assign iD_ldUnit_bsy = (ldUnit_rqsts_nearFull_r || __dCache_m_bsy || dCache_m_lrOpen);
+// cf. dCache_m_rel in dcache.pu.sv, and for a sync to be presented ahead of it, cf. dCache_m_syn there.
+assign iD_ldUnit_bsy = (ldUnit_rqsts_nearFull_r || __dCache_m_bsy || dCache_m_lrOpen || dCache_m_synPend_r);
 `else
-assign iD_ldUnit_bsy = (ldUnit_rqsts_full || __dCache_m_bsy || dCache_m_lrOpen);
+assign iD_ldUnit_bsy = (ldUnit_rqsts_full || __dCache_m_bsy || dCache_m_lrOpen || dCache_m_synPend_r);
 `endif
 
 wire ldUnit_stb = (iD_ldUnit_stb && iD_insn_valid);
@@ -106,8 +106,9 @@ wire ldUnit_respHeld = (dCache_m_ack_avail_o && ldUnit_memAck_);
 // Store Unit.
 
 // A store waits for the release of an open load-reserved as well, cf. dCache_m_rel in dcache.pu.sv, but a
-// store-conditional, which is the write of the atomic.
-assign iD_stUnit_bsy = (__dCache_m_bsy || (dCache_m_lrOpen && !iD_isSc));
+// store-conditional, which is the write of the atomic; and, as a load does, for a sync to be presented ahead of
+// it, cf. dCache_m_syn there.
+assign iD_stUnit_bsy = (__dCache_m_bsy || (dCache_m_lrOpen && !iD_isSc) || dCache_m_synPend_r);
 
 // AMO Unit.
 

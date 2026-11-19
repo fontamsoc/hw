@@ -360,8 +360,11 @@ end
 // data-cache put on the coherency ring to have come back around: a store is acknowledged once made in the
 // data-cache, and the ring keeps the order of the writes of a data-cache, but a later load answered from a
 // cache-entry could otherwise be made before such a store is seen by the other data-caches, which
-// fence rw,rw forbids, and which smp_mb() relies on.
-assign dCache_m_pending = ((|dCache_m_pending_acks) || dCache_m_bsy_r || (iD_isFenceWR && dCache_coherency_pending));
+// fence rw,rw forbids, and which smp_mb() relies on. A fence which syncs with the ring does not wait so, cf.
+// dCache_m_ringSync: its sync comes back around behind those write requests, and holds the later accesses
+// until then. A fence waits as well for a sync to be presented, and then acknowledged.
+assign dCache_m_pending = ((|dCache_m_pending_acks) || dCache_m_bsy_r || dCache_m_synPend_r ||
+	(iD_isFenceWR && !(dCache_m_ringSync && iD_isFenceSync) && dCache_coherency_pending));
 
 reg amoUnit_lrValid;
 
@@ -433,6 +436,23 @@ wire dCache_m_rel = (dCache_m_lrOpen && !dCache_m_max_pending &&
 // The release is presented, ie: the leg of dCache_m_rel below is taken.
 wire dCache_m_rel_stb = (dCache_m_rel && !dCache_m_bsy_r && !dCache_m_isAMOonly);
 
+// A write request reaches the other data-caches of the ring one after the other, hence two harts could see the
+// stores of two others in opposite orders, which a full fence forbids, as does an atomic memory operation which
+// is fully ordered, ie: whose aq and rl bits are both set (cpu/dcache.sv, Cache coherency). On a ring of more
+// than two harts, such a fence or atomic, once issued, thus syncs with the ring: a read selecting no byte is
+// presented after the access that it makes, if any, ie: after the write of the atomic, and after the release
+// of an open load-reserved, which the fence cancels; the data-cache acknowledges it only once a read request
+// that it issues has come back around, behind every write request travelling the ring when it was issued,
+// and holds the later accesses meanwhile. A load, a store or an atomic at decode waits for the sync to be
+// presented (lsu.pu.sv), and a fence for it to be acknowledged, cf. dCache_m_pending. On a ring of two harts,
+// a write request has a single other data-cache to reach, and nothing syncs.
+wire dCache_m_ringSync = (USE_DCACHE && dcache_coherency_en_i && PUIDBITSZ > 1);
+reg dCache_m_synPend_r; // A sync is to be presented.
+// The release of an open load-reserved is presented first, dCache_m_lrOpen being then high.
+wire dCache_m_syn = (dCache_m_synPend_r && !dCache_m_max_pending && !dCache_m_lrOpen);
+// The sync is presented, ie: the leg of dCache_m_syn below is taken.
+wire dCache_m_syn_stb = (dCache_m_syn && !dCache_m_bsy_r && !dCache_m_isAMOonly);
+
 always_comb begin
 
 	dCache_m_stb_i = 1'b0;
@@ -489,6 +509,15 @@ always_comb begin
 		// presented last took, cf. dCache_m_rel. The address is left as the load-reserved presented it,
 		// dCache_m_addr_r holding it still, so that it adds no leg to the address mux. It is
 		// acknowledged like a store, nothing waiting for its data.
+		dCache_m_stb_i = 1'b1;
+		dCache_m_lock_i = 1'b0;
+		dCache_m_we_i = 1'b0;
+		dCache_m_sel_i = {(WORDBITSZ/8){1'b0}};
+	end else if (dCache_m_syn) begin
+		// A read selecting no byte, which syncs with the ring, cf. dCache_m_ringSync. The address is left as
+		// the request presented last left it, dCache_m_addr_r holding it still, so that it adds no leg to the
+		// address mux; the data-cache does not access that word. It is acknowledged like a store, nothing
+		// waiting for its data.
 		dCache_m_stb_i = 1'b1;
 		dCache_m_lock_i = 1'b0;
 		dCache_m_we_i = 1'b0;
@@ -550,6 +579,15 @@ always_ff @(posedge clk_i) begin
 		dCache_m_lock_r <= 1'b0;
 end
 
+always_ff @(posedge clk_i) begin
+	if (rst_i || !dCache_m_ringSync)
+		dCache_m_synPend_r <= 1'b0;
+	else if (iD_insn_valid && (iD_isFenceSync || (iD_isAMOonly && iD_insn[26] && iD_insn[25])))
+		dCache_m_synPend_r <= 1'b1;
+	else if (dCache_m_syn_stb)
+		dCache_m_synPend_r <= 1'b0;
+end
+
 `ifdef SIMULATION_MONITOR
 // The release of a load-reserved has the leg of the request ahead of that of the instruction at decode, cf.
 // dCache_m_rel: should that instruction be one which presents a request, and be valid in that clockcycle,
@@ -558,13 +596,24 @@ end
 // lsu.pu.sv on dCache_m_lrOpen is what rules it out. Also reported is a reservation valid while no
 // load-reserved is open on a ring, which a store-conditional would then write under no lock. Neither is
 // reported while ATOMIC_COHERENCE is null, no release being made then, nor any load-reserved told open.
+// The sync has its leg ahead of that of the instruction at decode as well, cf. dCache_m_syn, and is
+// reported likewise; the stall of lsu.pu.sv on dCache_m_synPend_r is what rules that out.
 reg dCache_m_relOverInsn_r;
+reg dCache_m_synOverInsn_r;
 reg amoUnit_lrValidNotOpen_r;
 always_ff @(posedge clk_i) begin
 	if (rst_i) begin
 		dCache_m_relOverInsn_r <= 1'b0;
+		dCache_m_synOverInsn_r <= 1'b0;
 		amoUnit_lrValidNotOpen_r <= 1'b0;
 	end else begin
+		if (dCache_m_syn_stb && iD_insn_valid && (iD_isLoadOrLr || iD_isStore || (iD_isSc && _amoUnit_lrValid) || iD_isAMOonly) &&
+			!dCache_m_synOverInsn_r) begin
+			dCache_m_synOverInsn_r <= 1'b1;
+			$display("pu%0d: error: a sync is presented in place of the request of a valid instruction, iD_pc %h",
+				PUID, iD_pc);
+			$fflush();
+		end
 		if (dCache_m_rel_stb && iD_insn_valid && (iD_isLoadOrLr || iD_isStore || (iD_isSc && _amoUnit_lrValid) || iD_isAMOonly) &&
 			!dCache_m_relOverInsn_r) begin
 			dCache_m_relOverInsn_r <= 1'b1;

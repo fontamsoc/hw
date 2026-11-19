@@ -269,6 +269,9 @@
 // 	data-caches needs no sync, a write request having a single data-cache
 // 	to reach there; nor does a read selecting no byte make one when it
 // 	follows a locked access, being then forced to miss as described above.
+// 	cpu/dcache.pu.sv makes a sync for a full fence, which it then does not
+// 	hold until coherency_pending_o is low, and after an atomic memory
+// 	operation which is fully ordered.
 // - Note that writes to the same word from different data-caches, whose write
 // 	requests cross on the ring, are not ordered: each data-cache applies the
 // 	write of the other after its own, hence each cache-entry ends up holding
@@ -468,7 +471,8 @@
 // 	High while a write request that the data-cache issued has not come back
 // 	around, ie: while a write made through the data-cache may not yet be
 // 	seen by every data-cache of the ring; cpu/dcache.pu.sv holds a fence
-// 	ordering stores before loads until it is low.
+// 	ordering stores before loads until it is low, but one which syncs with
+// 	the ring, the sync coming back around behind those write requests.
 //
 // Module dCacheSub, which dCache wraps, has the same parameters, except
 // REGMSTOUTPUT and REGSLVINPUT, and the same ports, its coherency_*_o being
