@@ -6,13 +6,16 @@
 // then starts it by a system reset, as the load of gdb through the gdbstub starts
 // the image which it loaded. The device is a SPI flash driven by hwdrvspiflash.h,
 // or an SD card driven by hwdrvsdspi.h in SPI mode or by hwdrvsdsdio.h in SD mode,
-// as BOOTLDR_DEVTYPE selects; it is polled, bootldr using no interrupt.
+// as BOOTLDR_DEVTYPE selects; it is polled, bootldr using no interrupt. When
+// BOOTLDR_LOADADDR is not 0x1000, its default, the payload, linked at that
+// address, ie: a Linux kernel, is copied there instead, and started by a jump,
+// bootldr staying resident: the resident mode, described further below.
 //
 // The data at the word BOOTLDR_FIRSTU32 of the device is as follow, in words of
 // 4 bytes, little-endian:
 // - the signature 0x52444c42, ie: the bytes "BLDR";
 // - n, the count of words of the payload, at least 1;
-// - the n words of the payload, which get copied to 0x1000;
+// - the n words of the payload, which get copied to BOOTLDR_LOADADDR;
 // - the CRC32 of the (4*n) bytes of the payload, that of zlib.
 // The default of BOOTLDR_FIRSTU32, among the defaults of the board below, is a
 // word of the flash past its bitstream. On an SD card, whose first partition
@@ -37,12 +40,30 @@
 // otherwise a1 is null. Registers ra and a0, set to -1, which no link can be, and
 // null, tell that a1 is set by bootldr: a later reset, ie: using the button,
 // _sysreset() or the load of gdb through the gdbstub, runs the payload again,
-// not bootldr, and leaves those registers as they were. Hence a payload honoring
-// a1 begins with "if (ra == -1 && !a0 && a1) sp = a1;", and is to keep for its
-// later boots what it needs of a1, ie: in its section .persistent. The crt0.S of
+// not bootldr, save in the resident mode, and leaves those registers as they
+// were. Hence a payload honoring a1 begins with
+// "if (ra == -1 && !a0 && a1) sp = a1;", and is to keep for its later boots
+// what it needs of a1, ie: in its section .persistent. The crt0.S of
 // underLineOS does so: its cold boot moves sp likewise, keeping that end of
 // memory in __rst_sp, from which its warm boots take it; the stack data, when
 // there is some, is then at __rst_sp, ie: extern uintptr_t __rst_sp;
+//
+// In the resident mode, the payload goes to BOOTLDR_LOADADDR, which must be at
+// or above the end of memory which the reset gives, below which lie the image
+// of bootldr, its stack and the copy of its .data, which crt0.S restores at a
+// warm boot; the payload must also end below the buffer of the units read,
+// described below. The harts other than the cpu 0, which crt0.S started, are
+// parked first: each leaves underLineOS and, its destination of the irqctrl
+// disabled so that no interrupt source is dispatched to it, the external
+// interrupt alone enabled, waits for an interrupt with mtvec at a trampoline;
+// only an IPI wakes it, ie: that of a Linux kernel starting a hart, from which
+// the trampoline jumps to BOOTLDR_LOADADDR, having invalidated the icache, with
+// registers ra, a0 and a1 set as for the cpu 0. The cpu 0 copies the stack data
+// and the payload as the routine described below does, then jumps to
+// BOOTLDR_LOADADDR with registers ra, a0 and a1 set as for a reset, and sp set
+// to a1; the devices stay as bootldr leaves them. A later reset runs bootldr
+// again, which the payload left whole, ie: Linux restarting the system, as
+// underLineOS does in _sysreset(): bootldr loads the payload again.
 //
 // The stack data, when BOOTLDR_STACKDATA is defined, is the content of that
 // file, ie: a device tree blob, which #embed embeds in bootldr. Padded with null
@@ -87,7 +108,9 @@
 // The payload is at most the memory from the heap of bootldr to 4 KiB below its
 // stack, or to the stack data when it lies lower, less the routine, 128 bytes,
 // and the words which precede and follow the payload in the units read; the
-// defaults of the board below give its value.
+// defaults of the board below give its value. In the resident mode, the payload
+// and the buffer which holds it lie between BOOTLDR_LOADADDR and the stack
+// data: the payload is at most about half of that memory.
 //
 // A failure prints a line beginning with "❌ ERROR:" and stops bootldr, nothing
 // at 0x1000 having been changed: a reset runs bootldr again.
@@ -135,6 +158,9 @@
 #ifndef BOOTLDR_DEVTYPE
 #define BOOTLDR_DEVTYPE 0 // 0: SPI flash, driven by hwdrvspiflash.h; 1: SD card in SPI mode, by hwdrvsdspi.h; 2: SD card in SD mode, by hwdrvsdsdio.h.
 #endif
+#ifndef BOOTLDR_LOADADDR
+#define BOOTLDR_LOADADDR 0x1000 // Where the payload goes: 0x1000, or, for the resident mode, at or above the end of memory which the reset gives; an integer constant, which #if evaluates.
+#endif
 // BOOTLDR_STACKDATA, undefined by default, is the path of the file of the stack
 // data, a string literal, searched from the directory of this file, ie:
 // make clean && CFLAGS='-DBOOTLDR_STACKDATA=\"board.dtb\"' make
@@ -143,6 +169,7 @@ static_assert((BOOTLDR_DEVTYPE >= 0 && BOOTLDR_DEVTYPE <= 2),
 	"BOOTLDR_DEVTYPE is 0 for hwdrvspiflash.h, 1 for hwdrvsdspi.h or 2 for hwdrvsdsdio.h");
 static_assert(((long long)(BOOTLDR_FIRSTU32) >= -3 && (long long)(BOOTLDR_FIRSTU32) <= 0xffffffff),
 	"BOOTLDR_FIRSTU32 is the index of a uint32_t, or -1, -2 or -3 for an entry of the MBR");
+static_assert(!((BOOTLDR_LOADADDR) & 3), "BOOTLDR_LOADADDR is a multiple of 4");
 
 // The index of the first word of the data, and the entry of the MBR which
 // BOOTLDR_FIRSTU32 selects, 1 to 3, else 0; a 2's complement negative number
@@ -339,16 +366,14 @@ static void drain (void) {
 // .org guards its size. It must access memory only using atomic accesses, which
 // go straight to memory, as crt0.S copies .data: an atomic access reads the
 // latest value of a word, whose dirty bytes the dcache writes back or merges,
-// and allocates no entry of the dcache, neither does it evict one. An atomic
-// access replacing a word wholly cached invalidates its entry, but one partly
-// cached, its bytes from a byte or halfword store, ie: of the buffer of stdout,
-// keeps a stale entry, possibly dirty; hence, from the first copy to the reset,
-// which discards the dirty entries of the dcache, no access may write such an
-// entry back over the payload: the routine makes none but atomic accesses, and
-// there is no fence before the reset, as a fence which flushed the dcache would
-// write them back. The .aqrl accesses, and wb_mux, which grants the irqctrl once
-// the writes to the SRAM before are acknowledged, order the request of the reset
-// after the copies.
+// allocates no entry of the dcache, neither does it evict one, and leaves no
+// entry of the word which it replaces, whether the word was wholly or partly
+// cached, ie: its bytes from a byte store to the buffer of stdout. Hence the
+// payload is in the memory, which the reset keeps, and no entry of the dcache
+// holds a word of it, whereas the reset discards the dirty entries, as it would
+// discard what plain stores copied. The .aqrl accesses, and wb_mux, which
+// grants the irqctrl once the writes to the SRAM before are acknowledged, order
+// the request of the reset after the copies.
 extern const uintptr_t __bootldr_handoff[];
 __asm__ (
 	"	.pushsection .text.__bootldr_handoff,\"ax\",@progbits\n"
@@ -387,7 +412,104 @@ __asm__ (
 	"	.popsection\n"
 );
 
+// The resident mode parks the harts other than the cpu 0, as described above,
+// with park(), which main() runs on each of them: it disables its interrupts,
+// counts itself in parkcnt, then waits for parkgo. Once every other hart
+// counted itself, main() disables its own interrupts, then, for each other
+// hart, sends it an IPI, which its disabled interrupts keep pending, and
+// acknowledges on the irqctrl, for that hart, the IPI, which disables its
+// destination, then whatever else is pending for it, until nothing is: the IPI
+// insures that no acknowledgement is made from an enabled destination with
+// nothing pending, which the monitor of the irqctrl in simulation reports as an
+// error. No other transaction can run, as every hart has its interrupts
+// disabled: the lock of the irqctrl of underLineOS is private. main() then sets
+// parkgo, and park() waits for an interrupt with mtvec at __bootldr_trampoline,
+// with a1 as the cpu 0 gets it, and a2 BOOTLDR_LOADADDR, which the trap keeps.
+// parkcnt and parkgo are accessed only by atomic accesses, as ATOMIC_COHERENCE
+// may be null. The code of the resident mode is compiled only for it, so that
+// the default build is the same as without it.
+#if (BOOTLDR_LOADADDR) != 0x1000
+#define PARKSTACKSZ 2048
+static uintptr_t parkcnt, parkgo;
+
+extern const uintptr_t __bootldr_trampoline[];
+__asm__ (
+	"	.pushsection .text.__bootldr_trampoline,\"ax\",@progbits\n"
+	"	.balign 4\n"
+	"	.global __bootldr_trampoline\n"
+	"__bootldr_trampoline:\n"
+	"	csrw	mtvec, x0		# a trap halts until the payload sets mtvec\n"
+	"	fence.i				# the icache refills from the payload copied in memory\n"
+	"	li	ra, -1			# with a0 null, tells the payload that a1 is set by bootldr\n"
+	"	li	a0, 0\n"
+	"	jr	a2\n"
+	"	.popsection\n"
+);
+
+static void park (void *a1) {
+	__asm__ __volatile__ ("csrc mstatus, 0x8" ::: "memory");
+	(void)_atomic_inc(&parkcnt);
+	while (!_atomic_or(&parkgo, 0));
+	__asm__ __volatile__ (
+		"	mv	a1, %0\n"
+		"	mv	a2, %1\n"
+		"	csrw	mtvec, %2\n"
+		"	csrw	mie, %3			# MEIE alone\n"
+		"	csrs	mstatus, 0x8\n"
+		"1:	wfi\n"
+		"	j	1b\n"
+		:: "r"(a1), "r"((uintptr_t)(BOOTLDR_LOADADDR)), "r"(__bootldr_trampoline), "r"(0x800)
+		: "a1", "a2", "memory");
+	__builtin_unreachable();
+}
+
+// The routine with which the cpu 0 starts the payload in the resident mode;
+// main() calls it with interrupts disabled, the other harts being parked, and
+// it never returns: a0 is the address of the payload in the buffer, a1 where
+// the stack data goes, which is also the value of register a1 for the payload,
+// a2 the stack data, a3 its count of words, null without stack data, a4 n, and
+// a5 BOOTLDR_LOADADDR. It copies them as __bootldr_handoff does, using atomic
+// accesses only, so that no entry of the dcache holds a word of the payload,
+// whose instructions are fetched from memory; then it invalidates the icache,
+// and jumps to the payload with ra set to -1, a0 null, and sp set to a1.
+extern void __bootldr_start (uintptr_t *pl, uintptr_t a1, const void *sdat, uintptr_t sdwords,
+	uintptr_t n, uintptr_t loadaddr) __attribute__((noreturn));
+__asm__ (
+	"	.pushsection .text.__bootldr_start,\"ax\",@progbits\n"
+	"	.balign 4\n"
+	"	.global __bootldr_start\n"
+	"__bootldr_start:\n"
+	"	csrw	mtvec, x0		# a trap halts until the payload sets mtvec\n"
+	"	mv	t2, a1\n"
+	"1:	beqz	a3, 2f			# the stack data first\n"
+	"	amoadd.w.aqrl	t0, x0, (a2)\n"
+	"	amoswap.w.aqrl	x0, t0, (t2)\n"
+	"	addi	a2, a2, 4\n"
+	"	addi	t2, t2, 4\n"
+	"	addi	a3, a3, -1\n"
+	"	j	1b\n"
+	"2:	mv	t2, a5			# then the payload\n"
+	"3:	amoadd.w.aqrl	t0, x0, (a0)\n"
+	"	amoswap.w.aqrl	x0, t0, (t2)\n"
+	"	addi	a0, a0, 4\n"
+	"	addi	t2, t2, 4\n"
+	"	addi	a4, a4, -1\n"
+	"	bnez	a4, 3b\n"
+	"	fence.i				# the icache refills from the payload copied in memory\n"
+	"	li	ra, -1			# with a0 null, tells the payload that a1 is set by bootldr\n"
+	"	li	a0, 0\n"
+	"	mv	sp, a1\n"
+	"	jr	a5\n"
+	"	.popsection\n"
+);
+#endif
+
 void main (void) {
+#if (BOOTLDR_LOADADDR) != 0x1000
+	// In the resident mode, main() stays on the cpu 0, which starts the payload,
+	// the other harts being parked, as described above.
+	_thread_cur->pin = true;
+#endif
 	printf("🚀 Starting bootloader ...\n");
 	// The end of memory which the reset gives, ie: the value of register sp at
 	// reset, below which crt0.S carves, from tp up, the _thread_t of main(), its
@@ -560,6 +682,17 @@ void main (void) {
 			u64str(s0, ((unsigned long long)n * sizeof(uintptr_t))), (unsigned)(w * sizeof(uintptr_t)));
 		return;
 	}
+#if (BOOTLDR_LOADADDR) != 0x1000
+	// In the resident mode, the payload must lie at or above the end of memory
+	// which the reset gives, and below the buffer, as described above.
+	if ((uintptr_t)(BOOTLDR_LOADADDR) < memend ||
+		((uint64_t)(uintptr_t)(BOOTLDR_LOADADDR) + ((uint64_t)n * sizeof(uintptr_t))) > b) {
+		printf("❌ ERROR: payload of %s B at 0x%08x does not fit between 0x%08x and the buffer at 0x%08x\n",
+			u64str(s0, ((unsigned long long)n * sizeof(uintptr_t))), (unsigned)(BOOTLDR_LOADADDR),
+			(unsigned)memend, (unsigned)b);
+		return;
+	}
+#endif
 	uintptr_t *buf = (uintptr_t *)b;
 	_date_t c = _clkcycles();
 	r = DEVDRV(read)(&dev, buf, (uintptr_t)first, (uintptr_t)units);
@@ -582,6 +715,45 @@ void main (void) {
 	printf("📥 Loaded: %u B (%sB) | ⏱️ %u.%06u s | 📊 %sB/s | 🔢 CRC32 0x%08x ✅\n",
 		(unsigned)bytes, hrstr(s0, bytes), (unsigned)(us / 1000000), (unsigned)(us % 1000000),
 		hrstr(s1, ((bytes * 1000000) / us)), (unsigned)crc);
+#if (BOOTLDR_LOADADDR) != 0x1000
+	{
+		// The resident mode, described above: the other harts get parked, then
+		// the cpu 0 starts the payload; the end of memory to use, above the
+		// payload, is then above the end of memory which the reset gives.
+		uintptr_t ncpu = _ncpu(), cpu = _cpuid(), parked = 0, k;
+		for (uintptr_t i = 0; i < ncpu; ++i) {
+			if (i != cpu) {
+				_thread_schedoncpu(_thread_create(0, PARKSTACKSZ, park, (void *)a1), i, true);
+				++parked;
+			}
+		}
+		_date_t t = _clkcycles();
+		while ((k = _atomic_or(&parkcnt, 0)) != parked && (_clkcycles() - t) < _SECS(1));
+		if (k != parked) {
+			printf("❌ ERROR: %u of the %u other harts parked\n", (unsigned)k, (unsigned)parked);
+			return;
+		}
+		printf("⏩ Jumping to the payload at 0x%08x | 📎 a1 0x%08x: ", (unsigned)(BOOTLDR_LOADADDR), (unsigned)a1);
+		if (sdsz)
+			printf("%u B of stack data, end of memory raised to 0x%08x", (unsigned)STACKDATASZ, (unsigned)e);
+		else
+			printf("end of memory raised");
+		if (parked)
+			printf(" | 🅿️ %u hart%s parked", (unsigned)parked, ((parked == 1) ? "" : "s"));
+		printf("\n");
+		fflush(stdout);
+		drain();
+		__asm__ __volatile__ ("csrc mstatus, 0x8" ::: "memory");
+		for (uintptr_t i = 0; i < ncpu; ++i) {
+			if (i != cpu) {
+				(void)hwdrvirqctrl_int(i);
+				while (hwdrvirqctrl_ack(i, 0) != (uintptr_t)-2);
+			}
+		}
+		(void)_atomic_or(&parkgo, 1);
+		__bootldr_start(pl, a1, sdat, (sdsz / sizeof(uintptr_t)), n, (uintptr_t)(BOOTLDR_LOADADDR));
+	}
+#endif
 	const char *moved = ((e > memend) ? "raised" : "lowered");
 	if (!a1)
 		printf("🔄 Resetting into the payload at 0x1000 | 📎 a1 null\n");
