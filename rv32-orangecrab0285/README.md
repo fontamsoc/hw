@@ -885,6 +885,15 @@ to the payload, to the end of the DDR3 SDRAM. `SRCS= make` leaves the DDR3 SDRAM
 the payload then getting at most about 212 KiB of the SRAM, or about 203 KiB from the
 SD card, whose driver is larger.
 
+With `BOOTLDR_LOADADDR` set to another address than `0x1000`, its default, bootldr stays
+resident: the payload, linked at that address, at or above the end of memory which the
+reset gives, ie: at `0x41000`, the start of the DDR3 SDRAM, is copied there and started
+by a jump, with `ra`, `a0` and `a1` set as above. The other harts of a build with
+several are parked first, in the SRAM, no interrupt source being dispatched to them:
+only an IPI wakes one, ie: a Linux kernel starting it, into a trampoline which jumps to
+the payload. Any later reset, ie: holding the button, then runs bootldr again, which
+calibrates the DDR3 SDRAM and loads the payload again.
+
 ---
 
 ## Files
