@@ -1,0 +1,109 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// 20261120 (c) William Fonkou Tambe
+
+// FonTamSOC ftpu on the Digilent Nexys A7-100T, as rv32-nexysa7100/nexysa7100.sv
+// builds it: what does not depend on CPU_COUNT. The .dts including it adds the
+// cpu nodes, and their interrupt controllers to irqctrl and to the timer.
+//
+// No node has a clock frequency: the kernel reads the timebase from the CSR
+// 0xcc0 of the CPU, and each driver reads the clock of its device from the device
+// itself; the only frequency is the limit of the SPI flash.
+
+/ {
+	#address-cells = <1>;
+	#size-cells = <1>;
+	model = "FonTamSOC ftpu, Digilent Nexys A7-100T";
+	compatible = "fontamsoc,nexysa7100";
+
+	chosen {
+		bootargs = "console=ttyFTS0,115200 earlycon root=/dev/sdsdio0p4 rootfstype=ext2 rootwait ro";
+		stdout-path = &serial;
+	};
+
+	aliases {
+		serial0 = &serial;
+	};
+
+	// DDR2 only: the SRAM from 0x1000 to 0x41000 stays apps/bootldr's, which
+	// is resident, is warm-booted by any reset, and parks there the harts
+	// which the kernel has not started.
+	memory@41000 {
+		device_type = "memory";
+		reg = <0x41000 0x8000000>;
+	};
+
+	// No timebase-frequency: the kernel reads it from the CSR 0xcc0.
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+
+	timer: timer {
+		compatible = "fontamsoc,ftpu-timer";
+	};
+
+	soc {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "simple-bus";
+		interrupt-parent = <&irqctrl>;
+		ranges;
+
+		sdsdio@e00 {
+			compatible = "fontamsoc,sdio";
+			reg = <0xe00 0x10>;
+			interrupts = <2>;
+		};
+
+		spi@e40 {
+			compatible = "fontamsoc,spi";
+			reg = <0xe40 0x8>;
+			interrupts = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			flash@0 {
+				compatible = "jedec,spi-nor";
+				reg = <0>;
+				spi-max-frequency = <50000000>;
+
+				partitions {
+					compatible = "fixed-partitions";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					partition@0 {
+						label = "bitstream";
+						reg = <0x0 0x400000>;
+						read-only;
+					};
+
+					partition@400000 {
+						label = "bldr";
+						reg = <0x400000 0xc00000>;
+					};
+				};
+			};
+		};
+
+		irqctrl: interrupt-controller@f00 {
+			compatible = "fontamsoc,irqctrl";
+			reg = <0xf00 0x4>;
+			interrupt-controller;
+			#interrupt-cells = <1>;
+			fontamsoc,nsources = <4>;
+		};
+
+		serial: serial@f80 {
+			compatible = "fontamsoc,serial-uart";
+			reg = <0xf80 0x8>;
+			interrupts = <1>;
+		};
+
+		dfltdev@fffffffc {
+			compatible = "fontamsoc,dfltdev";
+			reg = <0xfffffffc 0x4>;
+			interrupts = <0>;
+		};
+	};
+};
