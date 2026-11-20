@@ -140,10 +140,16 @@ always_ff @(posedge clk_i) begin
 
 	end else if (!slvidx_rdy && m_wb_addr_r == m_wb_addr_i) begin
 
+		// The walk does not leave a slave while acknowledgements are
+		// pending: slvidx_invalid tests the range of the slave being
+		// walked, hence a request in that range is accepted mid-walk,
+		// ie: one which the master presents in place of the one walked
+		// for, and the acknowledgement of that slave would be dropped
+		// once slvidx moves on.
 		if (m_wb_stb_i) begin
 			if (!slvidx_invalid)
 				slvidx_rdy <= 1;
-			else if (slvidx < (SDEVCOUNT-1)) begin
+			else if (slvidx < (SDEVCOUNT-1) && !ack_pending) begin
 				addrspace_slvidx_lo <= addrspace[slvidx_nxt][0];
 				addrspace_slvidx_hi <= addrspace[slvidx_nxt][1];
 				slvidx <= slvidx_nxt;
