@@ -818,6 +818,10 @@ application finds the data at `__rst_sp`. Functions run before the load are thos
 `SRCS`, ie: to initialize a DDR SDRAM; this board's memory needs no initialization, so
 `SRCS` is empty.
 
+The resident mode, which `BOOTLDR_LOADADDR` selects when set to another address than
+`0x1000`, its default, needs memory above the end of memory which the reset gives, which
+this board does not have: bootldr then stops with an error before loading the payload.
+
 ---
 
 ## Files
