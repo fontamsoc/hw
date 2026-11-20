@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# 20261120 (c) William Fonkou Tambe
+
+source "$BR2_EXTERNAL_NEXYSA7100_PATH/package/linux-smp/Config.in"
