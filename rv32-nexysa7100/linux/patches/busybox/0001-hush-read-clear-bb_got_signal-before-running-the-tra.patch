@@ -1,0 +1,45 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Tambe <tambewilliam@gmail.com>
+Date: Fri, 20 Nov 2026 14:36:05 -0600
+Subject: [PATCH] hush: read: clear bb_got_signal before running the traps
+
+With FEATURE_EDITING, record_pending_signo() sets bb_got_signal for
+read_line_input() and the read builtin, but check_and_run_traps(),
+which runs the traps, does not clear it; only the interactive line
+input does. Once a non-interactive shell has run a trap, every poll of
+shell_builtin_read() thus fails at once with EINTR, without a system
+call, and builtin_read(), for which no trap is pending, retries forever:
+read spins at full CPU, ie:
+
+    trap 'echo USR1' USR1; kill -USR1 $$; read l < /proc/version
+
+builtin_read() now clears bb_got_signal before it runs the traps of the
+signals pending, a signal which comes later setting it again.
+
+Upstream: not submitted
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: William Tambe <tambewilliam@gmail.com>
+---
+ shell/hush.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/shell/hush.c b/shell/hush.c
+index dcc6b22..79f401d 100644
+--- a/shell/hush.c
++++ b/shell/hush.c
+@@ -11752,7 +11752,14 @@ static int FAST_FUNC builtin_read(char **argv)
+ 	r = shell_builtin_read(&params);
+ 
+ 	if ((uintptr_t)r == 1 && errno == EINTR) {
+-		unsigned sig = check_and_run_traps();
++		unsigned sig;
++		/* The traps of the signals pending run here, and only line
++		 * input clears bb_got_signal: left set, it would make every
++		 * poll of shell_builtin_read() fail with EINTR. A signal
++		 * which comes after it is cleared sets it again.
++		 */
++		bb_got_signal = 0;
++		sig = check_and_run_traps();
+ 		if (sig != SIGINT)
+ 			goto again;
+ 	}
