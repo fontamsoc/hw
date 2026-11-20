@@ -1,0 +1,369 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Tambe <tambewilliam@gmail.com>
+Date: Fri, 20 Nov 2026 11:49:16 -0600
+Subject: [PATCH 1/8] dt-bindings: Add the FonTamSOC
+
+Add the vendor prefix of the FonTamSOC, the system on chip around the
+ftpu RISC-V core, and the bindings of its devices: its interrupt
+controller, the timer of its core, its UART, its SD host, its SPI master
+and its default device.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: William Tambe <tambewilliam@gmail.com>
+---
+ .../fontamsoc,irqctrl.yaml                    | 59 +++++++++++++++++++
+ .../bindings/misc/fontamsoc,dfltdev.yaml      | 40 +++++++++++++
+ .../bindings/mmc/fontamsoc,sdio.yaml          | 40 +++++++++++++
+ .../serial/fontamsoc,serial-uart.yaml         | 43 ++++++++++++++
+ .../bindings/spi/fontamsoc,spi.yaml           | 49 +++++++++++++++
+ .../bindings/timer/fontamsoc,ftpu-timer.yaml  | 39 ++++++++++++
+ .../devicetree/bindings/vendor-prefixes.yaml  |  2 +
+ MAINTAINERS                                   | 10 ++++
+ 8 files changed, 282 insertions(+)
+ create mode 100644 Documentation/devicetree/bindings/interrupt-controller/fontamsoc,irqctrl.yaml
+ create mode 100644 Documentation/devicetree/bindings/misc/fontamsoc,dfltdev.yaml
+ create mode 100644 Documentation/devicetree/bindings/mmc/fontamsoc,sdio.yaml
+ create mode 100644 Documentation/devicetree/bindings/serial/fontamsoc,serial-uart.yaml
+ create mode 100644 Documentation/devicetree/bindings/spi/fontamsoc,spi.yaml
+ create mode 100644 Documentation/devicetree/bindings/timer/fontamsoc,ftpu-timer.yaml
+
+diff --git a/Documentation/devicetree/bindings/interrupt-controller/fontamsoc,irqctrl.yaml b/Documentation/devicetree/bindings/interrupt-controller/fontamsoc,irqctrl.yaml
+new file mode 100644
+index 000000000..957753322
+--- /dev/null
++++ b/Documentation/devicetree/bindings/interrupt-controller/fontamsoc,irqctrl.yaml
+@@ -0,0 +1,59 @@
++# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
++%YAML 1.2
++---
++$id: http://devicetree.org/schemas/interrupt-controller/fontamsoc,irqctrl.yaml#
++$schema: http://devicetree.org/meta-schemas/core.yaml#
++
++title: FonTamSOC interrupt controller
++
++maintainers:
++  - William Fonkou Tambe <tambewilliam@gmail.com>
++
++description: |
++  The interrupt controller of the FonTamSOC dispatches the interrupts of its
++  sources, one at a time, to the harts of the ftpu core, raising their machine
++  external interrupt until acknowledged, and their interprocessor interrupts.
++  It also resets the system.
++
++properties:
++  compatible:
++    const: fontamsoc,irqctrl
++
++  reg:
++    maxItems: 1
++
++  interrupt-controller: true
++
++  '#interrupt-cells':
++    const: 1
++
++  interrupts-extended:
++    description: The machine external interrupt of each hart, a destination.
++    minItems: 1
++    maxItems: 16
++
++  fontamsoc,nsources:
++    $ref: /schemas/types.yaml#/definitions/uint32
++    description: The count of interrupt sources.
++    minimum: 1
++
++required:
++  - compatible
++  - reg
++  - interrupt-controller
++  - '#interrupt-cells'
++  - interrupts-extended
++  - fontamsoc,nsources
++
++additionalProperties: false
++
++examples:
++  - |
++    interrupt-controller@f00 {
++        compatible = "fontamsoc,irqctrl";
++        reg = <0xf00 0x4>;
++        interrupt-controller;
++        #interrupt-cells = <1>;
++        interrupts-extended = <&cpu0_intc 11>;
++        fontamsoc,nsources = <4>;
++    };
+diff --git a/Documentation/devicetree/bindings/misc/fontamsoc,dfltdev.yaml b/Documentation/devicetree/bindings/misc/fontamsoc,dfltdev.yaml
+new file mode 100644
+index 000000000..a1625ef22
+--- /dev/null
++++ b/Documentation/devicetree/bindings/misc/fontamsoc,dfltdev.yaml
+@@ -0,0 +1,40 @@
++# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
++%YAML 1.2
++---
++$id: http://devicetree.org/schemas/misc/fontamsoc,dfltdev.yaml#
++$schema: http://devicetree.org/meta-schemas/core.yaml#
++
++title: FonTamSOC default device
++
++maintainers:
++  - William Fonkou Tambe <tambewilliam@gmail.com>
++
++description: |
++  The default device of the FonTamSOC acknowledges every access to an address
++  which no device maps, and raises its interrupt; its register, the last word
++  of the address space, holds the first such address since it was read.
++
++properties:
++  compatible:
++    const: fontamsoc,dfltdev
++
++  reg:
++    maxItems: 1
++
++  interrupts:
++    maxItems: 1
++
++required:
++  - compatible
++  - reg
++  - interrupts
++
++additionalProperties: false
++
++examples:
++  - |
++    dfltdev@fffffffc {
++        compatible = "fontamsoc,dfltdev";
++        reg = <0xfffffffc 0x4>;
++        interrupts = <0>;
++    };
+diff --git a/Documentation/devicetree/bindings/mmc/fontamsoc,sdio.yaml b/Documentation/devicetree/bindings/mmc/fontamsoc,sdio.yaml
+new file mode 100644
+index 000000000..663e6cfa4
+--- /dev/null
++++ b/Documentation/devicetree/bindings/mmc/fontamsoc,sdio.yaml
+@@ -0,0 +1,40 @@
++# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
++%YAML 1.2
++---
++$id: http://devicetree.org/schemas/mmc/fontamsoc,sdio.yaml#
++$schema: http://devicetree.org/meta-schemas/core.yaml#
++
++title: FonTamSOC SD host
++
++maintainers:
++  - William Fonkou Tambe <tambewilliam@gmail.com>
++
++description: |
++  The SD host of the FonTamSOC, which drives an SD card in SD mode, 4 bits
++  wide, through two serial interfaces, one for the line CMD and one for the
++  lines DAT; the card is driven as a block device.
++
++properties:
++  compatible:
++    const: fontamsoc,sdio
++
++  reg:
++    maxItems: 1
++
++  interrupts:
++    maxItems: 1
++
++required:
++  - compatible
++  - reg
++  - interrupts
++
++additionalProperties: false
++
++examples:
++  - |
++    sdsdio@e00 {
++        compatible = "fontamsoc,sdio";
++        reg = <0xe00 0x10>;
++        interrupts = <2>;
++    };
+diff --git a/Documentation/devicetree/bindings/serial/fontamsoc,serial-uart.yaml b/Documentation/devicetree/bindings/serial/fontamsoc,serial-uart.yaml
+new file mode 100644
+index 000000000..de5f29c14
+--- /dev/null
++++ b/Documentation/devicetree/bindings/serial/fontamsoc,serial-uart.yaml
+@@ -0,0 +1,43 @@
++# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
++%YAML 1.2
++---
++$id: http://devicetree.org/schemas/serial/fontamsoc,serial-uart.yaml#
++$schema: http://devicetree.org/meta-schemas/core.yaml#
++
++title: FonTamSOC UART
++
++maintainers:
++  - William Fonkou Tambe <tambewilliam@gmail.com>
++
++description: |
++  The UART of the FonTamSOC: its data word, and its command word, which sets
++  its receive interrupt and its speed, from the frequency of its clock, which
++  it reports.
++
++allOf:
++  - $ref: serial.yaml#
++
++properties:
++  compatible:
++    const: fontamsoc,serial-uart
++
++  reg:
++    maxItems: 1
++
++  interrupts:
++    maxItems: 1
++
++required:
++  - compatible
++  - reg
++  - interrupts
++
++unevaluatedProperties: false
++
++examples:
++  - |
++    serial@f80 {
++        compatible = "fontamsoc,serial-uart";
++        reg = <0xf80 0x8>;
++        interrupts = <1>;
++    };
+diff --git a/Documentation/devicetree/bindings/spi/fontamsoc,spi.yaml b/Documentation/devicetree/bindings/spi/fontamsoc,spi.yaml
+new file mode 100644
+index 000000000..40fabe841
+--- /dev/null
++++ b/Documentation/devicetree/bindings/spi/fontamsoc,spi.yaml
+@@ -0,0 +1,49 @@
++# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
++%YAML 1.2
++---
++$id: http://devicetree.org/schemas/spi/fontamsoc,spi.yaml#
++$schema: http://devicetree.org/meta-schemas/core.yaml#
++
++title: FonTamSOC SPI master
++
++maintainers:
++  - William Fonkou Tambe <tambewilliam@gmail.com>
++
++description: |
++  The SPI master of the FonTamSOC, mode 0, with one chip select, which
++  transfers words of 4 bytes.
++
++allOf:
++  - $ref: spi-controller.yaml#
++
++properties:
++  compatible:
++    const: fontamsoc,spi
++
++  reg:
++    maxItems: 1
++
++  interrupts:
++    maxItems: 1
++
++required:
++  - compatible
++  - reg
++
++unevaluatedProperties: false
++
++examples:
++  - |
++    spi@e40 {
++        compatible = "fontamsoc,spi";
++        reg = <0xe40 0x8>;
++        interrupts = <3>;
++        #address-cells = <1>;
++        #size-cells = <0>;
++
++        flash@0 {
++            compatible = "jedec,spi-nor";
++            reg = <0>;
++            spi-max-frequency = <50000000>;
++        };
++    };
+diff --git a/Documentation/devicetree/bindings/timer/fontamsoc,ftpu-timer.yaml b/Documentation/devicetree/bindings/timer/fontamsoc,ftpu-timer.yaml
+new file mode 100644
+index 000000000..e8394a061
+--- /dev/null
++++ b/Documentation/devicetree/bindings/timer/fontamsoc,ftpu-timer.yaml
+@@ -0,0 +1,39 @@
++# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
++%YAML 1.2
++---
++$id: http://devicetree.org/schemas/timer/fontamsoc,ftpu-timer.yaml#
++$schema: http://devicetree.org/meta-schemas/core.yaml#
++
++title: FonTamSOC ftpu timer
++
++maintainers:
++  - William Fonkou Tambe <tambewilliam@gmail.com>
++
++description: |
++  The timer of the ftpu core, in machine mode: its CSR time, which counts every
++  clock cycle and is the same on every hart, and the pair of CSRs of the
++  machine timer compare of each hart, whose machine timer interrupt it raises.
++  The timebase is the frequency of the clock of the core, which its CSR clkfreq
++  gives.
++
++properties:
++  compatible:
++    const: fontamsoc,ftpu-timer
++
++  interrupts-extended:
++    description: The machine timer interrupt of each hart.
++    minItems: 1
++    maxItems: 16
++
++required:
++  - compatible
++  - interrupts-extended
++
++additionalProperties: false
++
++examples:
++  - |
++    timer {
++        compatible = "fontamsoc,ftpu-timer";
++        interrupts-extended = <&cpu0_intc 7>;
++    };
+diff --git a/Documentation/devicetree/bindings/vendor-prefixes.yaml b/Documentation/devicetree/bindings/vendor-prefixes.yaml
+index a9cf85fd6..edda0f67c 100644
+--- a/Documentation/devicetree/bindings/vendor-prefixes.yaml
++++ b/Documentation/devicetree/bindings/vendor-prefixes.yaml
+@@ -576,6 +576,8 @@ patternProperties:
+     description: Flipkart Inc.
+   "^focaltech,.*":
+     description: FocalTech Systems Co.,Ltd
++  "^fontamsoc,.*":
++    description: FonTamSOC
+   "^forlinx,.*":
+     description: Baoding Forlinx Embedded Technology Co., Ltd.
+   "^foursemi,.*":
+diff --git a/MAINTAINERS b/MAINTAINERS
+index f5ea85882..d718d65fc 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -9756,6 +9756,16 @@ F:	include/uapi/sound/scarlett2.h
+ F:	sound/usb/fcp.c
+ F:	sound/usb/mixer_scarlett2.c
+ 
++FONTAMSOC FTPU PLATFORM
++M:	William Fonkou Tambe <tambewilliam@gmail.com>
++S:	Maintained
++F:	Documentation/devicetree/bindings/interrupt-controller/fontamsoc,irqctrl.yaml
++F:	Documentation/devicetree/bindings/misc/fontamsoc,dfltdev.yaml
++F:	Documentation/devicetree/bindings/mmc/fontamsoc,sdio.yaml
++F:	Documentation/devicetree/bindings/serial/fontamsoc,serial-uart.yaml
++F:	Documentation/devicetree/bindings/spi/fontamsoc,spi.yaml
++F:	Documentation/devicetree/bindings/timer/fontamsoc,ftpu-timer.yaml
++
+ FORCEDETH GIGABIT ETHERNET DRIVER
+ M:	Rain River <rain.1986.08.12@gmail.com>
+ M:	Zhu Yanjun <zyjzyj2000@gmail.com>

@@ -1,0 +1,532 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Tambe <tambewilliam@gmail.com>
+Date: Fri, 20 Nov 2026 11:49:17 -0600
+Subject: [PATCH 2/8] riscv: Add the FonTamSOC ftpu platform
+
+The ftpu is the RV32IMA core of the FonTamSOC, without MMU; the kernel
+runs in machine mode, without firmware:
+- the timebase is the frequency of the clock of the core, which its CSR
+  clkfreq (0xcc0) gives, the device tree carrying no frequency; its CSR
+  time counts every clock cycle, the same on every hart, and get_cycles()
+  reads it in M-mode rather than a CLINT;
+- its wfi waits only while mstatus.MIE is set: arch_cpu_idle() enables
+  the interrupts around it, and do_irq() moves the epc of an interrupt
+  taken at the wfi past it;
+- its data-cache is write-back and cannot be flushed as a whole, and its
+  instruction fetches read the memory: the flushes of the icache first
+  write the range back, a word at a time with amoor.w, or the whole
+  data-cache by reading an array of its size, then execute fence.i; with
+  SMP, the data-cache of every hart is written back before any hart
+  executes fence.i;
+- with SMP, the secondary harts, which the bootloader parks, are woken by
+  an interprocessor interrupt once their boot data is published, through
+  a hook which the driver of the interrupt controller sets; and they are
+  started only when /cpus states the atomic coherence of the bitstream,
+  without which harts with a data-cache cannot share words between atomic
+  and plain accesses, as the ticket spinlocks do.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: William Tambe <tambewilliam@gmail.com>
+---
+ arch/riscv/Kconfig.socs              |  11 +++
+ arch/riscv/include/asm/cacheflush.h  |  34 +++++++
+ arch/riscv/include/asm/csr.h         |   9 ++
+ arch/riscv/include/asm/processor.h   |   5 +
+ arch/riscv/include/asm/smp.h         |   8 ++
+ arch/riscv/include/asm/timex.h       |  10 +-
+ arch/riscv/kernel/cpu_ops_spinwait.c |  14 +++
+ arch/riscv/kernel/process.c          |  20 ++++
+ arch/riscv/kernel/smpboot.c          |  34 +++++++
+ arch/riscv/kernel/time.c             |  11 ++-
+ arch/riscv/kernel/traps.c            |   6 ++
+ arch/riscv/mm/cacheflush.c           | 132 ++++++++++++++++++++++++++-
+ 12 files changed, 289 insertions(+), 5 deletions(-)
+
+diff --git a/arch/riscv/Kconfig.socs b/arch/riscv/Kconfig.socs
+index 848e7149e..b8dbea248 100644
+--- a/arch/riscv/Kconfig.socs
++++ b/arch/riscv/Kconfig.socs
+@@ -13,6 +13,17 @@ config ARCH_ESWIN
+ 	  This enables support for ESWIN SoC platform hardware,
+ 	  including the ESWIN EIC7700 SoC.
+ 
++config ARCH_FONTAMSOC
++	bool "FonTamSOC (ftpu)"
++	depends on !MMU
++	select FTPU_TIMER
++	select FONTAMSOC_IRQCTRL
++	help
++	  This enables support for the FonTamSOC systems built around the
++	  ftpu RISC-V core, which runs the kernel in machine mode: its timer
++	  and its interrupt controller, and the maintenance of its caches,
++	  whose data-cache instruction fetches do not see.
++
+ config ARCH_MICROCHIP_POLARFIRE
+ 	def_bool ARCH_MICROCHIP
+ 
+diff --git a/arch/riscv/include/asm/cacheflush.h b/arch/riscv/include/asm/cacheflush.h
+index b1a2ac665..cd04ab601 100644
+--- a/arch/riscv/include/asm/cacheflush.h
++++ b/arch/riscv/include/asm/cacheflush.h
+@@ -8,6 +8,35 @@
+ 
+ #include <linux/mm.h>
+ 
++#ifdef CONFIG_ARCH_FONTAMSOC
++/*
++ * The data-cache of the FonTamSOC ftpu is write-back and cannot be flushed as
++ * a whole, while instruction fetches read the memory, fence.i invalidating
++ * the icache only: code which stores wrote is written back first, either by
++ * ftpu_dcache_wb_range(), an amoor.w per word, which writes back a word,
++ * wholly or partly cached, and invalidates its entry, or by
++ * ftpu_dcache_wb_all(), which reads as many words as the data-cache holds
++ * from an array which is never written nor executed, replacing every entry of
++ * the direct-mapped data-cache. ftpu_dcache_wb() does the former for a small
++ * range, the latter otherwise.
++ */
++void ftpu_dcache_wb_range(unsigned long start, unsigned long end);
++void ftpu_dcache_wb_all(void);
++void ftpu_dcache_wb(unsigned long start, unsigned long end);
++
++static inline void local_flush_icache_all(void)
++{
++	ftpu_dcache_wb_all();
++	asm volatile ("fence.i" ::: "memory");
++}
++
++static inline void local_flush_icache_range(unsigned long start,
++					    unsigned long end)
++{
++	ftpu_dcache_wb(start, end);
++	asm volatile ("fence.i" ::: "memory");
++}
++#else
+ static inline void local_flush_icache_all(void)
+ {
+ 	asm volatile ("fence.i" ::: "memory");
+@@ -18,6 +47,7 @@ static inline void local_flush_icache_range(unsigned long start,
+ {
+ 	local_flush_icache_all();
+ }
++#endif /* CONFIG_ARCH_FONTAMSOC */
+ 
+ #define PG_dcache_clean PG_arch_1
+ 
+@@ -81,10 +111,14 @@ void flush_icache_mm(struct mm_struct *mm, bool local);
+  * so instead we just flush the whole thing.
+  */
+ #define flush_icache_range flush_icache_range
++#ifdef CONFIG_ARCH_FONTAMSOC
++void flush_icache_range(unsigned long start, unsigned long end);
++#else
+ static inline void flush_icache_range(unsigned long start, unsigned long end)
+ {
+ 	flush_icache_all();
+ }
++#endif
+ 
+ extern unsigned int riscv_cbom_block_size;
+ extern unsigned int riscv_cboz_block_size;
+diff --git a/arch/riscv/include/asm/csr.h b/arch/riscv/include/asm/csr.h
+index 4a37a9839..daacbcb2b 100644
+--- a/arch/riscv/include/asm/csr.h
++++ b/arch/riscv/include/asm/csr.h
+@@ -419,6 +419,15 @@
+ #define CSR_MIMPID		0xf13
+ #define CSR_MHARTID		0xf14
+ 
++/*
++ * FonTamSOC ftpu: the machine timer compare is a pair of CSRs, compared with
++ * the CSR time, which counts every clock cycle; the read-only CSR clkfreq
++ * gives the frequency of that clock in Hz.
++ */
++#define CSR_FTPU_MTIMECMP	0x34d
++#define CSR_FTPU_MTIMECMPH	0x35d
++#define CSR_FTPU_CLKFREQ	0xcc0
++
+ /* Machine-Level Window to Indirectly Accessed Registers (AIA) */
+ #define CSR_MISELECT		0x350
+ #define CSR_MIREG		0x351
+diff --git a/arch/riscv/include/asm/processor.h b/arch/riscv/include/asm/processor.h
+index da5426122..095748c71 100644
+--- a/arch/riscv/include/asm/processor.h
++++ b/arch/riscv/include/asm/processor.h
+@@ -173,6 +173,11 @@ extern void start_thread(struct pt_regs *regs,
+ extern unsigned long __get_wchan(struct task_struct *p);
+ 
+ 
++#ifdef CONFIG_ARCH_FONTAMSOC
++/* The wfi of arch_cpu_idle(), which do_irq() skips. */
++extern char ftpu_idle_wfi[];
++#endif
++
+ static inline void wait_for_interrupt(void)
+ {
+ 	__asm__ __volatile__ ("wfi");
+diff --git a/arch/riscv/include/asm/smp.h b/arch/riscv/include/asm/smp.h
+index 7ac80e9f2..df5a19ac3 100644
+--- a/arch/riscv/include/asm/smp.h
++++ b/arch/riscv/include/asm/smp.h
+@@ -51,6 +51,14 @@ bool riscv_ipi_have_virq_range(void);
+ /* Set the IPI interrupt numbers for arch (called by irqchip drivers) */
+ void riscv_ipi_set_virq_range(int virq, int nr);
+ 
++#ifdef CONFIG_ARCH_FONTAMSOC
++/*
++ * Set by the driver of the interrupt controller of the FonTamSOC: wakes, by
++ * an interprocessor interrupt, a hart which the bootldr parked.
++ */
++extern void (*ftpu_wake_hart)(unsigned long hartid);
++#endif
++
+ /* Check other CPUs stop or not */
+ bool smp_crash_stop_failed(void);
+ 
+diff --git a/arch/riscv/include/asm/timex.h b/arch/riscv/include/asm/timex.h
+index a06697846..e63d78ce5 100644
+--- a/arch/riscv/include/asm/timex.h
++++ b/arch/riscv/include/asm/timex.h
+@@ -10,7 +10,11 @@
+ 
+ typedef unsigned long cycles_t;
+ 
+-#ifdef CONFIG_RISCV_M_MODE
++/*
++ * In M-mode, the time comes from the CLINT, save on the FonTamSOC ftpu, whose
++ * CSR time counts every clock cycle, the same on every hart.
++ */
++#if defined(CONFIG_RISCV_M_MODE) && !defined(CONFIG_ARCH_FONTAMSOC)
+ 
+ #include <asm/clint.h>
+ 
+@@ -46,7 +50,7 @@ static inline unsigned long random_get_entropy(void)
+ }
+ #define random_get_entropy()	random_get_entropy()
+ 
+-#else /* CONFIG_RISCV_M_MODE */
++#else /* CONFIG_RISCV_M_MODE && !CONFIG_ARCH_FONTAMSOC */
+ 
+ static inline cycles_t get_cycles(void)
+ {
+@@ -60,7 +64,7 @@ static inline u32 get_cycles_hi(void)
+ }
+ #define get_cycles_hi get_cycles_hi
+ 
+-#endif /* !CONFIG_RISCV_M_MODE */
++#endif /* !CONFIG_RISCV_M_MODE || CONFIG_ARCH_FONTAMSOC */
+ 
+ #ifdef CONFIG_64BIT
+ static inline u64 get_cycles64(void)
+diff --git a/arch/riscv/kernel/cpu_ops_spinwait.c b/arch/riscv/kernel/cpu_ops_spinwait.c
+index 24869eb88..0a766b843 100644
+--- a/arch/riscv/kernel/cpu_ops_spinwait.c
++++ b/arch/riscv/kernel/cpu_ops_spinwait.c
+@@ -17,6 +17,10 @@ const struct cpu_operations cpu_ops_spinwait;
+ void *__cpu_spinwait_stack_pointer[NR_CPUS] __section(".data");
+ void *__cpu_spinwait_task_pointer[NR_CPUS] __section(".data");
+ 
++#ifdef CONFIG_ARCH_FONTAMSOC
++void (*ftpu_wake_hart)(unsigned long hartid);
++#endif
++
+ static void cpu_update_secondary_bootdata(unsigned int cpuid,
+ 				   struct task_struct *tidle)
+ {
+@@ -50,6 +54,16 @@ static int spinwait_cpu_start(unsigned int cpuid, struct task_struct *tidle)
+ 	 */
+ 	cpu_update_secondary_bootdata(cpuid, tidle);
+ 
++#ifdef CONFIG_ARCH_FONTAMSOC
++	/*
++	 * The hart, which the bootldr of the FonTamSOC parked, enters the kernel
++	 * once an interprocessor interrupt wakes it: it then finds its boot
++	 * data published.
++	 */
++	if (ftpu_wake_hart)
++		ftpu_wake_hart(cpuid_to_hartid_map(cpuid));
++#endif
++
+ 	return 0;
+ }
+ 
+diff --git a/arch/riscv/kernel/process.c b/arch/riscv/kernel/process.c
+index 31a392993..b1dc358d9 100644
+--- a/arch/riscv/kernel/process.c
++++ b/arch/riscv/kernel/process.c
+@@ -41,10 +41,30 @@ EXPORT_SYMBOL(__stack_chk_guard);
+ extern asmlinkage void ret_from_fork_kernel_asm(void);
+ extern asmlinkage void ret_from_fork_user_asm(void);
+ 
++#ifdef CONFIG_ARCH_FONTAMSOC
++/*
++ * The wfi of the FonTamSOC ftpu, in M-mode, waits until an interrupt both
++ * enabled and pending, mstatus.MIE included: arch_cpu_idle(), entered with
++ * interrupts disabled, enables them around its wfi. An interrupt pending
++ * already traps at ftpu_idle_wfi, and do_irq() then moves the epc past it, so
++ * that the idle loop sees what the interrupt did; one which wakes the wfi
++ * traps with the epc past it.
++ */
++void noinstr arch_cpu_idle(void)
++{
++	asm volatile ("	csrsi	" __stringify(CSR_STATUS) ", %0\n"
++		"	.globl	ftpu_idle_wfi\n"
++		"ftpu_idle_wfi:\n"
++		"	wfi\n"
++		"	csrci	" __stringify(CSR_STATUS) ", %0\n"
++		: : "i" (SR_MIE) : "memory");
++}
++#else
+ void noinstr arch_cpu_idle(void)
+ {
+ 	cpu_do_idle();
+ }
++#endif
+ 
+ int set_unalign_ctl(struct task_struct *tsk, unsigned int val)
+ {
+diff --git a/arch/riscv/kernel/smpboot.c b/arch/riscv/kernel/smpboot.c
+index 601a321e0..5273f08ba 100644
+--- a/arch/riscv/kernel/smpboot.c
++++ b/arch/riscv/kernel/smpboot.c
+@@ -155,6 +155,35 @@ static void __init of_parse_and_init_cpus(void)
+ 			cpuid, nr_cpu_ids);
+ }
+ 
++#ifdef CONFIG_ARCH_FONTAMSOC
++/*
++ * On the FonTamSOC ftpu, harts with a data-cache share words between atomic
++ * and plain accesses, as the kernel does, ie: its ticket spinlock, only when
++ * the bitstream is built with ATOMIC_COHERENCE, which the boolean
++ * fontamsoc,atomic-coherence of /cpus states: without it, no secondary hart
++ * is started.
++ */
++static bool __init ftpu_smp_coherent(void)
++{
++	struct device_node *cpus, *np;
++	bool dcache = false, coherent;
++	u32 size;
++
++	for_each_of_cpu_node(np) {
++		if (!of_property_read_u32(np, "d-cache-size", &size) && size)
++			dcache = true;
++	}
++	if (!dcache)
++		return true;
++	cpus = of_find_node_by_path("/cpus");
++	coherent = (cpus && of_property_read_bool(cpus, "fontamsoc,atomic-coherence"));
++	of_node_put(cpus);
++	if (!coherent)
++		pr_warn("ftpu: harts with a data-cache, but no fontamsoc,atomic-coherence in /cpus: running on the boot hart only\n");
++	return coherent;
++}
++#endif
++
+ void __init setup_smp(void)
+ {
+ 	int cpuid;
+@@ -166,6 +195,11 @@ void __init setup_smp(void)
+ 	else
+ 		acpi_parse_and_init_cpus();
+ 
++#ifdef CONFIG_ARCH_FONTAMSOC
++	if (!ftpu_smp_coherent())
++		return;
++#endif
++
+ 	for (cpuid = 1; cpuid < nr_cpu_ids; cpuid++)
+ 		if (cpuid_to_hartid_map(cpuid) != INVALID_HARTID)
+ 			set_cpu_possible(cpuid, true);
+diff --git a/arch/riscv/kernel/time.c b/arch/riscv/kernel/time.c
+index ba3477197..7c6344d7c 100644
+--- a/arch/riscv/kernel/time.c
++++ b/arch/riscv/kernel/time.c
+@@ -24,7 +24,16 @@ void __init time_init(void)
+ 	acpi_status status;
+ 	u32 prop;
+ 
+-	if (acpi_disabled) {
++	if (IS_ENABLED(CONFIG_ARCH_FONTAMSOC)) {
++		/*
++		 * The CSR time of the ftpu counts the clock cycles of the
++		 * core, whose frequency its CSR clkfreq gives: the device
++		 * tree carries no frequency.
++		 */
++		riscv_timebase = csr_read(CSR_FTPU_CLKFREQ);
++		pr_info("ftpu: timebase %lu Hz from CSR 0xcc0\n", riscv_timebase);
++		of_clk_init(NULL);
++	} else if (acpi_disabled) {
+ 		cpu = of_find_node_by_path("/cpus");
+ 		if (!cpu || of_property_read_u32(cpu, "timebase-frequency", &prop))
+ 			panic("RISC-V system with no 'timebase-frequency' in DTS\n");
+diff --git a/arch/riscv/kernel/traps.c b/arch/riscv/kernel/traps.c
+index 47afea4ff..514812adb 100644
+--- a/arch/riscv/kernel/traps.c
++++ b/arch/riscv/kernel/traps.c
+@@ -396,6 +396,12 @@ asmlinkage void noinstr do_irq(struct pt_regs *regs)
+ {
+ 	irqentry_state_t state = irqentry_enter(regs);
+ 
++#ifdef CONFIG_ARCH_FONTAMSOC
++	/* The interrupt which arch_cpu_idle() enabled skips its wfi. */
++	if (regs->epc == (unsigned long)ftpu_idle_wfi)
++		regs->epc += 4;
++#endif
++
+ 	if (IS_ENABLED(CONFIG_IRQ_STACKS) && on_thread_stack())
+ 		call_on_irq_stack(regs, handle_riscv_irq);
+ 	else
+diff --git a/arch/riscv/mm/cacheflush.c b/arch/riscv/mm/cacheflush.c
+index d83a61246..cbefab4e0 100644
+--- a/arch/riscv/mm/cacheflush.c
++++ b/arch/riscv/mm/cacheflush.c
+@@ -6,10 +6,11 @@
+ #include <linux/acpi.h>
+ #include <linux/of.h>
+ #include <linux/prctl.h>
++#include <linux/sizes.h>
+ #include <asm/acpi.h>
+ #include <asm/cacheflush.h>
+ 
+-#ifdef CONFIG_SMP
++#if defined(CONFIG_SMP) && !defined(CONFIG_ARCH_FONTAMSOC)
+ 
+ #include <asm/sbi.h>
+ 
+@@ -94,8 +95,137 @@ void flush_icache_mm(struct mm_struct *mm, bool local)
+ 	preempt_enable();
+ }
+ 
++#endif /* CONFIG_SMP && !CONFIG_ARCH_FONTAMSOC */
++
++#ifdef CONFIG_ARCH_FONTAMSOC
++/*
++ * The words which ftpu_dcache_wb_all() reads, as many as the largest
++ * data-cache holds; never written but by the clearing of the bss, nor
++ * executed: a word of code which a patch wrote would stay dirty when the read
++ * hits it.
++ */
++static u32 ftpu_dcache_evict[SZ_16K / sizeof(u32)];
++
++/*
++ * The size in bytes of the data-cache, from the property d-cache-size of the
++ * cpus of the device tree, null without data-cache; until ftpu_dcache_init()
++ * reads it, or without the property, the largest.
++ */
++static unsigned int ftpu_dcache_size = sizeof(ftpu_dcache_evict);
++
++/*
++ * The largest range which ftpu_dcache_wb() writes back a word at a time: an
++ * amoor.w and the read of ftpu_dcache_wb_all() cost about the same per word,
++ * the latter for every word of the data-cache.
++ */
++#define FTPU_DCACHE_WB_RANGE_MAX	SZ_8K
++
++void ftpu_dcache_wb_range(unsigned long start, unsigned long end)
++{
++	unsigned long p;
++
++	if (!READ_ONCE(ftpu_dcache_size))
++		return;
++	for (p = (start & ~3UL); p < end; p += 4)
++		asm volatile ("amoor.w zero, zero, (%0)" : : "r" (p) : "memory");
++}
++
++void ftpu_dcache_wb_all(void)
++{
++	unsigned int i, n = (READ_ONCE(ftpu_dcache_size) / sizeof(u32));
++
++	for (i = 0; i < n; i++)
++		(void)READ_ONCE(ftpu_dcache_evict[i]);
++}
++
++void ftpu_dcache_wb(unsigned long start, unsigned long end)
++{
++	if ((end - start) <= FTPU_DCACHE_WB_RANGE_MAX)
++		ftpu_dcache_wb_range(start, end);
++	else
++		ftpu_dcache_wb_all();
++}
++
++#ifdef CONFIG_SMP
++/*
++ * The code which a hart wrote may lie dirty in the data-cache of any hart, ie:
++ * an executable read on one hart, flushed on another after a migration; and a
++ * hart may fill its icache ahead from memory, ie: for a predicted return,
++ * between its fence.i and the write-back of another hart: every hart writes
++ * its data-cache back, then every hart invalidates its icache.
++ */
++static void ipi_ftpu_dcache_wb_all(void *info)
++{
++	ftpu_dcache_wb_all();
++}
++
++static void ipi_ftpu_fence_i(void *info)
++{
++	asm volatile ("fence.i" ::: "memory");
++}
++
++void flush_icache_all(void)
++{
++	on_each_cpu(ipi_ftpu_dcache_wb_all, NULL, 1);
++	on_each_cpu(ipi_ftpu_fence_i, NULL, 1);
++}
++EXPORT_SYMBOL(flush_icache_all);
++
++/*
++ * A small range is written back by the amoor.w of ftpu_dcache_wb_range(): with
++ * ATOMIC_COHERENCE, which the kernel requires of harts with a data-cache, an
++ * atomic access first takes its word from every data-cache, writing it back
++ * when dirty.
++ */
++void flush_icache_range(unsigned long start, unsigned long end)
++{
++	if ((end - start) > FTPU_DCACHE_WB_RANGE_MAX) {
++		flush_icache_all();
++		return;
++	}
++	ftpu_dcache_wb_range(start, end);
++	on_each_cpu(ipi_ftpu_fence_i, NULL, 1);
++}
++EXPORT_SYMBOL(flush_icache_range);
++
++void flush_icache_mm(struct mm_struct *mm, bool local)
++{
++	flush_icache_all();
++}
++#else
++void flush_icache_range(unsigned long start, unsigned long end)
++{
++	local_flush_icache_range(start, end);
++}
++EXPORT_SYMBOL(flush_icache_range);
+ #endif /* CONFIG_SMP */
+ 
++static int __init ftpu_dcache_init(void)
++{
++	struct device_node *np;
++	unsigned int size = 0;
++	bool found = false;
++	u32 val;
++
++	for_each_of_cpu_node(np) {
++		if (of_property_read_u32(np, "d-cache-size", &val))
++			continue;
++		found = true;
++		size = max(size, val);
++	}
++	if (!found)
++		return 0;
++	if (size > sizeof(ftpu_dcache_evict)) {
++		pr_warn("ftpu: d-cache-size %u above %zu, which is kept\n",
++			size, sizeof(ftpu_dcache_evict));
++		size = sizeof(ftpu_dcache_evict);
++	}
++	WRITE_ONCE(ftpu_dcache_size, size);
++	return 0;
++}
++early_initcall(ftpu_dcache_init);
++#endif /* CONFIG_ARCH_FONTAMSOC */
++
+ #ifdef CONFIG_MMU
+ void flush_icache_pte(struct mm_struct *mm, pte_t pte)
+ {

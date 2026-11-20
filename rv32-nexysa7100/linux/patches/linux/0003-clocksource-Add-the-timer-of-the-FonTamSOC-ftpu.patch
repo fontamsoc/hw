@@ -1,0 +1,251 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Tambe <tambewilliam@gmail.com>
+Date: Fri, 20 Nov 2026 11:49:17 -0600
+Subject: [PATCH 3/8] clocksource: Add the timer of the FonTamSOC ftpu
+
+In machine mode, the CSR time of the ftpu counts every clock cycle, the
+same on every hart, at the timebase; each hart compares it with its pair
+of CSRs mtimecmp, 0x34d and 0x35d, which raise its machine timer
+interrupt: a clocksource and sched_clock of 64 bits, and a oneshot
+clockevent per cpu.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: William Tambe <tambewilliam@gmail.com>
+---
+ MAINTAINERS                      |   1 +
+ drivers/clocksource/Kconfig      |  12 +++
+ drivers/clocksource/Makefile     |   1 +
+ drivers/clocksource/timer-ftpu.c | 164 +++++++++++++++++++++++++++++++
+ include/linux/cpuhotplug.h       |   1 +
+ 5 files changed, 179 insertions(+)
+ create mode 100644 drivers/clocksource/timer-ftpu.c
+
+diff --git a/MAINTAINERS b/MAINTAINERS
+index d718d65fc..7b47ec853 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -9765,6 +9765,7 @@ F:	Documentation/devicetree/bindings/mmc/fontamsoc,sdio.yaml
+ F:	Documentation/devicetree/bindings/serial/fontamsoc,serial-uart.yaml
+ F:	Documentation/devicetree/bindings/spi/fontamsoc,spi.yaml
+ F:	Documentation/devicetree/bindings/timer/fontamsoc,ftpu-timer.yaml
++F:	drivers/clocksource/timer-ftpu.c
+ 
+ FORCEDETH GIGABIT ETHERNET DRIVER
+ M:	Rain River <rain.1986.08.12@gmail.com>
+diff --git a/drivers/clocksource/Kconfig b/drivers/clocksource/Kconfig
+index 1119fbd52..3b2f9a957 100644
+--- a/drivers/clocksource/Kconfig
++++ b/drivers/clocksource/Kconfig
+@@ -673,6 +673,18 @@ config CLINT_TIMER
+ 	  This option enables the CLINT timer for RISC-V systems.  The CLINT
+ 	  driver is usually used for NoMMU RISC-V systems.
+ 
++config FTPU_TIMER
++	bool "Timer of the FonTamSOC ftpu" if COMPILE_TEST
++	depends on GENERIC_SCHED_CLOCK && RISCV
++	select TIMER_PROBE
++	select TIMER_OF
++	help
++	  This option enables the timer of the FonTamSOC ftpu RISC-V core,
++	  in machine mode: its CSR time, which counts every clock cycle and
++	  is the same on every hart, as the clocksource and sched_clock, and
++	  the pair of CSRs of the machine timer compare of each hart as its
++	  clockevent.
++
+ config CSKY_MP_TIMER
+ 	bool "SMP Timer for the C-SKY platform" if COMPILE_TEST
+ 	depends on CSKY
+diff --git a/drivers/clocksource/Makefile b/drivers/clocksource/Makefile
+index ec4452ee9..0dd1471cb 100644
+--- a/drivers/clocksource/Makefile
++++ b/drivers/clocksource/Makefile
+@@ -84,6 +84,7 @@ obj-$(CONFIG_CLKSRC_ST_LPC)		+= clksrc_st_lpc.o
+ obj-$(CONFIG_X86_NUMACHIP)		+= numachip.o
+ obj-$(CONFIG_RISCV_TIMER)		+= timer-riscv.o
+ obj-$(CONFIG_CLINT_TIMER)		+= timer-clint.o
++obj-$(CONFIG_FTPU_TIMER)		+= timer-ftpu.o
+ obj-$(CONFIG_CSKY_MP_TIMER)		+= timer-mp-csky.o
+ obj-$(CONFIG_GX6605S_TIMER)		+= timer-gx6605s.o
+ obj-$(CONFIG_HYPERV_TIMER)		+= hyperv_timer.o
+diff --git a/drivers/clocksource/timer-ftpu.c b/drivers/clocksource/timer-ftpu.c
+new file mode 100644
+index 000000000..5aa61e4bc
+--- /dev/null
++++ b/drivers/clocksource/timer-ftpu.c
+@@ -0,0 +1,164 @@
++// SPDX-License-Identifier: GPL-2.0-only
++// 20261120 (c) William Fonkou Tambe
++/*
++ * The timer of the FonTamSOC ftpu RISC-V core. In M-mode, its CSR time counts
++ * every clock cycle, the same on every hart, at riscv_timebase, which
++ * time_init() reads from its CSR clkfreq; each hart compares it with its pair
++ * of CSRs mtimecmp, 0x34d and 0x35d, which raise its machine timer interrupt.
++ */
++
++#define pr_fmt(fmt) "ftpu-timer: " fmt
++
++#include <linux/clockchips.h>
++#include <linux/clocksource.h>
++#include <linux/cpu.h>
++#include <linux/cpuhotplug.h>
++#include <linux/delay.h>
++#include <linux/init.h>
++#include <linux/interrupt.h>
++#include <linux/irq.h>
++#include <linux/irqdomain.h>
++#include <linux/of.h>
++#include <linux/of_irq.h>
++#include <linux/sched_clock.h>
++#include <linux/timex.h>
++
++#include <asm/csr.h>
++
++static unsigned int ftpu_timer_irq;
++
++static u64 notrace ftpu_timer_read(void)
++{
++	return get_cycles64();
++}
++
++static u64 ftpu_clocksource_read(struct clocksource *cs)
++{
++	return get_cycles64();
++}
++
++static struct clocksource ftpu_clocksource = {
++	.name	= "ftpu_clocksource",
++	.rating	= 300,
++	.mask	= CLOCKSOURCE_MASK(64),
++	.flags	= CLOCK_SOURCE_IS_CONTINUOUS,
++	.read	= ftpu_clocksource_read,
++};
++
++/*
++ * The high word of the compare is first set to all ones, so that no value
++ * which the writes of the pair go through is in the past.
++ */
++static void ftpu_timer_set_cmp(u64 cmp)
++{
++	csr_write(CSR_FTPU_MTIMECMPH, ULONG_MAX);
++	csr_write(CSR_FTPU_MTIMECMP, lower_32_bits(cmp));
++	csr_write(CSR_FTPU_MTIMECMPH, upper_32_bits(cmp));
++}
++
++static int ftpu_timer_next_event(unsigned long delta,
++				 struct clock_event_device *ce)
++{
++	ftpu_timer_set_cmp(get_cycles64() + delta);
++	csr_set(CSR_IE, IE_TIE);
++	return 0;
++}
++
++static int ftpu_timer_shutdown(struct clock_event_device *ce)
++{
++	csr_clear(CSR_IE, IE_TIE);
++	ftpu_timer_set_cmp(U64_MAX);
++	return 0;
++}
++
++static DEFINE_PER_CPU(struct clock_event_device, ftpu_clock_event) = {
++	.name			= "ftpu_clockevent",
++	.features		= CLOCK_EVT_FEAT_ONESHOT,
++	.rating			= 100,
++	.set_next_event		= ftpu_timer_next_event,
++	.set_state_shutdown	= ftpu_timer_shutdown,
++};
++
++static irqreturn_t ftpu_timer_interrupt(int irq, void *dev_id)
++{
++	struct clock_event_device *evdev = this_cpu_ptr(&ftpu_clock_event);
++
++	csr_clear(CSR_IE, IE_TIE);
++	evdev->event_handler(evdev);
++	return IRQ_HANDLED;
++}
++
++static int ftpu_timer_starting_cpu(unsigned int cpu)
++{
++	struct clock_event_device *ce = per_cpu_ptr(&ftpu_clock_event, cpu);
++
++	ce->cpumask = cpumask_of(cpu);
++	ce->irq = ftpu_timer_irq;
++	clockevents_config_and_register(ce, riscv_timebase, 100, ULONG_MAX);
++	enable_percpu_irq(ftpu_timer_irq,
++			  irq_get_trigger_type(ftpu_timer_irq));
++	return 0;
++}
++
++static int ftpu_timer_dying_cpu(unsigned int cpu)
++{
++	disable_percpu_irq(ftpu_timer_irq);
++	return 0;
++}
++
++static int __init ftpu_timer_init_dt(struct device_node *np)
++{
++	struct of_phandle_args oirq;
++	int i, n, rc;
++
++	/*
++	 * The machine timer interrupt of each cpu: one mapping serves every
++	 * cpu, the interrupt being per cpu.
++	 */
++	n = of_irq_count(np);
++	for (i = 0; (i < n) && !ftpu_timer_irq; i++) {
++		if (of_irq_parse_one(np, i, &oirq))
++			continue;
++		if (oirq.args_count != 1 || oirq.args[0] != RV_IRQ_TIMER) {
++			pr_err("%pOFP: interrupt %d is not the machine timer\n",
++			       np, i);
++			return -ENODEV;
++		}
++		if (irq_find_host(oirq.np))
++			ftpu_timer_irq = irq_of_parse_and_map(np, i);
++	}
++	if (!ftpu_timer_irq) {
++		pr_err("%pOFP: no machine timer interrupt\n", np);
++		return -ENODEV;
++	}
++
++	pr_info("%pOFP: running at %lu Hz\n", np, riscv_timebase);
++
++	rc = clocksource_register_hz(&ftpu_clocksource, riscv_timebase);
++	if (rc) {
++		pr_err("%pOFP: clocksource register failed [%d]\n", np, rc);
++		return rc;
++	}
++
++	sched_clock_register(ftpu_timer_read, 64, riscv_timebase);
++
++	rc = request_percpu_irq(ftpu_timer_irq, ftpu_timer_interrupt,
++				"ftpu-timer", &ftpu_clock_event);
++	if (rc) {
++		pr_err("%pOFP: registering percpu irq failed [%d]\n", np, rc);
++		return rc;
++	}
++
++	rc = cpuhp_setup_state(CPUHP_AP_FTPU_TIMER_STARTING,
++			       "clockevents/ftpu/timer:starting",
++			       ftpu_timer_starting_cpu, ftpu_timer_dying_cpu);
++	if (rc) {
++		pr_err("%pOFP: cpuhp setup state failed [%d]\n", np, rc);
++		free_percpu_irq(ftpu_timer_irq, &ftpu_clock_event);
++		return rc;
++	}
++
++	return 0;
++}
++
++TIMER_OF_DECLARE(ftpu_timer, "fontamsoc,ftpu-timer", ftpu_timer_init_dt);
+diff --git a/include/linux/cpuhotplug.h b/include/linux/cpuhotplug.h
+index 22ba327ec..be224b921 100644
+--- a/include/linux/cpuhotplug.h
++++ b/include/linux/cpuhotplug.h
+@@ -173,6 +173,7 @@ enum cpuhp_state {
+ 	CPUHP_AP_REALTEK_TIMER_STARTING,
+ 	CPUHP_AP_RISCV_TIMER_STARTING,
+ 	CPUHP_AP_CLINT_TIMER_STARTING,
++	CPUHP_AP_FTPU_TIMER_STARTING,
+ 	CPUHP_AP_CSKY_TIMER_STARTING,
+ 	CPUHP_AP_TI_GP_TIMER_STARTING,
+ 	CPUHP_AP_HYPERV_TIMER_STARTING,
