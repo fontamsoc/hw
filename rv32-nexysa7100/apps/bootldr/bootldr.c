@@ -68,15 +68,20 @@
 // The stack data, when BOOTLDR_STACKDATA is defined, is the content of that
 // file, ie: a device tree blob, which #embed embeds in bootldr. Padded with null
 // bytes to a multiple of 16 bytes, it is stored right below the end of the memory
-// to use, rounded down to a multiple of 16; register a1 gives its address.
+// to use, rounded down to a multiple of 16; register a1 gives its address. The
+// functions of __bootldr_init_array, described below, may edit it beforehand, as
+// __bootldr_stackdata, of __bootldr_stackdatasz bytes, ie: to enable in a device
+// tree blob the harts which the bitstream has; it lies in .data, which crt0.S
+// restores at a warm boot, hence every boot starts from the stack data as embedded.
 //
 // __bootldr_init_array is an array of pointers to functions, ended by a null
 // pointer, which main() calls in order once it printed its first line, before
-// initializing the device, ie: to initialize or calibrate a DDR SDRAM. A function
-// returns non-null on success; null stops the boot, an error being printed. This
-// file defines the array weak, holding only the null pointer; a board defines its
-// own in a source file which the makefile compiles as well, given through the
-// variable SRCS, ie: make clean && SRCS=ddrinit.c make
+// initializing the device, ie: to initialize or calibrate a DDR SDRAM, or to edit
+// the stack data, as described above. A function returns non-null on success;
+// null stops the boot, an error being printed. This file defines the array weak,
+// holding only the null pointer; a board defines its own in a source file which
+// the makefile compiles as well, given through the variable SRCS, ie:
+// make clean && SRCS=ddrinit.c make
 // where ddrinit.c holds, for a DDR SDRAM of 128 MiB following 256 KiB of SRAM:
 // 	#include <stdint.h>
 // 	extern uintptr_t __bootldr_ram_end;
@@ -229,13 +234,16 @@ static DEVDRV(t) dev = {.addr = devc};
 #error "BOOTLDR_STACKDATA must be the path of a file which is not empty, searched from the directory of bootldr.c"
 #endif
 // The stack data, padded with null bytes to a multiple of 16 bytes;
-// STACKDATASZ is the size of the file.
+// STACKDATASZ is the size of the file; __bootldr_stackdatasz gives it to the
+// functions of __bootldr_init_array, which may edit the stack data, as
+// described above.
 enum { STACKDATASZ = sizeof((const uint8_t[]){
 #embed BOOTLDR_STACKDATA
 }) };
-static const alignas(16) uint8_t stackdata[(STACKDATASZ + 15) & ~15] = {
+alignas(16) uint8_t __bootldr_stackdata[(STACKDATASZ + 15) & ~15] = {
 #embed BOOTLDR_STACKDATA
 };
+const uintptr_t __bootldr_stackdatasz = STACKDATASZ;
 #else
 enum { STACKDATASZ = 0 };
 #endif
@@ -621,8 +629,8 @@ void main (void) {
 	// a multiple of 16, at d, which the payload gets in register a1 when there is
 	// stack data, or when the end of the memory to use was moved.
 #ifdef BOOTLDR_STACKDATA
-	const void *sdat = stackdata;
-	uintptr_t sdsz = sizeof(stackdata);
+	const void *sdat = __bootldr_stackdata;
+	uintptr_t sdsz = sizeof(__bootldr_stackdata);
 #else
 	const void *sdat = 0;
 	uintptr_t sdsz = 0;
