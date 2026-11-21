@@ -7,7 +7,7 @@ on an ext2 root file system.
 
 The kernel runs in machine mode. There is no firmware below it:
 - [`apps/bootldr`](../apps/bootldr), in its resident mode, calibrates the DDR2 SDRAM;
-- it loads the kernel from the partition 2 of the SD card;
+- it loads the kernel from the partition 3 of the SD card;
 - it copies the kernel to `0x41000`, the start of the DDR2 SDRAM, with the device tree
   blob as its stack data;
 - then it jumps to the kernel.
@@ -76,13 +76,13 @@ make
    program](../README.md#loading-a-program). The bitstream must come from a tree with
    this directory: before it, `lib/wb_mux.sv` could drop an acknowledgement, which hangs
    the kernel of one hart within seconds of its boot.
-2. On the SD card, make an MBR partition table with a partition 2 of at least the size of
-   `vmlinux.bldr.bin`, and a partition 4 of at least 64 MiB. Partitions 1 and 3 are not
+2. On the SD card, make an MBR partition table with a partition 3 of at least the size of
+   `vmlinux.bldr.bin`, and a partition 4 of at least 64 MiB. Partitions 1 and 2 are not
    used.
 3. Write the images:
 
    ```sh
-   dd if=output/images/vmlinux.bldr.bin of=/dev/sdX2 bs=1M conv=fsync
+   dd if=output/images/vmlinux.bldr.bin of=/dev/sdX3 bs=1M conv=fsync
    dd if=output/images/rootfs.ext2 of=/dev/sdX4 bs=1M conv=fsync
    ```
 
@@ -106,7 +106,7 @@ function of [`bootldr_init_array.c`](../apps/bootldr/bootldr_init_array.c) which
 the calibration of the DDR2 SDRAM.
 
 Use `output/images/smp/bootldr.32.hex` for `SRAM_INITFILE`, and
-`output/images/smp/vmlinux.bldr.bin` for the partition 2. bootldr parks the other harts
+`output/images/smp/vmlinux.bldr.bin` for the partition 3. bootldr parks the other harts
 in the SRAM, where they wait for the IPI of the kernel which starts them; those beyond
 the fourth stay there.
 

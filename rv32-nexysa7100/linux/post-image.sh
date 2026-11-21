@@ -7,10 +7,12 @@
 # when the package linux-smp built it:
 # - vmlinux.bldr.bin, which tools/mkBootldrDat.py formats for apps/bootldr from
 #   vmlinux.bin, the Image, which the packages install under that name, to be
-#   written at the start of the partition 2 of the SD card;
+#   written at the start of the partition 3 of the SD card, the partition 4
+#   holding the root file system;
 # - bootldr.32.hex, the image of apps/bootldr for SRAM_INITFILE, built in its
-#   resident mode for the SD card in SD mode, loading the partition 2 to
-#   0x41000, the device tree blob of the kernel as its stack data.
+#   resident mode for the SD card in SD mode, loading the partition 3, the
+#   entry 2 of the MBR (BOOTLDR_FIRSTU32=-2), to 0x41000, the device tree blob
+#   of the kernel as its stack data.
 # The kernel must be linked at 0x41000, CONFIG_PHYS_RAM_BASE, where bootldr
 # copies it; the script checks it.
 
@@ -53,14 +55,14 @@ images() {
 		cd "${b}"
 		export PATH="${TOOLCHAIN}:${PATH}"
 		make clean > /dev/null
-		CFLAGS="-DBOOTLDR_DEVTYPE=2 -DBOOTLDR_DEVADDR=0xe00 -DBOOTLDR_FIRSTU32=-1 -DBOOTLDR_LOADADDR=${BOOTLDR_LOADADDR} -DBOOTLDR_STACKDATA=\\\"${dtb}\\\"" \
+		CFLAGS="-DBOOTLDR_DEVTYPE=2 -DBOOTLDR_DEVADDR=0xe00 -DBOOTLDR_FIRSTU32=-2 -DBOOTLDR_LOADADDR=${BOOTLDR_LOADADDR} -DBOOTLDR_STACKDATA=\\\"${dtb}\\\"" \
 			SRCS="bootldr_init_array.c ${HW}/rv32-nexysa7100/litedram/litedram.c" make > build.log
 	)
 	cp "${b}/bootldr.32.hex" "${dir}/bootldr.32.hex"
 
 	n=$(stat -c %s "${dir}/vmlinux.bldr.bin")
 	echo "post-image: ${dir}: vmlinux.bin $(stat -c %s "${dir}/vmlinux.bin") B," \
-		"vmlinux.bldr.bin ${n} B: the partition 2 must hold at least $(( (n + 511) / 512 )) blocks;" \
+		"vmlinux.bldr.bin ${n} B: the partition 3 must hold at least $(( (n + 511) / 512 )) blocks;" \
 		"bootldr.32.hex for SRAM_INITFILE, stack data $(basename "${dtb}")"
 }
 
