@@ -5,9 +5,9 @@
 # Buildroot's post-image script of rv32-nexysa7100: for the kernel of one hart,
 # in BINARIES_DIR, and for the kernel of several harts, in BINARIES_DIR/smp,
 # when the package linux-smp built it:
-# - vmlinux.bin, the Image, and vmlinux.bldr.bin, which tools/mkBootldrDat.py
-#   formats for apps/bootldr, to be written at the start of the partition 2 of
-#   the SD card;
+# - vmlinux.bldr.bin, which tools/mkBootldrDat.py formats for apps/bootldr from
+#   vmlinux.bin, the Image, which the packages install under that name, to be
+#   written at the start of the partition 2 of the SD card;
 # - bootldr.32.hex, the image of apps/bootldr for SRAM_INITFILE, built in its
 #   resident mode for the SD card in SD mode, loading the partition 2 to
 #   0x41000, the device tree blob of the kernel as its stack data.
@@ -42,7 +42,6 @@ images() {
 		echo "post-image: ${pkg} is linked at ${base:-?}, not ${BOOTLDR_LOADADDR}" >&2
 		exit 1
 	fi
-	cp "${dir}/Image" "${dir}/vmlinux.bin"
 	python3 "${HW}/tools/mkBootldrDat.py" -o "${dir}/vmlinux.bldr.bin" "${dir}/vmlinux.bin"
 
 	# bootldr, built in a copy of its directory; litedram.c includes its
@@ -66,7 +65,7 @@ images() {
 }
 
 images "${BINARIES_DIR}" linux "${BINARIES_DIR}/nexysa7100.dtb"
-if [ -f "${BINARIES_DIR}/smp/Image" ]; then
+if [ -f "${BINARIES_DIR}/smp/vmlinux.bin" ]; then
 	cp "${BINARIES_DIR}/nexysa7100-smp.dtb" "${BINARIES_DIR}/smp/"
 	images "${BINARIES_DIR}/smp" linux-smp "${BINARIES_DIR}/smp/nexysa7100-smp.dtb"
 fi

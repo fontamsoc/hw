@@ -6,7 +6,8 @@
 
 # The sources of the package linux, in a tree of their own, as Kbuild refuses
 # O= on the tree which the package linux built in; its patches are those of
-# the package linux, patches/linux-smp being a link to patches/linux.
+# the package linux, patches/linux-smp being a link to patches/linux. Its Image
+# is installed as smp/vmlinux.bin, as external.mk renames that of the package linux.
 LINUX_SMP_VERSION = $(LINUX_VERSION)
 LINUX_SMP_SOURCE = $(LINUX_SOURCE)
 LINUX_SMP_SITE = $(LINUX_SITE)
@@ -29,7 +30,7 @@ define LINUX_SMP_BUILD_CMDS
 endef
 
 define LINUX_SMP_INSTALL_IMAGES_CMDS
-	$(INSTALL) -D -m 0644 $(@D)/arch/riscv/boot/Image $(BINARIES_DIR)/smp/Image
+	$(INSTALL) -D -m 0644 $(@D)/arch/riscv/boot/Image $(BINARIES_DIR)/smp/vmlinux.bin
 endef
 
 $(eval $(generic-package))
