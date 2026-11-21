@@ -24,11 +24,11 @@ the kernel again.
 | `linux-smp.config` | Merged over `linux.config` for the kernel of several harts |
 | `patches/linux/` | The kernel patch series; `patches/linux-smp` links to it |
 | `patches/busybox/` | A fix of BusyBox's shell, whose `read` builtin would spin once the shell has run a trap |
-| `dts/fontamsoc/` | The device trees: `nexysa7100.dts` (one hart), `nexysa7100-smp.dts` (two), both including `nexysa7100.dtsi` |
+| `dts/fontamsoc/` | The device trees: `nexysa7100.dts` (one hart), `nexysa7100-smp.dts` (up to four), both including `nexysa7100.dtsi` |
 | `package/linux-smp/` | Builds the second kernel, of several harts, from the same sources and patches |
 | `busybox.fragment` | Adds `hexdump` and `taskset` to BusyBox |
 | `post-image.sh` | Formats each kernel for bootldr, and builds bootldr for it |
-| `external.mk` | Also builds uClibc-ng with soft-float math, as the RISC-V port otherwise assumes an FPU |
+| `external.mk` | Installs the kernel as `vmlinux.bin`, and builds uClibc-ng with soft-float math, as the RISC-V port otherwise assumes an FPU |
 
 The patch series adds:
 - the platform `ARCH_FONTAMSOC`: the timebase read from the CSR `0xcc0`, the idle `wfi`,
@@ -62,12 +62,12 @@ make
 
 | File | What |
 |---|---|
-| `Image`, `vmlinux.bin` | The kernel of one hart, linked at `0x41000` |
+| `vmlinux.bin` | The `Image` of the kernel of one hart, linked at `0x41000` |
 | `vmlinux.bldr.bin` | The kernel as [`tools/mkBootldrDat.py`](../../tools/mkBootldrDat.py) formats it for bootldr |
 | `bootldr.32.hex` | bootldr in its resident mode, with `nexysa7100.dtb` as its stack data, for `SRAM_INITFILE` |
 | `nexysa7100.dtb` | The device tree of one hart |
 | `rootfs.ext2` | The root file system, 64 MiB |
-| `smp/` | The same `Image`, `vmlinux.bldr.bin` and `bootldr.32.hex` for the kernel of several harts, with `nexysa7100-smp.dtb` |
+| `smp/` | The same `vmlinux.bin`, `vmlinux.bldr.bin` and `bootldr.32.hex` for the kernel of several harts, with `nexysa7100-smp.dtb` |
 
 ## The bitstream and the SD card
 
@@ -92,16 +92,23 @@ without password.
 
 ## Several harts
 
-The kernel of several harts needs a bitstream built with the Vivado defines
-`CPU_COUNT=2 ATOMIC_COHERENCE=1`:
+The kernel of several harts runs on a bitstream of 1 to 4 harts, the Vivado define
+`CPU_COUNT`, which needs the define `ATOMIC_COHERENCE=1` from 2 harts:
 - `ATOMIC_COHERENCE` lets atomic and plain accesses of several harts share words through
   their data-caches, which the spinlocks of Linux do;
 - `nexysa7100-smp.dts` states it with the property `fontamsoc,atomic-coherence` of
   `/cpus`, without which the kernel starts the boot hart alone.
 
+`nexysa7100-smp.dts` describes 4 harts, as many as `CONFIG_NR_CPUS` of
+`linux-smp.config`, all but the first disabled: bootldr enables those which the
+bitstream has, in the device tree blob which it passes to the kernel, through the
+function of [`bootldr_init_array.c`](../apps/bootldr/bootldr_init_array.c) which follows
+the calibration of the DDR2 SDRAM.
+
 Use `output/images/smp/bootldr.32.hex` for `SRAM_INITFILE`, and
 `output/images/smp/vmlinux.bldr.bin` for the partition 2. bootldr parks the other harts
-in the SRAM, where they wait for the IPI of the kernel which starts them.
+in the SRAM, where they wait for the IPI of the kernel which starts them; those beyond
+the fourth stay there.
 
 ## Limits
 
