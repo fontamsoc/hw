@@ -5,7 +5,7 @@ Subject: [PATCH 6/8] block: Add the SD card of the FonTamSOC, in SD mode
 
 The SD host of the FonTamSOC, driven through hwdrvsdsdio.h, a copy of
 the driver of the FonTamSOC, reads and writes the blocks of an SD card in
-SD mode, 4 bits wide: the block device sdsdio0. The driver sleeps on the
+SD mode, 4 bits wide: the block device sd0. The driver sleeps on the
 interrupt of the host while it waits for the card; the tag set is
 blocking.
 
@@ -34,7 +34,7 @@ index 20dc9e450..ac8a04d0e 100644
  F:	drivers/irqchip/irq-fontamsoc-irqctrl.c
  F:	drivers/tty/serial/fontamsoc-serial.c
 diff --git a/drivers/block/Kconfig b/drivers/block/Kconfig
-index 77d694448..553bb3e09 100644
+index 77d694448..170774b01 100644
 --- a/drivers/block/Kconfig
 +++ b/drivers/block/Kconfig
 @@ -304,6 +304,17 @@ config XEN_BLKDEV_BACKEND
@@ -49,8 +49,8 @@ index 77d694448..553bb3e09 100644
 +	help
 +	  This driver is for the SD card on the SD host of the FonTamSOC,
 +	  around the ftpu RISC-V core, in SD mode, 4 bits wide: the block
-+	  device sdsdio0, whose partitions are sdsdio0p1 and on. The host
-+	  interrupts the driver while it waits for the card.
++	  device sd0, whose partitions are sd0p1 and on. The host interrupts
++	  the driver while it waits for the card.
 +
  config VIRTIO_BLK
  	tristate "Virtio block driver"
@@ -69,7 +69,7 @@ index 2d8096eb8..9cf257d82 100644
  obj-$(CONFIG_XEN_BLKDEV_BACKEND)	+= xen-blkback/
 diff --git a/drivers/block/fontamsoc-sdsdio.c b/drivers/block/fontamsoc-sdsdio.c
 new file mode 100644
-index 000000000..384152040
+index 000000000..927e090e7
 --- /dev/null
 +++ b/drivers/block/fontamsoc-sdsdio.c
 @@ -0,0 +1,292 @@
@@ -77,8 +77,8 @@ index 000000000..384152040
 +// 20261120 (c) William Fonkou Tambe
 +/*
 + * The SD card of the FonTamSOC, on its SD host dev/sdio.sv, in SD mode,
-+ * driven through hwdrvsdsdio.h: the block device sdsdio0, whose partitions are
-+ * sdsdio0p1 and on.
++ * driven through hwdrvsdsdio.h: the block device sd0, whose partitions are
++ * sd0p1 and on.
 + *
 + * The device has two serial interfaces, CMD and DAT, each a data word and a
 + * command word as hwdrvchar.h drives them. The driver polls them, save while
@@ -111,7 +111,7 @@ index 000000000..384152040
 +#include <soc/fontamsoc/hwdrvsdsdio.h>
 +#pragma pop_macro("noinline")
 +
-+#define SDSDIO_NAME	"sdsdio"
++#define SDSDIO_NAME	"sd"
 +#define SDSDIO_MINORS	16
 +#define SDSDIO_WAIT_MS	20
 +

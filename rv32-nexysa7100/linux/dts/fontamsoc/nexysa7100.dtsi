@@ -16,7 +16,7 @@
 	compatible = "fontamsoc,nexysa7100";
 
 	chosen {
-		bootargs = "console=ttyFTS0,115200 earlycon root=/dev/sdsdio0p4 rootfstype=ext2 rootwait ro";
+		bootargs = "console=ttyS0,115200 earlycon root=/dev/sd0p4 rootfstype=ext2 rootwait ro";
 		stdout-path = &serial;
 	};
 

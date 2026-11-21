@@ -40,8 +40,8 @@ The patch series adds:
 |---|---|---|
 | Timer of the ftpu | `drivers/clocksource/timer-ftpu.c` | clocksource, sched_clock, clockevent per hart |
 | Interrupt controller | `drivers/irqchip/irq-fontamsoc-irqctrl.c` | interrupts, IPIs, system reset |
-| UART | `drivers/tty/serial/fontamsoc-serial.c` | `ttyFTS0`, console, earlycon |
-| SD card, SD mode | `drivers/block/fontamsoc-sdsdio.c` | `sdsdio0`, partitions `sdsdio0p1`... |
+| UART | `drivers/tty/serial/fontamsoc-serial.c` | `ttyS0`, console, earlycon |
+| SD card, SD mode | `drivers/block/fontamsoc-sdsdio.c` | `sd0`, partitions `sd0p1`... |
 | SPI flash | `drivers/spi/spi-fontamsoc.c` | `spi-nor`, `/dev/mtd0` (bitstream, read-only), `/dev/mtd1` |
 | Default device | `drivers/misc/fontamsoc-dfltdev.c` | reports accesses to unmapped addresses |
 
@@ -86,7 +86,7 @@ make
    dd if=output/images/rootfs.ext2 of=/dev/sdX4 bs=1M conv=fsync
    ```
 
-The console is the UART, at 115200 bauds. The kernel mounts `/dev/sdsdio0p4` read-only;
+The console is the UART, at 115200 bauds. The kernel mounts `/dev/sd0p4` read-only;
 BusyBox's init remounts it read-write, then gives a login prompt on the console: `root`,
 without password.
 

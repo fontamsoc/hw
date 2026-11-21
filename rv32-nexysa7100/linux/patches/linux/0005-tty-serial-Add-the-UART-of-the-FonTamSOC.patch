@@ -14,11 +14,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Signed-off-by: William Tambe <tambewilliam@gmail.com>
 ---
  MAINTAINERS                           |   1 +
- drivers/tty/serial/Kconfig            |  24 ++
+ drivers/tty/serial/Kconfig            |  26 ++
  drivers/tty/serial/Makefile           |   1 +
  drivers/tty/serial/fontamsoc-serial.c | 506 ++++++++++++++++++++++++++
  include/soc/fontamsoc/hwdrvchar.h     | 215 +++++++++++
- 5 files changed, 747 insertions(+)
+ 5 files changed, 749 insertions(+)
  create mode 100644 drivers/tty/serial/fontamsoc-serial.c
  create mode 100644 include/soc/fontamsoc/hwdrvchar.h
 
@@ -35,10 +35,10 @@ index 448e09fc7..20dc9e450 100644
  
  FORCEDETH GIGABIT ETHERNET DRIVER
 diff --git a/drivers/tty/serial/Kconfig b/drivers/tty/serial/Kconfig
-index 2b9c8b39d..f2cb5dfe8 100644
+index 2b9c8b39d..ee432967d 100644
 --- a/drivers/tty/serial/Kconfig
 +++ b/drivers/tty/serial/Kconfig
-@@ -1512,6 +1512,30 @@ config SERIAL_MILBEAUT_USIO_CONSOLE
+@@ -1512,6 +1512,32 @@ config SERIAL_MILBEAUT_USIO_CONSOLE
  	  receives all kernel messages and warnings and which allows logins in
  	  single user mode).
  
@@ -50,8 +50,10 @@ index 2b9c8b39d..f2cb5dfe8 100644
 +	select SERIAL_CORE
 +	help
 +	  This driver is for the UART of the FonTamSOC, around the ftpu
-+	  RISC-V core, the port ttyFTS0: 8N1, with buffers of 2048 bytes in
++	  RISC-V core, the port ttyS0: 8N1, with buffers of 2048 bytes in
 +	  each direction, a receive interrupt, and no transmit interrupt.
++	  The 8250 driver names its ports ttyS0 and on as well: with both
++	  built in, the port of whichever registers last fails.
 +
 +	  Say 'Y' or 'M' here to use it.
 +
@@ -83,7 +85,7 @@ index a2ccbc508..31bc3f7f9 100644
  obj-$(CONFIG_SERIAL_MAX310X)		+= max310x.o
 diff --git a/drivers/tty/serial/fontamsoc-serial.c b/drivers/tty/serial/fontamsoc-serial.c
 new file mode 100644
-index 000000000..1e33f2162
+index 000000000..0d2bb691d
 --- /dev/null
 +++ b/drivers/tty/serial/fontamsoc-serial.c
 @@ -0,0 +1,506 @@
@@ -133,7 +135,7 @@ index 000000000..1e33f2162
 +#define HWDRVCHAR_DATATYPE uint8_t
 +#include <soc/fontamsoc/hwdrvchar.h>
 +
-+#define FTS_DEV_NAME		"ttyFTS"
++#define FTS_DEV_NAME		"ttyS"
 +#define FTS_BAUD_DEFAULT	115200
 +#define FTS_BAUD_MIN		1200
 +#define FTS_TX_RESERVE		2	/* staged bytes which the usage misses */
