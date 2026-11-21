@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // 20261120 (c) William Fonkou Tambe
 
-// rv32-nexysa7100 built with the defines CPU_COUNT=2 and ATOMIC_COHERENCE=1.
+// rv32-nexysa7100 built with the define CPU_COUNT from 1 to 4, CONFIG_NR_CPUS of
+// the kernel of several harts, and ATOMIC_COHERENCE=1 when CPU_COUNT is 2 or more.
+//
+// The harts other than the first are disabled: apps/bootldr enables those which
+// the bitstream has, editing the device tree blob before starting the kernel;
+// without that edit, the kernel runs on the first hart only.
 //
 // The boolean fontamsoc,atomic-coherence of /cpus states that the bitstream is
 // built with ATOMIC_COHERENCE non-null: atomic and plain accesses may then share
@@ -46,8 +51,49 @@
 			d-cache-size = <16384>;
 			d-cache-sets = <4096>;
 			d-cache-block-size = <4>;
+			status = "disabled";
 
 			cpu1_intc: interrupt-controller {
+				#interrupt-cells = <1>;
+				interrupt-controller;
+				compatible = "riscv,cpu-intc";
+			};
+		};
+
+		cpu2: cpu@2 {
+			device_type = "cpu";
+			reg = <2>;
+			compatible = "fontamsoc,ftpu", "riscv";
+			riscv,isa = "rv32ima";
+			riscv,isa-base = "rv32i";
+			riscv,isa-extensions = "i", "m", "a", "zicsr", "zifencei";
+			mmu-type = "riscv,none";
+			d-cache-size = <16384>;
+			d-cache-sets = <4096>;
+			d-cache-block-size = <4>;
+			status = "disabled";
+
+			cpu2_intc: interrupt-controller {
+				#interrupt-cells = <1>;
+				interrupt-controller;
+				compatible = "riscv,cpu-intc";
+			};
+		};
+
+		cpu3: cpu@3 {
+			device_type = "cpu";
+			reg = <3>;
+			compatible = "fontamsoc,ftpu", "riscv";
+			riscv,isa = "rv32ima";
+			riscv,isa-base = "rv32i";
+			riscv,isa-extensions = "i", "m", "a", "zicsr", "zifencei";
+			mmu-type = "riscv,none";
+			d-cache-size = <16384>;
+			d-cache-sets = <4096>;
+			d-cache-block-size = <4>;
+			status = "disabled";
+
+			cpu3_intc: interrupt-controller {
 				#interrupt-cells = <1>;
 				interrupt-controller;
 				compatible = "riscv,cpu-intc";
@@ -57,9 +103,9 @@
 };
 
 &irqctrl {
-	interrupts-extended = <&cpu0_intc 11>, <&cpu1_intc 11>;
+	interrupts-extended = <&cpu0_intc 11>, <&cpu1_intc 11>, <&cpu2_intc 11>, <&cpu3_intc 11>;
 };
 
 &timer {
-	interrupts-extended = <&cpu0_intc 7>, <&cpu1_intc 7>;
+	interrupts-extended = <&cpu0_intc 7>, <&cpu1_intc 7>, <&cpu2_intc 7>, <&cpu3_intc 7>;
 };
