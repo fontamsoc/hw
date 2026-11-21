@@ -7,9 +7,11 @@ The controller, driven through hwdrvirqctrl.h, a copy of the driver of
 the FonTamSOC, dispatches the interrupts of its sources, one at a time,
 to the harts, raising their machine external interrupt until
 acknowledged, and their interprocessor interrupts, which ipi_mux
-multiplexes. Device interrupts go to the boot hart only. The controller
-also resets the system, which the restart handler requests: the
-bootloader, resident, then loads the kernel again.
+multiplexes. Device interrupts go to the boot hart only: the destination
+of each other hart is disabled, unless its node is, as the bitstream
+then lacks that hart. The controller also resets the system, which the
+restart handler requests: the bootloader, resident, then loads the
+kernel again.
 
 include/soc/fontamsoc/hwdrv.h provides the drivers of the FonTamSOC
 with the environment which they expect from its operating system,
@@ -21,11 +23,11 @@ Signed-off-by: William Tambe <tambewilliam@gmail.com>
  MAINTAINERS                             |   2 +
  drivers/irqchip/Kconfig                 |  11 +
  drivers/irqchip/Makefile                |   1 +
- drivers/irqchip/irq-fontamsoc-irqctrl.c | 308 ++++++++++++++++++++++++
+ drivers/irqchip/irq-fontamsoc-irqctrl.c | 316 ++++++++++++++++++++++++
  include/linux/cpuhotplug.h              |   1 +
  include/soc/fontamsoc/hwdrv.h           |  42 ++++
  include/soc/fontamsoc/hwdrvirqctrl.h    | 112 +++++++++
- 7 files changed, 477 insertions(+)
+ 7 files changed, 485 insertions(+)
  create mode 100644 drivers/irqchip/irq-fontamsoc-irqctrl.c
  create mode 100644 include/soc/fontamsoc/hwdrv.h
  create mode 100644 include/soc/fontamsoc/hwdrvirqctrl.h
@@ -79,10 +81,10 @@ index 3de083f54..ec4078d96 100644
  obj-$(CONFIG_IMX_IRQSTEER)		+= irq-imx-irqsteer.o
 diff --git a/drivers/irqchip/irq-fontamsoc-irqctrl.c b/drivers/irqchip/irq-fontamsoc-irqctrl.c
 new file mode 100644
-index 000000000..33a1d43f7
+index 000000000..16688ffe4
 --- /dev/null
 +++ b/drivers/irqchip/irq-fontamsoc-irqctrl.c
-@@ -0,0 +1,308 @@
+@@ -0,0 +1,316 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +// 20261120 (c) William Fonkou Tambe
 +/*
@@ -315,14 +317,19 @@ index 000000000..33a1d43f7
 +	/*
 +	 * Every source disabled; then the destination of each other hart of
 +	 * the device tree acknowledged until nothing is pending for it, which
-+	 * disables it, and that of the boot hart enabled by acknowledging an
-+	 * interprocessor interrupt which it sends itself, its interrupts being
-+	 * disabled; a source pending for it reaches the handler.
++	 * disables it, save for a hart whose node is disabled, ie: one which
++	 * the bitstream lacks, which has no destination; and that of the boot
++	 * hart enabled by acknowledging an interprocessor interrupt which it
++	 * sends itself, its interrupts being disabled; a source pending for it
++	 * reaches the handler.
 +	 */
 +	for (i = 0; i < nsources; i++)
 +		ftpu_irqctrl_ena(i, 0);
 +	n = of_irq_count(node);
 +	for (i = 0; i < n; i++) {
++		struct device_node *cpu;
++		bool avail;
++
 +		if (of_irq_parse_one(node, i, &oirq) ||
 +		    oirq.args_count != 1 || oirq.args[0] != RV_IRQ_EXT ||
 +		    riscv_of_parent_hartid(oirq.np, &hart)) {
@@ -330,7 +337,10 @@ index 000000000..33a1d43f7
 +				node, i);
 +			continue;
 +		}
-+		if (hart == ftpu_irqctrl_boot_hart)
++		cpu = of_get_parent(oirq.np);
++		avail = of_device_is_available(cpu);
++		of_node_put(cpu);
++		if (hart == ftpu_irqctrl_boot_hart || !avail)
 +			continue;
 +		while (ftpu_irqctrl_ack(hart) != FTPU_IRQCTRL_NONE)
 +			;
