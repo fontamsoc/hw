@@ -958,9 +958,13 @@ reset gives, ie: a Linux kernel at `0x41000`, the start of the DDR2 SDRAM, as `l
 builds it, is copied there and started by a jump, with `ra`, `a0` and `a1` set as above,
 the stack data being then its device tree blob. The other harts of a build with several
 are parked first, in the SRAM, no interrupt source being dispatched to them: only an IPI
-wakes one, ie: Linux starting it, into a trampoline which jumps to the payload. Any
-later reset, ie: Linux's `reboot` or holding `CPU RESET`, then runs bootldr again, which
-calibrates the DDR2 SDRAM and loads the payload again.
+wakes one, ie: Linux starting it, into a trampoline which jumps to the payload. With
+stack data, `bootldr_init_array.c` puts in `__bootldr_init_array`, after
+`litedram_init()`, a function which, in a device tree blob, sets to `"okay"` the status
+`"disabled"` of the harts which the bitstream has, so that a device tree may describe
+more harts than a bitstream has, all but the first disabled. Any later reset, ie:
+Linux's `reboot` or holding `CPU RESET`, then runs bootldr again, which calibrates the
+DDR2 SDRAM and loads the payload again.
 
 ---
 
