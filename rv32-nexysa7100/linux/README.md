@@ -20,15 +20,15 @@ the kernel again.
 | Path | What |
 |---|---|
 | `configs/nexysa7100_defconfig` | The Buildroot configuration |
-| `linux.config` | The kernel configuration of one hart |
-| `linux-smp.config` | Merged over `linux.config` for the kernel of several harts |
+| `linux.config` | The configuration of the single-hart kernel |
+| `linux-smp.config` | Merged over `linux.config` for the multi-hart kernel |
 | `patches/linux/` | The kernel patch series; `patches/linux-smp` links to it |
 | `patches/busybox/` | A fix of BusyBox's shell, whose `read` builtin would spin once the shell has run a trap |
 | `dts/fontamsoc/` | The device trees: `nexysa7100.dts` (one hart), `nexysa7100-smp.dts` (up to four), both including `nexysa7100.dtsi` |
-| `package/linux-smp/` | Builds the second kernel, of several harts, from the same sources and patches |
+| `package/linux-smp/` | Builds the multi-hart kernel, from the same sources and patches |
 | `busybox.fragment` | Adds `hexdump` and `taskset` to BusyBox |
 | `post-image.sh` | Formats each kernel for bootldr, and builds bootldr for it |
-| `external.mk` | Installs the kernel as `vmlinux.bin` and the device tree of several harts in `smp/`, and builds uClibc-ng with soft-float math, as the RISC-V port otherwise assumes an FPU |
+| `external.mk` | Installs the kernel as `vmlinux.bin` and the multi-hart device tree in `smp/`, and builds uClibc-ng with soft-float math, as the RISC-V port otherwise assumes an FPU |
 | `override.mk` | Buildroot's package override file, as the defconfig sets: puts the images in `images/`, and includes the default `local.mk` |
 
 The patch series adds:
@@ -64,12 +64,12 @@ make
 
 | File | What |
 |---|---|
-| `vmlinux.bin` | The `Image` of the kernel of one hart, linked at `0x41000` |
+| `vmlinux.bin` | The `Image` of the single-hart kernel, linked at `0x41000` |
 | `vmlinux.bldr.bin` | The kernel as [`tools/mkBootldrDat.py`](../../tools/mkBootldrDat.py) formats it for bootldr |
 | `bootldr.32.hex` | bootldr in its resident mode, with `nexysa7100.dtb` as its stack data, for `SRAM_INITFILE` |
-| `nexysa7100.dtb` | The device tree of one hart |
+| `nexysa7100.dtb` | The single-hart device tree |
 | `rootfs.ext2` | The root file system |
-| `smp/` | The same `vmlinux.bin`, `vmlinux.bldr.bin` and `bootldr.32.hex` for the kernel of several harts, with `nexysa7100-smp.dtb` |
+| `smp/` | The same `vmlinux.bin`, `vmlinux.bldr.bin` and `bootldr.32.hex` for the multi-hart kernel, with `nexysa7100-smp.dtb` |
 
 ## The bitstream and the SD card
 
@@ -77,7 +77,7 @@ make
    `"../../../linux/images/bootldr.32.hex"`, as described in [Loading a
    program](../README.md#loading-a-program). The bitstream must come from a tree with
    this directory: before it, `lib/wb_mux.sv` could drop an acknowledgement, which hangs
-   the kernel of one hart within seconds of its boot.
+   the single-hart kernel within seconds of its boot.
 2. Make the image of the SD card with [`tools/mkMbrImg.sh`](../../tools/mkMbrImg.sh),
    which needs `genimage` and `mkdosfs`: an MBR whose partition 3 holds the kernel, and
    partition 4 the root file system. Partitions 1 and 2 are not used: the partition 1 is
@@ -99,9 +99,9 @@ The console is the UART, at 115200 bauds. The kernel mounts `/dev/sd0p4` read-on
 BusyBox's init remounts it read-write, then gives a login prompt on the console: `root`,
 without password.
 
-## Several harts
+## The multi-hart kernel
 
-The kernel of several harts runs on a bitstream of 1 to 4 harts, the Vivado define
+The multi-hart kernel runs on a bitstream of 1 to 4 harts, the Vivado define
 `CPU_COUNT`, which needs the define `ATOMIC_COHERENCE=1` from 2 harts:
 - `ATOMIC_COHERENCE` lets atomic and plain accesses of several harts share words through
   their data-caches, which the spinlocks of Linux do;
@@ -121,7 +121,6 @@ fourth stay there.
 
 ## Limits
 
-- **Several harts** need the variant above.
 - **Racing plain stores.** Plain stores of two harts to the same byte, whose coherency
   writes cross on the ring, leave each hart with the other's value until its next store
   to that byte (`cpu/README.md`). This is why the tick is periodic (`HZ_PERIODIC`):

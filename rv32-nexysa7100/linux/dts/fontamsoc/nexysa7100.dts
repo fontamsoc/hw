@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // 20261120 (c) William Fonkou Tambe
 
-// rv32-nexysa7100 with one hart, the default of nexysa7100.sv.
+// The single-hart build of rv32-nexysa7100, the default of nexysa7100.sv.
 
 /dts-v1/;
 

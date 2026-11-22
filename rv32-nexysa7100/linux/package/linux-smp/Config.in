@@ -2,10 +2,11 @@ config BR2_PACKAGE_LINUX_SMP
 	bool "linux-smp"
 	depends on BR2_LINUX_KERNEL
 	help
-	  The kernel of rv32-nexysa7100 built with several harts, ie: the
-	  defines CPU_COUNT=2 and ATOMIC_COHERENCE=1: the sources and patches
-	  of the package linux, its configuration linux.config merged with
-	  linux-smp.config; its Image is installed to images/smp/.
+	  The multi-hart kernel of rv32-nexysa7100, whose bitstream is built
+	  with the define CPU_COUNT from 1 to 4, and ATOMIC_COHERENCE=1 from
+	  2 harts: the sources and patches of the package linux, its
+	  configuration linux.config merged with linux-smp.config; its Image
+	  is installed to images/smp/.
 
 comment "linux-smp needs the Linux kernel"
 	depends on !BR2_LINUX_KERNEL

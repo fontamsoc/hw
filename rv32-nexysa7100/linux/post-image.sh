@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: GPL-2.0-only
 # 20261120 (c) William Fonkou Tambe
 
-# Buildroot's post-image script of rv32-nexysa7100: for the kernel of one hart,
-# in BINARIES_DIR, and for the kernel of several harts, in BINARIES_DIR/smp,
-# when the package linux-smp built it:
+# Buildroot's post-image script of rv32-nexysa7100: for the single-hart kernel,
+# in BINARIES_DIR, and for the multi-hart kernel, in BINARIES_DIR/smp, when the
+# package linux-smp built it:
 # - vmlinux.bldr.bin, which tools/mkBootldrDat.py formats for apps/bootldr from
 #   vmlinux.bin, the Image, which the packages install under that name, to be
 #   written at the start of the partition 3 of the SD card, the partition 4
@@ -35,8 +35,8 @@ kconfig() {
 }
 
 # The images of one kernel: its directory, the name of its package, the path of
-# its DTB, which the package linux installs for both kernels, that of several
-# harts in smp/, as external.mk moves it.
+# its DTB, which the package linux installs for both kernels, the multi-hart one
+# in smp/, as external.mk moves it.
 images() {
 	local dir=$1 pkg=$2 dtb=$3 cfg base n
 	cfg=$(kconfig "${pkg}") || { echo "post-image: no .config of ${pkg}" >&2; exit 1; }

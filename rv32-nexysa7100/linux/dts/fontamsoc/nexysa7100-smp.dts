@@ -2,7 +2,7 @@
 // 20261120 (c) William Fonkou Tambe
 
 // rv32-nexysa7100 built with the define CPU_COUNT from 1 to 4, CONFIG_NR_CPUS of
-// the kernel of several harts, and ATOMIC_COHERENCE=1 when CPU_COUNT is 2 or more.
+// the multi-hart kernel, and ATOMIC_COHERENCE=1 when CPU_COUNT is 2 or more.
 //
 // The harts other than the first are disabled: apps/bootldr enables those which
 // the bitstream has, editing the device tree blob before starting the kernel;
