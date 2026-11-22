@@ -76,14 +76,20 @@ make
    program](../README.md#loading-a-program). The bitstream must come from a tree with
    this directory: before it, `lib/wb_mux.sv` could drop an acknowledgement, which hangs
    the kernel of one hart within seconds of its boot.
-2. On the SD card, make an MBR partition table with a partition 3 of at least the size of
-   `vmlinux.bldr.bin`, and a partition 4 of at least the size of `rootfs.ext2`.
-   Partitions 1 and 2 are not used.
-3. Write the images:
+2. Make the image of the SD card with [`tools/mkMbrImg.sh`](../../tools/mkMbrImg.sh),
+   which needs `genimage` and `mkdosfs`: an MBR whose partition 3 holds the kernel, and
+   partition 4 the root file system. Partitions 1 and 2 are not used: the partition 1 is
+   an empty FAT file system, the partition 2 a placeholder of one block.
 
    ```sh
-   dd if=output/images/vmlinux.bldr.bin of=/dev/sdX3 bs=1M conv=fsync
-   dd if=output/images/rootfs.ext2 of=/dev/sdX4 bs=1M conv=fsync
+   /path/to/tools/mkMbrImg.sh -3 output/images/vmlinux.bldr.bin \
+       -4 output/images/rootfs.ext2 output/images/sdcard.img
+   ```
+
+3. Write the image to the SD card, whose partition table it replaces:
+
+   ```sh
+   dd if=output/images/sdcard.img of=/dev/sdX bs=1M conv=fsync
    ```
 
 The console is the UART, at 115200 bauds. The kernel mounts `/dev/sd0p4` read-only;
