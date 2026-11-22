@@ -66,7 +66,7 @@ make
 | `vmlinux.bldr.bin` | The kernel as [`tools/mkBootldrDat.py`](../../tools/mkBootldrDat.py) formats it for bootldr |
 | `bootldr.32.hex` | bootldr in its resident mode, with `nexysa7100.dtb` as its stack data, for `SRAM_INITFILE` |
 | `nexysa7100.dtb` | The device tree of one hart |
-| `rootfs.ext2` | The root file system, 64 MiB |
+| `rootfs.ext2` | The root file system |
 | `smp/` | The same `vmlinux.bin`, `vmlinux.bldr.bin` and `bootldr.32.hex` for the kernel of several harts, with `nexysa7100-smp.dtb` |
 
 ## The bitstream and the SD card
@@ -77,8 +77,8 @@ make
    this directory: before it, `lib/wb_mux.sv` could drop an acknowledgement, which hangs
    the kernel of one hart within seconds of its boot.
 2. On the SD card, make an MBR partition table with a partition 3 of at least the size of
-   `vmlinux.bldr.bin`, and a partition 4 of at least 64 MiB. Partitions 1 and 2 are not
-   used.
+   `vmlinux.bldr.bin`, and a partition 4 of at least the size of `rootfs.ext2`.
+   Partitions 1 and 2 are not used.
 3. Write the images:
 
    ```sh
