@@ -35,7 +35,8 @@ kconfig() {
 }
 
 # The images of one kernel: its directory, the name of its package, the path of
-# its DTB, which the package linux installs for both kernels.
+# its DTB, which the package linux installs for both kernels, that of several
+# harts in smp/, as external.mk moves it.
 images() {
 	local dir=$1 pkg=$2 dtb=$3 cfg base n
 	cfg=$(kconfig "${pkg}") || { echo "post-image: no .config of ${pkg}" >&2; exit 1; }
@@ -68,6 +69,5 @@ images() {
 
 images "${BINARIES_DIR}" linux "${BINARIES_DIR}/nexysa7100.dtb"
 if [ -f "${BINARIES_DIR}/smp/vmlinux.bin" ]; then
-	cp "${BINARIES_DIR}/nexysa7100-smp.dtb" "${BINARIES_DIR}/smp/"
 	images "${BINARIES_DIR}/smp" linux-smp "${BINARIES_DIR}/smp/nexysa7100-smp.dtb"
 fi

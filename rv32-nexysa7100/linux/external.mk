@@ -12,6 +12,16 @@ define NEXYSA7100_LINUX_IMAGE_RENAME
 endef
 LINUX_POST_INSTALL_IMAGES_HOOKS += NEXYSA7100_LINUX_IMAGE_RENAME
 
+# The package linux also installs the device trees of both kernels, which it
+# builds from dts/; that of several harts is moved to smp/, where post-image.sh
+# makes the images of the kernel of several harts, right after it is installed,
+# as above.
+define NEXYSA7100_LINUX_SMP_DTB_MOVE
+	mkdir -p $(BINARIES_DIR)/smp
+	mv -f $(BINARIES_DIR)/nexysa7100-smp.dtb $(BINARIES_DIR)/smp/
+endef
+LINUX_POST_INSTALL_IMAGES_HOOKS += NEXYSA7100_LINUX_SMP_DTB_MOVE
+
 # Buildroot selects BR2_SOFT_FLOAT for no RISC-V target, hence uclibc.mk
 # configures uClibc-ng for a FPU, with its floating-point environment, whose
 # riscv32 sources use instructions of the F extension, which rv32ima lacks: the

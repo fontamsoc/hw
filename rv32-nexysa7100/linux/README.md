@@ -28,7 +28,7 @@ the kernel again.
 | `package/linux-smp/` | Builds the second kernel, of several harts, from the same sources and patches |
 | `busybox.fragment` | Adds `hexdump` and `taskset` to BusyBox |
 | `post-image.sh` | Formats each kernel for bootldr, and builds bootldr for it |
-| `external.mk` | Installs the kernel as `vmlinux.bin`, and builds uClibc-ng with soft-float math, as the RISC-V port otherwise assumes an FPU |
+| `external.mk` | Installs the kernel as `vmlinux.bin` and the device tree of several harts in `smp/`, and builds uClibc-ng with soft-float math, as the RISC-V port otherwise assumes an FPU |
 | `override.mk` | Buildroot's package override file, as the defconfig sets: puts the images in `images/`, and includes the default `local.mk` |
 
 The patch series adds:
