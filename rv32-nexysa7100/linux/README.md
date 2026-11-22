@@ -29,6 +29,7 @@ the kernel again.
 | `busybox.fragment` | Adds `hexdump` and `taskset` to BusyBox |
 | `post-image.sh` | Formats each kernel for bootldr, and builds bootldr for it |
 | `external.mk` | Installs the kernel as `vmlinux.bin`, and builds uClibc-ng with soft-float math, as the RISC-V port otherwise assumes an FPU |
+| `override.mk` | Buildroot's package override file, as the defconfig sets: puts the images in `images/`, and includes the default `local.mk` |
 
 The patch series adds:
 - the platform `ARCH_FONTAMSOC`: the timebase read from the CSR `0xcc0`, the idle `wfi`,
@@ -58,7 +59,8 @@ make
 ```
 
 `post-image.sh` builds bootldr with the ftpu toolchain, which it expects at
-`/opt/ftpu-toolchain/bin`. The images land in `output/images/`:
+`/opt/ftpu-toolchain/bin`. The images land in `images/` of this directory, where
+`override.mk` puts them, and which git ignores:
 
 | File | What |
 |---|---|
@@ -71,25 +73,26 @@ make
 
 ## The bitstream and the SD card
 
-1. Build the bitstream with `SRAM_INITFILE` set to the path of
-   `output/images/bootldr.32.hex`, as described in [Loading a
+1. Build the bitstream with `SRAM_INITFILE` set to
+   `"../../../linux/images/bootldr.32.hex"`, as described in [Loading a
    program](../README.md#loading-a-program). The bitstream must come from a tree with
    this directory: before it, `lib/wb_mux.sv` could drop an acknowledgement, which hangs
    the kernel of one hart within seconds of its boot.
 2. Make the image of the SD card with [`tools/mkMbrImg.sh`](../../tools/mkMbrImg.sh),
    which needs `genimage` and `mkdosfs`: an MBR whose partition 3 holds the kernel, and
    partition 4 the root file system. Partitions 1 and 2 are not used: the partition 1 is
-   an empty FAT file system, the partition 2 a placeholder of one block.
+   an empty FAT file system, the partition 2 a placeholder of one block. From this
+   directory:
 
    ```sh
-   /path/to/tools/mkMbrImg.sh -3 output/images/vmlinux.bldr.bin \
-       -4 output/images/rootfs.ext2 output/images/sdcard.img
+   ../../tools/mkMbrImg.sh -3 images/vmlinux.bldr.bin \
+       -4 images/rootfs.ext2 images/sdcard.img
    ```
 
 3. Write the image to the SD card, whose partition table it replaces:
 
    ```sh
-   dd if=output/images/sdcard.img of=/dev/sdX bs=1M conv=fsync
+   dd if=images/sdcard.img of=/dev/sdX bs=1M conv=fsync
    ```
 
 The console is the UART, at 115200 bauds. The kernel mounts `/dev/sd0p4` read-only;
@@ -111,10 +114,10 @@ bitstream has, in the device tree blob which it passes to the kernel, through th
 function of [`bootldr_init_array.c`](../apps/bootldr/bootldr_init_array.c) which follows
 the calibration of the DDR2 SDRAM.
 
-Use `output/images/smp/bootldr.32.hex` for `SRAM_INITFILE`, and
-`output/images/smp/vmlinux.bldr.bin` for the partition 3. bootldr parks the other harts
-in the SRAM, where they wait for the IPI of the kernel which starts them; those beyond
-the fourth stay there.
+Use `"../../../linux/images/smp/bootldr.32.hex"` for `SRAM_INITFILE`, and
+`images/smp/vmlinux.bldr.bin` for the partition 3. bootldr parks the other harts in the
+SRAM, where they wait for the IPI of the kernel which starts them; those beyond the
+fourth stay there.
 
 ## Limits
 
