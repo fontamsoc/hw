@@ -11,7 +11,8 @@ usage: $(basename "${0}") [options] <image>
 
 	Each partition is written in the slot of its option: when a slot is
 	not specified but a later one is, it gets a one-sector placeholder
-	of type 0x00.
+	of type 0x00. Partitions start on 1 MiB boundaries, and the size of
+	one written from a file is rounded up to 1 MiB.
 
 	A partition file can be prefixed with its MBR partition type in hex
 	followed by a colon (e.g. -4 0x83:rootfs.ext2); otherwise the default
@@ -27,8 +28,8 @@ options:
 	If not specified, nothing is used.
 
 -1 [<type>:]<file>
-	data to write in <image> first partition; default type 0x0c.
-	If not specified, an empty 32 MiB FAT filesystem of type 0x0c is used.
+	data to write in <image> first partition; default type 0x0e.
+	If not specified, an empty 32 MiB FAT16 filesystem is used.
 
 -2 [<type>:]<file>
 	data to write in <image> second partition; default type 0xf8.
@@ -58,7 +59,7 @@ imgfile=""
 # Files given with -0 to -4: slot 0 is the boot-code, 1 to 4 the partitions.
 slot=("" "" "" "" "")
 # Default partition type of slots 1 to 4, and the type used for each slot.
-deftype=("" 0x0c 0xf8 0x8a 0x83)
+deftype=("" 0x0e 0xf8 0x8a 0x83)
 slottype=("${deftype[@]}")
 # Partition type prefix of a file: 0x, hex digits and a colon.
 typere='^0[xX]([0-9a-fA-F]+):(.*)$'
@@ -115,8 +116,6 @@ for n in 2 3 4; do
 	[ -n "${slot[n]}" ] && last="${n}"
 done
 
-set -x
-
 tmpdir="$(mktemp -d)" || die "mktemp failed"
 trap 'rm -rf "${tmpdir}"' EXIT
 mkdir -p "${tmpdir}/tmp"
@@ -153,7 +152,7 @@ __EOF__
 	if [ -z "${slot[1]}" ]; then
 		cat << __EOF__
 image fatpart.img {
-  vfat {}
+  vfat { extraargs = "-F 16" }
   empty = true
   temporary = true
   size = 32M
@@ -162,11 +161,15 @@ image fatpart.img {
 __EOF__
 	fi
 
+	# Align partitions on 1 MiB, as fdisk does: genimage's default of 512
+	# bytes puts the first one right after the MBR, and leaves the blocks
+	# of a file system straddling the pages of an SD card.
 	cat << __EOF__
 image $(cfgstr "$(basename -- "${imgfile}")") {
   hdimage {
     partition-table-type = "mbr"
     fill = true
+    align = 1M
   }
 __EOF__
 
@@ -195,6 +198,11 @@ __EOF__
 	echo "}"
 } > "${tmpdir}/genimage.cfg"
 
+# Show the generated configuration, then trace the genimage command.
+echo "# genimage.cfg" >&2
+cat "${tmpdir}/genimage.cfg" >&2
+
+set -x
 genimage --loglevel 9 --tmppath "${tmpdir}/tmp" --outputpath "$(dirname -- "${imgfile}")" --config "${tmpdir}/genimage.cfg" ||
 	die "genimage failed"
 
