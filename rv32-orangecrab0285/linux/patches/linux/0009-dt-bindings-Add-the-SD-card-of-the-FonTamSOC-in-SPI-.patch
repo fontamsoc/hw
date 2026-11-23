@@ -1,0 +1,76 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Tambe <tambewilliam@gmail.com>
+Date: Sun, 22 Nov 2026 21:48:49 -0600
+Subject: [PATCH 09/10] dt-bindings: Add the SD card of the FonTamSOC, in SPI
+ mode
+
+Add the binding of an SD card in SPI mode, the only device of an SPI
+master of the FonTamSOC, which transfers words of 4 bytes; the card is
+driven as a block device.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: William Tambe <tambewilliam@gmail.com>
+---
+ .../bindings/mmc/fontamsoc,sdspi.yaml         | 40 +++++++++++++++++++
+ MAINTAINERS                                   |  1 +
+ 2 files changed, 41 insertions(+)
+ create mode 100644 Documentation/devicetree/bindings/mmc/fontamsoc,sdspi.yaml
+
+diff --git a/Documentation/devicetree/bindings/mmc/fontamsoc,sdspi.yaml b/Documentation/devicetree/bindings/mmc/fontamsoc,sdspi.yaml
+new file mode 100644
+index 000000000..903e3eb8f
+--- /dev/null
++++ b/Documentation/devicetree/bindings/mmc/fontamsoc,sdspi.yaml
+@@ -0,0 +1,40 @@
++# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
++%YAML 1.2
++---
++$id: http://devicetree.org/schemas/mmc/fontamsoc,sdspi.yaml#
++$schema: http://devicetree.org/meta-schemas/core.yaml#
++
++title: FonTamSOC SD card in SPI mode
++
++maintainers:
++  - William Fonkou Tambe <tambewilliam@gmail.com>
++
++description: |
++  An SD card in SPI mode, the only device of an SPI master of the FonTamSOC,
++  mode 0, which transfers words of 4 bytes through one serial interface; the
++  card is driven as a block device.
++
++properties:
++  compatible:
++    const: fontamsoc,sdspi
++
++  reg:
++    maxItems: 1
++
++  interrupts:
++    maxItems: 1
++
++required:
++  - compatible
++  - reg
++  - interrupts
++
++additionalProperties: false
++
++examples:
++  - |
++    sdspi@e00 {
++        compatible = "fontamsoc,sdspi";
++        reg = <0xe00 0x8>;
++        interrupts = <2>;
++    };
+diff --git a/MAINTAINERS b/MAINTAINERS
+index 6573b9c2e..3557ed245 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -9762,6 +9762,7 @@ S:	Maintained
+ F:	Documentation/devicetree/bindings/interrupt-controller/fontamsoc,irqctrl.yaml
+ F:	Documentation/devicetree/bindings/misc/fontamsoc,dfltdev.yaml
+ F:	Documentation/devicetree/bindings/mmc/fontamsoc,sdio.yaml
++F:	Documentation/devicetree/bindings/mmc/fontamsoc,sdspi.yaml
+ F:	Documentation/devicetree/bindings/serial/fontamsoc,serial-uart.yaml
+ F:	Documentation/devicetree/bindings/spi/fontamsoc,spi.yaml
+ F:	Documentation/devicetree/bindings/timer/fontamsoc,ftpu-timer.yaml

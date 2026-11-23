@@ -1,0 +1,581 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Tambe <tambewilliam@gmail.com>
+Date: Fri, 20 Nov 2026 11:49:17 -0600
+Subject: [PATCH 4/8] irqchip: Add the interrupt controller of the FonTamSOC
+
+The controller, driven through hwdrvirqctrl.h, a copy of the driver of
+the FonTamSOC, dispatches the interrupts of its sources, one at a time,
+to the harts, raising their machine external interrupt until
+acknowledged, and their interprocessor interrupts, which ipi_mux
+multiplexes. Device interrupts go to the boot hart only: the destination
+of each other hart is disabled, unless its node is, as the bitstream
+then lacks that hart. The controller also resets the system, which the
+restart handler requests: the bootloader, resident, then loads the
+kernel again.
+
+include/soc/fontamsoc/hwdrv.h provides the drivers of the FonTamSOC
+with the environment which they expect from its operating system,
+underLineOS.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: William Tambe <tambewilliam@gmail.com>
+---
+ MAINTAINERS                             |   2 +
+ drivers/irqchip/Kconfig                 |  11 +
+ drivers/irqchip/Makefile                |   1 +
+ drivers/irqchip/irq-fontamsoc-irqctrl.c | 316 ++++++++++++++++++++++++
+ include/linux/cpuhotplug.h              |   1 +
+ include/soc/fontamsoc/hwdrv.h           |  42 ++++
+ include/soc/fontamsoc/hwdrvirqctrl.h    | 112 +++++++++
+ 7 files changed, 485 insertions(+)
+ create mode 100644 drivers/irqchip/irq-fontamsoc-irqctrl.c
+ create mode 100644 include/soc/fontamsoc/hwdrv.h
+ create mode 100644 include/soc/fontamsoc/hwdrvirqctrl.h
+
+diff --git a/MAINTAINERS b/MAINTAINERS
+index 7b47ec853..448e09fc7 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -9766,6 +9766,8 @@ F:	Documentation/devicetree/bindings/serial/fontamsoc,serial-uart.yaml
+ F:	Documentation/devicetree/bindings/spi/fontamsoc,spi.yaml
+ F:	Documentation/devicetree/bindings/timer/fontamsoc,ftpu-timer.yaml
+ F:	drivers/clocksource/timer-ftpu.c
++F:	drivers/irqchip/irq-fontamsoc-irqctrl.c
++F:	include/soc/fontamsoc/
+ 
+ FORCEDETH GIGABIT ETHERNET DRIVER
+ M:	Rain River <rain.1986.08.12@gmail.com>
+diff --git a/drivers/irqchip/Kconfig b/drivers/irqchip/Kconfig
+index a61c6dc63..3dac3c853 100644
+--- a/drivers/irqchip/Kconfig
++++ b/drivers/irqchip/Kconfig
+@@ -641,6 +641,17 @@ config RISCV_RPMI_SYSMSI
+ 	select GENERIC_MSI_IRQ
+ 	default RISCV
+ 
++config FONTAMSOC_IRQCTRL
++	bool "Interrupt controller of the FonTamSOC" if COMPILE_TEST
++	depends on RISCV
++	select IRQ_DOMAIN
++	help
++	  This enables support for the interrupt controller of the FonTamSOC,
++	  which dispatches the interrupts of its devices to the harts of the
++	  ftpu, one at a time, and their interprocessor interrupts; it also
++	  resets the system, which restarts the bootloader, resident in the
++	  memory which the kernel leaves it.
++
+ config SIFIVE_PLIC
+ 	bool
+ 	depends on RISCV
+diff --git a/drivers/irqchip/Makefile b/drivers/irqchip/Makefile
+index 3de083f54..ec4078d96 100644
+--- a/drivers/irqchip/Makefile
++++ b/drivers/irqchip/Makefile
+@@ -108,6 +108,7 @@ obj-$(CONFIG_RISCV_APLIC_MSI)		+= irq-riscv-aplic-msi.o
+ obj-$(CONFIG_RISCV_IMSIC)		+= irq-riscv-imsic-state.o irq-riscv-imsic-early.o irq-riscv-imsic-platform.o
+ obj-$(CONFIG_RISCV_RPMI_SYSMSI)		+= irq-riscv-rpmi-sysmsi.o
+ obj-$(CONFIG_SIFIVE_PLIC)		+= irq-sifive-plic.o
++obj-$(CONFIG_FONTAMSOC_IRQCTRL)		+= irq-fontamsoc-irqctrl.o
+ obj-$(CONFIG_STARFIVE_JH8100_INTC)	+= irq-starfive-jh8100-intc.o
+ obj-$(CONFIG_ACLINT_SSWI)		+= irq-aclint-sswi.o
+ obj-$(CONFIG_IMX_IRQSTEER)		+= irq-imx-irqsteer.o
+diff --git a/drivers/irqchip/irq-fontamsoc-irqctrl.c b/drivers/irqchip/irq-fontamsoc-irqctrl.c
+new file mode 100644
+index 000000000..16688ffe4
+--- /dev/null
++++ b/drivers/irqchip/irq-fontamsoc-irqctrl.c
+@@ -0,0 +1,316 @@
++// SPDX-License-Identifier: GPL-2.0-only
++// 20261120 (c) William Fonkou Tambe
++/*
++ * The interrupt controller of the FonTamSOC, dev/irqctrl.sv, driven through
++ * hwdrvirqctrl.h: a single word, which every hart shares, takes commands,
++ * each a transaction of two atomic exchanges, hence serialized by a lock with
++ * interrupts disabled.
++ *
++ * The controller dispatches one interrupt at a time, from its sources, to
++ * one of the destinations which it enables, the harts, raising its machine
++ * external interrupt until the hart acknowledges it; the acknowledgment
++ * returns the source, or -1 for an interprocessor interrupt, which reaches a
++ * hart whatever its destination, or -2 when nothing is pending for the hart,
++ * and enables or disables the destination of the hart. The device of the
++ * source disarms itself once acknowledged: its driver arms it again.
++ *
++ * Device interrupts go to the boot hart only: every acknowledgment of
++ * another hart disables its destination. An acknowledgment from an enabled
++ * destination with nothing pending for it is an error which the monitor of
++ * the simulation of the controller reports: the handler acknowledges once per
++ * trap, the level of the interrupt keeping the hart trapping while anything is
++ * pending for it, and the initialization enables the destination of the boot
++ * hart by acknowledging an interprocessor interrupt which it sends that hart;
++ * an acknowledgment from a disabled destination with nothing pending is not
++ * an error, but an interprocessor interrupt would wake a hart which the
++ * bootldr parked. A reset requested through the
++ * controller restarts every hart, cache and device, but neither the memory
++ * nor the calibration of the DDR SDRAM: the bootldr resident at 0x1000 loads
++ * the kernel again.
++ */
++
++#define pr_fmt(fmt) "fontamsoc-irqctrl: " fmt
++
++#include <linux/cpu.h>
++#include <linux/cpuhotplug.h>
++#include <linux/init.h>
++#include <linux/interrupt.h>
++#include <linux/irq.h>
++#include <linux/irqchip.h>
++#include <linux/irqchip/chained_irq.h>
++#include <linux/irqdomain.h>
++#include <linux/of.h>
++#include <linux/of_address.h>
++#include <linux/of_irq.h>
++#include <linux/processor.h>
++#include <linux/reboot.h>
++#include <linux/smp.h>
++#include <linux/spinlock.h>
++
++#include <soc/fontamsoc/hwdrv.h>
++#include <soc/fontamsoc/hwdrvirqctrl.h>
++
++/* The results of an acknowledgment which are not a source. */
++#define FTPU_IRQCTRL_IPI	((uintptr_t)-1)
++#define FTPU_IRQCTRL_NONE	((uintptr_t)-2)
++
++static DEFINE_RAW_SPINLOCK(ftpu_irqctrl_lock);
++static struct irq_domain *ftpu_irqctrl_domain;
++static unsigned int ftpu_irqctrl_parent_irq;
++static unsigned long ftpu_irqctrl_boot_hart;
++
++/* Acknowledge for hart, enabling its destination only for the boot hart. */
++static uintptr_t ftpu_irqctrl_ack(unsigned long hart)
++{
++	unsigned long flags;
++	uintptr_t r;
++
++	raw_spin_lock_irqsave(&ftpu_irqctrl_lock, flags);
++	r = hwdrvirqctrl_ack(hart, (hart == ftpu_irqctrl_boot_hart));
++	raw_spin_unlock_irqrestore(&ftpu_irqctrl_lock, flags);
++	return r;
++}
++
++/* An interprocessor interrupt to hart. */
++static void ftpu_irqctrl_ipi(unsigned long hart)
++{
++	unsigned long flags;
++
++	raw_spin_lock_irqsave(&ftpu_irqctrl_lock, flags);
++	hwdrvirqctrl_int(hart);
++	raw_spin_unlock_irqrestore(&ftpu_irqctrl_lock, flags);
++}
++
++#ifdef CONFIG_SMP
++/* The parent of the interprocessor interrupts which ipi_mux multiplexes. */
++static void ftpu_irqctrl_send_ipi(unsigned int cpu)
++{
++	ftpu_irqctrl_ipi(cpuid_to_hartid_map(cpu));
++}
++#endif
++
++static void ftpu_irqctrl_ena(irq_hw_number_t src, uintptr_t en)
++{
++	unsigned long flags;
++
++	raw_spin_lock_irqsave(&ftpu_irqctrl_lock, flags);
++	hwdrvirqctrl_ena(src, en);
++	raw_spin_unlock_irqrestore(&ftpu_irqctrl_lock, flags);
++}
++
++static void ftpu_irqctrl_mask(struct irq_data *d)
++{
++	ftpu_irqctrl_ena(irqd_to_hwirq(d), 0);
++}
++
++static void ftpu_irqctrl_unmask(struct irq_data *d)
++{
++	ftpu_irqctrl_ena(irqd_to_hwirq(d), 1);
++}
++
++static struct irq_chip ftpu_irqctrl_chip = {
++	.name		= "fontamsoc-irqctrl",
++	.irq_mask	= ftpu_irqctrl_mask,
++	.irq_unmask	= ftpu_irqctrl_unmask,
++	.flags		= IRQCHIP_SKIP_SET_WAKE,
++};
++
++/*
++ * The source is masked at once by disable_irq(), rather than when it next
++ * triggers: the controller then keeps it pending, whereas acknowledging it
++ * while disabled would disarm its device, losing the interrupt.
++ */
++static int ftpu_irqctrl_map(struct irq_domain *d, unsigned int virq,
++			    irq_hw_number_t hwirq)
++{
++	irq_set_chip_and_handler(virq, &ftpu_irqctrl_chip, handle_simple_irq);
++	irq_set_status_flags(virq, IRQ_DISABLE_UNLAZY);
++	return 0;
++}
++
++static const struct irq_domain_ops ftpu_irqctrl_domain_ops = {
++	.map	= ftpu_irqctrl_map,
++	.xlate	= irq_domain_xlate_onecell,
++};
++
++static void ftpu_irqctrl_handle_irq(struct irq_desc *desc)
++{
++	struct irq_chip *chip = irq_desc_get_chip(desc);
++	unsigned long hart = cpuid_to_hartid_map(smp_processor_id());
++	uintptr_t r;
++
++	chained_irq_enter(chip, desc);
++	r = ftpu_irqctrl_ack(hart);
++	if (r == FTPU_IRQCTRL_IPI) {
++#ifdef CONFIG_SMP
++		ipi_mux_process();
++#endif
++	} else if ((r != FTPU_IRQCTRL_NONE) &&
++		   generic_handle_domain_irq(ftpu_irqctrl_domain, r)) {
++		pr_warn_ratelimited("interrupt of source %lu unhandled\n",
++				    (unsigned long)r);
++	}
++	chained_irq_exit(chip, desc);
++}
++
++static int ftpu_irqctrl_starting_cpu(unsigned int cpu)
++{
++	enable_percpu_irq(ftpu_irqctrl_parent_irq,
++			  irq_get_trigger_type(ftpu_irqctrl_parent_irq));
++	return 0;
++}
++
++static int ftpu_irqctrl_dying_cpu(unsigned int cpu)
++{
++	disable_percpu_irq(ftpu_irqctrl_parent_irq);
++	return 0;
++}
++
++/*
++ * Restart: a reset requested through the controller, as hwdrvirqctrl_reset()
++ * requests it; no lock is taken, CMDDEVRDY closing a transaction which another
++ * hart, stopped, left open. Registers ra, a0 and a1 are nulled first, the
++ * reset keeping them: the crt0.S of the bootldr at 0x1000 takes a1 for the end
++ * of its memory when ra is -1 and a0 null.
++ */
++static int ftpu_irqctrl_restart(struct notifier_block *nb, unsigned long mode,
++				void *cmd)
++{
++	local_irq_disable();
++	asm volatile ("	li	ra, 0\n"
++		"	li	a0, 0\n"
++		"	li	a1, 0\n"
++		"1:	amoswap.w.aqrl	zero, zero, (%0)\n"
++		"	amoswap.w.aqrl	t1, %1, (%0)\n"
++		"	andi	t1, t1, 3\n"
++		"	bnez	t1, 1b\n"
++		"2:	wfi\n"
++		"	j	2b\n"
++		: : "r" (IRQCTRLADDR), "r" ((((uintptr_t)-1) << 3) | 0b10)
++		: "ra", "a0", "a1", "t1", "memory");
++	unreachable();
++}
++
++static struct notifier_block ftpu_irqctrl_restart_nb = {
++	.notifier_call	= ftpu_irqctrl_restart,
++	.priority	= 128,
++};
++
++static int __init ftpu_irqctrl_init(struct device_node *node,
++				    struct device_node *parent)
++{
++	struct irq_domain *intc;
++	struct of_phandle_args oirq;
++	unsigned long hart;
++	void __iomem *base;
++	u32 nsources;
++	int i, n, rc;
++
++	/* hwdrvirqctrl.h addresses the controller at 0xf00, by convention. */
++	base = of_iomap(node, 0);
++	if (base != (void __iomem *)IRQCTRLADDR) {
++		pr_err("%pOFP: not at %p\n", node, IRQCTRLADDR);
++		return -ENODEV;
++	}
++
++	if (of_property_read_u32(node, "fontamsoc,nsources", &nsources) ||
++	    !nsources) {
++		pr_err("%pOFP: no fontamsoc,nsources\n", node);
++		return -EINVAL;
++	}
++
++	intc = irq_find_matching_fwnode(riscv_get_intc_hwnode(), DOMAIN_BUS_ANY);
++	if (!intc) {
++		pr_err("%pOFP: no interrupt controller of the cpus\n", node);
++		return -ENODEV;
++	}
++
++	ftpu_irqctrl_boot_hart = cpuid_to_hartid_map(smp_processor_id());
++
++	/*
++	 * Every source disabled; then the destination of each other hart of
++	 * the device tree acknowledged until nothing is pending for it, which
++	 * disables it, save for a hart whose node is disabled, ie: one which
++	 * the bitstream lacks, which has no destination; and that of the boot
++	 * hart enabled by acknowledging an interprocessor interrupt which it
++	 * sends itself, its interrupts being disabled; a source pending for it
++	 * reaches the handler.
++	 */
++	for (i = 0; i < nsources; i++)
++		ftpu_irqctrl_ena(i, 0);
++	n = of_irq_count(node);
++	for (i = 0; i < n; i++) {
++		struct device_node *cpu;
++		bool avail;
++
++		if (of_irq_parse_one(node, i, &oirq) ||
++		    oirq.args_count != 1 || oirq.args[0] != RV_IRQ_EXT ||
++		    riscv_of_parent_hartid(oirq.np, &hart)) {
++			pr_warn("%pOFP: interrupt %d is not the machine external interrupt of a cpu\n",
++				node, i);
++			continue;
++		}
++		cpu = of_get_parent(oirq.np);
++		avail = of_device_is_available(cpu);
++		of_node_put(cpu);
++		if (hart == ftpu_irqctrl_boot_hart || !avail)
++			continue;
++		while (ftpu_irqctrl_ack(hart) != FTPU_IRQCTRL_NONE)
++			;
++	}
++	ftpu_irqctrl_ipi(ftpu_irqctrl_boot_hart);
++	if (ftpu_irqctrl_ack(ftpu_irqctrl_boot_hart) != FTPU_IRQCTRL_IPI)
++		pr_warn("%pOFP: the interprocessor interrupt to the boot hart did not come\n",
++			node);
++
++	ftpu_irqctrl_domain = irq_domain_create_linear(of_fwnode_handle(node),
++						       nsources,
++						       &ftpu_irqctrl_domain_ops,
++						       NULL);
++	if (!ftpu_irqctrl_domain) {
++		pr_err("%pOFP: irq domain creation failed\n", node);
++		return -ENOMEM;
++	}
++
++	ftpu_irqctrl_parent_irq = irq_create_mapping(intc, RV_IRQ_EXT);
++	if (!ftpu_irqctrl_parent_irq) {
++		pr_err("%pOFP: no mapping of the external interrupt\n", node);
++		irq_domain_remove(ftpu_irqctrl_domain);
++		return -ENODEV;
++	}
++	irq_set_chained_handler(ftpu_irqctrl_parent_irq, ftpu_irqctrl_handle_irq);
++
++#ifdef CONFIG_SMP
++	/*
++	 * The interprocessor interrupts of the kernel, multiplexed on those of
++	 * the controller; the latter also wake the harts which the bootldr
++	 * parked, from cpu_ops_spinwait.
++	 */
++	rc = ipi_mux_create(BITS_PER_BYTE, ftpu_irqctrl_send_ipi);
++	if (rc <= 0) {
++		pr_err("%pOFP: unable to create muxed IPIs [%d]\n", node, rc);
++		return ((rc < 0) ? rc : -ENODEV);
++	}
++	riscv_ipi_set_virq_range(rc, BITS_PER_BYTE);
++	ftpu_wake_hart = ftpu_irqctrl_ipi;
++#endif
++
++	rc = cpuhp_setup_state(CPUHP_AP_IRQ_FONTAMSOC_STARTING,
++			       "irqchip/fontamsoc/irqctrl:starting",
++			       ftpu_irqctrl_starting_cpu, ftpu_irqctrl_dying_cpu);
++	if (rc) {
++		pr_err("%pOFP: cpuhp setup state failed [%d]\n", node, rc);
++		return rc;
++	}
++
++	rc = register_restart_handler(&ftpu_irqctrl_restart_nb);
++	if (rc)
++		pr_warn("%pOFP: restart handler registration failed [%d]\n",
++			node, rc);
++
++	pr_info("%pOFP: %u sources, boot hart %lu\n", node, nsources,
++		ftpu_irqctrl_boot_hart);
++	return 0;
++}
++
++IRQCHIP_DECLARE(fontamsoc_irqctrl, "fontamsoc,irqctrl", ftpu_irqctrl_init);
+diff --git a/include/linux/cpuhotplug.h b/include/linux/cpuhotplug.h
+index be224b921..50a9e5533 100644
+--- a/include/linux/cpuhotplug.h
++++ b/include/linux/cpuhotplug.h
+@@ -145,6 +145,7 @@ enum cpuhp_state {
+ 	CPUHP_AP_IRQ_SIFIVE_PLIC_STARTING,
+ 	CPUHP_AP_IRQ_ACLINT_SSWI_STARTING,
+ 	CPUHP_AP_IRQ_RISCV_IMSIC_STARTING,
++	CPUHP_AP_IRQ_FONTAMSOC_STARTING,
+ 	CPUHP_AP_IRQ_RISCV_SBI_IPI_STARTING,
+ 	CPUHP_AP_ARM_MVEBU_COHERENCY,
+ 	CPUHP_AP_PERF_X86_AMD_UNCORE_STARTING,
+diff --git a/include/soc/fontamsoc/hwdrv.h b/include/soc/fontamsoc/hwdrv.h
+new file mode 100644
+index 000000000..305db64d0
+--- /dev/null
++++ b/include/soc/fontamsoc/hwdrv.h
+@@ -0,0 +1,42 @@
++/* SPDX-License-Identifier: GPL-2.0-only */
++/* 20261120 (c) William Fonkou Tambe */
++/*
++ * The environment which the drivers hwdrv*.h of the FonTamSOC expect from
++ * underLineOS, whose copies, unchanged, are next to this file: _xchg() and
++ * _atomic_op(), as _os.h defines them for 32-bit words, and alignas, a
++ * keyword of C23, which the kernel, built as gnu11, lacks; the drivers give
++ * alignas a type. A driver includes this file first; then it defines
++ * HWDRVCHAR_DATATYPE before including hwdrvchar.h. hwdrvsdsdio.h spells out
++ * the attributes noinline and noclone, which the macro noinline of the kernel
++ * would break: it is to be included with that macro pushed and undefined.
++ */
++
++#ifndef __SOC_FONTAMSOC_HWDRV_H
++#define __SOC_FONTAMSOC_HWDRV_H
++
++#include <linux/build_bug.h>
++#include <linux/stddef.h>
++#include <linux/types.h>
++
++#ifndef alignas
++#define alignas(type) __aligned(__alignof__(type))
++#endif
++
++/*
++ * The atomic operation OP, with .aqrl, on the word at PTR: as the drivers
++ * exchange words with a device, ie: on a word of its registers, an atomic
++ * read-write of the bus.
++ */
++#define _atomic_op(OP, PTR, VAL) ({ \
++	__typeof__(PTR) __ptr = (PTR); \
++	__typeof__(VAL) __val = (VAL); \
++	__typeof__(*__ptr) __ret; \
++	__asm__ __volatile__ ( \
++		#OP ".w.aqrl %0, %2, %1\n" \
++		: "=r" (__ret), "+A" (*__ptr) \
++		: "r" (__val) \
++		: "memory"); \
++	__ret; })
++#define _xchg(PTR, VAL) _atomic_op(amoswap, PTR, VAL)
++
++#endif /* __SOC_FONTAMSOC_HWDRV_H */
+diff --git a/include/soc/fontamsoc/hwdrvirqctrl.h b/include/soc/fontamsoc/hwdrvirqctrl.h
+new file mode 100644
+index 000000000..ce7dd0282
+--- /dev/null
++++ b/include/soc/fontamsoc/hwdrvirqctrl.h
+@@ -0,0 +1,112 @@
++// SPDX-License-Identifier: GPL-2.0-only
++// 20260802 (c) William Fonkou Tambe
++
++#ifndef HWDRVIRQCTRL_H
++#define HWDRVIRQCTRL_H
++
++// Commands are sent to the controller writing to it with the
++// following expected format | arg: (WORDBITSZ-2) bits | cmd: 2 bit |
++// where the field "cmd" values are CMDDEVRDY(2'b00), CMDACKIRQ(2'b01),
++// CMDINTDST(2'b10) and CMDENAIRQ(2'b11). The result of a previously
++// sent command is retrieved from the controller reading from it and
++// has the following format
++// | resp: (WORDBITSZ-3) bits | rsvd: 1 bit | cmd: 2 bit |, where the fields
++// "cmd" and "resp" are the command and its result, while the field "rsvd"
++// is reserved and null.
++// Two memory operations, a write followed by a read are needed to send
++// a command to the controller and retrieve its result.
++// The controller has accepted a command only if "cmd" in its result
++// is CMDDEVRDY, otherwise sending the command CMDDEVRDY is needed.
++//
++// The description of commands is as follow:
++// 	CMDDEVRDY: Make the controller accept a new command.
++// 	"resp" in the result gets set to 0.
++// 	CMDACKIRQ: Acknowledges an interrupt source; field "arg" is expected
++// 	to have following format | idx: (WORDBITSZ-3) bits | en: 1 bit |
++// 	where "idx" is the interrupt destination index, "en" enables/disables
++// 	further interrupt delivery to the interrupt destination "idx", except
++// 	for interrupts triggered by CMDINTDST, which "en" does not gate.
++// 	"resp" in the result gets set to -1 for an interrupt triggered by
++// 	CMDINTDST pending for the destination "idx", which gets acknowledged
++// 	ahead of an interrupt from a source routed to "idx", the latter staying
++// 	pending; otherwise "resp" gets set to the interrupt source index, or -2
++// 	if there are no pending interrupts for the destination "idx".
++// 	CMDINTDST: Triggers an interrupt targeting a specific destination,
++// 	held pending for that destination until it acknowledges it;
++// 	field "arg" is expected to have following format
++// 	| idx: (WORDBITSZ-3) bits | rsvd: 1 bit | where "idx" is the interrupt
++// 	destination index to target, "rsvd" is reserved and ignored.
++// 	"resp" in the result gets set to the interrupt destination index
++// 	if valid, or -1 if invalid. The command is never refused: one targeting
++// 	a destination which already has one pending merges with it, a single
++// 	acknowledgement servicing both.
++// 	The destination -1 (all ones) requests a system reset; "resp" in the
++// 	result gets set to -1 as for an invalid destination.
++// 	CMDENAIRQ: Enable/Disable an interrupt source; field "arg" is expected
++// 	to have following format | idx: (WORDBITSZ-3) bits | en: 1 bit |
++// 	where "idx" is the interrupt source index, "en" enables/disables
++// 	interrupts from the interrupt source "idx".
++// 	"resp" in the result gets set to the interrupt source index, or -1
++// 	if invalid.
++//
++// To be multi core proof, an atomic read-write must be used to send
++// a command to the controller until CMDDEVRDY is returned, then another
++// atomic read-write sending CMDDEVRDY must be used to retrieve the
++// result while making the controller ready for the next command.
++//
++// An interrupt from a source must be acknowledged as soon as possible so
++// that the irqctrl can dispatch another interrupt request, as it dispatches
++// them one at a time for all destinations.
++
++#define IRQCTRLADDR ((uintptr_t *)0xf00 /* By convention, the interrupt controller is located at 0xf00 */)
++
++static inline uintptr_t hwdrvirqctrl_ack (uintptr_t idx, uintptr_t en) {
++	uintptr_t irqsrc;
++	do {
++		irqsrc = ((idx<<3) | ((en&1)<<2) | 0b01);
++		irqsrc = _xchg(IRQCTRLADDR, irqsrc);
++	} while (irqsrc & 0b11);
++	irqsrc = 0;
++	irqsrc = _xchg(IRQCTRLADDR, irqsrc);
++	return ((intptr_t)irqsrc >> 3);
++}
++
++static inline uintptr_t hwdrvirqctrl_int (uintptr_t idx) {
++	uintptr_t irqdst;
++	do {
++		irqdst = ((idx<<3) | 0b10);
++		irqdst = _xchg(IRQCTRLADDR, irqdst);
++	} while (irqdst & 0b11);
++	irqdst = 0;
++	irqdst = _xchg(IRQCTRLADDR, irqdst);
++	return ((intptr_t)irqdst >> 3);
++}
++
++static inline uintptr_t hwdrvirqctrl_ena (uintptr_t idx, uintptr_t en) {
++	uintptr_t irqsrc;
++	do {
++		irqsrc = ((idx<<3) | ((en&1)<<2) | 0b11);
++		irqsrc = _xchg(IRQCTRLADDR, irqsrc);
++	} while (irqsrc & 0b11);
++	irqsrc = 0;
++	irqsrc = _xchg(IRQCTRLADDR, irqsrc);
++	return ((intptr_t)irqsrc >> 3);
++}
++
++// Request a system reset, the CMDINTDST destination -1; it never returns.
++// The controller accepts a command only when its previous transaction has
++// been closed: CMDDEVRDY closes whatever transaction another context left
++// open, and the request is accepted exactly when the word it returns has a
++// null "cmd" field, otherwise another context slipped a command in between
++// and the pair is retried; wfi parks the cpu until the reset asserts.
++static inline __attribute__((noreturn)) void hwdrvirqctrl_reset (void) {
++	uintptr_t v;
++	do {
++		(void)_xchg(IRQCTRLADDR, 0);
++		v = _xchg(IRQCTRLADDR, ((((uintptr_t)-1) << 3) | 0b10));
++	} while (v & 0b11);
++	for (;;)
++		__asm__ __volatile__ ("wfi");
++}
++
++#endif /* HWDRVIRQCTRL_H */

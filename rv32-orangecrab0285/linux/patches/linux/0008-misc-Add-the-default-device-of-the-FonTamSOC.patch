@@ -1,0 +1,149 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Tambe <tambewilliam@gmail.com>
+Date: Fri, 20 Nov 2026 11:49:18 -0600
+Subject: [PATCH 8/8] misc: Add the default device of the FonTamSOC
+
+The default device of the FonTamSOC acknowledges the accesses to
+unmapped addresses, and raises its interrupt: the address, which its
+register holds, is reported. The register, the last word of the address
+space, lies within the range of the error pointers: it is mapped without
+devm_platform_ioremap_resource().
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: William Tambe <tambewilliam@gmail.com>
+---
+ MAINTAINERS                      |  1 +
+ drivers/misc/Kconfig             | 11 +++++
+ drivers/misc/Makefile            |  1 +
+ drivers/misc/fontamsoc-dfltdev.c | 76 ++++++++++++++++++++++++++++++++
+ 4 files changed, 89 insertions(+)
+ create mode 100644 drivers/misc/fontamsoc-dfltdev.c
+
+diff --git a/MAINTAINERS b/MAINTAINERS
+index c10a5c48d..6573b9c2e 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -9768,6 +9768,7 @@ F:	Documentation/devicetree/bindings/timer/fontamsoc,ftpu-timer.yaml
+ F:	drivers/block/fontamsoc-sdsdio.c
+ F:	drivers/clocksource/timer-ftpu.c
+ F:	drivers/irqchip/irq-fontamsoc-irqctrl.c
++F:	drivers/misc/fontamsoc-dfltdev.c
+ F:	drivers/spi/spi-fontamsoc.c
+ F:	drivers/tty/serial/fontamsoc-serial.c
+ F:	include/soc/fontamsoc/
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index b9c11f673..4ca03d00f 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -50,6 +50,17 @@ config AD525X_DPOT_SPI
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called ad525x_dpot-spi.
+ 
++config FONTAMSOC_DFLTDEV
++	bool "FonTamSOC default device"
++	depends on HAS_IOMEM
++	depends on OF
++	depends on ARCH_FONTAMSOC || COMPILE_TEST
++	help
++	  This driver reports the accesses to unmapped addresses which the
++	  default device of the FonTamSOC acknowledges, from its interrupt.
++	  The interrupt is imprecise, and a fetch which the core makes ahead
++	  may raise it: the address is reported, never fatal.
++
+ config DUMMY_IRQ
+ 	tristate "Dummy IRQ handler"
+ 	help
+diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+index b32a2597d..87d12e19e 100644
+--- a/drivers/misc/Makefile
++++ b/drivers/misc/Makefile
+@@ -10,6 +10,7 @@ obj-$(CONFIG_AD525X_DPOT_I2C)	+= ad525x_dpot-i2c.o
+ obj-$(CONFIG_AD525X_DPOT_SPI)	+= ad525x_dpot-spi.o
+ obj-$(CONFIG_ATMEL_SSC)		+= atmel-ssc.o
+ obj-$(CONFIG_DUMMY_IRQ)		+= dummy-irq.o
++obj-$(CONFIG_FONTAMSOC_DFLTDEV)	+= fontamsoc-dfltdev.o
+ obj-$(CONFIG_ICS932S401)	+= ics932s401.o
+ obj-$(CONFIG_LKDTM)		+= lkdtm/
+ obj-$(CONFIG_TI_FPC202)		+= ti_fpc202.o
+diff --git a/drivers/misc/fontamsoc-dfltdev.c b/drivers/misc/fontamsoc-dfltdev.c
+new file mode 100644
+index 000000000..69a40cd2c
+--- /dev/null
++++ b/drivers/misc/fontamsoc-dfltdev.c
+@@ -0,0 +1,76 @@
++// SPDX-License-Identifier: GPL-2.0-only
++// 20261120 (c) William Fonkou Tambe
++/*
++ * The default device of the FonTamSOC, dev/dfltdev.sv: it acknowledges every
++ * access to an address which no device maps, a read returning 0x00000013, a
++ * nop, a write being dropped, and raises its interrupt, until acknowledged.
++ * Its register, the last word of the address space, read-only, holds the
++ * first such address since it was last read: its bits 27 to 2 exact, bit 28
++ * the OR of bits 31 to 28, bits 1 and 0 null. The interrupt is imprecise, and
++ * a fetch which the predictor of the core makes ahead, never executed, raises
++ * it as well: it is reported, never fatal.
++ */
++
++#include <linux/interrupt.h>
++#include <linux/io.h>
++#include <linux/module.h>
++#include <linux/of.h>
++#include <linux/platform_device.h>
++
++static irqreturn_t dfltdev_interrupt(int irq, void *data)
++{
++	void __iomem *reg = (void __iomem __force *)data;
++
++	pr_warn_ratelimited("dfltdev: access to unmapped address %#010x (imprecise, may be a speculative fetch)\n",
++			    readl(reg));
++	return IRQ_HANDLED;
++}
++
++/*
++ * The register is the last word of the address space, which, without MMU, is
++ * also its virtual address: within the range of the error pointers, which
++ * IS_ERR() would take for -4, hence it is mapped without
++ * devm_platform_ioremap_resource().
++ */
++static int dfltdev_probe(struct platform_device *pdev)
++{
++	struct resource *res;
++	void __iomem *reg;
++	int irq;
++
++	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	if (!res)
++		return -EINVAL;
++	if (!devm_request_mem_region(&pdev->dev, res->start, resource_size(res),
++				     dev_name(&pdev->dev)))
++		return -EBUSY;
++	reg = devm_ioremap(&pdev->dev, res->start, resource_size(res));
++	if (!reg)
++		return -ENOMEM;
++	irq = platform_get_irq(pdev, 0);
++	if (irq < 0)
++		return irq;
++	/* The address of a fault before the probe, if any, is dropped. */
++	(void)readl(reg);
++	return devm_request_irq(&pdev->dev, irq, dfltdev_interrupt, 0,
++				dev_name(&pdev->dev), (void __force *)reg);
++}
++
++static const struct of_device_id dfltdev_of_match[] = {
++	{ .compatible = "fontamsoc,dfltdev" },
++	{}
++};
++MODULE_DEVICE_TABLE(of, dfltdev_of_match);
++
++static struct platform_driver dfltdev_driver = {
++	.probe	= dfltdev_probe,
++	.driver	= {
++		.name		= "fontamsoc-dfltdev",
++		.of_match_table	= dfltdev_of_match,
++	},
++};
++module_platform_driver(dfltdev_driver);
++
++MODULE_AUTHOR("William Fonkou Tambe");
++MODULE_DESCRIPTION("FonTamSOC default device driver");
++MODULE_LICENSE("GPL");

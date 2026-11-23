@@ -1,0 +1,818 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Tambe <tambewilliam@gmail.com>
+Date: Fri, 20 Nov 2026 11:49:17 -0600
+Subject: [PATCH 5/8] tty: serial: Add the UART of the FonTamSOC
+
+The UART, driven through hwdrvchar.h, a copy of the driver of the
+FonTamSOC, transmits and receives 8N1 through buffers of 2048 bytes: its
+receive interrupt drives the input, an hrtimer refills its transmit
+buffer, as it has no transmit interrupt. The console and earlycon poll
+it. A read with the receive buffer empty would stall the bus: only the
+bytes which its usage counts are read.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: William Tambe <tambewilliam@gmail.com>
+---
+ MAINTAINERS                           |   1 +
+ drivers/tty/serial/Kconfig            |  26 ++
+ drivers/tty/serial/Makefile           |   1 +
+ drivers/tty/serial/fontamsoc-serial.c | 506 ++++++++++++++++++++++++++
+ include/soc/fontamsoc/hwdrvchar.h     | 215 +++++++++++
+ 5 files changed, 749 insertions(+)
+ create mode 100644 drivers/tty/serial/fontamsoc-serial.c
+ create mode 100644 include/soc/fontamsoc/hwdrvchar.h
+
+diff --git a/MAINTAINERS b/MAINTAINERS
+index 448e09fc7..20dc9e450 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -9767,6 +9767,7 @@ F:	Documentation/devicetree/bindings/spi/fontamsoc,spi.yaml
+ F:	Documentation/devicetree/bindings/timer/fontamsoc,ftpu-timer.yaml
+ F:	drivers/clocksource/timer-ftpu.c
+ F:	drivers/irqchip/irq-fontamsoc-irqctrl.c
++F:	drivers/tty/serial/fontamsoc-serial.c
+ F:	include/soc/fontamsoc/
+ 
+ FORCEDETH GIGABIT ETHERNET DRIVER
+diff --git a/drivers/tty/serial/Kconfig b/drivers/tty/serial/Kconfig
+index 2b9c8b39d..ee432967d 100644
+--- a/drivers/tty/serial/Kconfig
++++ b/drivers/tty/serial/Kconfig
+@@ -1512,6 +1512,32 @@ config SERIAL_MILBEAUT_USIO_CONSOLE
+ 	  receives all kernel messages and warnings and which allows logins in
+ 	  single user mode).
+ 
++config SERIAL_FONTAMSOC
++	tristate "FonTamSOC serial port support"
++	depends on HAS_IOMEM
++	depends on OF
++	depends on ARCH_FONTAMSOC || COMPILE_TEST
++	select SERIAL_CORE
++	help
++	  This driver is for the UART of the FonTamSOC, around the ftpu
++	  RISC-V core, the port ttyS0: 8N1, with buffers of 2048 bytes in
++	  each direction, a receive interrupt, and no transmit interrupt.
++	  The 8250 driver names its ports ttyS0 and on as well: with both
++	  built in, the port of whichever registers last fails.
++
++	  Say 'Y' or 'M' here to use it.
++
++config SERIAL_FONTAMSOC_CONSOLE
++	bool "FonTamSOC serial port console support"
++	depends on SERIAL_FONTAMSOC=y
++	select SERIAL_CORE_CONSOLE
++	select SERIAL_EARLYCON
++	help
++	  Say 'Y' here to use the UART of the FonTamSOC as the system
++	  console, which writes to it polling, and as earlycon, from the
++	  stdout-path of the device tree, ie: with the kernel parameter
++	  earlycon given without options.
++
+ config SERIAL_LITEUART
+ 	tristate "LiteUART serial port support"
+ 	depends on HAS_IOMEM
+diff --git a/drivers/tty/serial/Makefile b/drivers/tty/serial/Makefile
+index a2ccbc508..31bc3f7f9 100644
+--- a/drivers/tty/serial/Makefile
++++ b/drivers/tty/serial/Makefile
+@@ -48,6 +48,7 @@ obj-$(CONFIG_SERIAL_IP22_ZILOG)		+= ip22zilog.o
+ obj-$(CONFIG_SERIAL_JSM)		+= jsm/
+ obj-$(CONFIG_SERIAL_LANTIQ)		+= lantiq.o
+ obj-$(CONFIG_SERIAL_LITEUART)		+= liteuart.o
++obj-$(CONFIG_SERIAL_FONTAMSOC)	+= fontamsoc-serial.o
+ obj-$(CONFIG_SERIAL_HS_LPC32XX)		+= lpc32xx_hs.o
+ obj-$(CONFIG_SERIAL_MAX3100)		+= max3100.o
+ obj-$(CONFIG_SERIAL_MAX310X)		+= max310x.o
+diff --git a/drivers/tty/serial/fontamsoc-serial.c b/drivers/tty/serial/fontamsoc-serial.c
+new file mode 100644
+index 000000000..0d2bb691d
+--- /dev/null
++++ b/drivers/tty/serial/fontamsoc-serial.c
+@@ -0,0 +1,506 @@
++// SPDX-License-Identifier: GPL-2.0-only
++// 20261120 (c) William Fonkou Tambe
++/*
++ * The UART of the FonTamSOC, dev/serial_uart.sv, driven through hwdrvchar.h:
++ * its data word, and its command word, which takes transactions of two atomic
++ * exchanges: the usage of its receive and transmit buffers, its receive
++ * interrupt, and its speed, the count of clock cycles per bit. It transmits
++ * and receives 8N1.
++ *
++ * Every access is serialized by fts_hw_lock with interrupts disabled: during
++ * an open transaction, a read of the data word returns the result without
++ * taking a byte, and a write of it is dropped. A read of the data word with
++ * the receive buffer empty stalls the bus until a byte arrives, which wedges
++ * the whole machine when it has several harts: only the bytes counted by
++ * hwdrvchar_readable() are read. A write stalls while the transmit buffer is
++ * full, and its usage misses up to two staged bytes: at most
++ * hwdrvchar_writable() less two bytes are written, the console and earlycon
++ * waiting for room rather than for the stall.
++ *
++ * The receive interrupt is a level while the receive buffer holds at least
++ * its threshold; its acknowledgment nulls the threshold, which the handler
++ * sets again once it read the buffer. There is no transmit interrupt: an
++ * hrtimer refills the transmit buffer while the circular buffer holds data.
++ */
++
++#include <linux/console.h>
++#include <linux/delay.h>
++#include <linux/hrtimer.h>
++#include <linux/init.h>
++#include <linux/interrupt.h>
++#include <linux/io.h>
++#include <linux/irqflags.h>
++#include <linux/ktime.h>
++#include <linux/module.h>
++#include <linux/of.h>
++#include <linux/platform_device.h>
++#include <linux/serial.h>
++#include <linux/serial_core.h>
++#include <linux/spinlock.h>
++#include <linux/tty.h>
++#include <linux/tty_flip.h>
++
++#include <soc/fontamsoc/hwdrv.h>
++#define HWDRVCHAR_DATATYPE uint8_t
++#include <soc/fontamsoc/hwdrvchar.h>
++
++#define FTS_DEV_NAME		"ttyS"
++#define FTS_BAUD_DEFAULT	115200
++#define FTS_BAUD_MIN		1200
++#define FTS_TX_RESERVE		2	/* staged bytes which the usage misses */
++#define FTS_TX_PERIOD_NS	(1 * NSEC_PER_MSEC)
++#define FTS_RX_CHUNK		64
++
++struct fts_port {
++	struct uart_port port;
++	hwdrvchar_t dev;
++	uintptr_t div;
++	struct hrtimer tx_timer;
++};
++
++#define to_fts_port(p)	container_of(p, struct fts_port, port)
++
++static DEFINE_RAW_SPINLOCK(fts_hw_lock);
++static struct fts_port *fts_console_port;
++
++/* The command HWDRVCHAR_CMDSETSPEED with the argument div, as hwdrvchar_init(). */
++static void fts_setspeed(hwdrvchar_t *dev, uintptr_t div)
++{
++	uintptr_t *addrcmd = (uintptr_t *)(dev->addr + sizeof(uintptr_t));
++	uintptr_t dat;
++
++	do {
++		dat = ((div << 2) | HWDRVCHAR_CMDSETSPEED);
++		dat = _xchg(addrcmd, dat);
++	} while ((dat & 0b11) != HWDRVCHAR_CMDDEVRDY);
++	(void)_xchg(addrcmd, HWDRVCHAR_CMDDEVRDY);
++}
++
++/* Write ch if the transmit buffer has room; return whether it did. */
++static bool fts_try_putc(hwdrvchar_t *dev, u8 ch)
++{
++	unsigned long flags;
++	bool done = false;
++
++	raw_spin_lock_irqsave(&fts_hw_lock, flags);
++	if (hwdrvchar_writable(dev) > FTS_TX_RESERVE) {
++		writeb_relaxed(ch, (void __iomem __force *)dev->addr);
++		done = true;
++	}
++	raw_spin_unlock_irqrestore(&fts_hw_lock, flags);
++	return done;
++}
++
++static void fts_putc(hwdrvchar_t *dev, u8 ch)
++{
++	while (!fts_try_putc(dev, ch))
++		cpu_relax();
++}
++
++static uintptr_t fts_tx_usage(hwdrvchar_t *dev)
++{
++	unsigned long flags;
++	uintptr_t usage;
++
++	raw_spin_lock_irqsave(&fts_hw_lock, flags);
++	usage = (dev->bufsz - hwdrvchar_writable(dev));
++	raw_spin_unlock_irqrestore(&fts_hw_lock, flags);
++	return usage;
++}
++
++/*
++ * Move what the circular buffer holds to the transmit buffer, as much as it
++ * has room for; return what remains. The port lock is held.
++ */
++static unsigned int fts_tx_chars(struct uart_port *port)
++{
++	struct fts_port *fp = to_fts_port(port);
++	unsigned int room, pending;
++	uintptr_t w;
++	u8 ch;
++
++	raw_spin_lock(&fts_hw_lock);
++	w = hwdrvchar_writable(&fp->dev);
++	room = ((w > FTS_TX_RESERVE) ? (w - FTS_TX_RESERVE) : 0);
++	pending = uart_port_tx_limited(port, ch, room, true,
++				       writeb_relaxed(ch, port->membase), ({}));
++	raw_spin_unlock(&fts_hw_lock);
++	return pending;
++}
++
++static enum hrtimer_restart fts_tx_timer(struct hrtimer *t)
++{
++	struct fts_port *fp = container_of(t, struct fts_port, tx_timer);
++	struct uart_port *port = &fp->port;
++	unsigned long flags;
++	unsigned int pending;
++
++	uart_port_lock_irqsave(port, &flags);
++	pending = (uart_tx_stopped(port) ? 0 : fts_tx_chars(port));
++	uart_port_unlock_irqrestore(port, flags);
++	if (!pending)
++		return HRTIMER_NORESTART;
++	hrtimer_forward_now(t, ns_to_ktime(FTS_TX_PERIOD_NS));
++	return HRTIMER_RESTART;
++}
++
++static void fts_start_tx(struct uart_port *port)
++{
++	struct fts_port *fp = to_fts_port(port);
++
++	if (fts_tx_chars(port) && !hrtimer_is_queued(&fp->tx_timer))
++		hrtimer_start(&fp->tx_timer, ns_to_ktime(FTS_TX_PERIOD_NS),
++			      HRTIMER_MODE_REL);
++}
++
++static void fts_stop_tx(struct uart_port *port)
++{
++	hrtimer_try_to_cancel(&to_fts_port(port)->tx_timer);
++}
++
++static void fts_stop_rx(struct uart_port *port)
++{
++	struct fts_port *fp = to_fts_port(port);
++
++	raw_spin_lock(&fts_hw_lock);
++	hwdrvchar_interrupt(&fp->dev, 0);
++	raw_spin_unlock(&fts_hw_lock);
++}
++
++static irqreturn_t fts_interrupt(int irq, void *data)
++{
++	struct fts_port *fp = data;
++	struct uart_port *port = &fp->port;
++	struct tty_port *tport = &port->state->port;
++	u8 buf[FTS_RX_CHUNK];
++	unsigned long flags;
++	uintptr_t i, n;
++
++	uart_port_lock_irqsave(port, &flags);
++	raw_spin_lock(&fts_hw_lock);
++	n = min_t(uintptr_t, hwdrvchar_readable(&fp->dev), sizeof(buf));
++	n = hwdrvchar_read(&fp->dev, buf, n);
++	/* Armed again: what remains raises the interrupt again at once. */
++	hwdrvchar_interrupt(&fp->dev, 1);
++	raw_spin_unlock(&fts_hw_lock);
++	for (i = 0; i < n; i++) {
++		port->icount.rx++;
++		tty_insert_flip_char(tport, buf[i], TTY_NORMAL);
++	}
++	uart_port_unlock_irqrestore(port, flags);
++	if (n)
++		tty_flip_buffer_push(tport);
++	return IRQ_HANDLED;
++}
++
++static unsigned int fts_tx_empty(struct uart_port *port)
++{
++	return fts_tx_usage(&to_fts_port(port)->dev) ? 0 : TIOCSER_TEMT;
++}
++
++static void fts_set_mctrl(struct uart_port *port, unsigned int mctrl)
++{
++}
++
++static unsigned int fts_get_mctrl(struct uart_port *port)
++{
++	return (TIOCM_CTS | TIOCM_DSR | TIOCM_CAR);
++}
++
++static int fts_startup(struct uart_port *port)
++{
++	struct fts_port *fp = to_fts_port(port);
++	unsigned long flags;
++	int ret;
++
++	ret = request_irq(port->irq, fts_interrupt, 0, "fontamsoc-serial", fp);
++	if (ret)
++		return ret;
++	uart_port_lock_irqsave(port, &flags);
++	raw_spin_lock(&fts_hw_lock);
++	hwdrvchar_interrupt(&fp->dev, 1);
++	raw_spin_unlock(&fts_hw_lock);
++	uart_port_unlock_irqrestore(port, flags);
++	return 0;
++}
++
++static void fts_shutdown(struct uart_port *port)
++{
++	struct fts_port *fp = to_fts_port(port);
++	unsigned long flags;
++
++	uart_port_lock_irqsave(port, &flags);
++	raw_spin_lock(&fts_hw_lock);
++	hwdrvchar_interrupt(&fp->dev, 0);
++	raw_spin_unlock(&fts_hw_lock);
++	uart_port_unlock_irqrestore(port, flags);
++	hrtimer_cancel(&fp->tx_timer);
++	free_irq(port->irq, fp);
++}
++
++/* Wait, at most 1 s, for the transmit buffer to be empty. */
++static void fts_wait_tx_empty(struct fts_port *fp)
++{
++	ktime_t end = ktime_add_ms(ktime_get(), 1000);
++
++	while (fts_tx_usage(&fp->dev) && ktime_before(ktime_get(), end)) {
++		if (irqs_disabled())
++			cpu_relax();
++		else
++			usleep_range(100, 200);
++	}
++}
++
++static void fts_set_termios(struct uart_port *port, struct ktermios *termios,
++			    const struct ktermios *old)
++{
++	struct fts_port *fp = to_fts_port(port);
++	unsigned long flags;
++	unsigned int baud;
++	uintptr_t div;
++
++	termios->c_cflag &= ~(CSIZE | CSTOPB | PARENB | PARODD | CMSPAR | CRTSCTS);
++	termios->c_cflag |= CS8;
++	baud = uart_get_baud_rate(port, termios, old, FTS_BAUD_MIN,
++				  (fp->dev.clkfreq / 8));
++	div = (fp->dev.clkfreq / baud);
++	/* The speed is changed with the transmit buffer empty. */
++	if (div != fp->div)
++		fts_wait_tx_empty(fp);
++	uart_port_lock_irqsave(port, &flags);
++	if (div != fp->div) {
++		raw_spin_lock(&fts_hw_lock);
++		fts_setspeed(&fp->dev, div);
++		raw_spin_unlock(&fts_hw_lock);
++		fp->div = div;
++	}
++	uart_update_timeout(port, termios->c_cflag, baud);
++	uart_port_unlock_irqrestore(port, flags);
++}
++
++static const char *fts_type(struct uart_port *port)
++{
++	return "fontamsoc-serial";
++}
++
++static void fts_config_port(struct uart_port *port, int flags)
++{
++	/* serial_core skips a port whose type is PORT_UNKNOWN. */
++	port->type = 1;
++}
++
++static int fts_verify_port(struct uart_port *port, struct serial_struct *ser)
++{
++	if (port->type != PORT_UNKNOWN && ser->type != 1)
++		return -EINVAL;
++	return 0;
++}
++
++static const struct uart_ops fts_ops = {
++	.tx_empty	= fts_tx_empty,
++	.set_mctrl	= fts_set_mctrl,
++	.get_mctrl	= fts_get_mctrl,
++	.stop_tx	= fts_stop_tx,
++	.start_tx	= fts_start_tx,
++	.stop_rx	= fts_stop_rx,
++	.startup	= fts_startup,
++	.shutdown	= fts_shutdown,
++	.set_termios	= fts_set_termios,
++	.type		= fts_type,
++	.config_port	= fts_config_port,
++	.verify_port	= fts_verify_port,
++};
++
++#ifdef CONFIG_SERIAL_FONTAMSOC_CONSOLE
++static void fts_console_putchar(struct uart_port *port, unsigned char ch)
++{
++	fts_putc(&to_fts_port(port)->dev, ch);
++}
++
++static void fts_console_write(struct console *co, const char *s,
++			      unsigned int count)
++{
++	struct uart_port *port;
++	unsigned long flags;
++	int locked = 1;
++
++	if (!fts_console_port)
++		return;
++	port = &fts_console_port->port;
++	if (oops_in_progress)
++		locked = uart_port_trylock_irqsave(port, &flags);
++	else
++		uart_port_lock_irqsave(port, &flags);
++	uart_console_write(port, s, count, fts_console_putchar);
++	if (locked)
++		uart_port_unlock_irqrestore(port, flags);
++}
++
++static int fts_console_setup(struct console *co, char *options)
++{
++	int baud = FTS_BAUD_DEFAULT, bits = 8, parity = 'n', flow = 'n';
++
++	if (!fts_console_port)
++		return -ENODEV;
++	if (options)
++		uart_parse_options(options, &baud, &parity, &bits, &flow);
++	return uart_set_options(&fts_console_port->port, co, baud, parity,
++				bits, flow);
++}
++
++static struct uart_driver fts_uart_driver;
++
++/* The console of the port, which earlycon precedes. */
++static struct console fts_console = {
++	.name	= FTS_DEV_NAME,
++	.write	= fts_console_write,
++	.device	= uart_console_device,
++	.setup	= fts_console_setup,
++	.flags	= CON_PRINTBUFFER,
++	.index	= -1,
++	.data	= &fts_uart_driver,
++};
++
++static hwdrvchar_t fts_early_dev;
++
++static void fts_early_putchar(struct uart_port *port, unsigned char ch)
++{
++	fts_putc(&fts_early_dev, ch);
++}
++
++static void fts_early_write(struct console *con, const char *s, unsigned int n)
++{
++	struct earlycon_device *dev = con->data;
++
++	uart_console_write(&dev->port, s, n, fts_early_putchar);
++}
++
++static int __init fts_early_setup(struct earlycon_device *device,
++				  const char *options)
++{
++	unsigned long flags;
++
++	if (!device->port.membase)
++		return -ENODEV;
++	fts_early_dev.addr = (void __force *)device->port.membase;
++	raw_spin_lock_irqsave(&fts_hw_lock, flags);
++	hwdrvchar_init(&fts_early_dev, device->baud ? device->baud : FTS_BAUD_DEFAULT);
++	raw_spin_unlock_irqrestore(&fts_hw_lock, flags);
++	device->con->write = fts_early_write;
++	return 0;
++}
++
++OF_EARLYCON_DECLARE(fontamsoc, "fontamsoc,serial-uart", fts_early_setup);
++
++#define FTS_CONSOLE	(&fts_console)
++#else
++#define FTS_CONSOLE	NULL
++#endif /* CONFIG_SERIAL_FONTAMSOC_CONSOLE */
++
++static struct uart_driver fts_uart_driver = {
++	.owner		= THIS_MODULE,
++	.driver_name	= "fontamsoc-serial",
++	.dev_name	= FTS_DEV_NAME,
++	.major		= 0,
++	.minor		= 0,
++	.nr		= 1,
++	.cons		= FTS_CONSOLE,
++};
++
++static int fts_probe(struct platform_device *pdev)
++{
++	struct fts_port *fp;
++	struct uart_port *port;
++	struct resource *res;
++	unsigned long flags;
++	int irq, ret;
++
++	if (fts_console_port)
++		return -EBUSY;
++	fp = devm_kzalloc(&pdev->dev, sizeof(*fp), GFP_KERNEL);
++	if (!fp)
++		return -ENOMEM;
++	port = &fp->port;
++	port->membase = devm_platform_get_and_ioremap_resource(pdev, 0, &res);
++	if (IS_ERR(port->membase))
++		return PTR_ERR(port->membase);
++	irq = platform_get_irq(pdev, 0);
++	if (irq < 0)
++		return irq;
++
++	fp->dev.addr = (void __force *)port->membase;
++	raw_spin_lock_irqsave(&fts_hw_lock, flags);
++	hwdrvchar_init(&fp->dev, FTS_BAUD_DEFAULT);
++	raw_spin_unlock_irqrestore(&fts_hw_lock, flags);
++	fp->div = (fp->dev.clkfreq / FTS_BAUD_DEFAULT);
++	hrtimer_setup(&fp->tx_timer, fts_tx_timer, CLOCK_MONOTONIC,
++		      HRTIMER_MODE_REL);
++
++	port->mapbase = res->start;
++	port->irq = irq;
++	port->dev = &pdev->dev;
++	port->iotype = UPIO_MEM;
++	port->flags = UPF_BOOT_AUTOCONF;
++	port->ops = &fts_ops;
++	port->fifosize = fp->dev.bufsz;
++	port->uartclk = fp->dev.clkfreq;
++	port->type = PORT_UNKNOWN;
++	port->line = 0;
++	spin_lock_init(&port->lock);
++	platform_set_drvdata(pdev, fp);
++	fts_console_port = fp;
++
++	ret = uart_add_one_port(&fts_uart_driver, port);
++	if (ret)
++		fts_console_port = NULL;
++	return ret;
++}
++
++static void fts_remove(struct platform_device *pdev)
++{
++	struct fts_port *fp = platform_get_drvdata(pdev);
++
++	uart_remove_one_port(&fts_uart_driver, &fp->port);
++	fts_console_port = NULL;
++}
++
++static const struct of_device_id fts_of_match[] = {
++	{ .compatible = "fontamsoc,serial-uart" },
++	{}
++};
++MODULE_DEVICE_TABLE(of, fts_of_match);
++
++static struct platform_driver fts_platform_driver = {
++	.probe	= fts_probe,
++	.remove	= fts_remove,
++	.driver	= {
++		.name		= "fontamsoc-serial",
++		.of_match_table	= fts_of_match,
++	},
++};
++
++static int __init fts_init(void)
++{
++	int ret;
++
++	ret = uart_register_driver(&fts_uart_driver);
++	if (ret)
++		return ret;
++	ret = platform_driver_register(&fts_platform_driver);
++	if (ret)
++		uart_unregister_driver(&fts_uart_driver);
++	return ret;
++}
++
++static void __exit fts_exit(void)
++{
++	platform_driver_unregister(&fts_platform_driver);
++	uart_unregister_driver(&fts_uart_driver);
++}
++
++module_init(fts_init);
++module_exit(fts_exit);
++
++MODULE_AUTHOR("William Fonkou Tambe");
++MODULE_DESCRIPTION("FonTamSOC serial port driver");
++MODULE_LICENSE("GPL");
+diff --git a/include/soc/fontamsoc/hwdrvchar.h b/include/soc/fontamsoc/hwdrvchar.h
+new file mode 100644
+index 000000000..fe816805a
+--- /dev/null
++++ b/include/soc/fontamsoc/hwdrvchar.h
+@@ -0,0 +1,215 @@
++// SPDX-License-Identifier: GPL-2.0-only
++// 20260606 (c) William Fonkou Tambe
++
++#ifndef HWDRVCHAR_H
++#define HWDRVCHAR_H
++
++// HWDRVCHAR_DATATYPE is the type of the data which an access to the data word
++// of the device transfers, which hwdrvchar_read() and hwdrvchar_write() use
++// when copying data; it must be defined before including this file, ie:
++// uint8_t for a device transferring a byte at a time, as a UART does, or
++// uintptr_t for one transferring a word at a time, as dev/spi.sv does.
++#ifndef HWDRVCHAR_DATATYPE
++#error "HWDRVCHAR_DATATYPE must be defined!"
++#endif
++
++// Structure representing a serial device.
++// Before initializing the device using hwdrvchar_init(),
++// the fields addr must be valid.
++typedef struct {
++	// Device address.
++	void *addr;
++	// Size in bytes of the transmit and receive buffer.
++	uintptr_t bufsz;
++	// Clock frequency in Hz used by the device.
++	uintptr_t clkfreq;
++} hwdrvchar_t;
++
++// Commands.
++#define HWDRVCHAR_CMDDEVRDY         0
++#define HWDRVCHAR_CMDGETBUFFERUSAGE 1
++#define HWDRVCHAR_CMDSETINTERRUPT   2
++#define HWDRVCHAR_CMDSETSPEED       3
++
++// Initialize the serial device at the address given through
++// the argument dev->addr using the baudrate given as argument.
++// The field dev->bufsz get initialized by this function.
++static void hwdrvchar_init (hwdrvchar_t *dev, uintptr_t baudrate) {
++
++	void *addrDat = dev->addr;
++	void *addrCmd = (addrDat + sizeof(uintptr_t));
++
++	uintptr_t dat;
++
++	// Command HWDRVCHAR_CMDGETBUFFERUSAGE to retrieve
++	// the number of bytes in the serial transmit buffer.
++	// The encoding of a command and its argument
++	// is as follow: | arg: (ARCHBITSZ-2) bits | cmd: 2 bits |
++	do {
++		do {
++			dat = ((1<<2) | HWDRVCHAR_CMDGETBUFFERUSAGE);
++			dat = _xchg((uintptr_t *)addrCmd, dat);
++		} while ((dat & 0b11) != HWDRVCHAR_CMDDEVRDY);
++		dat = HWDRVCHAR_CMDDEVRDY;
++		dat = _xchg((uintptr_t *)addrCmd, dat);
++	} while ((intptr_t)dat >> 2); // Wait for the transmit buffer to be empty.
++
++	// Command HWDRVCHAR_CMDSETSPEED to retrieve
++	// the clock frequency used by the serial device.
++	// The encoding of a command and its argument
++	// is as follow: | arg: (ARCHBITSZ-2) bits | cmd: 2 bits |
++	do {
++		dat = HWDRVCHAR_CMDSETSPEED;
++		dat = _xchg((uintptr_t *)addrCmd, dat);
++	} while ((dat & 0b11) != HWDRVCHAR_CMDDEVRDY);
++	dat = HWDRVCHAR_CMDDEVRDY;
++	dat = _xchg((uintptr_t *)addrCmd, dat);
++	dev->clkfreq = ((intptr_t)dat >> 2);
++
++	// Command HWDRVCHAR_CMDSETSPEED to set
++	// the speed to use when sending and receiving bytes.
++	// The encoding of a command and its argument
++	// is as follow: | arg: (ARCHBITSZ-2) bits | cmd: 2 bits |
++	do {
++		dat = (((dev->clkfreq/baudrate)<<2) | HWDRVCHAR_CMDSETSPEED);
++		dat = _xchg((uintptr_t *)addrCmd, dat);
++	} while ((dat & 0b11) != HWDRVCHAR_CMDDEVRDY);
++	dat = HWDRVCHAR_CMDDEVRDY;
++	(void)_xchg((uintptr_t *)addrCmd, dat);
++
++	// Command HWDRVCHAR_CMDSETINTERRUPT to retrieve
++	// the size in bytes of the serial transmit
++	// and receive buffer.
++	// The encoding of a command and its argument
++	// is as follow: | arg: (ARCHBITSZ-2) bits | cmd: 2 bits |
++	do {
++		dat = HWDRVCHAR_CMDSETINTERRUPT;
++		dat = _xchg((uintptr_t *)addrCmd, dat);
++	} while ((dat & 0b11) != HWDRVCHAR_CMDDEVRDY);
++	dat = HWDRVCHAR_CMDDEVRDY;
++	dat = _xchg((uintptr_t *)addrCmd, dat);
++	dev->bufsz = ((intptr_t)dat >> 2);
++}
++
++// Return the count of bytes that can be read
++// from the serial device without blocking.
++static inline uintptr_t hwdrvchar_readable (hwdrvchar_t *dev) {
++	void *addrDat = dev->addr;
++	void *addrCmd = (addrDat + sizeof(uintptr_t));
++	uintptr_t dat;
++	// Command HWDRVCHAR_CMDGETBUFFERUSAGE to retrieve
++	// the number of bytes in the serial receive buffer.
++	// The encoding of a command and its argument
++	// is as follow: | arg: (ARCHBITSZ-2) bits | cmd: 2 bits |
++	do {
++		dat = HWDRVCHAR_CMDGETBUFFERUSAGE;
++		dat = _xchg((uintptr_t *)addrCmd, dat);
++	} while ((dat & 0b11) != HWDRVCHAR_CMDDEVRDY);
++	dat = HWDRVCHAR_CMDDEVRDY;
++	dat = _xchg((uintptr_t *)addrCmd, dat);
++	return ((intptr_t)dat >> 2);
++}
++
++// Read from the serial device into the buffer given by the
++// argument ptr, the byte amount given by the argument sz,
++// a HWDRVCHAR_DATATYPE at a time: sz is a multiple of the size
++// of HWDRVCHAR_DATATYPE, on which ptr is aligned.
++// Return the byte amount read.
++static inline uintptr_t hwdrvchar_read (hwdrvchar_t *dev, void *ptr, uintptr_t sz) {
++	void *addrDat = dev->addr;
++	uintptr_t cnt = 0;
++	ptr = __builtin_assume_aligned(ptr, sizeof(HWDRVCHAR_DATATYPE));
++	while (sz) {
++		uintptr_t n = hwdrvchar_readable(dev);
++		if (!n)
++			return cnt;
++		if (sz >= n)
++			sz -= n;
++		else {
++			n = sz;
++			sz = 0;
++		}
++		cnt += n;
++		// The data is stored using __builtin_memcpy(), the buffer
++		// being possibly declared of another type than its data.
++		do {
++			HWDRVCHAR_DATATYPE dat = *((volatile HWDRVCHAR_DATATYPE *)addrDat);
++			__builtin_memcpy(ptr, &dat, sizeof(dat));
++			ptr += sizeof(dat);
++		} while (n -= sizeof(HWDRVCHAR_DATATYPE));
++	}
++	return cnt;
++}
++
++// Return the count of bytes that can be written
++// to the serial device without blocking.
++static inline uintptr_t hwdrvchar_writable (hwdrvchar_t *dev) {
++	void *addrDat = dev->addr;
++	void *addrCmd = (addrDat + sizeof(uintptr_t));
++	uintptr_t dat;
++	// Command HWDRVCHAR_CMDGETBUFFERUSAGE to retrieve
++	// the number of bytes in the serial transmit buffer.
++	// The encoding of a command and its argument
++	// is as follow: | arg: (ARCHBITSZ-2) bits | cmd: 2 bits |
++	do {
++		dat = ((1<<2) | HWDRVCHAR_CMDGETBUFFERUSAGE);
++		dat = _xchg((uintptr_t *)addrCmd, dat);
++	} while ((dat & 0b11) != HWDRVCHAR_CMDDEVRDY);
++	dat = HWDRVCHAR_CMDDEVRDY;
++	dat = _xchg((uintptr_t *)addrCmd, dat);
++	return (dev->bufsz - ((intptr_t)dat >> 2));
++}
++
++// Write to the serial device from the buffer given by the
++// argument ptr, the byte amount given by the argument sz,
++// a HWDRVCHAR_DATATYPE at a time: sz is a multiple of the size
++// of HWDRVCHAR_DATATYPE, on which ptr is aligned.
++// Return the byte amount written.
++static inline uintptr_t hwdrvchar_write (hwdrvchar_t *dev, void *ptr, uintptr_t sz) {
++	void *addrDat = dev->addr;
++	uintptr_t cnt = 0;
++	ptr = __builtin_assume_aligned(ptr, sizeof(HWDRVCHAR_DATATYPE));
++	while (sz) {
++		uintptr_t n = hwdrvchar_writable(dev);
++		if (!n)
++			return cnt;
++		if (sz >= n)
++			sz -= n;
++		else {
++			n = sz;
++			sz = 0;
++		}
++		cnt += n;
++		// The data is loaded using __builtin_memcpy(), the buffer
++		// being possibly declared of another type than its data.
++		do {
++			HWDRVCHAR_DATATYPE dat;
++			__builtin_memcpy(&dat, ptr, sizeof(dat));
++			*((volatile HWDRVCHAR_DATATYPE *)addrDat) = dat;
++			ptr += sizeof(dat);
++		} while (n -= sizeof(HWDRVCHAR_DATATYPE));
++	}
++	return cnt;
++}
++
++// Configure the serial device interrupt.
++// When the argument threshold is null, interrupt gets disabled.
++// When the argument threshold is non-null, interrupt gets enabled,
++// and its value is the receive buffer byte amount that will
++// trigger an interrupt.
++static inline void hwdrvchar_interrupt (hwdrvchar_t *dev, uintptr_t threshold) {
++	void *addrDat = dev->addr;
++	void *addrCmd = (addrDat + sizeof(uintptr_t));
++	uintptr_t dat;
++	// Command HWDRVCHAR_CMDSETINTERRUPT to enable/disable interrupt.
++	// The encoding of a command and its argument
++	// is as follow: | arg: (ARCHBITSZ-2) bits | cmd: 2 bits |
++	do {
++		dat = ((threshold<<2) | HWDRVCHAR_CMDSETINTERRUPT);
++		dat = _xchg((uintptr_t *)addrCmd, dat);
++	} while ((dat & 0b11) != HWDRVCHAR_CMDDEVRDY);
++	dat = HWDRVCHAR_CMDDEVRDY;
++	(void)_xchg((uintptr_t *)addrCmd, dat);
++}
++
++#endif /* HWDRVCHAR_H */

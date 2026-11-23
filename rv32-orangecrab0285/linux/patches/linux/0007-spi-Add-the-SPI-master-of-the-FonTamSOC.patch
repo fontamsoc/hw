@@ -1,0 +1,376 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Tambe <tambewilliam@gmail.com>
+Date: Fri, 20 Nov 2026 11:49:18 -0600
+Subject: [PATCH 7/8] spi: Add the SPI master of the FonTamSOC
+
+The SPI master of the FonTamSOC, driven through hwdrvchar.h, transfers
+words of 4 bytes, mode 0, with one chip select: the transfers of a
+message which the chip select spans are one transmission, polled. It
+drives the SPI flash which holds the bitstream.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: William Tambe <tambewilliam@gmail.com>
+---
+ MAINTAINERS                 |   1 +
+ drivers/spi/Kconfig         |  11 ++
+ drivers/spi/Makefile        |   1 +
+ drivers/spi/spi-fontamsoc.c | 304 ++++++++++++++++++++++++++++++++++++
+ 4 files changed, 317 insertions(+)
+ create mode 100644 drivers/spi/spi-fontamsoc.c
+
+diff --git a/MAINTAINERS b/MAINTAINERS
+index ac8a04d0e..c10a5c48d 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -9768,6 +9768,7 @@ F:	Documentation/devicetree/bindings/timer/fontamsoc,ftpu-timer.yaml
+ F:	drivers/block/fontamsoc-sdsdio.c
+ F:	drivers/clocksource/timer-ftpu.c
+ F:	drivers/irqchip/irq-fontamsoc-irqctrl.c
++F:	drivers/spi/spi-fontamsoc.c
+ F:	drivers/tty/serial/fontamsoc-serial.c
+ F:	include/soc/fontamsoc/
+ 
+diff --git a/drivers/spi/Kconfig b/drivers/spi/Kconfig
+index 1872f9d54..65df4e0d8 100644
+--- a/drivers/spi/Kconfig
++++ b/drivers/spi/Kconfig
+@@ -420,6 +420,17 @@ config SPI_FALCON
+ 	  has only been tested with m25p80 type chips. The hardware has no
+ 	  support for other types of SPI peripherals.
+ 
++config SPI_FONTAMSOC
++	tristate "FonTamSOC SPI master"
++	depends on HAS_IOMEM
++	depends on OF
++	depends on ARCH_FONTAMSOC || COMPILE_TEST
++	help
++	  This driver is for the SPI master of the FonTamSOC, around the ftpu
++	  RISC-V core, which drives its SPI flash: mode 0, one chip select,
++	  transfers of 8 bits, up to half the clock frequency of the device,
++	  polled.
++
+ config SPI_FSI
+ 	tristate "FSI SPI driver"
+ 	depends on FSI
+diff --git a/drivers/spi/Makefile b/drivers/spi/Makefile
+index 1f7c06a30..beeed73ee 100644
+--- a/drivers/spi/Makefile
++++ b/drivers/spi/Makefile
+@@ -57,6 +57,7 @@ obj-$(CONFIG_SPI_DW_MMIO)		+= spi-dw-mmio.o
+ obj-$(CONFIG_SPI_DW_PCI)		+= spi-dw-pci.o
+ obj-$(CONFIG_SPI_EP93XX)		+= spi-ep93xx.o
+ obj-$(CONFIG_SPI_FALCON)		+= spi-falcon.o
++obj-$(CONFIG_SPI_FONTAMSOC)		+= spi-fontamsoc.o
+ obj-$(CONFIG_SPI_FSI)			+= spi-fsi.o
+ obj-$(CONFIG_SPI_FSL_CPM)		+= spi-fsl-cpm.o
+ obj-$(CONFIG_SPI_FSL_DSPI)		+= spi-fsl-dspi.o
+diff --git a/drivers/spi/spi-fontamsoc.c b/drivers/spi/spi-fontamsoc.c
+new file mode 100644
+index 000000000..6b26c6186
+--- /dev/null
++++ b/drivers/spi/spi-fontamsoc.c
+@@ -0,0 +1,304 @@
++// SPDX-License-Identifier: GPL-2.0-only
++// 20261120 (c) William Fonkou Tambe
++/*
++ * The SPI master of the FonTamSOC, dev/spi.sv, driven through hwdrvchar.h:
++ * its data word and its command word, each access to the data word a word of
++ * 4 bytes, sent low byte first, each byte most significant bit first; mode 0,
++ * one chip select. It is polled.
++ *
++ * The transfers of a message which the chip select spans are one transmission:
++ * its first word, written while the device is idle, is its control word, each
++ * of its bits active low: bits 0 to 3 waiting for a 0 on MISO, discarding it,
++ * keeping the chip select high, and enabling the flow control of the receive
++ * buffer, all disabled here; its byte 1 is the count of the bytes during which
++ * the chip select is low, 0xff for every byte. Each word written yields one
++ * word received, the first that of the control word, discarded; at most the
++ * receive buffer size is kept in flight. When the transmit buffer runs empty
++ * the transmission pauses, keeping the chip select low; it ends once closed by
++ * the command HWDRVCHAR_CMDSETINTERRUPT with a null argument, after the words
++ * queued. A pause of 100 ms aborts it: the chip select rises, and the words
++ * then queued are dropped, as are the words they would have yielded; the
++ * transmit buffer usage, which counts a word held, paused or closing, is then
++ * null before the close.
++ *
++ * A read of the data word with the receive buffer empty stalls the bus until
++ * a word arrives, which wedges the whole machine when it has several harts,
++ * and never ends for a word which an abort dropped: only the words counted by
++ * hwdrvchar_readable() are read. The speed is changed with the device idle.
++ */
++
++#include <linux/delay.h>
++#include <linux/io.h>
++#include <linux/kernel.h>
++#include <linux/ktime.h>
++#include <linux/module.h>
++#include <linux/of.h>
++#include <linux/platform_device.h>
++#include <linux/sizes.h>
++#include <linux/spi/spi.h>
++
++#include <soc/fontamsoc/hwdrv.h>
++#define HWDRVCHAR_DATATYPE uintptr_t
++#include <soc/fontamsoc/hwdrvchar.h>
++
++#define FTSPI_WORD		sizeof(uintptr_t)
++#define FTSPI_CTRL		0xffff00ffUL	/* every control bit inactive */
++#define FTSPI_CS_ALL		0xff		/* the chip select low for every byte */
++#define FTSPI_MAX_XFER		SZ_64K
++#define FTSPI_TIMEOUT_US	(200 * USEC_PER_MSEC)	/* beyond twice the transmission */
++
++struct ftspi {
++	hwdrvchar_t c;
++	unsigned long clkfreq;
++	unsigned int div;
++};
++
++/* The command HWDRVCHAR_CMDSETSPEED with the argument div, as hwdrvchar_init(). */
++static void ftspi_setspeed(hwdrvchar_t *c, uintptr_t div)
++{
++	uintptr_t *addrcmd = (uintptr_t *)(c->addr + FTSPI_WORD);
++	uintptr_t dat;
++
++	do {
++		dat = ((div << 2) | HWDRVCHAR_CMDSETSPEED);
++		dat = _xchg(addrcmd, dat);
++	} while ((dat & 0b11) != HWDRVCHAR_CMDDEVRDY);
++	(void)_xchg(addrcmd, HWDRVCHAR_CMDDEVRDY);
++}
++
++/*
++ * The argument of HWDRVCHAR_CMDSETSPEED for at most hz: the device divides its
++ * clock by its argument rounded up to an even count, from 2 to 1002.
++ */
++static unsigned int ftspi_div(struct ftspi *fs, u32 hz)
++{
++	unsigned int d = DIV_ROUND_UP(fs->clkfreq, hz);
++
++	return clamp(round_up(d, 2), 2U, 1002U);
++}
++
++/* The bytes of the transfers of a transmission, in turn. */
++struct ftspi_cursor {
++	struct spi_transfer *t, *last;
++	unsigned int off;
++	bool rx;
++};
++
++static struct spi_transfer *ftspi_next_xfer(struct spi_transfer *t)
++{
++	return list_next_entry(t, transfer_list);
++}
++
++/* The next byte to send, 0xff past the end or for a transfer without tx_buf. */
++static u8 ftspi_tx_byte(struct ftspi_cursor *cu)
++{
++	u8 b = 0xff;
++
++	while (cu->t && (cu->off >= cu->t->len)) {
++		cu->t = ((cu->t == cu->last) ? NULL : ftspi_next_xfer(cu->t));
++		cu->off = 0;
++	}
++	if (cu->t) {
++		if (cu->t->tx_buf)
++			b = ((const u8 *)cu->t->tx_buf)[cu->off];
++		cu->off++;
++	}
++	return b;
++}
++
++/* Store a byte received, past the end or for a transfer without rx_buf dropped. */
++static void ftspi_rx_byte(struct ftspi_cursor *cu, u8 b)
++{
++	while (cu->t && (cu->off >= cu->t->len)) {
++		cu->t = ((cu->t == cu->last) ? NULL : ftspi_next_xfer(cu->t));
++		cu->off = 0;
++	}
++	if (cu->t) {
++		if (cu->t->rx_buf)
++			((u8 *)cu->t->rx_buf)[cu->off] = b;
++		cu->off++;
++	}
++}
++
++/* Close the transmission: the command HWDRVCHAR_CMDSETINTERRUPT, null. */
++static void ftspi_close(hwdrvchar_t *c)
++{
++	hwdrvchar_interrupt(c, 0);
++}
++
++/*
++ * One transmission: the nbytes of the transfers from first to last, the chip
++ * select low throughout.
++ */
++static int ftspi_xmit(struct ftspi *fs, struct spi_transfer *first,
++		      struct spi_transfer *last, unsigned int nbytes)
++{
++	hwdrvchar_t *c = &fs->c;
++	void __iomem *data = (void __iomem __force *)c->addr;
++	unsigned int nwords = (DIV_ROUND_UP(nbytes, FTSPI_WORD) + 1);
++	unsigned int inflight = (c->bufsz / FTSPI_WORD);
++	unsigned int wi = 0, ri = 0, n, k;
++	struct ftspi_cursor tx = { first, last, 0, false };
++	struct ftspi_cursor rx = { first, last, 0, true };
++	bool closed = false;
++	ktime_t end = ktime_add_us(ktime_get(), (FTSPI_TIMEOUT_US +
++		div_u64(((u64)nwords * FTSPI_WORD * 8 * 2 * fs->div * USEC_PER_SEC),
++			fs->clkfreq)));
++	uintptr_t ctrl = (FTSPI_CTRL |
++			  ((uintptr_t)((nbytes <= 254) ? nbytes : FTSPI_CS_ALL) << 8));
++
++	while (ri < nwords) {
++		if (wi < nwords) {
++			n = min3((unsigned int)(hwdrvchar_writable(c) / FTSPI_WORD),
++				 (inflight - (wi - ri)), (nwords - wi));
++			for (k = 0; k < n; k++, wi++) {
++				uintptr_t w = ctrl;
++
++				if (wi) {
++					w = ftspi_tx_byte(&tx);
++					w |= ((uintptr_t)ftspi_tx_byte(&tx) << 8);
++					w |= ((uintptr_t)ftspi_tx_byte(&tx) << 16);
++					w |= ((uintptr_t)ftspi_tx_byte(&tx) << 24);
++				}
++				writel_relaxed(w, data);
++			}
++		}
++		if (wi == nwords && !closed) {
++			ftspi_close(c);
++			closed = true;
++		}
++		n = (hwdrvchar_readable(c) / FTSPI_WORD);
++		for (k = 0; k < n; k++, ri++) {
++			uintptr_t w = readl_relaxed(data);
++
++			if (ri) {
++				ftspi_rx_byte(&rx, (w & 0xff));
++				ftspi_rx_byte(&rx, ((w >> 8) & 0xff));
++				ftspi_rx_byte(&rx, ((w >> 16) & 0xff));
++				ftspi_rx_byte(&rx, ((w >> 24) & 0xff));
++			}
++		}
++		if (ri == nwords)
++			break;
++		/*
++		 * Idle: an abort before the close, or the end of a transmission
++		 * whose last words never came.
++		 */
++		if (hwdrvchar_writable(c) == c->bufsz &&
++		    !hwdrvchar_readable(c) && wi > ri) {
++			if (!closed)
++				ftspi_close(c);
++			return -EIO;
++		}
++		if (ktime_after(ktime_get(), end)) {
++			ftspi_close(c);
++			return -ETIMEDOUT;
++		}
++	}
++	/* The device goes idle once its last word is received. */
++	while (hwdrvchar_writable(c) != c->bufsz) {
++		if (ktime_after(ktime_get(), end))
++			return -ETIMEDOUT;
++		cpu_relax();
++	}
++	return 0;
++}
++
++static int ftspi_transfer_one_message(struct spi_controller *ctlr,
++				      struct spi_message *msg)
++{
++	struct ftspi *fs = spi_controller_get_devdata(ctlr);
++	struct spi_transfer *t, *first = NULL;
++	unsigned int nbytes = 0, div;
++	int ret = 0;
++
++	list_for_each_entry(t, &msg->transfers, transfer_list) {
++		if (!first) {
++			first = t;
++			nbytes = 0;
++			/* The speed of the first transfer, the device idle. */
++			div = ftspi_div(fs, (t->speed_hz ? t->speed_hz : msg->spi->max_speed_hz));
++			if (div != fs->div) {
++				ftspi_setspeed(&fs->c, div);
++				fs->div = div;
++			}
++		}
++		nbytes += t->len;
++		if (t->cs_change || list_is_last(&t->transfer_list, &msg->transfers)) {
++			if (nbytes)
++				ret = ftspi_xmit(fs, first, t, nbytes);
++			if (ret)
++				break;
++			msg->actual_length += nbytes;
++			first = NULL;
++			spi_transfer_delay_exec(t);
++		}
++	}
++	msg->status = ret;
++	spi_finalize_current_message(ctlr);
++	return ret;
++}
++
++static size_t ftspi_max_size(struct spi_device *spi)
++{
++	return FTSPI_MAX_XFER;
++}
++
++static int ftspi_probe(struct platform_device *pdev)
++{
++	struct spi_controller *ctlr;
++	void __iomem *base;
++	struct ftspi *fs;
++
++	ctlr = devm_spi_alloc_host(&pdev->dev, sizeof(*fs));
++	if (!ctlr)
++		return -ENOMEM;
++	fs = spi_controller_get_devdata(ctlr);
++	base = devm_platform_ioremap_resource(pdev, 0);
++	if (IS_ERR(base))
++		return PTR_ERR(base);
++
++	/*
++	 * hwdrvchar_init() waits for the device to be idle, reads its clock
++	 * frequency, sets the slowest speed, and closes what was open.
++	 */
++	fs->c.addr = (void __force *)base;
++	hwdrvchar_init(&fs->c, 400000);
++	fs->clkfreq = fs->c.clkfreq;
++	fs->div = (fs->clkfreq / 400000);
++
++	ctlr->dev.of_node = pdev->dev.of_node;
++	ctlr->bus_num = -1;
++	ctlr->num_chipselect = 1;
++	ctlr->mode_bits = 0;
++	ctlr->bits_per_word_mask = SPI_BPW_MASK(8);
++	ctlr->max_speed_hz = (fs->clkfreq / 2);
++	ctlr->min_speed_hz = DIV_ROUND_UP(fs->clkfreq, 1002);
++	ctlr->max_transfer_size = ftspi_max_size;
++	ctlr->max_message_size = ftspi_max_size;
++	ctlr->transfer_one_message = ftspi_transfer_one_message;
++	platform_set_drvdata(pdev, ctlr);
++
++	dev_info(&pdev->dev, "clock %lu Hz, buffers of %lu bytes\n",
++		 fs->clkfreq, (unsigned long)fs->c.bufsz);
++	return devm_spi_register_controller(&pdev->dev, ctlr);
++}
++
++static const struct of_device_id ftspi_of_match[] = {
++	{ .compatible = "fontamsoc,spi" },
++	{}
++};
++MODULE_DEVICE_TABLE(of, ftspi_of_match);
++
++static struct platform_driver ftspi_driver = {
++	.probe	= ftspi_probe,
++	.driver	= {
++		.name		= "fontamsoc-spi",
++		.of_match_table	= ftspi_of_match,
++	},
++};
++module_platform_driver(ftspi_driver);
++
++MODULE_AUTHOR("William Fonkou Tambe");
++MODULE_DESCRIPTION("FonTamSOC SPI master driver");
++MODULE_LICENSE("GPL");
