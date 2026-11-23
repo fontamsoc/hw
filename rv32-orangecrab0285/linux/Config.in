@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# 20261122 (c) William Fonkou Tambe
+
+source "$BR2_EXTERNAL_ORANGECRAB0285_PATH/package/linux-smp/Config.in"

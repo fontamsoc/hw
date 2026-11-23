@@ -1,0 +1,6 @@
+# Applets added to Buildroot's configuration of BusyBox: hexdump, to read the
+# SPI flash, ie: /dev/mtd2; taskset, to run a command on a given cpu of the
+# multi-hart kernel.
+CONFIG_HEXDUMP=y
+CONFIG_TASKSET=y
+CONFIG_FEATURE_TASKSET_FANCY=y

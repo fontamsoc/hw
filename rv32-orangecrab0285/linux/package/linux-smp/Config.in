@@ -1,0 +1,12 @@
+config BR2_PACKAGE_LINUX_SMP
+	bool "linux-smp"
+	depends on BR2_LINUX_KERNEL
+	help
+	  The multi-hart kernel of rv32-orangecrab0285, whose bitstream is
+	  built with the define CPU_COUNT 1 or 2, and ATOMIC_COHERENCE=1 at
+	  2 harts: the sources and patches of the package linux, its
+	  configuration linux.config merged with linux-smp.config; its Image
+	  is installed to images/smp/.
+
+comment "linux-smp needs the Linux kernel"
+	depends on !BR2_LINUX_KERNEL
