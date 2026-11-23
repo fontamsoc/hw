@@ -73,11 +73,8 @@ make
 
 ## The bitstream and the SD card
 
-1. Build the bitstream with `SRAM_INITFILE` set to
-   `"../../../linux/images/bootldr.32.hex"`, as described in [Loading a
-   program](../README.md#loading-a-program). The bitstream must come from a tree with
-   this directory: before it, `lib/wb_mux.sv` could drop an acknowledgement, which hangs
-   the single-hart kernel within seconds of its boot.
+1. Build the bitstream with `SRAM_INITFILE` set to `"../../../linux/images/bootldr.32.hex"`,
+   as described in [Loading a program](../README.md#loading-a-program).
 2. Make the image of the SD card with [`tools/mkMbrImg.sh`](../../tools/mkMbrImg.sh),
    which needs `genimage` and `mkdosfs`: an MBR whose partition 3 holds the kernel, and
    partition 4 the root file system. Partitions 1 and 2 are not used: the partition 1 is
