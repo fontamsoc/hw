@@ -1,0 +1,39 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// 20261122 (c) William Fonkou Tambe
+
+// The single-hart build of rv32-orangecrab0285, the default of orangecrab0285.sv.
+
+/dts-v1/;
+
+#include "orangecrab0285.dtsi"
+
+/ {
+	cpus {
+		cpu0: cpu@0 {
+			device_type = "cpu";
+			reg = <0>;
+			compatible = "fontamsoc,ftpu", "riscv";
+			riscv,isa = "rv32ima";
+			riscv,isa-base = "rv32i";
+			riscv,isa-extensions = "i", "m", "a", "zicsr", "zifencei";
+			mmu-type = "riscv,none";
+			d-cache-size = <16384>;
+			d-cache-sets = <4096>;
+			d-cache-block-size = <4>;
+
+			cpu0_intc: interrupt-controller {
+				#interrupt-cells = <1>;
+				interrupt-controller;
+				compatible = "riscv,cpu-intc";
+			};
+		};
+	};
+};
+
+&irqctrl {
+	interrupts-extended = <&cpu0_intc 11>;
+};
+
+&timer {
+	interrupts-extended = <&cpu0_intc 7>;
+};

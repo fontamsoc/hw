@@ -1,0 +1,71 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// 20261122 (c) William Fonkou Tambe
+
+// rv32-orangecrab0285 built with the define CPU_COUNT 1 or 2, CONFIG_NR_CPUS of
+// the multi-hart kernel, and ATOMIC_COHERENCE=1 when CPU_COUNT is 2.
+//
+// The second hart is disabled: apps/bootldr enables it when the bitstream has
+// it, editing the device tree blob before starting the kernel; without that
+// edit, the kernel runs on the first hart only.
+//
+// The boolean fontamsoc,atomic-coherence of /cpus states that the bitstream is
+// built with ATOMIC_COHERENCE non-null: atomic and plain accesses may then share
+// words across harts, as the ticket spinlock of the kernel does. Without it, a
+// kernel whose cpus have a data-cache starts no secondary hart.
+
+/dts-v1/;
+
+#include "orangecrab0285.dtsi"
+
+/ {
+	cpus {
+		fontamsoc,atomic-coherence;
+
+		cpu0: cpu@0 {
+			device_type = "cpu";
+			reg = <0>;
+			compatible = "fontamsoc,ftpu", "riscv";
+			riscv,isa = "rv32ima";
+			riscv,isa-base = "rv32i";
+			riscv,isa-extensions = "i", "m", "a", "zicsr", "zifencei";
+			mmu-type = "riscv,none";
+			d-cache-size = <16384>;
+			d-cache-sets = <4096>;
+			d-cache-block-size = <4>;
+
+			cpu0_intc: interrupt-controller {
+				#interrupt-cells = <1>;
+				interrupt-controller;
+				compatible = "riscv,cpu-intc";
+			};
+		};
+
+		cpu1: cpu@1 {
+			device_type = "cpu";
+			reg = <1>;
+			compatible = "fontamsoc,ftpu", "riscv";
+			riscv,isa = "rv32ima";
+			riscv,isa-base = "rv32i";
+			riscv,isa-extensions = "i", "m", "a", "zicsr", "zifencei";
+			mmu-type = "riscv,none";
+			d-cache-size = <16384>;
+			d-cache-sets = <4096>;
+			d-cache-block-size = <4>;
+			status = "disabled";
+
+			cpu1_intc: interrupt-controller {
+				#interrupt-cells = <1>;
+				interrupt-controller;
+				compatible = "riscv,cpu-intc";
+			};
+		};
+	};
+};
+
+&irqctrl {
+	interrupts-extended = <&cpu0_intc 11>, <&cpu1_intc 11>;
+};
+
+&timer {
+	interrupts-extended = <&cpu0_intc 7>, <&cpu1_intc 7>;
+};
