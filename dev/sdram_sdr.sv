@@ -24,6 +24,11 @@
 // SDRAM_BANK_W
 // 	Row, column and bank address width of the SDRAM chip.
 //
+// SDRAM_REFRESH_CNT
+// 	Count of AUTO REFRESH commands the SDRAM chip requires every 64ms;
+// 	it defaults to the row count, while some chips require more,
+// 	ie: 4096 for a chip of 2048 rows.
+//
 // SDRAM_CAS_LATENCY
 // 	CAS latency programmed in the SDRAM chip mode register;
 // 	only the value 2 has been validated in simulation.
@@ -105,6 +110,7 @@ parameter SDRAM_MHZ           = 50;
 parameter SDRAM_ROW_W         = 13;
 parameter SDRAM_COL_W         = 9;
 parameter SDRAM_BANK_W        = 2;
+parameter SDRAM_REFRESH_CNT   = (2 ** SDRAM_ROW_W);
 parameter SDRAM_CAS_LATENCY   = 2;
 parameter SDRAM_TARGET        = "XILINX";
 parameter SDRAM_ALTERA_FAMILY = "Cyclone IV E";
@@ -116,10 +122,9 @@ localparam SDRAM_DQM_W = 2;
 
 localparam SDRAM_ADDR_W         = (SDRAM_ROW_W + SDRAM_COL_W + SDRAM_BANK_W);
 localparam SDRAM_BANKS          = (2 ** SDRAM_BANK_W);
-localparam SDRAM_REFRESH_CNT    = (2 ** SDRAM_ROW_W);
 localparam SDRAM_START_DELAY    = (100000 / (1000 / SDRAM_MHZ)); // 100uS
-// tREFI: maximum interval between AUTO REFRESH commands, insuring the 64ms
-// refresh period is spread across all rows.
+// tREFI: maximum interval between AUTO REFRESH commands, insuring that
+// SDRAM_REFRESH_CNT of them are issued every 64ms.
 localparam SDRAM_TREFI_CYCLES   = ((64000 * SDRAM_MHZ) / SDRAM_REFRESH_CNT);
 
 localparam CMD_W         = 4;
