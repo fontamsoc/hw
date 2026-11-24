@@ -42,6 +42,8 @@
 // 	"XILINX" uses ODDR2/IOBUF primitives for the pads,
 // 	"ALTERA" uses an altddio_out primitive for the clock pad
 // 	and lets the tool infer the data pad tristates,
+// 	"GOWIN" uses an ODDR primitive for the clock pad
+// 	and lets the tool infer the data pad tristates,
 // 	while any other value uses portable verilog.
 //
 // SDRAM_ALTERA_FAMILY
@@ -791,6 +793,27 @@ end else if (SDRAM_TARGET == "ALTERA") begin :gen_pads_altera
 
     // Same data pad tristates as the portable arm below; quartus infers
     // the ioe tristate cell from them, ie: no primitive needed for dq.
+    assign sdram_data_io   = data_rd_en_q ? {SDRAM_DATA_W{1'bz}} : data_q;
+    assign sdram_data_in_w = sdram_data_io;
+end else if (SDRAM_TARGET == "GOWIN") begin :gen_pads_gowin
+    // 180 degree phase delayed sdram clock output, launched from the
+    // iologic ddr output register; mirror of the XILINX arm's ODDR2: Q0
+    // drives D0 while clk_i is high and D1 while it is low. Every port is
+    // named; Q1, the registered tristate control that an IOBUF would take,
+    // is left open, the clock pad being an output only, hence TX tied low.
+    ODDR #(
+        .TXCLK_POL(1'b0),
+        .INIT(1'b0)
+    ) u_clock_delay (
+        .D0(1'b0),
+        .D1(1'b1),
+        .TX(1'b0),
+        .CLK(clk_i),
+        .Q0(sdram_clk_o),
+        .Q1());
+
+    // Same data pad tristates as the portable arm below; the tool infers
+    // the iob tristate buffer from them, ie: no primitive needed for dq.
     assign sdram_data_io   = data_rd_en_q ? {SDRAM_DATA_W{1'bz}} : data_q;
     assign sdram_data_in_w = sdram_data_io;
 end else begin :gen_pads
