@@ -137,8 +137,10 @@ localparam CMD_PRECHARGE = 4'b0010;
 localparam CMD_REFRESH   = 4'b0001;
 localparam CMD_LOAD_MODE = 4'b0000;
 
-// Mode: Burst Length = 4 bytes.
-localparam MODE_REG = {3'b000,1'b0,2'b00,3'(SDRAM_CAS_LATENCY),1'b0,3'b001};
+// Mode: Burst Length = 4 bytes; sized to the address pins, the reserved
+// bits above A9 being null whatever their count.
+localparam [SDRAM_ROW_W-1:0] MODE_REG = {
+	{(SDRAM_ROW_W-10){1'b0}},1'b0,2'b00,3'(SDRAM_CAS_LATENCY),1'b0,3'b001};
 
 // SM states.
 localparam STATE_W         = 4;
@@ -205,9 +207,16 @@ inout  wire [SDRAM_DATA_W-1:0] sdram_data_io;
 // sanity checks below the port declarations.
 localparam SDRAM_TWR_CYCLES  = ((15 + (CYCLE_TIME_NS-1)) / CYCLE_TIME_NS);
 localparam SDRAM_TMRD_CYCLES = 2;
-// Configuration sanity checks for the timings the fsm meets structurally
-// rather than counted; they bound how high SDRAM_MHZ can go.
+// Configuration sanity checks: the timings the fsm meets structurally
+// rather than counted, which bound how high SDRAM_MHZ can go, and the
+// address pins the fsm requires.
 initial begin
+	// A10 must exist: it selects all banks for PRECHARGE, and disables
+	// auto precharge for READ and WRITE.
+	if (SDRAM_ROW_W < 11) begin
+		$display("sdram_sdr: error: SDRAM_ROW_W too small for A10");
+		$finish;
+	end
 	// The earliest PRECHARGE after a WRITE is 2 clockcycles after its
 	// last data beat (WRITE1 -> IDLE -> PRECHARGE).
 	if (SDRAM_TWR_CYCLES > 2) begin
