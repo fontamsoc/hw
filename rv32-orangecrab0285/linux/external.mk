@@ -35,3 +35,9 @@ define UCLIBC_FLOAT_CONFIG
 	$(call KCONFIG_ENABLE_OPT,DO_C99_MATH)
 endef
 endif
+
+# coremark.mk gives the compiler TARGET_CFLAGS, but not TARGET_LDFLAGS, which
+# holds the stack that BR2_TARGET_LDFLAGS gives the FLAT binaries: CoreMark
+# would get the 4096 bytes of elf2flt. Buildroot puts the stack of
+# <PKG>_FLAT_STACKSIZE in TARGET_CFLAGS; it is set to that of the defconfig.
+COREMARK_FLAT_STACKSIZE = 32768
