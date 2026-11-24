@@ -23,18 +23,26 @@ Save three:
 - -Wl,-z,max-page-size=4, which lays out a bare-metal ELF, is left out:
   elf2flt lays out the FLAT binary.
 
+And one is added: -fno-semantic-interposition. With the -fPIC which
+Buildroot passes, which FLAT binaries need, GCC inlines no function
+which is not static, as a definition loaded at run time could replace
+it, which a static binary rules out: core_bench_list(),
+core_bench_matrix(), core_bench_state() and crcu16() would call the
+functions which rv32-sim/apps/coremark inlines in them, for about 18%
+more instructions per iteration.
+
 Upstream: N/A, specific to the FonTamSOC
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Signed-off-by: William Tambe <tambewilliam@gmail.com>
 ---
- linux/core_portme.mak | 18 +++++++++++++++++-
- 1 file changed, 17 insertions(+), 1 deletion(-)
+ linux/core_portme.mak | 22 +++++++++++++++++++++-
+ 1 file changed, 21 insertions(+), 1 deletion(-)
 
 diff --git a/linux/core_portme.mak b/linux/core_portme.mak
-index 025b035..2d3cd62 100755
+index 025b035..d1300eb 100755
 --- a/linux/core_portme.mak
 +++ b/linux/core_portme.mak
-@@ -9,8 +9,24 @@ CC = gcc
+@@ -9,8 +9,28 @@ CC = gcc
  # Flag: CFLAGS
  #	Use this flag to define compiler options. Note, you can add compiler options from the command line using XCFLAGS="other flags"
  PORT_CFLAGS = -O2
@@ -45,7 +53,11 @@ index 025b035..2d3cd62 100755
 +# -specs=nano.specs, which is newlib's, and -Wl,-z,max-page-size=4, which lays
 +# out a bare-metal ELF, are left out. -DPERFORMANCE_RUN=1 is that of its target
 +# all: SEED_ARG makes it moot here, but CoreMark prints it among the flags.
-+override PORT_CFLAGS += -O3 -DMULTITHREAD=16 -DUSE_PTHREAD=1 -pthread -DPERFORMANCE_RUN=1
++# -fno-semantic-interposition is added: with the -fPIC of Buildroot, which
++# FLAT binaries need, GCC inlines no function which is not static, as one
++# loaded at run time could replace it, which a static binary rules out;
++# with it, CoreMark's functions are inlined as in rv32-sim/apps/coremark.
++override PORT_CFLAGS += -O3 -DMULTITHREAD=16 -DUSE_PTHREAD=1 -pthread -DPERFORMANCE_RUN=1 -fno-semantic-interposition
 +EXTRA_CFLAGS = -mbranch-cost=2 -funroll-all-loops -finline-functions \
 +	-finline-limit=10000 -fno-tree-sink -fselective-scheduling \
 +	-fno-if-conversion2 -fno-code-hoisting -fno-strict-overflow \
