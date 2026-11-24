@@ -1,0 +1,49 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Tambe <tambewilliam@gmail.com>
+Date: Tue, 24 Nov 2026 09:08:25 -0600
+Subject: [PATCH 11/11] time: Add HZ_50
+
+The ftpu, the RISC-V core of the FonTamSOC, has caches of one word per
+line, direct mapped: between two ticks, the program which runs evicts
+the code and the data of the tick, which every tick then reads again
+from the DDR SDRAM, at tens of thousands of cycles. At 100 Hz, the
+lowest choice, the tick thus takes a hart at 48 MHz some 14% of its
+time, and more with several harts; NO_HZ_FULL, which depends on
+HAVE_VIRT_CPU_ACCOUNTING_GEN, is out of reach of riscv32.
+
+Add a choice of 50 Hz, which halves the timer interrupts. Its jiffy of
+20 ms keeps a wait of the drivers of the SD card of the FonTamSOC, of
+20 ms at most and rounded up to a jiffy, plus a tick, below the 100 ms
+after which its devices abort a paused transmission.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: William Tambe <tambewilliam@gmail.com>
+---
+ kernel/Kconfig.hz | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/kernel/Kconfig.hz b/kernel/Kconfig.hz
+index ce1435cb0..95baa647f 100644
+--- a/kernel/Kconfig.hz
++++ b/kernel/Kconfig.hz
+@@ -17,6 +17,12 @@ choice
+ 	 per second.
+ 
+ 
++	config HZ_50
++		bool "50 HZ"
++	help
++	  50 Hz halves the timer interrupts of 100 Hz, for systems whose
++	  timer interrupt is costly, at the expense of a coarser tick.
++
+ 	config HZ_100
+ 		bool "100 HZ"
+ 	help
+@@ -50,6 +56,7 @@ endchoice
+ 
+ config HZ
+ 	int
++	default 50 if HZ_50
+ 	default 100 if HZ_100
+ 	default 250 if HZ_250
+ 	default 300 if HZ_300
