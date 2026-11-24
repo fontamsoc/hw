@@ -1,0 +1,62 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Tambe <tambewilliam@gmail.com>
+Date: Mon, 23 Nov 2026 20:56:27 -0600
+Subject: [PATCH] linux: build with the flags of rv32-sim/apps/coremark
+
+The port linux, which Buildroot builds for a 32-bit target, takes the
+flags of rv32-sim/apps/coremark of the FonTamSOC, the bare-metal build
+of CoreMark for its ftpu cores, after the PORT_CFLAGS which Buildroot
+sets on the command line, so that -O3 overrides Buildroot's -O2, ie:
+- -O3 -DMULTITHREAD=16, and the -DPERFORMANCE_RUN=1 of the target all
+  of its Makefile, which SEED_ARG makes moot here, but which CoreMark
+  prints among the flags;
+- EXTRA_CFLAGS, its tuning of the optimizations of GCC, as is;
+- -g -fstack-usage -fdata-sections -ffunction-sections
+  -Wl,--gc-sections.
+
+Save three:
+- -DUSE__OS=1, whose contexts are threads of underLineOS, gives way to
+  -DUSE_PTHREAD=1 -pthread, the threads of pthreads, which the port
+  implements: without MMU, fork() is not available;
+- -specs=nano.specs, which selects newlib-nano, is left out: uClibc-ng
+  has no such spec file;
+- -Wl,-z,max-page-size=4, which lays out a bare-metal ELF, is left out:
+  elf2flt lays out the FLAT binary.
+
+Upstream: N/A, specific to the FonTamSOC
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: William Tambe <tambewilliam@gmail.com>
+---
+ linux/core_portme.mak | 18 +++++++++++++++++-
+ 1 file changed, 17 insertions(+), 1 deletion(-)
+
+diff --git a/linux/core_portme.mak b/linux/core_portme.mak
+index 025b035..2d3cd62 100755
+--- a/linux/core_portme.mak
++++ b/linux/core_portme.mak
+@@ -9,8 +9,24 @@ CC = gcc
+ # Flag: CFLAGS
+ #	Use this flag to define compiler options. Note, you can add compiler options from the command line using XCFLAGS="other flags"
+ PORT_CFLAGS = -O2
++# The flags of rv32-sim/apps/coremark of the FonTamSOC, the bare-metal build
++# of its ftpu cores, follow the PORT_CFLAGS which Buildroot sets on the
++# command line, so that -O3 overrides its -O2. Save three: -DUSE__OS=1, whose
++# contexts are threads of underLineOS, gives way to -DUSE_PTHREAD=1 -pthread;
++# -specs=nano.specs, which is newlib's, and -Wl,-z,max-page-size=4, which lays
++# out a bare-metal ELF, are left out. -DPERFORMANCE_RUN=1 is that of its target
++# all: SEED_ARG makes it moot here, but CoreMark prints it among the flags.
++override PORT_CFLAGS += -O3 -DMULTITHREAD=16 -DUSE_PTHREAD=1 -pthread -DPERFORMANCE_RUN=1
++EXTRA_CFLAGS = -mbranch-cost=2 -funroll-all-loops -finline-functions \
++	-finline-limit=10000 -fno-tree-sink -fselective-scheduling \
++	-fno-if-conversion2 -fno-code-hoisting -fno-strict-overflow \
++	-fira-region=one -falign-functions=4 \
++	-fsplit-paths -msmall-data-limit=1024 -fno-caller-saves \
++	-fno-split-loops -fno-tree-partial-pre -fno-version-loops-for-strides \
++	--param max-completely-peeled-insns=16 -fvect-cost-model=very-cheap
+ FLAGS_STR = "$(PORT_CFLAGS) $(XCFLAGS) $(XLFLAGS) $(LFLAGS_END)"
+-CFLAGS = $(PORT_CFLAGS) -I$(PORT_DIR) -I. -DFLAGS_STR=\"$(FLAGS_STR)\"
++CFLAGS = -g -fstack-usage -fdata-sections -ffunction-sections -Wl,--gc-sections \
++	$(PORT_CFLAGS) $(EXTRA_CFLAGS) -I$(PORT_DIR) -I. -DFLAGS_STR=\"$(FLAGS_STR)\"
+ #Flag: LFLAGS_END
+ #	Define any libraries needed for linking or other flags that should come at the end of the link line (e.g. linker scripts). 
+ #	Note: On certain platforms, the default clock_gettime implementation is supported but requires linking of librt.

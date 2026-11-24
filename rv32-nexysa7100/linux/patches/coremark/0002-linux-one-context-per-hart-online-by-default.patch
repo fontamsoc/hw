@@ -1,0 +1,56 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: William Tambe <tambewilliam@gmail.com>
+Date: Mon, 23 Nov 2026 20:56:49 -0600
+Subject: [PATCH] linux: one context per hart online by default
+
+With MULTITHREAD above 1, the port linux runs MULTITHREAD contexts,
+unless its first argument M<n> sets another count. It now runs one
+context per hart online by default, as sysconf(_SC_NPROCESSORS_ONLN)
+counts them, MULTITHREAD at most, with a warning above it, as the port
+of rv32-sim/apps/coremark of the FonTamSOC runs them on underLineOS.
+
+With the MULTITHREAD of 16 of the previous patch, a single-hart system
+thus runs one context rather than 16, each of which would run the
+iterations which take about 10 seconds to one hart. The argument M<n>
+still sets the count, 16 at most.
+
+Upstream: N/A, specific to the FonTamSOC
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: William Tambe <tambewilliam@gmail.com>
+---
+ linux/core_portme.c | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/linux/core_portme.c b/linux/core_portme.c
+index 2f07490..b5cf7eb 100755
+--- a/linux/core_portme.c
++++ b/linux/core_portme.c
+@@ -7,6 +7,7 @@
+ */ 
+ #include <stdio.h>
+ #include <stdlib.h>
++#include <unistd.h>
+ #include "coremark.h"
+ #if CALLGRIND_RUN
+ #include <valgrind/callgrind.h>
+@@ -185,6 +186,20 @@ void portable_init(core_portable *p, int *argc, char *argv[])
+ 	ee_printf("ERROR! Main has no argc, but SEED_METHOD defined to SEED_ARG!\n");
+ #endif
+ 	
++#if (MULTITHREAD>1)
++	/* One context per hart online, MULTITHREAD at most, as the port of
++	 * rv32-sim/apps/coremark of the FonTamSOC runs them on underLineOS;
++	 * the argument M<n> below sets another count.
++	 */
++	{
++		long n=sysconf(_SC_NPROCESSORS_ONLN);
++		if (n>MULTITHREAD) {
++			ee_printf("WARNING! sysconf(_SC_NPROCESSORS_ONLN)>MULTITHREAD!\n");
++			n=MULTITHREAD;
++		}
++		default_num_contexts=(n>0)?(ee_u32)n:1;
++	}
++#endif
+ #if (MULTITHREAD>1) && (SEED_METHOD==SEED_ARG)
+ 	{
+ 		int nargs=*argc,i;
