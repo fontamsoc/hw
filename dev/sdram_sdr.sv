@@ -24,6 +24,11 @@
 // SDRAM_BANK_W
 // 	Row, column and bank address width of the SDRAM chip.
 //
+// SDRAM_DATA_W
+// 	Data bus width of the SDRAM chip, either 16 or 32: a wishbone word
+// 	maps onto two consecutive 16bits columns, which a BL=2 burst covers
+// 	in a single command, or onto a single 32bits column (BL=1).
+//
 // SDRAM_REFRESH_CNT
 // 	Count of AUTO REFRESH commands the SDRAM chip requires every 64ms;
 // 	it defaults to the row count, while some chips require more,
@@ -110,15 +115,14 @@ parameter SDRAM_MHZ           = 50;
 parameter SDRAM_ROW_W         = 13;
 parameter SDRAM_COL_W         = 9;
 parameter SDRAM_BANK_W        = 2;
+parameter SDRAM_DATA_W        = 16;
 parameter SDRAM_REFRESH_CNT   = (2 ** SDRAM_ROW_W);
 parameter SDRAM_CAS_LATENCY   = 2;
 parameter SDRAM_TARGET        = "XILINX";
 parameter SDRAM_ALTERA_FAMILY = "Cyclone IV E";
 
-// The wishbone interface is inherently 32bits and the data mask width must
-// be 2: a wishbone word maps onto two consecutive 16bits sdram columns,
-// which a BL=2 burst covers in a single command; hence a localparam.
-localparam SDRAM_DQM_W = 2;
+// One data mask bit per byte of the sdram data bus.
+localparam SDRAM_DQM_W = (SDRAM_DATA_W / 8);
 
 localparam SDRAM_ADDR_W         = (SDRAM_ROW_W + SDRAM_COL_W + SDRAM_BANK_W);
 localparam SDRAM_BANKS          = (2 ** SDRAM_BANK_W);
@@ -137,10 +141,12 @@ localparam CMD_PRECHARGE = 4'b0010;
 localparam CMD_REFRESH   = 4'b0001;
 localparam CMD_LOAD_MODE = 4'b0000;
 
-// Mode: Burst Length = 4 bytes; sized to the address pins, the reserved
-// bits above A9 being null whatever their count.
+// Mode: Burst Length = 4 bytes, ie: BL=2 with a 16bits chip and BL=1 with
+// a 32bits chip; sized to the address pins, the reserved bits above A9
+// being null whatever their count.
 localparam [SDRAM_ROW_W-1:0] MODE_REG = {
-	{(SDRAM_ROW_W-10){1'b0}},1'b0,2'b00,3'(SDRAM_CAS_LATENCY),1'b0,3'b001};
+	{(SDRAM_ROW_W-10){1'b0}},1'b0,2'b00,3'(SDRAM_CAS_LATENCY),1'b0,
+	((SDRAM_DATA_W == 32) ? 3'b000 : 3'b001)};
 
 // SM states.
 localparam STATE_W         = 4;
@@ -157,8 +163,6 @@ localparam STATE_REFRESH   = 4'd9;
 
 localparam AUTO_PRECHARGE = 10;
 localparam ALL_BANKS      = 10;
-
-localparam SDRAM_DATA_W = (SDRAM_DQM_W * 8);
 
 localparam CYCLE_TIME_NS = (1000 / SDRAM_MHZ);
 
@@ -217,8 +221,13 @@ initial begin
 		$display("sdram_sdr: error: SDRAM_ROW_W too small for A10");
 		$finish;
 	end
+	// A wishbone word is two beats of a 16bits chip or one of a 32bits chip.
+	if (SDRAM_DATA_W != 16 && SDRAM_DATA_W != 32) begin
+		$display("sdram_sdr: error: SDRAM_DATA_W neither 16 nor 32");
+		$finish;
+	end
 	// The earliest PRECHARGE after a WRITE is 2 clockcycles after its
-	// last data beat (WRITE1 -> IDLE -> PRECHARGE).
+	// last data beat (WRITE1 -> IDLE -> PRECHARGE), 3 with a 32bits chip.
 	if (SDRAM_TWR_CYCLES > 2) begin
 		$display("sdram_sdr: error: SDRAM_MHZ too high for tWR");
 		$finish;
@@ -247,7 +256,7 @@ reg [SDRAM_DQM_W-1:0]  dqm_q;
 reg                    cke_q;
 reg [SDRAM_BANK_W-1:0] bank_q;
 
-// Buffer half word during read and write commands.
+// Buffer a beat during read and write commands.
 reg [SDRAM_DATA_W-1:0] data_buffer_q;
 reg [SDRAM_DQM_W-1:0]  dqm_buffer_q;
 
@@ -265,13 +274,21 @@ reg [STATE_W-1:0] target_state_q;
 reg [STATE_W-1:0] delay_state_q;
 
 // Address bits.
-// wb_addr_i is a device relative 32bits-word address, while the sdram is
-// 16bits wide and each access bursts two columns (BL=2); the column address
-// is therefore the word index shifted up by one with a null lsb, while the
-// bank and row fields sit directly above that word index.
-wire [SDRAM_ROW_W-1:0]  addr_col_w  = {{(SDRAM_ROW_W-SDRAM_COL_W){1'b0}}, wb_addr_i[0 +: (SDRAM_COL_W-1)], 1'b0};
-wire [SDRAM_ROW_W-1:0]  addr_row_w  = wb_addr_i[((SDRAM_COL_W-1)+SDRAM_BANK_W) +: SDRAM_ROW_W];
-wire [SDRAM_BANK_W-1:0] addr_bank_w = wb_addr_i[(SDRAM_COL_W-1) +: SDRAM_BANK_W];
+// wb_addr_i is a device relative 32bits-word address; a 16bits sdram bursts
+// two columns per access (BL=2), hence the column address is the word index
+// shifted up by one with a null lsb, while a 32bits sdram has the word index
+// itself as column address; the bank and row fields sit directly above that
+// word index, which is SDRAM_WCOL_W bits wide.
+localparam SDRAM_WCOL_W = ((SDRAM_DATA_W == 32) ? SDRAM_COL_W : (SDRAM_COL_W-1));
+wire [SDRAM_ROW_W-1:0]  addr_col_w;
+wire [SDRAM_ROW_W-1:0]  addr_row_w  = wb_addr_i[(SDRAM_WCOL_W+SDRAM_BANK_W) +: SDRAM_ROW_W];
+wire [SDRAM_BANK_W-1:0] addr_bank_w = wb_addr_i[SDRAM_WCOL_W +: SDRAM_BANK_W];
+generate if (SDRAM_DATA_W == 32) begin :gen_addr_col_x32
+    assign addr_col_w = {{(SDRAM_ROW_W-SDRAM_COL_W){1'b0}}, wb_addr_i[0 +: SDRAM_COL_W]};
+end else begin :gen_addr_col_x16
+    assign addr_col_w = {{(SDRAM_ROW_W-SDRAM_COL_W){1'b0}}, wb_addr_i[0 +: (SDRAM_COL_W-1)], 1'b0};
+end
+endgenerate
 
 // Live row-hit validation of the request being presented; a request is
 // only accepted in STATE_READ/STATE_WRITE0 when it still matches an open
@@ -583,8 +600,8 @@ end else begin
     end
     STATE_PRECHARGE: begin
         // tWR is met structurally: the earliest PRECHARGE after a WRITE is
-        // 2 clockcycles after its last data beat (WRITE1 -> IDLE -> STATE_PRECHARGE);
-        // checked against SDRAM_TWR_CYCLES under SIMULATION_MONITOR.
+        // 2 clockcycles after its last data beat (WRITE1 -> IDLE -> STATE_PRECHARGE),
+        // 3 with a 32bits chip; checked against SDRAM_TWR_CYCLES under SIMULATION_MONITOR.
         // Precharge due to refresh, close all banks.
         if (target_state_r == STATE_REFRESH) begin
             // Precharge all banks.
@@ -631,14 +648,14 @@ end else begin
             command_q <= CMD_WRITE;
             addr_q    <= addr_col_w;
             bank_q    <= addr_bank_w;
-            data_q    <= wb_dat_i[15:0];
+            data_q    <= wb_dat_i[SDRAM_DATA_W-1:0];
 
             // Disable auto precharge (auto close of row).
             addr_q[AUTO_PRECHARGE] <= 1'b0;
 
             // Write mask.
-            dqm_q        <= ~wb_sel_i[1:0];
-            dqm_buffer_q <= ~wb_sel_i[3:2];
+            dqm_q        <= ~wb_sel_i[SDRAM_DQM_W-1:0];
+            dqm_buffer_q <= ~wb_sel_i[(WORDBITSZ/8)-1 -: SDRAM_DQM_W];
 
             data_rd_en_q <= 1'b0;
         end else begin
@@ -649,7 +666,8 @@ end else begin
         end
     end
     STATE_WRITE1: begin
-        // Burst continuation.
+        // Burst continuation; a 32bits chip took its single beat with the
+        // WRITE command, and ignores the beat driven again here.
         command_q <= CMD_NOP;
 
         data_q <= data_buffer_q;
@@ -673,18 +691,23 @@ if (rst_i)
 else
     rd_q <= {rd_q[SDRAM_CAS_LATENCY:0], rd_issue_w};
 
-// Buffer upper 16-bits of write data so write command can be accepted
-// in WRITE0. Also buffer lower 16-bits of read data.
+// Buffer the last beat of write data so write command can be accepted
+// in WRITE0. Also buffer the first beat of read data.
 always_ff @(posedge clk_i)
 if (rst_i)
     data_buffer_q <= {SDRAM_DATA_W{1'b0}};
 else if (wr_issue_w)
-    data_buffer_q <= wb_dat_i[31:16];
+    data_buffer_q <= wb_dat_i[WORDBITSZ-1 -: SDRAM_DATA_W];
 else if (rd_q[SDRAM_CAS_LATENCY+1])
     data_buffer_q <= sample_data_q;
 
 // Read data output.
-assign wb_dat_o = {sample_data_q, data_buffer_q};
+generate if (SDRAM_DATA_W == 32) begin :gen_rd_data_x32
+    assign wb_dat_o = data_buffer_q;
+end else begin :gen_rd_data_x16
+    assign wb_dat_o = {sample_data_q, data_buffer_q};
+end
+endgenerate
 
 // Wishbone ACK.
 always_ff @(posedge clk_i)
