@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-only
+SHELL := /bin/bash
+
 PREFIX := riscv32-unknown-elf
 
 CC := ${PREFIX}-gcc

@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0-only
 # (c) William Fonkou Tambe
 
+SHELL := /bin/bash
+
 BUILD_LOG_FILE ?= build.log
 
 CLKFREQ ?= 100000000
