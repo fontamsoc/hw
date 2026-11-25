@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0-only
 # (c) William Fonkou Tambe
 
+SHELL := /bin/bash
+
 TOP ?= orangecrab0285
 
 CPU_COUNT ?= 1
