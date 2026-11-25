@@ -21,10 +21,13 @@ updsram: ${TOP}.sram.hex ${TOP}.bak.config
 	dfu-suffix -v 1209 -p 5af0 -a ${TOP}.dfu &>/dev/null
 	@rm ${TOP}.out.config
 
+# read_verilog -defer elaborates each module only with the parameters given by
+# its instantiation, hence the hierarchy pass ahead of the latch check, which
+# covers then the design as built rather than modules at default parameters.
 %.json: ../%.sv
 	@ecpbram --generate ${TOP}.sram.hex --width ${XWORDBITSZ} --depth $$((${SRAM_KBSIZE}*1024/4))
 	yosys -p "verilog_defines -DCPU_COUNT=${CPU_COUNT} -DATOMIC_COHERENCE=${ATOMIC_COHERENCE} -DXWORDBITSZ=${XWORDBITSZ} -DSRAM_KBSIZE=${SRAM_KBSIZE} -DSRAM_INITFILE=\"${TOP}.sram.hex\"; \
-		read_verilog -sv -I../../ $<; proc; select -assert-none t:\$$dlatch t:\$$dlatchsr t:\$$sr; synth_ecp5 -top ${TOP} -dff -json $@" &>$*.synth.log
+		read_verilog -defer -sv -I../../ $<; hierarchy -top ${TOP}; proc; select -assert-none t:\$$dlatch t:\$$dlatchsr t:\$$sr; synth_ecp5 -top ${TOP} -dff -json $@" &>$*.synth.log
 %.out.config: %.json ../%.lpf
 	$(info # Running nextpnr-ecp5 ...)
 	@cntr=0; until \
