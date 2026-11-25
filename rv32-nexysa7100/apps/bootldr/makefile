@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0-only
 # 20261012 (c) William Fonkou Tambe
 
+SHELL := /bin/bash
+
 PREFIX := riscv32-unknown-elf
 
 CC := ${PREFIX}-gcc
