@@ -205,7 +205,7 @@ ccx #(
 );
 
 // Logic used by verilator.
-wire [WORDBITSZ -1 : 0] pc_w [CPU_COUNT -1 : 0] /* verilator public */;
+wire [WORDBITSZ -1 : 0] pc_w [CPU_COUNT -1 : 0] /* verilator public_flat_rd */;
 genvar gen_pc_w_idx;
 generate for (gen_pc_w_idx = 0; gen_pc_w_idx < CPU_COUNT; gen_pc_w_idx = gen_pc_w_idx + 1) begin :gen_pc_w
 assign pc_w[gen_pc_w_idx] =

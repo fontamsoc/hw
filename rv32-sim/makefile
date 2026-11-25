@@ -23,10 +23,10 @@ sim:
 sim_trace:
 	@make TB=sim_trace \
 	VFLAGS="--x-assign 1 --x-initial-edge \
-	--trace-fst --trace-threads 2 --trace-underscore \
+	--trace-fst --trace-underscore \
 	$${TRACE_BEGIN:+-CFLAGS -DTRACE_BEGIN=$${TRACE_BEGIN}} \
 	$${TRACE_LEN:+-CFLAGS -DTRACE_LEN=$${TRACE_LEN}}" \
-	obj_dir/Vsim # Maximum of 2 threads recommended for FST.
+	obj_dir/Vsim
 
 obj_dir/Vsim: sim.sv ${TB}.cpp
 	@verilator --version &>${BUILD_LOG_FILE}

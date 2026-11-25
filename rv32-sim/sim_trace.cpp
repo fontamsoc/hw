@@ -4,7 +4,7 @@
 #include <termios.h>
 
 #include "Vsim.h"
-#include "Vsim_sim.h"
+#include "Vsim___024root.h"
 
 #define USE_TRACE
 #if defined(USE_TRACE)
@@ -15,7 +15,7 @@
 #if !defined(TRACE_LEN)
 #define TRACE_LEN 4000000
 #endif
-//#define TRACE_DUMP_THRESH0 (/*0x763fa*/0xffffffff) /* tb->sim->pc_w[0] value which sets traceDumpBegin non-null */
+//#define TRACE_DUMP_THRESH0 (/*0x763fa*/0xffffffff) /* tb->rootp->sim__DOT__pc_w[0] value which sets traceDumpBegin non-null */
 #endif
 
 int main (int argc, char **argv) {
@@ -50,7 +50,7 @@ int main (int argc, char **argv) {
 
 	auto tickclk = [&]() -> void {
 		#if defined(TRACE_DUMP_THRESH0) && defined(USE_TRACE)
-		sim_pc_w_0_saved = tb->sim->pc_w[0];
+		sim_pc_w_0_saved = tb->rootp->sim__DOT__pc_w[0];
 		#endif
 		tb->clk_i = 0;
 		tb->eval();
