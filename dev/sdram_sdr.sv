@@ -518,11 +518,27 @@ else if (state_q == STATE_REFRESH)
     refresh_q <= 1'b0;
 
 reg [SDRAM_DATA_W-1:0] sample_data0_q;
+generate if (SDRAM_TARGET == "GOWIN") begin :gen_sample_negedge
+// The gowin arm samples the read data on the falling edge of clk_i: its
+// flops cannot sit in the iologic with the open-source flow, as the
+// gowin_pack of oss-cad-suite 20261124 leaves such registers unconfigured,
+// ie: every read returns 0; from the farthest dq pads, the routing to the
+// flops in the fabric then makes the data arrive at 54MHz after the rising
+// edge, which comes half a period after the chip's clock edge; the falling
+// edge, half a period later, still falls within the beat, and
+// sample_data_q takes it at the same rising edge as it would otherwise.
+always_ff @(negedge clk_i)
+if (rst_i)
+    sample_data0_q <= {SDRAM_DATA_W{1'b0}};
+else
+    sample_data0_q <= sdram_data_in_w;
+end else begin :gen_sample_posedge
 always_ff @(posedge clk_i)
 if (rst_i)
     sample_data0_q <= {SDRAM_DATA_W{1'b0}};
 else
     sample_data0_q <= sdram_data_in_w;
+end endgenerate
 
 reg [SDRAM_DATA_W-1:0] sample_data_q;
 always_ff @(posedge clk_i)
